@@ -25,13 +25,12 @@ const HomeFirstSection = () => {
                 </div>
 
                 {/* Button */}
-                <button
-                    className="
-                        bg-red-400 hover:bg-red-500 border-2 border-white
-                        text-white font-semibold text-xl
-                        px-8 py-4 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl 
-                        active:transform active:scale-95 cursor-pointer
-                    "
+                <button className="
+                    bg-red-400 hover:bg-red-500 border-2 border-white mt-2
+                    text-white font-semibold text-xl
+                    px-8 py-4 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl 
+                    active:transform active:scale-95 cursor-pointer
+                "
                     onClick={
                         () => router.push('/create')
                     }

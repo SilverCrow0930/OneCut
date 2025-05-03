@@ -17,16 +17,16 @@ const Navbar = () => {
         console.log('signing out')
     }
 
-    useEffect(() => {
-        console.log('user', user)
-    }, [user])
+    // useEffect(() => {
+    //     console.log('user', user)
+    // }, [user])
 
     return (
         <div className="
             flex flex-row w-full items-center justify-between
             bg-black/40 rounded-lg
-            border-2 border-white border-opacity-20
-            px-6 py-2
+            border border-white border-opacity-20
+            px-6 py-4
         ">
             <LemonaLogo />
             {

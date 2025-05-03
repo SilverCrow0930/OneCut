@@ -8,8 +8,8 @@ import React, {
 import { supabase } from '@/lib/supabaseClient'
 import { Session, User } from '@supabase/supabase-js'
 import { Profile } from '@/types/users'
-
 import dotenv from 'dotenv'
+import { apiPath } from '@/lib/config'
 
 dotenv.config()
 
@@ -26,7 +26,7 @@ const AuthContext = createContext<AuthContextType>({
     session: null,
     profile: null,
     signIn: () => { },
-    signOut: async () => { }
+    signOut: async () => { },
 })
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -59,9 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return
         }
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL
-
-        fetch(`${apiUrl}/auth/me`, {
+        fetch(apiPath('/auth/me'), {
             headers: { Authorization: `Bearer ${session.access_token}` },
         })
             .then(async res => {
@@ -101,7 +99,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return (
-        <AuthContext.Provider value={{ user, session, profile, signIn, signOut }}>
+        <AuthContext.Provider value={{
+            user,
+            session,
+            profile,
+            signIn,
+            signOut,
+        }}>
             {children}
         </AuthContext.Provider>
     )

@@ -9,9 +9,9 @@ export default function Home() {
     <div className="flex flex-col items-center w-screen h-screen bg-black/70">
 
       {/* Background */}
-      <div className="absolute top-0 left-0 w-full h-full z-[-1]">
+      {/* <div className="absolute top-0 left-0 w-full h-full z-[-1]">
         <BubbleEffect />
-      </div>
+      </div> */}
 
       {/* Main Content */}
       <div className="

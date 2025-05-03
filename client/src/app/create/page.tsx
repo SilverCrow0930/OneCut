@@ -2,6 +2,8 @@
 
 import Navbar from "@/components/layout/Navbar";
 import BubbleEffect from "@/components/ui/backgrounds/BubbleEffect";
+import ProjectsList from "@/components/create/ProjectsList";
+import ProjectsHeader from "@/components/create/ProjectsHeader";
 
 export default function CreatePage() {
     return (
@@ -14,11 +16,17 @@ export default function CreatePage() {
 
             {/* Main Content */}
             <div className="
-                flex flex-col w-[70%] h-full py-8
+                flex flex-col w-[70%] h-full py-8 gap-12
             ">
 
                 {/* Navbar */}
                 <Navbar />
+
+                {/* Projects Header */}
+                <ProjectsHeader />
+
+                {/* Projects */}
+                <ProjectsList />
 
             </div>
         </div>
