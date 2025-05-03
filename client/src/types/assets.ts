@@ -1,10 +1,3 @@
-import { Request } from 'express'
-import { User } from '@supabase/supabase-js'
-
-export interface AuthenticatedRequest extends Request {
-    user: User
-}
-
 export interface Asset {
     id: string
     user_id: string
