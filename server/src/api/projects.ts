@@ -3,12 +3,13 @@ import { check, validationResult } from 'express-validator'
 import { supabase } from '../config/supabaseClient'
 import { AuthenticatedRequest } from '../middleware/authenticate'
 import { generateDefaultName } from '../lib/utils'
+import { DBClip as Clip } from '../types/clips'
 
 const router = Router()
 
 type RequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>
 
-// GET /api/projects — list all projects for the current user
+// GET /api/v1/projects — list all projects for the current user
 router.get('/', (async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { user } = req as AuthenticatedRequest
@@ -45,7 +46,7 @@ router.get('/', (async (req: Request, res: Response, next: NextFunction) => {
     }
 }) as RequestHandler)
 
-// GET /api/projects/:id — fetch one project
+// GET /api/v1/projects/:id — fetch one project
 router.get(
     '/:id',
     // 1) Validate that :id is a UUID
@@ -102,7 +103,7 @@ router.get(
     }
 )
 
-// POST /api/projects — create a new project
+// POST /api/v1/projects — create a new project
 router.post(
     '/',
     async (req: Request, res: Response, next: NextFunction) => {
@@ -155,7 +156,7 @@ router.post(
     }
 )
 
-// PUT /api/projects/:id — update an existing project
+// PUT /api/v1/projects/:id — update an existing project
 router.put(
     '/:id',
     check('id').isUUID().withMessage('Invalid project ID'),
@@ -213,7 +214,7 @@ router.put(
     }
 )
 
-// DELETE /api/projects/:id — delete a project
+// DELETE /api/v1/projects/:id — delete a project
 router.delete(
     '/:id',
     check('id').isUUID().withMessage('Invalid project ID'),
@@ -260,6 +261,118 @@ router.delete(
             return res.sendStatus(204)
         }
         catch (err) {
+            next(err)
+        }
+    }
+)
+
+// GET /api/v1/projects/:projectId/timeline
+router.get(
+    '/:projectId/timeline',
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { projectId } = req.params
+            const { user } = req as AuthenticatedRequest
+
+            // 1) Find your app-profile ID
+            const { data: profile, error: profErr } = await supabase
+                .from('users')
+                .select('id')
+                .eq('auth_id', user.id)
+                .single()
+            if (profErr || !profile) {
+                console.error('Profile lookup failed:', profErr)
+                return res.status(500).json({ error: 'Could not load user profile' })
+            }
+
+            // 2) Ownership check against the **profile.id**, not auth UID
+            const { data: proj, error: projErr } = await supabase
+                .from('projects')
+                .select('id')
+                .eq('id', projectId)
+                .eq('user_id', profile.id)
+                .single()
+            if (projErr || !proj) {
+                return res.status(404).json({ error: 'Project not found' })
+            }
+
+            // 3) Fetch tracks
+            const { data: tracks, error: tracksErr } = await supabase
+                .from('tracks')
+                .select('*')
+                .eq('project_id', projectId)
+                .order('index', { ascending: true })
+            if (tracksErr) {
+                return res.status(500).json({ error: tracksErr.message })
+            }
+
+            // 4) Fetch clips
+            const { data: clips, error: clipsErr } = await supabase
+                .from('clips')
+                .select('*')
+                .in('track_id', tracks.map(t => t.id))
+                .order('timeline_start_ms', { ascending: true })
+            if (clipsErr) {
+                return res.status(500).json({ error: clipsErr.message })
+            }
+
+            return res.json({ tracks, clips })
+        } catch (err) {
+            next(err)
+        }
+    }
+)
+
+// PUT /api/v1/projects/:projectId/timeline
+router.put(
+    '/:projectId/timeline',
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { projectId } = req.params
+            const { user } = req as AuthenticatedRequest
+            const uid = user.id
+            const { tracks, clips } = req.body as {
+                tracks: Array<{ id: string; project_id?: string; index: number; type: string }>
+                clips: Array<Partial<Record<keyof Clip, any>> & { id: string; track_id: string }>
+            }
+
+            // 1) Ownership check
+            const { data: project, error: projectErr } = await supabase
+                .from('projects')
+                .select('id')
+                .eq('id', projectId)
+                .eq('user_id', uid)
+                .single()
+
+            if (projectErr || !project) {
+                return res.status(404).json({ error: 'Project not found' })
+            }
+
+            // 2) Replace tracks & clips
+            //    Note: Supabase JS doesn't support transactions directly,
+            //    so we do sequential deletes/inserts. For production, wrap in a Postgres function.
+
+            // Delete existing tracks & clips
+            const trackIds = tracks.map(t => t.id)
+            await supabase.from('clips').delete().in('track_id', trackIds)
+            await supabase.from('tracks').delete().eq('project_id', projectId)
+
+            // Insert new tracks
+            if (tracks.length) {
+                await supabase
+                    .from('tracks')
+                    .insert(tracks.map(t => ({ ...t, project_id: projectId })))
+            }
+
+            // Insert new clips
+            if (clips.length) {
+                await supabase
+                    .from('clips')
+                    .insert(clips)
+            }
+
+            res.sendStatus(204)
+        } catch (err) {
             next(err)
         }
     }

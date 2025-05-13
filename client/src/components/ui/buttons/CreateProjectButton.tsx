@@ -27,7 +27,7 @@ const CreateProjectButton = () => {
                 throw new Error(`Error ${response.status}: ${error}`)
             }
             const data: { id: string } = await response.json()
-            router.push(`/edit/${data.id}`)
+            router.push(`/projects/${data.id}`)
         }
         catch (error) {
             console.error(error)

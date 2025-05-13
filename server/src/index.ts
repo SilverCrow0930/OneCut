@@ -2,12 +2,12 @@ import express from 'express'
 import dotenv from 'dotenv'
 import helmet from 'helmet'
 import cors from 'cors'
-import rateLimit from 'express-rate-limit'
 
 import { authenticate } from './middleware/authenticate'
 import { updateLastLogin } from './middleware/updateLastLogin'
 import { json } from 'body-parser'
 import apiRouter from './api'
+import morgan from 'morgan'
 
 dotenv.config();
 
@@ -23,11 +23,7 @@ app.use(helmet())
 app.use(express.json())
 app.use(json())
 
-// rate limiting
-app.use(rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 100,
-}))
+app.use(morgan('dev'))
 
 // protect everything under /api
 app.use(

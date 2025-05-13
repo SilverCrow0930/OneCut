@@ -91,7 +91,7 @@ export default function ProjectsList() {
                         "
                         onClick={
                             () => {
-                                router.push(`/edit/${project.id}`)
+                                router.push(`/projects/${project.id}`)
                             }
                         }
                     >

@@ -9,9 +9,14 @@ export default function Home() {
     <div className="flex flex-col items-center w-screen h-screen bg-black/70">
 
       {/* Background */}
-      {/* <div className="absolute top-0 left-0 w-full h-full z-[-1]">
+      <div className="absolute top-0 left-0 w-full h-full z-[-1]">
         <BubbleEffect />
-      </div> */}
+      </div>
+
+      <p className="opacity-0">
+        AI-powered video editor for podcasters, educators, and content creators.<br />
+        Lemona’s AI copilot cuts long recordings into short videos based on your needs.
+      </p>
 
       {/* Main Content */}
       <div className="

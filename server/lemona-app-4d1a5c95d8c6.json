@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "lemona-app",
+  "private_key_id": "4d1a5c95d8c6dc88041781f5d7e435457f239f9a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCzKjGEP0HBb22B\n7OVoY6tkCcKRSe+Uov3zOUB7L6WTUCZBqN/jkMisCXVIebi6qS+7407qjUDbpJWQ\n6GWc8M7F5ro5GYD/ptYEPMEbJZLadsov5wu4fO7QE9dKYQco7p4QWa/Tcmz41lO5\niAFgRCw5tUqj5nITxnrYRAkRKIVcJzKkLy6mcI457f3Atk2tZuA2yQAS4RGMrfWD\nqPw5G22uMiixSWqYh7CgxIc4HP2NcA+nePmfzX9S42iMrr5XRVYgZxGmOLnWd0Qy\nM+S5vfdDpaQbb0DaI0YFmZz15Ym7Q9TNX7suJV4greVT9jxbGOj5l8YgwowB9UNe\nDllUxjxfAgMBAAECggEAGWC5oNTg+IhTB5tJp26uwT3MrI2/fNtVg1UxuAE4v9QT\nhytngzFn605vqXNsYixC0adR71FQxYvbj6oLcp59e3TCHgJpzkyQdgsxAypgUceP\nvhdJBrnTje+xiByUSgz6oLBDgnzryJd7RoVoRH2Dki0GxI6IzBpKHkYMzrxhn3rE\nx2wpFoCZ0RC4NsK5wEI0dQ4gVaOtRNHe9Xal42EfhrYLLoqZTFRjxF807U4gq0fx\ntb0VFwVwcRAgpwlys3AVNUow/6Hhvlf1j7APiKX6G5MrELY6v1YlEmBRQbtjpzPV\noFs5INrtGYGECkmbuh/ziQb2J25+EQqrmJy62VLv4QKBgQDx5ABpnYyE3GcD+d3v\nzivT/hpFk5/4P4BJrKsS5N1/2m173WEDXFCbhIghN7m1Xd/mLUTqOKMK0+ldnvFv\n9FQSfCUw1ZLgIHPdcupQLJyK7SQjgjX0STE0ZddhsiWHtl/7nJSvODp92JxMOrZc\njWwPSe5NjiPZjDK5VjddHaQEMQKBgQC9nYwazzUpAXWfMx2ENHIZj8h5liuzjh57\ndcPhDhzPsJdseUt+LnZz0Tn2oVrfIfNbmBNGhvKnR47pqnnG0dYxbirQzCfzIYub\ntJH9/L/VeZOaW+lP8U25eQB7y01bxFFx/bliRn8wIikbPcWDbUYbUhsqyz7vXQ7T\n9SIl8DX1jwKBgCI28+/8fwHUAyZG06O17/EegizRQtFkegrxx4j2onYROWdJ2w0U\no7o7tt2r+jKzQpZWVOckd7tyWhIKB3CkiLfMo54St6HINVtfg9EvXj0waeoz4tnY\n+ILG3P5OqoxVuaHndgiK1Yszdng53c2dm2lWNcT2lA+TiyE4FsCvDqIhAoGANL/3\nkh3C9D1rs3ZM59KPS30skGauka0f3cjNTXbXnQ/LkGnODrRuT5oNPgd1eE3BneGY\nuy4fo1nM8ER0zFLj+6xiTOP+2Syj4hVB6B7AX2sLHQ4kwhCnRsna0JWmV7ktz0B+\nqlBiYcmfFe0BXaawsjkNRcJ1J7IDxgOUFGnXGRECgYEAn1lGl/HHy21MmaXov8gu\niHhsk6BUIWlHwcOtQx6wHyPy4GV3lMT4Cvrsts//FNguNS+M8uS3b7xaLg+qj2MD\nn304Pz9mKZRN+J9cfry3V258RfKOYKJOHM99Kv7twRUBhX8Otyt+zYhz3Z3Ax2Np\nfqVk/40KHIkmnG07GQ9zWUs=\n-----END PRIVATE KEY-----\n",
+  "client_email": "lemona-backend-sa@lemona-app.iam.gserviceaccount.com",
+  "client_id": "113483246021973448171",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/lemona-backend-sa%40lemona-app.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
