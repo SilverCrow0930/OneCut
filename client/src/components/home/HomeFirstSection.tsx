@@ -20,9 +20,9 @@ const HomeFirstSection = () => {
 
                 <div className="flex flex-col items-center justify-center gap-4 px-2 sm:px-4">
                     {/* Title */}
-                    <h1 className="
-                        flex flex-col items-center justify-center 
-                        text-3xl sm:text-4xl md:text-5xl lg:text-7xl text-white font-[600]
+                    <div className="
+                        flex flex-col items-center justify-center gap-2
+                        text-2xl sm:text-3xl md:text-4xl lg:text-6xl text-white font-[600]
                         text-center whitespace-nowrap
                     ">
                         <p>
@@ -31,15 +31,15 @@ const HomeFirstSection = () => {
                         <p>
                             with AI in Minutes
                         </p>
-                    </h1>
+                    </div>
 
                     {/* Description */}
                     <div className="flex flex-col items-center justify-center gap-1">
-                        <p className="text-base sm:text-md md:text-lg lg:text-2xl text-gray-200 text-center">
+                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
                             <span className="hidden sm:inline">The first AI video co-pilot that takes you from nothing to</span>
                             <span className="sm:hidden">The first AI video co-pilot that takes you from</span>
                         </p>
-                        <p className="text-base sm:text-md md:text-lg lg:text-2xl text-gray-200 text-center">
+                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
                             <span className="hidden sm:inline">viral-ready content.</span>
                             <span className="sm:hidden">nothing to viral-ready content.</span>
                         </p>
