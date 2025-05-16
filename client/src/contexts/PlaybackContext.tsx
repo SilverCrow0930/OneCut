@@ -58,15 +58,17 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
             const newTime = elapsed / 1000
             const maxTime = duration / 1000 // Convert ms to seconds
 
-            // Update current time based on elapsed time
-            if (newTime >= maxTime) {
-                // Reset to beginning and continue playing
-                currentTimeRef.current = 0
-                setCurrentTime(0)
-                startTimeRef.current = timestamp
-            } else {
-                currentTimeRef.current = newTime
-                setCurrentTime(newTime)
+            // Only update state if the time has changed significantly
+            if (Math.abs(newTime - currentTimeRef.current) >= 0.016) { // ~60fps
+                if (newTime >= maxTime) {
+                    // Reset to beginning and continue playing
+                    currentTimeRef.current = 0
+                    setCurrentTime(0)
+                    startTimeRef.current = timestamp
+                } else {
+                    currentTimeRef.current = newTime
+                    setCurrentTime(newTime)
+                }
             }
 
             frameRef.current = requestAnimationFrame(animate)

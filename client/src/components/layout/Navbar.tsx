@@ -35,9 +35,21 @@ const Navbar = () => {
                         onClick={handleSignOut}
                     />
                 ) : (
-                    <AuthButton
+                    <button
+                        className="
+                            flex flex-row items-center gap-2
+                            bg-white/20 text-white px-6 py-3 rounded-2xl
+                            hover:bg-white/30 transition-all duration-300
+                        "
                         onClick={handleSignIn}
-                    />
+                    >
+                        <img
+                            src="/assets/icons/google.png"
+                            alt="google"
+                            className="w-6 h-6"
+                        />
+                        Sign In
+                    </button>
                 )
             }
         </div>
