@@ -17,7 +17,7 @@ const DEMOS: Demo[] = [
             'Stay ahead of the curve by identifying trending topics, formats, and hooks that resonate with your audience.',
         video: {
             type: 'local',
-            url: '/public/assets/videos/demos/1.mov'
+            url: '/assets/videos/demos/1.mov'
         },
     },
     {
@@ -26,7 +26,7 @@ const DEMOS: Demo[] = [
             'Get inspired with AI-powered video concepts and scripts tailored to your style, audience, and trending content.',
         video: {
             type: 'local',
-            url: '/public/assets/videos/demos/2.mov'
+            url: '/assets/videos/demos/2.mov'
         },
     },
     {
@@ -35,7 +35,7 @@ const DEMOS: Demo[] = [
             'Easily upload up to 2 hours of raw video—Lemona handles the trimming, scrubbing, and preparation for editing.',
         video: {
             type: 'local',
-            url: '/public/assets/videos/demos/3.mov'
+            url: '/assets/videos/demos/3.mov'
         },
     },
     {
@@ -44,7 +44,7 @@ const DEMOS: Demo[] = [
             "Lemona's multi-modal AI understands visuals, speech, and context to pinpoint the most compelling moments in your footage.",
         video: {
             type: 'local',
-            url: '/public/assets/videos/demos/4.mov'
+            url: '/assets/videos/demos/4.mov'
         },
     },
     {
@@ -53,7 +53,7 @@ const DEMOS: Demo[] = [
             'Lemona edits your footage into compelling short-form videos — saving you hours of manual editing.',
         video: {
             type: 'local',
-            url: '/public/assets/videos/demos/5.mov'
+            url: '/assets/videos/demos/5.mov'
         },
     },
 ]
