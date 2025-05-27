@@ -13,7 +13,7 @@ interface AssetThumbnailProps {
 }
 
 export default function AssetThumbnail({ asset }: AssetThumbnailProps) {
-    const { url, loading, error } = useAssetUrl(asset.id)
+    const { url, loading } = useAssetUrl(asset.id)
     const { deleteAsset } = useAssets()
     const [showContextMenu, setShowContextMenu] = useState(false)
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
@@ -42,7 +42,7 @@ export default function AssetThumbnail({ asset }: AssetThumbnailProps) {
         )
     }
 
-    if (error || !url) {
+    if (!url) {
         return (
             <div className="relative w-24 aspect-video bg-red-100 text-red-500 flex items-center justify-center rounded">
                 !
