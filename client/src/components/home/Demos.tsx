@@ -107,15 +107,15 @@ const Demos = () => {
     }
 
     return (
-        <div className="flex flex-row w-full h-fit gap-8 border-[0.5px] border-white/50 rounded-xl px-8 py-8 text-white">
-            <div className="flex flex-col w-80 gap-4 flex-none">
-                <p className="text-2xl font-bold my-4">🎬 Demos</p>
+        <div className="flex flex-col md:flex-row w-full h-fit gap-8 border-[0.5px] border-white/50 rounded-xl px-4 md:px-8 py-4 md:py-8 text-white">
+            <div className="flex flex-col w-full md:w-80 gap-4 flex-none">
+                <p className="text-xl md:text-2xl font-bold my-2 md:my-4">🎬 Demos</p>
                 {
                     DEMOS.map((demo, index) => (
                         <div
                             key={index}
                             className={`
-                                flex flex-col w-80 gap-4 border-[0.5px] border-white/50 rounded-xl p-4 
+                                flex flex-col w-full md:w-80 gap-4 border-[0.5px] border-white/50 rounded-xl p-3 md:p-4 
                                 cursor-pointer hover:bg-white/5 transition-colors 
                                 ${selectedDemo === index ? 'border-blue-500 bg-white/10' : ''}`}
                             onClick={() => {
@@ -123,20 +123,20 @@ const Demos = () => {
                             }}
                         >
                             <div className="flex items-center justify-between">
-                                <p className="text-lg">
+                                <p className="text-base md:text-lg">
                                     {demo.title}
                                 </p>
                                 {
                                     expandedDemos.has(index) ? (
-                                        <ChevronDown className="w-5 h-5" />
+                                        <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
                                     ) : (
-                                        <ChevronRight className="w-5 h-5" />
+                                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
                                     )
                                 }
                             </div>
                             {
                                 expandedDemos.has(index) && (
-                                    <p className="text-sm text-gray-300 pl-4 leading-relaxed relative before:absolute before:left-0 before:top-0 before:content-['•'] before:text-gray-300">
+                                    <p className="text-xs md:text-sm text-gray-300 pl-4 leading-relaxed relative before:absolute before:left-0 before:top-0 before:content-['•'] before:text-gray-300">
                                         {demo.description}
                                     </p>
                                 )
@@ -154,8 +154,8 @@ const Demos = () => {
                 }
             </div>
             <div className="flex flex-col flex-grow h-full">
-                <p className="h-20"></p>
-                <div className="w-full h-full rounded-xl overflow-hidden">
+                <p className="h-10 md:h-20"></p>
+                <div className="w-full h-[300px] md:h-full rounded-xl overflow-hidden">
                     {DEMOS[selectedDemo].video.type === 'youtube' ? (
                         <iframe
                             src={DEMOS[selectedDemo].video.url.replace('watch?v=', 'embed/')}
@@ -181,7 +181,6 @@ const Demos = () => {
                     )}
                 </div>
             </div>
-
         </div>
     )
 }

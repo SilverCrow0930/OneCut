@@ -11,10 +11,14 @@ export default function TrackRow({
     track,
     clips,
     timelineSetIsDragOver,
+    isSelected,
+    onClick,
 }: {
     track: Track
     clips: Clip[]
     timelineSetIsDragOver: (isDragOver: boolean) => void
+    isSelected: boolean
+    onClick: () => void
 }) {
     const rowRef = useRef<HTMLDivElement>(null)
     const { executeCommand, tracks, clips: allClips, setSelectedClipId } = useEditor()
@@ -185,8 +189,10 @@ export default function TrackRow({
                     bg-gray-50 hover:bg-gray-100
                     shadow-sm
                     cursor-pointer
+                    ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}
                 `}
                 onContextMenu={handleContextMenu}
+                onClick={onClick}
                 onDragOver={e => {
                     e.preventDefault()
                     e.stopPropagation()
