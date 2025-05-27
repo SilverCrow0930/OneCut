@@ -9,10 +9,10 @@ CREATE TABLE IF NOT EXISTS public.clips (
   track_id          UUID          NOT NULL
                                    REFERENCES public.tracks(id)
                                    ON DELETE CASCADE,
-  asset_id          UUID          NOT NULL
+  asset_id          UUID          NULL
                                    REFERENCES public.assets(id),
   type              TEXT          NOT NULL
-                                   CHECK (type IN ('video','image','audio')),
+                                   CHECK (type IN ('video','image','audio','text')),
   source_start_ms   INTEGER       NOT NULL,  -- trim start in source (ms)
   source_end_ms     INTEGER       NOT NULL,  -- trim end in source (ms)
   timeline_start_ms INTEGER       NOT NULL,  -- placement start on timeline (ms)
@@ -29,9 +29,11 @@ CREATE OR REPLACE FUNCTION public.asset_mark_last_used()
   RETURNS trigger
   LANGUAGE plpgsql AS $$
 BEGIN
-  UPDATE public.assets
-    SET last_used = now()
-  WHERE id = NEW.asset_id;
+  IF NEW.asset_id IS NOT NULL THEN
+    UPDATE public.assets
+      SET last_used = now()
+    WHERE id = NEW.asset_id;
+  END IF;
   RETURN NEW;
 END;
 $$;

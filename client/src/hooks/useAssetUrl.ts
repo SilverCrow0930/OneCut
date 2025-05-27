@@ -88,68 +88,38 @@ const saveToCache = async (assetId: string, url: string) => {
     }
 }
 
-export function useAssetUrl(assetId: string) {
-    const { session } = useAuth()
+export function useAssetUrl(assetId?: string) {
     const [url, setUrl] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const { session } = useAuth()
 
     useEffect(() => {
-        if (!session?.access_token) {
+        if (!assetId) {
+            setUrl(null)
+            setLoading(false)
             return
         }
 
-        let cancelled = false
-
         const fetchUrl = async () => {
             try {
-                // Try to get from cache first
-                const cachedUrl = await getFromCache(assetId)
-                if (cachedUrl && !cancelled) {
-                    setUrl(cachedUrl)
-                    setLoading(false)
-                    return
-                }
-
-                // If not in cache, fetch from server
                 const response = await fetch(apiPath(`assets/${assetId}/url`), {
                     headers: {
-                        Authorization: `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
+                        'Authorization': `Bearer ${session?.access_token}`
+                    }
                 })
-
-                if (!response.ok) {
-                    throw new Error(await response.text())
-                }
-
-                const { url } = await response.json() as { url: string }
-
-                if (!cancelled) {
-                    setUrl(url)
-                    // Save to cache
-                    await saveToCache(assetId, url)
-                }
-            }
-            catch (error: any) {
-                if (!cancelled) {
-                    setError(error.message)
-                }
-            }
-            finally {
-                if (!cancelled) {
-                    setLoading(false)
-                }
+                if (!response.ok) throw new Error('Failed to fetch asset URL')
+                const data = await response.json()
+                setUrl(data.url)
+            } catch (error) {
+                console.error('Error fetching asset URL:', error)
+                setUrl(null)
+            } finally {
+                setLoading(false)
             }
         }
 
-        setLoading(true)
         fetchUrl()
+    }, [assetId, session?.access_token])
 
-        return () => {
-            cancelled = true
-        }
-    }, [assetId, session])
-
-    return { url, loading, error }
+    return { url, loading }
 }

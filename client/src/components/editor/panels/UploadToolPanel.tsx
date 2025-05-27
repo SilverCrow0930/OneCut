@@ -1,15 +1,10 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { useAssets } from '@/contexts/AssetsContext'
 import AssetUploader from '@/components/editor/upload/AssetUploader'
 import AssetThumbnail from '../upload/AssetThumbnail'
 
 const UploadToolPanel: React.FC = () => {
     const { assets, loading, error, refresh } = useAssets()
-
-    // Fetch assets on mount (and after each upload)
-    useEffect(() => {
-        refresh()
-    }, [refresh])
 
     return (
         <div className="flex flex-col items-center w-full h-full p-1 space-y-2 overflow-auto">
@@ -26,7 +21,7 @@ const UploadToolPanel: React.FC = () => {
             }
             {
                 !loading && !error && (
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                         {
                             assets.map((asset, index) => (
                                 <AssetThumbnail

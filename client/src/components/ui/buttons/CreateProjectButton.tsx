@@ -27,6 +27,10 @@ const CreateProjectButton = () => {
                 throw new Error(`Error ${response.status}: ${error}`)
             }
             const data: { id: string } = await response.json()
+
+            // Add a small delay to show the loading animation
+            await new Promise(resolve => setTimeout(resolve, 500))
+
             router.push(`/projects/${data.id}`)
         }
         catch (error) {
@@ -39,24 +43,26 @@ const CreateProjectButton = () => {
 
     return (
         <button
-            className="
+            className={`
                 flex items-center 
                 gap-2 px-5 py-3 rounded-lg shadow-md
-                bg-white text-black hover:opacity-60  
-                duration-500
-            "
+                bg-white text-black
+                transform transition-all duration-300 ease-in-out
+                ${loading ? 'opacity-80 scale-95' : 'hover:opacity-90 hover:scale-105'}
+                active:scale-95
+            `}
             onClick={handleCreateProject}
             disabled={loading}
         >
-            {
-                loading ? (
+            <div className="relative w-5 h-5">
+                {loading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                    <PlusIcon className="w-5 h-5" />
-                )
-            }
+                    <PlusIcon className="w-5 h-5 transition-transform duration-300 group-hover:rotate-90" />
+                )}
+            </div>
             <span className="font-medium">
-                Create a New Project
+                {loading ? 'Creating...' : 'Create a new project'}
             </span>
         </button>
     )

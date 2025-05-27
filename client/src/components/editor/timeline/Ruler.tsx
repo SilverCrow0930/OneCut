@@ -5,14 +5,14 @@ import { formatTimeMs } from '@/lib/utils'
 // Configure your intervals here
 // Each entry represents: [zoomLevel, intervalInMs]
 const ZOOM_INTERVALS = [
-    [3, 20],    // 20ms intervals when zoomed in 300%+
-    [2, 50],    // 50ms intervals when zoomed in 200%+
-    [1.5, 100], // 100ms intervals when zoomed in 150%+
-    [1, 500],   // 500ms intervals at normal zoom
-    [0.75, 1000], // 1s intervals when slightly zoomed out
-    [0.5, 2000],  // 2s intervals when zoomed out
-    [0.25, 5000], // 5s intervals when very zoomed out
-    [0, 10000],   // 10s intervals when extremely zoomed out
+    [3, 50],     // 50ms intervals when zoomed in 300%+
+    [2, 200],    // 200ms intervals when zoomed in 200%+
+    [1.5, 500],  // 500ms intervals when zoomed in 150%+
+    [1, 1000],   // 1s intervals at normal zoom
+    [0.75, 2000], // 2s intervals when slightly zoomed out
+    [0.5, 5000],  // 5s intervals when zoomed out
+    [0.25, 10000], // 10s intervals when very zoomed out
+    [0, 20000],   // 20s intervals when extremely zoomed out
 ] as const
 
 interface RulerProps {

@@ -38,13 +38,13 @@ export default function AssetThumbnail({ asset }: AssetThumbnailProps) {
 
     if (loading) {
         return (
-            <div className="relative w-24 h-24 bg-gray-200 animate-pulse rounded" />
+            <div className="relative w-24 aspect-video bg-gray-200 animate-pulse rounded" />
         )
     }
 
     if (error || !url) {
         return (
-            <div className="relative w-24 h-24 bg-red-100 text-red-500 flex items-center justify-center rounded">
+            <div className="relative w-24 aspect-video bg-red-100 text-red-500 flex items-center justify-center rounded">
                 !
             </div>
         )
@@ -57,7 +57,7 @@ export default function AssetThumbnail({ asset }: AssetThumbnailProps) {
             <DraggableAsset assetId={asset.id}>
                 <div
                     className="
-                        relative w-full h-full rounded-lg overflow-hidden 
+                        relative w-full aspect-video rounded-lg overflow-hidden 
                         bg-black hover:opacity-80 transition-opacity duration-500
                     "
                     onContextMenu={handleContextMenu}
@@ -66,14 +66,14 @@ export default function AssetThumbnail({ asset }: AssetThumbnailProps) {
                         isVideo ? (
                             <video
                                 src={url}
-                                className="object-cover w-24 h-24"
+                                className="object-cover w-full h-full"
                                 muted
                                 loop
                             />
                         ) : (
                             <img
                                 src={url}
-                                className="object-cover w-24 h-24"
+                                className="object-cover w-full h-full"
                             />
                         )
                     }

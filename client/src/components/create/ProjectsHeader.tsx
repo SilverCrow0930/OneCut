@@ -10,7 +10,7 @@ const ProjectsHeader = () => {
                 <h1 className="text-white text-3xl font-semibold">
                     Projects
                 </h1>
-                <div className="
+                {/* <div className="
                     flex items-center gap-2 px-2 py-1 rounded-lg shadow-md
                     text-xs text-gray-300 bg-gradient-to-r from-blue-500 to-indigo-600 
                 ">
@@ -24,7 +24,7 @@ const ProjectsHeader = () => {
                     hover:text-gray-300 transition-colors duration-500
                 ">
                     Need more space ?
-                </button>
+                </button> */}
             </div>
 
             {/* Create Project Button */}

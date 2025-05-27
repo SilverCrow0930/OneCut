@@ -12,11 +12,11 @@ export default function PlaybackControls() {
     return (
         <div className={`
             flex items-center gap-3
-            bg-gray-800/80 backdrop-blur-sm
+            backdrop-blur-sm
             px-4 py-2.5 rounded-xl
-            text-gray-100
+            text-black
             transition-all duration-200
-            ${!hasTracks ? 'opacity-40' : 'hover:bg-gray-800'}
+            ${!hasTracks ? 'opacity-40' : ''}
         `}>
             <button
                 onClick={
@@ -27,7 +27,7 @@ export default function PlaybackControls() {
                 className={`
                     p-1 rounded-lg
                     transition-all duration-200
-                    ${hasTracks ? 'hover:bg-gray-700' : 'cursor-not-allowed'}
+                    ${hasTracks ? 'hover:bg-gray-300' : 'cursor-not-allowed'}
                 `}
                 disabled={!hasTracks}
             >

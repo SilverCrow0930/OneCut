@@ -46,6 +46,8 @@ interface EditorContextType {
     // selection
     selectedClipId: string | null
     setSelectedClipId: (id: string | null) => void
+    selectedTrackId: string | null
+    setSelectedTrackId: (id: string | null) => void
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined)
@@ -70,6 +72,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
     const fetchProject = async () => {
         if (!session?.access_token) return
+
+        // Don't reload if we already have the project data
+        if (project && !error) return
 
         setLoading(true)
         setError(null)
@@ -100,8 +105,11 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     }
 
     useEffect(() => {
-        fetchProject()
-    }, [session, projectId])
+        // Only fetch if we don't have the project data
+        if (!project) {
+            fetchProject()
+        }
+    }, [session?.access_token, projectId]) // Only depend on access_token instead of entire session
 
     // 2) Selected tool
     const [selectedTool, setSelectedTool] = useState<string | null>('Upload')
@@ -119,6 +127,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
     // selection
     const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
+    const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
 
     const fetchTimeline = async () => {
         if (!session?.access_token) return
@@ -159,7 +168,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         if (projectId) {
             fetchTimeline()
         }
-    }, [session, projectId])
+    }, [session?.access_token, projectId])
 
     // 3) Command helpers
     const executeCommand = (cmd: Command) => {
@@ -243,6 +252,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             // selection
             selectedClipId,
             setSelectedClipId,
+            selectedTrackId,
+            setSelectedTrackId,
         }}>
             {children}
         </EditorContext.Provider>

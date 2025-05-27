@@ -1,65 +1,98 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LogoutButtonProps {
     onClick: () => void;
 }
 
 export default function LogoutButton({ onClick }: LogoutButtonProps) {
-    const [isHovered, setIsHovered] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const { profile } = useAuth();
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     return (
-        <button
-            className={`
-                relative overflow-hidden
-                px-8 py-3 rounded-full
-                bg-gradient-to-r from-red-500 to-orange-500
-                text-white font-medium text-lg
-                shadow-lg
-                transform transition-all duration-300 ease-in-out
-                ${isHovered ? 'scale-105 shadow-xl' : ''}
-            `}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={onClick}
-        >
-            <span className="relative z-10 flex items-center justify-center">
-                <svg
-                    className="w-5 h-5 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+        <div className="relative" ref={dropdownRef}>
+            {/* Avatar Button */}
+            <button
+                className={`
+                    relative overflow-hidden
+                    w-12 h-12 rounded-full
+                    border-2 border-white/20
+                    transform transition-all duration-300 ease-in-out
+                    hover:border-white/40 hover:scale-105
+                `}
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            >
+                {profile?.avatar_url ? (
+                    <img
+                        src={profile.avatar_url}
+                        alt={`${profile.full_name}'s avatar`}
+                        className="w-full h-full object-cover"
                     />
-                </svg>
-                Logout
-            </span>
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-medium">
+                        {profile?.full_name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                )}
+            </button>
 
-            {/* Animated background glow */}
-            <span
-                className={`
-                    absolute inset-0 
-                    bg-gradient-to-r from-orange-500 via-red-500 to-rose-500
-                    opacity-0 transition-opacity duration-300 ease-in-out
-                    ${isHovered ? 'opacity-80' : ''}
-                `}
-            />
-
-            {/* Animated shine effect */}
-            <span
-                className={`
-                    absolute top-0 left-0 w-full h-full
-                    bg-gradient-to-r from-transparent via-white to-transparent
-                    opacity-20
-                    transform transition-transform duration-700 ease-in-out
-                    ${isHovered ? 'translate-x-full' : '-translate-x-full'}
-                `}
-            />
-        </button>
+            {/* Dropdown Menu */}
+            {isDropdownOpen && (
+                <div className="
+                    absolute right-0 mt-3 min-w-[220px] w-56
+                    bg-white rounded-xl shadow-xl
+                    border border-gray-200
+                    overflow-hidden
+                    z-50
+                    p-0
+                ">
+                    <div className="p-4 border-b border-gray-100">
+                        <p className="font-bold text-base text-gray-900 leading-tight">{profile?.full_name}</p>
+                        <p className="text-xs text-gray-500 truncate" title={profile?.email}>{profile?.email}</p>
+                    </div>
+                    <button
+                        className="
+                            w-full flex items-center gap-2
+                            px-4 py-3
+                            text-left text-red-600 text-base font-semibold
+                            hover:bg-red-50
+                            transition-colors duration-200
+                        "
+                        onClick={() => {
+                            onClick();
+                            setIsDropdownOpen(false);
+                        }}
+                    >
+                        <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                            />
+                        </svg>
+                        Logout
+                    </button>
+                </div>
+            )}
+        </div>
     );
 }

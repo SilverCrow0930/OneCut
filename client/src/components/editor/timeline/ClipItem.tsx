@@ -6,6 +6,7 @@ import { useZoom } from '@/contexts/ZoomContext'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { useAssets } from '@/contexts/AssetsContext'
 import { formatTime } from '@/lib/utils'
+import TextClipItem from './TextClipItem'
 
 export default function ClipItem({ clip }: { clip: Clip }) {
     const { executeCommand, clips, tracks, selectedClipId, setSelectedClipId } = useEditor()
@@ -29,8 +30,6 @@ export default function ClipItem({ clip }: { clip: Clip }) {
 
     // drag state
     const [isDragging, setIsDragging] = useState(false)
-    const [dragStartX, setDragStartX] = useState(0)
-    const [dragStartMs, setDragStartMs] = useState(0)
     const [ghostLeft, setGhostLeft] = useState(0)
     const [ghostTrackId, setGhostTrackId] = useState<string | null>(null)
     const [dragOffset, setDragOffset] = useState(0)
@@ -41,6 +40,7 @@ export default function ClipItem({ clip }: { clip: Clip }) {
     const isVideo = asset?.mime_type.startsWith('video/')
     const isImage = asset?.mime_type.startsWith('image/')
     const isAudio = asset?.mime_type.startsWith('audio/')
+    const isText = clip.type === 'text'
 
     // Get the source duration
     const assetDuration = asset?.duration ?? 0
@@ -48,6 +48,11 @@ export default function ClipItem({ clip }: { clip: Clip }) {
     // convert ms → px
     const left = isResizing ? currentLeft : clip.timelineStartMs * timeScale
     const width = isResizing ? currentWidth : (clip.timelineEndMs - clip.timelineStartMs) * timeScale
+
+    // If it's a text clip, use the TextClipItem component
+    if (isText) {
+        return <TextClipItem clip={clip} />
+    }
 
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -113,7 +118,9 @@ export default function ClipItem({ clip }: { clip: Clip }) {
     // click handler to select
     const onClick = (e: React.MouseEvent) => {
         e.stopPropagation()
+        console.log('Clip clicked:', { clipId: clip.id, currentSelectedId: selectedClipId })
         setSelectedClipId(clip.id)
+        console.log('After setting selectedClipId:', { newSelectedId: clip.id })
     }
 
     // Limit the number of thumbnails to prevent performance issues
@@ -309,7 +316,7 @@ export default function ClipItem({ clip }: { clip: Clip }) {
             const offset = e.clientX - rect.left
             setDragOffset(offset)
 
-            // Create a simple ghost preview
+            // Create a ghost preview
             const ghost = document.createElement('div')
             ghost.style.width = `${width}px`
             ghost.style.height = `${rect.height}px`
@@ -320,7 +327,7 @@ export default function ClipItem({ clip }: { clip: Clip }) {
             ghost.style.top = '-1000px'
             ghost.style.pointerEvents = 'none'
 
-            // Add a simple preview of the content type
+            // Add a preview of the content type
             const icon = document.createElement('div')
             icon.style.width = '100%'
             icon.style.height = '100%'
@@ -330,9 +337,11 @@ export default function ClipItem({ clip }: { clip: Clip }) {
 
             if (isVideo) {
                 icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>'
-            } else if (isAudio) {
+            }
+            else if (isAudio) {
                 icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>'
-            } else if (isImage) {
+            }
+            else if (isImage) {
                 icon.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>'
             }
 
@@ -347,8 +356,6 @@ export default function ClipItem({ clip }: { clip: Clip }) {
         }
 
         setIsDragging(true)
-        setDragStartX(e.clientX)
-        setDragStartMs(clip.timelineStartMs)
         setGhostLeft(clip.timelineStartMs * timeScale)
         setGhostTrackId(clip.trackId)
     }
@@ -390,6 +397,7 @@ export default function ClipItem({ clip }: { clip: Clip }) {
             const isOverlap = !(newLeft + clipWidth <= clipLeft || newLeft >= clipRight)
             if (isOverlap) {
                 setIsOverlapping(true)
+                return false // Don't snap if overlapping
             }
 
             return (
@@ -435,7 +443,7 @@ export default function ClipItem({ clip }: { clip: Clip }) {
         // Ensure we don't go below 0
         finalLeft = Math.max(0, finalLeft)
 
-        // Update ghost position directly without smoothing
+        // Update ghost position
         setGhostLeft(finalLeft)
     }
 
@@ -458,6 +466,7 @@ export default function ClipItem({ clip }: { clip: Clip }) {
 
         // Calculate new start time
         const newStartMs = Math.round(ghostLeft / timeScale)
+        const durationMs = droppedClip.timelineEndMs - droppedClip.timelineStartMs
 
         // Update the clip position
         executeCommand({
@@ -467,12 +476,19 @@ export default function ClipItem({ clip }: { clip: Clip }) {
                 after: {
                     ...droppedClip,
                     timelineStartMs: newStartMs,
-                    timelineEndMs: newStartMs + (droppedClip.timelineEndMs - droppedClip.timelineStartMs)
+                    timelineEndMs: newStartMs + durationMs
                 }
             }
         })
+
+        // Reset drag state
+        setIsDragging(false)
+        setGhostTrackId(null)
+        setDragOffset(0)
+        setIsOverlapping(false)
     }
 
+    console.log('Rendering clip:', { clipId: clip.id, selectedClipId, isSelected: selectedClipId === clip.id })
     return (
         <>
             <div
@@ -482,13 +498,16 @@ export default function ClipItem({ clip }: { clip: Clip }) {
                     flex items-center justify-center rounded
                     overflow-hidden
                     ${isResizing ? 'cursor-ew-resize' : 'cursor-move'}
-                    ${selectedClipId === clip.id ? 'ring-2 ring-cyan-300 border-cyan-200' : ''}
+                    ${selectedClipId === clip.id ? 'ring-4 ring-blue-300 border-4 border-blue-300 shadow-xl' : ''}
                     ${isDragging ? 'opacity-0' : ''}
                 `}
                 style={{
                     left,
                     width,
-                    border: selectedClipId === clip.id ? '2px solid #67e8f9' : undefined
+                    border: selectedClipId === clip.id ? '4px solid #93c5fd' : 'none',
+                    boxShadow: selectedClipId === clip.id ? '0 0 16px rgba(147, 197, 253, 0.8)' : 'none',
+                    outline: selectedClipId === clip.id ? '4px solid #93c5fd' : 'none',
+                    outlineOffset: selectedClipId === clip.id ? '2px' : '0'
                 }}
                 onClick={onClick}
                 onContextMenu={handleContextMenu}
@@ -527,6 +546,7 @@ export default function ClipItem({ clip }: { clip: Clip }) {
                                                 loop
                                                 playsInline
                                             />
+                                            <div className="absolute inset-0 bg-black/5" />
                                         </div>
                                     ))
                                 ) : isImage ? (
@@ -538,6 +558,7 @@ export default function ClipItem({ clip }: { clip: Clip }) {
                                                 className="w-full h-full object-cover"
                                                 alt=""
                                             />
+                                            <div className="absolute inset-0 bg-black/5" />
                                         </div>
                                     ))
                                 ) : isAudio ? (

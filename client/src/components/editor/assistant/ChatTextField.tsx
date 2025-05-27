@@ -1,17 +1,17 @@
 import React, { ChangeEvent, useEffect, useRef, useState } from "react"
 import ChatSendButton from "./ChatSendButton";
-import { Paperclip } from "lucide-react";
+import IdeationButton from "./IdeationButton";
 
 interface ChatTextFieldProps {
-    onSend: (message: string) => void;
-    onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
-    fileInputRef: React.RefObject<HTMLInputElement | null>;
+    onSend: (message: string, useIdeation: boolean) => void;
+    message: string;
+    setMessage: (msg: string) => void;
 }
 
-const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, onSubmit, fileInputRef }) => {
+const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessage }) => {
 
-    // Message State
-    const [message, setMessage] = useState<string>("");
+    // Ideation State
+    const [isIdeationEnabled, setIsIdeationEnabled] = useState<boolean>(false);
 
     // Textarea Ref
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -23,25 +23,23 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, onSubmit, fileInp
 
     // Handle Send Message
     const handleSend = () => {
-
         // Check if message is empty
         if (message.trim() === "") {
             return;
         }
 
-        // Send message
-        onSend(message.trim());
+        // Send message with ideation state
+        onSend(message.trim(), isIdeationEnabled);
 
-        // Clear message
+        // Clear message and reset ideation
         setMessage("");
+        setIsIdeationEnabled(false);
     };
 
     // Handle Key Down Event
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-
         // Check if Enter key is pressed without shift key
         if (e.key === "Enter" && !e.shiftKey) {
-
             // Prevent default behavior
             e.preventDefault();
 
@@ -51,20 +49,24 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, onSubmit, fileInp
     };
 
     useEffect(() => {
-
         // Auto Resize Textarea
         const textarea = textareaRef.current
 
         // Check if textarea exists
         if (textarea) {
+            // Store current scroll position
+            const scrollPos = textarea.scrollTop;
 
             // Reset height
             textarea.style.height = "auto"
 
             // Set to scrollHeight
             textarea.style.height = `${textarea.scrollHeight}px`
+
+            // Restore scroll position
+            textarea.scrollTop = scrollPos;
         }
-    }, [message])
+    }, [message]) // Only depend on message changes, not button state
 
     return (
         <div className="
@@ -82,16 +84,6 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, onSubmit, fileInp
                     </div>
                 </div>
                 <div className="flex flex-row gap-1 w-full">
-                    {/* <button className="
-                        flex flex-row items-center justify-center w-[24px] h-[24px]
-                        border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 duration-500
-                    ">
-                        <Paperclip
-                            className="
-                                w-[14px] h-[14px]
-                            "
-                        />
-                    </button> */}
                     <textarea
                         ref={textareaRef}
                         className="focus:outline-none text-sm overflow-auto resize-none mt-[2px] w-full"
@@ -104,7 +96,10 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, onSubmit, fileInp
                 </div>
             </div>
             <div className="flex flex-row items-center justify-between">
-                <div></div>
+                <IdeationButton
+                    isToggled={isIdeationEnabled}
+                    onClick={setIsIdeationEnabled}
+                />
                 <ChatSendButton
                     onSend={handleSend}
                 />

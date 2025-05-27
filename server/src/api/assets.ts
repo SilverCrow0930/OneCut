@@ -2,9 +2,10 @@ import fs from 'fs'
 import { Router, Request, Response, NextFunction } from 'express'
 import multer from 'multer'
 import { v4 as uuid } from 'uuid'
+import { supabase } from '../config/supabaseClient.js'
+import { AuthenticatedRequest } from '../types/types.js'
+import { bucket } from '../integrations/googleStorage.js'
 import { Storage } from '@google-cloud/storage'
-import { supabase } from '../config/supabaseClient'
-import { AuthenticatedRequest } from '../types/types'
 import dotenv from 'dotenv'
 import path from 'path'
 
@@ -31,8 +32,6 @@ gcs.getBuckets()
         console.error('❌ GCS auth FAILED:', e)
         process.exit(1)
     })
-
-const bucket = gcs.bucket(process.env.GCS_BUCKET_NAME!)
 
 const router = Router()
 
@@ -106,7 +105,7 @@ router.post(
                 public: false,
             })
 
-            const duration = req.body.duration ? Number(req.body.duration) : null
+            const duration = req.body.duration ? Number(req.body.duration) * 1000 : null
 
             // 3) Insert into assets using localUserId
             const { data, error } = await supabase

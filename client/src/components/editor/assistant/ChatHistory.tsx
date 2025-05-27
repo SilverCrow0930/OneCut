@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import ChatMessage from './ChatMessage'
 
 interface ChatMessage {
@@ -13,17 +13,28 @@ interface ChatHistoryProps {
 }
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state }) => {
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to bottom when messages change or when state changes
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            const container = chatContainerRef.current;
+            // Always scroll to bottom when messages change or when state changes
+            container.scrollTop = container.scrollHeight;
+        }
+    }, [chatMessages, state]);
 
     // Render the content based on the state
     function renderContent(state: string) {
         switch (state) {
             case 'generating_output':
                 return (
-                    <div className='flex flex-row w-full text-sm px-4'>
-                        <h1>
-                            Thinking
-                        </h1>
-                        <div className='bouncing-dots scale-[0.5]'>
+                    <div className='flex flex-row w-full text-sm px-4 py-3 items-center bg-gray-50 rounded-lg'>
+                        <div className="flex flex-row items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                            <span className="text-gray-600 font-medium">Thinking</span>
+                        </div>
+                        <div className='bouncing-dots ml-2'>
                             <span className="bouncing-dot"></span>
                             <span className="bouncing-dot"></span>
                             <span className="bouncing-dot"></span>
@@ -35,13 +46,16 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state }) => {
         }
     }
 
-
     return (
-        <div className="
-            flex flex-col w-full h-full items-center
-            gap-2
-            overflow-y-scroll hide-scrollbar
-        ">
+        <div
+            ref={chatContainerRef}
+            className="
+                flex flex-col w-full h-full
+                gap-2 pr-2 pb-4
+                overflow-y-auto
+                hide-scrollbar
+            "
+        >
             {
                 chatMessages.map((message) => (
                     <ChatMessage

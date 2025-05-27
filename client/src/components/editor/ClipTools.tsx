@@ -15,47 +15,59 @@ const ClipTools = () => {
     const handleDelete = () => {
         if (!selectedClip) return
 
-        // First remove the clip
-        executeCommand({
-            type: 'REMOVE_CLIP',
-            payload: {
-                clip: selectedClip
-            }
-        })
+        // Find the track
+        const track = tracks.find(t => t.id === selectedClip.trackId)
+        if (!track) return
 
         // Check if the track becomes empty after removing this clip
         const remainingClipsInTrack = clips.filter(c => c.trackId === selectedClip.trackId && c.id !== selectedClip.id)
+
         if (remainingClipsInTrack.length === 0) {
-            // Find the track
-            const track = tracks.find(t => t.id === selectedClip.trackId)
-            if (track) {
-                // Remove the track
-                executeCommand({
-                    type: 'REMOVE_TRACK',
-                    payload: {
-                        track,
-                        affectedClips: []
-                    }
-                })
+            // Create a batch command for removing the clip, track, and reindexing
+            const remainingTracks = tracks.filter(t => t.id !== track.id)
+            const reindexedTracks = remainingTracks.map((t, index) => ({
+                ...t,
+                index
+            }))
 
-                // Reindex remaining tracks
-                const remainingTracks = tracks.filter(t => t.id !== track.id)
-                const reindexedTracks = remainingTracks.map((t, index) => ({
-                    ...t,
-                    index
-                }))
-
-                // Update each track's index
-                reindexedTracks.forEach(track => {
-                    executeCommand({
-                        type: 'UPDATE_TRACK',
-                        payload: {
-                            before: tracks.find(t => t.id === track.id)!,
-                            after: track
-                        }
-                    })
-                })
-            }
+            executeCommand({
+                type: 'BATCH',
+                payload: {
+                    commands: [
+                        // First remove the clip
+                        {
+                            type: 'REMOVE_CLIP',
+                            payload: {
+                                clip: selectedClip
+                            }
+                        },
+                        // Then remove the track
+                        {
+                            type: 'REMOVE_TRACK',
+                            payload: {
+                                track,
+                                affectedClips: []
+                            }
+                        },
+                        // Then update each track's index
+                        ...reindexedTracks.map(track => ({
+                            type: 'UPDATE_TRACK' as const,
+                            payload: {
+                                before: tracks.find(t => t.id === track.id)!,
+                                after: track
+                            }
+                        }))
+                    ]
+                }
+            })
+        } else {
+            // Just remove the clip
+            executeCommand({
+                type: 'REMOVE_CLIP',
+                payload: {
+                    clip: selectedClip
+                }
+            })
         }
     }
 
@@ -84,19 +96,25 @@ const ClipTools = () => {
             sourceStartMs: selectedClip.sourceStartMs + (currentMs - selectedClip.timelineStartMs)
         }
 
-        // Update the first clip and add the second clip
+        // Update the first clip and add the second clip in a batch
         executeCommand({
-            type: 'UPDATE_CLIP',
+            type: 'BATCH',
             payload: {
-                before: selectedClip,
-                after: firstClip
-            }
-        })
-
-        executeCommand({
-            type: 'ADD_CLIP',
-            payload: {
-                clip: secondClip
+                commands: [
+                    {
+                        type: 'UPDATE_CLIP',
+                        payload: {
+                            before: selectedClip,
+                            after: firstClip
+                        }
+                    },
+                    {
+                        type: 'ADD_CLIP',
+                        payload: {
+                            clip: secondClip
+                        }
+                    }
+                ]
             }
         })
     }
@@ -104,16 +122,18 @@ const ClipTools = () => {
     return (
         <div className={`
             flex items-center gap-3
-            bg-gray-800/80 backdrop-blur-sm
+            backdrop-blur-sm
             px-4 py-2.5 rounded-xl
-            text-gray-100
+            text-black
             transition-all duration-200
-            hover:bg-gray-800
         `}>
             <button
                 className={`
                     p-1 rounded-lg transition-all duration-200
-                    ${hasSelectedClip ? 'hover:bg-gray-700' : 'opacity-40 cursor-not-allowed'}
+                    ${hasSelectedClip ?
+                        'hover:bg-gray-300' :
+                        'opacity-40 cursor-not-allowed'
+                    }
                 `}
                 title="Split clip"
                 onClick={handleSplit}
@@ -124,7 +144,7 @@ const ClipTools = () => {
             <button
                 className={`
                     p-1 rounded-lg transition-all duration-200
-                    ${hasSelectedClip ? 'hover:bg-gray-700' : 'opacity-40 cursor-not-allowed'}
+                    ${hasSelectedClip ? 'hover:bg-gray-300' : 'opacity-40 cursor-not-allowed'}
                 `}
                 title="Delete clip"
                 onClick={handleDelete}

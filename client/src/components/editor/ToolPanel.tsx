@@ -5,6 +5,7 @@ import AssetsToolPanel from './panels/AssetsToolPanel'
 import StickersToolPanel from './panels/StickersToolPanel'
 import VoiceoverToolPanel from './panels/VoiceoverToolPanel'
 import CaptionsToolPanel from './panels/CaptionsToolPanel'
+import AutoCutToolPanel from './panels/AutoCutToolPanel'
 import { useEditor } from '@/contexts/EditorContext'
 
 const toolComponents: { [key: string]: React.ComponentType } = {
@@ -14,6 +15,7 @@ const toolComponents: { [key: string]: React.ComponentType } = {
     Stickers: StickersToolPanel,
     Voiceover: VoiceoverToolPanel,
     Captions: CaptionsToolPanel,
+    'AI Pilot': AutoCutToolPanel,
 }
 
 const ToolPanel = () => {
@@ -23,7 +25,7 @@ const ToolPanel = () => {
     return (
         <div className="
             flex flex-col w-full h-full
-            p-1 border-l-2 border-r-2 border-gray-100
+            p-1
         ">
             {
                 ToolComponent ?

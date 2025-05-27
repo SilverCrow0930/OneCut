@@ -3,6 +3,19 @@ import { useRouter } from 'next/navigation'
 
 const HomeFirstSection = () => {
     const router = useRouter()
+
+    const handleJoinBeta = () => {
+        const div = document.createElement('div');
+        div.setAttribute('data-tf-live', '01JW7CG4SPCPSZXP8JWESVN5D2');
+        document.body.appendChild(div);
+
+        // Force reload the script to initialize the new embed
+        const script = document.createElement('script');
+        script.src = '//embed.typeform.com/next/embed.js';
+        script.async = true;
+        document.body.appendChild(script);
+    }
+
     return (
         <div className="
             flex flex-col w-full h-screen items-center justify-center
@@ -26,21 +39,18 @@ const HomeFirstSection = () => {
                         text-center whitespace-nowrap
                     ">
                         <p>
-                            Effortless Video Creation
-                        </p>
-                        <p>
-                            with AI in Minutes
+                            The First AI Content Creator
                         </p>
                     </div>
 
                     {/* Description */}
                     <div className="flex flex-col items-center justify-center gap-1">
                         <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
-                            <span className="hidden sm:inline">The first AI video co-pilot that takes you from nothing to</span>
-                            <span className="sm:hidden">The first AI video co-pilot that takes you from</span>
+                            <span className="hidden sm:inline">The AI video co-pilot that takes you from nothing</span>
+                            <span className="sm:hidden">The AI video co-pilot that takes you from</span>
                         </p>
                         <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
-                            <span className="hidden sm:inline">viral-ready content.</span>
+                            <span className="hidden sm:inline">to viral-ready content.</span>
                             <span className="sm:hidden">nothing to viral-ready content.</span>
                         </p>
                     </div>
@@ -53,11 +63,9 @@ const HomeFirstSection = () => {
                     px-6 sm:px-8 md:px-12 py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl 
                     active:transform active:scale-95 cursor-pointer
                 "
-                    onClick={
-                        () => router.push('/create')
-                    }
+                    onClick={handleJoinBeta}
                 >
-                    Start My Journey
+                    Join the Beta
                 </button>
 
             </div>

@@ -7,7 +7,7 @@ import { ClipLayer } from './ClipLayer'
 export default function Player() {
     const videoRef = useRef<HTMLVideoElement>(null)
     const { currentTime, duration, setCurrentTime, setDuration } = usePlayback()
-    const { clips, tracks } = useEditor()
+    const { clips, tracks, setSelectedClipId } = useEditor()
 
     // Get clips that are currently active at the playhead position
     const activeClips = clips.filter(clip => {
@@ -47,16 +47,23 @@ export default function Player() {
     return (
         <div
             className="relative mx-auto bg-black"
-            style={{ aspectRatio: '9 / 16', width: '100%', maxWidth: '20rem' }}
+            style={{
+                aspectRatio: '9 / 16',
+                width: '100%',
+                maxWidth: '20rem'
+            }}
+            onClick={() => setSelectedClipId(null)}
         >
             {/* Render active clips in order with their source times */}
-            {clipsWithSourceTime.map(clip => (
-                <ClipLayer
-                    key={clip.id}
-                    clip={clip}
-                    sourceTime={clip.sourceTime}
-                />
-            ))}
+            {
+                clipsWithSourceTime.map(clip => (
+                    <ClipLayer
+                        key={clip.id}
+                        clip={clip}
+                        sourceTime={clip.sourceTime}
+                    />
+                ))
+            }
         </div>
     )
 }

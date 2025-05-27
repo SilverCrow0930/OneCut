@@ -1,15 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LemonaLogo from '../common/LemonaLogo';
 import LogoutButton from '../ui/buttons/LogoutButton';
 import AuthButton from '../ui/buttons/AuthButton';
 import { useAuth } from '@/contexts/AuthContext';
 
+declare global {
+    interface Window {
+        tf: any;
+    }
+}
+
 export default function HomeNavbar() {
     const { user, signIn, signOut } = useAuth()
 
+    useEffect(() => {
+        // Load Typeform embed script
+        const script = document.createElement('script');
+        script.src = '//embed.typeform.com/next/embed.js';
+        script.async = true;
+        document.body.appendChild(script);
+
+        return () => {
+            document.body.removeChild(script);
+        };
+    }, []);
+
     const handleSignIn = () => {
-        signIn()
-        console.log('signing in')
+        const div = document.createElement('div');
+        div.setAttribute('data-tf-live', '01JW7CG4SPCPSZXP8JWESVN5D2');
+        document.body.appendChild(div);
+
+        // Force reload the script to initialize the new embed
+        const script = document.createElement('script');
+        script.src = '//embed.typeform.com/next/embed.js';
+        script.async = true;
+        document.body.appendChild(script);
     }
 
     const handleSignOut = () => {

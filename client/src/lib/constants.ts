@@ -6,6 +6,7 @@ import AssetsToolPanel from "@/components/editor/panels/AssetsToolPanel"
 import StickersToolPanel from "@/components/editor/panels/StickersToolPanel"
 import VoiceoverToolPanel from "@/components/editor/panels/VoiceoverToolPanel"
 import CaptionsToolPanel from "@/components/editor/panels/CaptionsToolPanel"
+import AutoCutToolPanel from "@/components/editor/panels/AutoCutToolPanel"
 
 export const TOOLS: Tool[] = [
     {
@@ -18,26 +19,31 @@ export const TOOLS: Tool[] = [
         icon: '/assets/icons/text.png',
         aiTool: false,
     },
-    // {
-    //     label: 'Assets',
-    //     icon: '/assets/icons/assets.png',
-    //     aiTool: false,
-    // },
-    // {
-    //     label: 'Stickers',
-    //     icon: '/assets/icons/stickers.png',
-    //     aiTool: false,
-    // },
+    {
+        label: 'Assets',
+        icon: '/assets/icons/assets.png',
+        aiTool: false,
+    },
+    {
+        label: 'Stickers',
+        icon: '/assets/icons/stickers.png',
+        aiTool: false,
+    },
     {
         label: 'Voiceover',
         icon: '/assets/icons/voiceover.png',
         aiTool: true,
     },
+    // {
+    //     label: 'Captions',
+    //     icon: '/assets/icons/captions.png',
+    //     aiTool: true,
+    // },
     {
-        label: 'Captions',
-        icon: '/assets/icons/captions.png',
+        label: 'AI Pilot',
+        icon: '/assets/icons/scissors.png',
         aiTool: true,
-    },
+    }
 ]
 
 export const TOOL_PANELS: ToolPanel[] = [
@@ -65,6 +71,10 @@ export const TOOL_PANELS: ToolPanel[] = [
         label: 'Captions',
         component: CaptionsToolPanel
     },
+    {
+        label: 'AI Pilot',
+        component: AutoCutToolPanel
+    }
 ]
 
 export const initialHistory: HistoryState = {

@@ -26,7 +26,7 @@ export type ClipType = 'video' | 'image' | 'audio' | 'text'
 export interface Clip {
     id: string
     trackId: string
-    assetId: string
+    assetId?: string
     type: ClipType
     sourceStartMs: number
     sourceEndMs: number
@@ -81,6 +81,12 @@ export type Command
         type: 'RESET';
         payload: {
             tracks: Track[]; clips: Clip[]
+        }
+    }
+    | {
+        type: 'BATCH';
+        payload: {
+            commands: Command[]
         }
     }
 

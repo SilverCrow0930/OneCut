@@ -104,7 +104,7 @@ export default function TrackRow({
         const startMs = Math.max(0, Math.round(x / timeScale))
 
         // build new clip
-        const dur = asset.duration ? Math.floor(asset.duration * 1000) : 0 // Convert seconds to ms
+        const dur = asset.duration ? Math.floor(asset.duration) : 0 // Duration is already in ms
         const newClip: Clip = {
             id: uuid(),
             trackId: track.id,
@@ -134,31 +134,35 @@ export default function TrackRow({
     }
 
     const handleDeleteTrack = () => {
-        // First remove the track and its clips
-        executeCommand({
-            type: 'REMOVE_TRACK',
-            payload: {
-                track,
-                affectedClips: clips
-            }
-        })
-
-        // Then reindex the remaining tracks
+        // Create a batch command for removing the track and reindexing
         const remainingTracks = tracks.filter(t => t.id !== track.id)
         const reindexedTracks = remainingTracks.map((t, index) => ({
             ...t,
             index
         }))
 
-        // Update each track's index
-        reindexedTracks.forEach(track => {
-            executeCommand({
-                type: 'UPDATE_TRACK',
-                payload: {
-                    before: tracks.find(t => t.id === track.id)!,
-                    after: track
-                }
-            })
+        executeCommand({
+            type: 'BATCH',
+            payload: {
+                commands: [
+                    // First remove the track and its clips
+                    {
+                        type: 'REMOVE_TRACK',
+                        payload: {
+                            track,
+                            affectedClips: clips
+                        }
+                    },
+                    // Then update each track's index
+                    ...reindexedTracks.map(track => ({
+                        type: 'UPDATE_TRACK' as const,
+                        payload: {
+                            before: tracks.find(t => t.id === track.id)!,
+                            after: track
+                        }
+                    }))
+                ]
+            }
         })
 
         setShowContextMenu(false)
@@ -176,15 +180,13 @@ export default function TrackRow({
             <div
                 ref={rowRef}
                 className={`
-                    relative h-12 border-b
+                    relative h-12
                     transition-all duration-200 rounded-md
-                    bg-gray-300
-                    ${isDragOver ?
-                        'border-2 border-cyan-500' :
-                        'border border-gray-300'}
+                    bg-gray-50 hover:bg-gray-100
+                    shadow-sm
+                    cursor-pointer
                 `}
                 onContextMenu={handleContextMenu}
-                onClick={() => setSelectedClipId(null)}
                 onDragOver={e => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -221,8 +223,9 @@ export default function TrackRow({
                     <div
                         className="
                             fixed 
-                            bg-white shadow-lg rounded-lg py-1 z-50 
-                            hover:bg-gray-100 cursor-pointer
+                            bg-white shadow-xl rounded-lg py-1 z-50 
+                            border border-gray-100
+                            min-w-[160px]
                         "
                         style={{
                             left: contextMenuPosition.x,
@@ -231,7 +234,7 @@ export default function TrackRow({
                         }}
                     >
                         <button
-                            className="w-full px-4 py-2 text-left text-red-600"
+                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors duration-150"
                             onClick={handleDeleteTrack}
                         >
                             Delete Track

@@ -16,6 +16,7 @@ export default function Timeline() {
     const params = useParams()
     const { zoomLevel } = useZoom()
     const timeScale = getTimeScale(zoomLevel)
+    const dragCounterRef = useRef(0)
 
     // 1) Guard: if there's no projectId, bail out or show an error
     if (!params.projectId) {
@@ -31,7 +32,7 @@ export default function Timeline() {
         ? params.projectId[0]
         : params.projectId
 
-    const { tracks, clips, loadingTimeline, timelineError, executeCommand, setSelectedClipId } = useEditor()
+    const { tracks, clips, loadingTimeline, timelineError, executeCommand, setSelectedClipId, selectedTrackId, setSelectedTrackId } = useEditor()
     const { currentTime, setDuration, isPlaying, setCurrentTime } = usePlayback()
     const currentTimeMs = currentTime * 1000
 
@@ -81,8 +82,12 @@ export default function Timeline() {
             setCurrentTime(0)
         } else {
             setDuration(maxMs)
+            // Ensure playhead stays within bounds
+            if (currentTimeMs > maxMs) {
+                setCurrentTime(maxMs / 1000)
+            }
         }
-    }, [maxMs, setDuration, setCurrentTime, tracks.length])
+    }, [maxMs, setDuration, setCurrentTime, tracks.length, currentTime])
 
     // Smooth scrolling animation
     useEffect(() => {
@@ -120,14 +125,43 @@ export default function Timeline() {
         }
     }, [playheadX, isPlaying])
 
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        dragCounterRef.current++
+        setIsDragOver(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        dragCounterRef.current--
+        if (dragCounterRef.current === 0) {
+            setIsDragOver(false)
+        }
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+    }
+
     const onDrop = (e: React.DragEvent) => {
         e.preventDefault()
+        e.stopPropagation()
+        dragCounterRef.current = 0
+        setIsDragOver(false)
+
         if (!containerRef.current) return
 
         // 1) parse assetId
         let payload: { assetId: string }
-        try { payload = JSON.parse(e.dataTransfer.getData('application/json')) }
-        catch { return }
+        try {
+            payload = JSON.parse(e.dataTransfer.getData('application/json'))
+        } catch {
+            return
+        }
+
         const asset = assets.find(a => a.id === payload.assetId)
         if (!asset) return
 
@@ -143,8 +177,7 @@ export default function Timeline() {
         const newIndex = Math.max(0, Math.min(tracks.length, rawIndex))
 
         // 4) CREATE TRACK
-        const trackType: TrackType =
-            asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
+        const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
 
         const newTrack = {
             id: uuid(),
@@ -156,13 +189,15 @@ export default function Timeline() {
 
         executeCommand({
             type: 'ADD_TRACK',
-            payload: {
-                track: newTrack
-            }
+            payload: { track: newTrack }
         })
 
         // 5) CREATE CLIP in that track
         const dur = asset.duration ? Math.floor(asset.duration) : 0 // Duration is already in ms
+
+        // Calculate the maximum allowed start time to fit the clip
+        const maxStartMs = Math.max(0, paddedMaxMs - dur)
+        const adjustedStartMs = Math.min(startMs, maxStartMs)
 
         const newClip = {
             id: uuid(),
@@ -171,8 +206,8 @@ export default function Timeline() {
             type: trackType,
             sourceStartMs: 0,
             sourceEndMs: dur,
-            timelineStartMs: startMs,
-            timelineEndMs: startMs + dur,
+            timelineStartMs: adjustedStartMs,
+            timelineEndMs: adjustedStartMs + dur,
             assetDurationMs: dur,
             volume: 1,
             speed: 1,
@@ -182,12 +217,8 @@ export default function Timeline() {
 
         executeCommand({
             type: 'ADD_CLIP',
-            payload: {
-                clip: newClip
-            }
+            payload: { clip: newClip }
         })
-
-        setIsDragOver(false)
     }
 
     const handleTimelineClick = (e: React.MouseEvent) => {
@@ -241,63 +272,37 @@ export default function Timeline() {
         <div
             ref={containerRef}
             className={`
-                w-full h-full overflow-x-auto
+                w-full h-full overflow-auto
                 transition-colors duration-500
-                ${isDragOver ?
-                    'border-2 border-cyan-400 bg-cyan-50/50' :
-                    'border border-transparent bg-white'}
-              `}
-            onDragEnter={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (e.target === containerRef.current) {
-                    setIsDragOver(true);
-                }
-            }}
-            onDragLeave={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (e.target === e.currentTarget) {
-                    setIsDragOver(false);
-                }
-            }}
-            onDragOver={e => {
-                e.preventDefault();
-                e.stopPropagation();
-            }}
-            onDrop={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                onDrop(e);
-            }}
-            onClick={e => {
-                setSelectedClipId(null)
-                handleTimelineClick(e)
-            }}
+                ${isDragOver ? 'border-2 border-cyan-400 bg-cyan-50/50' : 'border border-transparent bg-white'}
+            `}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={onDrop}
+            onClick={handleTimelineClick}
         >
-            {
-                tracks.length === 0 ? (
-                    <EmptyTimeline />
-                ) : (
-                    <div
-                        className="
-                            relative flex flex-col flex-none w-full h-fit 
-                            overflow-y-scroll gap-2
-                        "
-                        style={{
-                            width: totalPx + 1,
-                            minHeight: '100%'
-                        }}
-                    >
-                        <Ruler
-                            totalMs={paddedMaxMs}
-                            timeScale={timeScale}
-                        />
-                        <Playhead
-                            playheadX={playheadX}
-                            onDrag={handlePlayheadDrag}
-                            isPlaying={isPlaying}
-                        />
+            {tracks.length === 0 ? (
+                <EmptyTimeline />
+            ) : (
+                <div
+                    className="relative flex flex-col w-full gap-2"
+                    style={{
+                        width: totalPx + 1,
+                        minHeight: '100%',
+                        height: 'max-content'
+                    }}
+                >
+                    <Ruler
+                        totalMs={paddedMaxMs}
+                        timeScale={timeScale}
+                    />
+                    <Playhead
+                        playheadX={playheadX}
+                        onDrag={handlePlayheadDrag}
+                        isPlaying={isPlaying}
+                    />
+                    <div className="flex flex-col overflow-y-scroll gap-2">
                         {
                             tracks.map(t => (
                                 <TrackRow
@@ -305,12 +310,14 @@ export default function Timeline() {
                                     track={t}
                                     clips={clipsByTrack.get(t.id) ?? []}
                                     timelineSetIsDragOver={setIsDragOver}
+                                    isSelected={t.id === selectedTrackId}
+                                    onClick={() => setSelectedTrackId(t.id)}
                                 />
                             ))
                         }
                     </div>
-                )
-            }
+                </div>
+            )}
         </div>
     )
 }

@@ -1,14 +1,14 @@
 // src/types/clip.ts
 
 /** The allowed clip "kinds" */
-export type ClipType = 'video' | 'image' | 'audio'
+export type ClipType = 'video' | 'image' | 'audio' | 'text'
 
 /** A clip as stored in the database (snake_cased to match Supabase) */
 export interface DBClip {
     id: string         // uuid
     track_id: string         // FK → tracks.id
     asset_id: string         // FK → assets.id
-    type: ClipType       // 'video' | 'image' | 'audio'
+    type: ClipType       // 'video' | 'image' | 'audio' | 'text'
     source_start_ms: number         // trim start in source media
     source_end_ms: number         // trim end in source media
     timeline_start_ms: number         // placement start on timeline

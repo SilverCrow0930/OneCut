@@ -11,16 +11,20 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
     "dotenv": "^16.5.0",
+    "express": "^5.1.0",
     "lucide-react": "^0.506.0",
     "next": "15.3.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-draggable": "^4.4.6",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "rehype-raw": "^7.0.0",
     "sass": "^1.87.0",
-    "uuid": "^11.1.0"
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -7,6 +7,13 @@ export function applyCommand(
 ): { tracks: Track[]; clips: Clip[] } {
     const { tracks, clips } = state
     switch (cmd.type) {
+        case 'BATCH': {
+            // Apply each command in sequence
+            return cmd.payload.commands.reduce(
+                (state, cmd) => applyCommand(state, cmd),
+                state
+            )
+        }
         case 'ADD_TRACK': {
             // insert & re-index so no gaps
             const newTracks = [...tracks, cmd.payload.track]
@@ -51,6 +58,15 @@ export function applyCommand(
 
 export function inverseCommand(cmd: Command): Command {
     switch (cmd.type) {
+        case 'BATCH': {
+            // Reverse the commands and invert each one
+            return {
+                type: 'BATCH',
+                payload: {
+                    commands: [...cmd.payload.commands].reverse().map(inverseCommand)
+                }
+            }
+        }
         case 'ADD_TRACK':
             return { type: 'REMOVE_TRACK', payload: { track: cmd.payload.track, affectedClips: [] } }
         case 'REMOVE_TRACK':

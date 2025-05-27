@@ -64,7 +64,7 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
         finally {
             setLoading(false)
         }
-    }, [session])   // now `refresh` only changes when `session` does
+    }, [session?.access_token])
 
     const deleteAsset = useCallback(async (id: string) => {
         if (!session?.access_token) return
@@ -89,7 +89,7 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         refresh()
-    }, [refresh])   // will run once when session arrives, then never again
+    }, [refresh])
 
     return (
         <AssetsContext.Provider value={{ assets, loading, error, refresh, deleteAsset }}>
