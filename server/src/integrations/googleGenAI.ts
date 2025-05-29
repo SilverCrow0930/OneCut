@@ -20,7 +20,7 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 })
 
-const model = "gemini-2.5-flash-preview-05-20"
+const model = "gemini-2.5-pro-preview-05-20"
 
 const systemInstruction = `
     You are a video editor.
