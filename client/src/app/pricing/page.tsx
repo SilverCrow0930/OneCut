@@ -25,8 +25,8 @@ const plans = [
         description: 'For growing creators',
         features: [
             'Everything in Free',
-            'AI Usage: 10M tokens/month',
-            'Storage: 10 GB',
+            'AI Usage: 5M tokens/month',
+            'Storage: 5 GB',
             'Premium assets',
         ],
         highlighted: true,
@@ -39,8 +39,8 @@ const plans = [
         description: 'For professional creators',
         features: [
             'Everything in Hobby',
-            'AI Usage: 40M tokens/month',
-            'Storage: 40 GB',
+            'AI Usage: 20M tokens/month',
+            'Storage: 20 GB',
             'Faster AI responses',
         ],
         highlighted: false,
