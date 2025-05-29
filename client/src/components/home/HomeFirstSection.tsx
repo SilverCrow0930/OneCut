@@ -16,9 +16,10 @@ const HomeFirstSection = () => {
 
     return (
         <div className="
-            flex flex-col w-full h-screen items-center justify-center overflow-hidden
+            flex flex-col w-full h-screen items-center justify-center
         ">
-            <div className="flex flex-col items-center justify-center gap-6 px-4">
+            <div className="flex flex-col items-center justify-center gap-6">
+
                 {/* Logo */}
                 <div className="flex flex-col items-center justify-center gap-2">
                     <img
@@ -28,27 +29,29 @@ const HomeFirstSection = () => {
                     />
                 </div>
 
-                {/* Title */}
-                <div className="
-                    flex flex-col items-center justify-center gap-2
-                    text-2xl sm:text-3xl md:text-4xl lg:text-6xl text-white font-[600]
-                    text-center
-                ">
-                    <p>
-                        The First AI Content Creator
-                    </p>
-                </div>
+                <div className="flex flex-col items-center justify-center gap-4 px-2 sm:px-4">
+                    {/* Title */}
+                    <div className="
+                        flex flex-col items-center justify-center gap-2
+                        text-2xl sm:text-3xl md:text-4xl lg:text-6xl text-white font-[600]
+                        text-center whitespace-nowrap
+                    ">
+                        <p>
+                            The First AI Content Creator
+                        </p>
+                    </div>
 
-                {/* Description */}
-                <div className="flex flex-col items-center justify-center gap-1">
-                    <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
-                        <span className="hidden sm:inline">The AI video co-pilot that takes you from nothing</span>
-                        <span className="sm:hidden">The AI video co-pilot that takes you from</span>
-                    </p>
-                    <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
-                        <span className="hidden sm:inline">to viral-ready content.</span>
-                        <span className="sm:hidden">nothing to viral-ready content.</span>
-                    </p>
+                    {/* Description */}
+                    <div className="flex flex-col items-center justify-center gap-1">
+                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
+                            <span className="hidden sm:inline">The AI video co-pilot that takes you from nothing</span>
+                            <span className="sm:hidden">The AI video co-pilot that takes you from</span>
+                        </p>
+                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
+                            <span className="hidden sm:inline">to viral-ready content.</span>
+                            <span className="sm:hidden">nothing to viral-ready content.</span>
+                        </p>
+                    </div>
                 </div>
 
                 {/* Button */}
@@ -62,6 +65,7 @@ const HomeFirstSection = () => {
                 >
                     {user ? 'Start the Journey' : 'Sign In to Start'}
                 </button>
+
             </div>
         </div>
     )

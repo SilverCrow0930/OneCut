@@ -131,21 +131,7 @@ export default function PricingPage() {
                         </div>
                     ))}
                 </div>
-
-                {/* FAQ Section */}
-                <div className="mt-32 text-center">
-                    <h2 className="text-3xl font-bold mb-12">Frequently Asked Questions</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
-                        <div className="bg-white/5 rounded-xl p-6">
-                            <h3 className="text-lg font-semibold mb-2">What are tokens?</h3>
-                            <p className="text-gray-400">Tokens are units of AI processing power. One token is roughly equivalent to 4 characters of text.</p>
-                        </div>
-                        <div className="bg-white/5 rounded-xl p-6">
-                            <h3 className="text-lg font-semibold mb-2">Can I upgrade anytime?</h3>
-                            <p className="text-gray-400">Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle.</p>
-                        </div>
-                    </div>
-                </div>
+            
             </div>
         </div>
     );

@@ -32,7 +32,7 @@ const DEMOS: Demo[] = [
     {
         title: 'Upload Long Footage',
         description:
-            'Easily upload up to 2 hours of raw video—Lemona handles the trimming, scrubbing, and preparation for editing.',
+            'Easily upload up to 1 hour of raw video—Lemona handles the trimming, scrubbing, and preparation for editing.',
         video: {
             type: 'local',
             url: '/assets/videos/demos/3.MOV'
@@ -60,92 +60,129 @@ const DEMOS: Demo[] = [
 
 const DURATION = 10000 // 10 seconds per demo for YouTube videos
 
-export default function Demos() {
-    const [currentDemoIndex, setCurrentDemoIndex] = useState(0)
-    const [isPlaying, setIsPlaying] = useState(false)
-    const [isExpanded, setIsExpanded] = useState(false)
+const Demos = () => {
+    const [selectedDemo, setSelectedDemo] = useState<number>(0)
+    const [expandedDemos, setExpandedDemos] = useState<Set<number>>(new Set([0]))
+    const [progress, setProgress] = useState<number>(0)
+    const [videoDuration, setVideoDuration] = useState<number>(DURATION)
+    const intervalRef = useRef<NodeJS.Timeout | null>(null)
     const videoRef = useRef<HTMLVideoElement>(null)
 
     useEffect(() => {
-        if (videoRef.current) {
-            videoRef.current.load()
-            videoRef.current.play().catch(console.error)
-        }
-    }, [currentDemoIndex])
+        // Expand only the selected demo
+        setExpandedDemos(new Set([selectedDemo]))
 
-    const handleDemoClick = (index: number) => {
-        setCurrentDemoIndex(index)
-        setIsPlaying(true)
+        // Reset progress
+        setProgress(0)
+
+        // Set duration based on video type
+        if (DEMOS[selectedDemo].video.type === 'local') {
+            if (videoRef.current) {
+                setVideoDuration(videoRef.current.duration * 1000) // Convert to milliseconds
+            }
+        } else {
+            setVideoDuration(DURATION)
+        }
+
+        // Animate progress over duration
+        const step = 100
+        let elapsed = 0
+        intervalRef.current = setInterval(() => {
+            elapsed += step
+            setProgress((elapsed / videoDuration) * 100)
+            if (elapsed >= videoDuration) {
+                clearInterval(intervalRef.current!)
+                setSelectedDemo((prev) => (prev + 1) % DEMOS.length)
+            }
+        }, step)
+
+        return () => clearInterval(intervalRef.current!)
+    }, [selectedDemo, videoDuration])
+
+    const handleManualSelect = (index: number) => {
+        if (index !== selectedDemo) {
+            clearInterval(intervalRef.current!)
+            setSelectedDemo(index)
+        }
     }
 
     return (
-        <div className="flex flex-col w-full gap-8 overflow-hidden">
-            {/* Current Demo */}
-            <div className="relative w-full aspect-[9/16] rounded-2xl overflow-hidden">
-                <video
-                    ref={videoRef}
-                    src={DEMOS[currentDemoIndex].video.url}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    playsInline
-                    muted
-                    loop
-                />
-
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80" />
-
-                {/* Text Overlay */}
-                <div className="absolute bottom-0 left-0 w-full p-6 md:p-8">
-                    <h3 className="text-xl md:text-2xl font-semibold text-white mb-2">
-                        {DEMOS[currentDemoIndex].title}
-                    </h3>
-                    <p className="text-sm md:text-base text-gray-300">
-                        {DEMOS[currentDemoIndex].description}
-                    </p>
-                </div>
-            </div>
-
-            {/* Demo List */}
-            <div className="flex flex-col gap-4">
-                <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
-                >
-                    <span className="text-lg font-medium">All Features</span>
-                    {isExpanded ? (
-                        <ChevronDown className="w-5 h-5" />
-                    ) : (
-                        <ChevronRight className="w-5 h-5" />
-                    )}
-                </button>
-
-                {isExpanded && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {DEMOS.map((demo, index) => (
-                            <button
-                                key={index}
-                                className={`
-                                    flex flex-col gap-2 p-4 rounded-xl text-left
-                                    transition-all duration-300
-                                    ${
-                                        currentDemoIndex === index
-                                            ? 'bg-white/20'
-                                            : 'bg-white/5 hover:bg-white/10'
-                                    }
-                                `}
-                                onClick={() => handleDemoClick(index)}
-                            >
-                                <h4 className="text-white text-lg font-medium">
+        <div className="flex flex-col md:flex-row w-full h-fit gap-8 border-[0.5px] border-white/50 rounded-xl px-4 md:px-8 py-4 md:py-8 text-white">
+            <div className="flex flex-col w-full md:w-80 gap-4 flex-none">
+                <p className="text-xl md:text-2xl font-bold my-2 md:my-4">🎬 Demos</p>
+                {
+                    DEMOS.map((demo, index) => (
+                        <div
+                            key={index}
+                            className={`
+                                flex flex-col w-full md:w-80 gap-4 border-[0.5px] border-white/50 rounded-xl p-3 md:p-4 
+                                cursor-pointer hover:bg-white/5 transition-colors 
+                                ${selectedDemo === index ? 'border-blue-500 bg-white/10' : ''}`}
+                            onClick={() => {
+                                handleManualSelect(index)
+                            }}
+                        >
+                            <div className="flex items-center justify-between">
+                                <p className="text-base md:text-lg">
                                     {demo.title}
-                                </h4>
-                                <p className="text-gray-400 text-sm">
-                                    {demo.description}
                                 </p>
-                            </button>
-                        ))}
-                    </div>
-                )}
+                                {
+                                    expandedDemos.has(index) ? (
+                                        <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+                                    ) : (
+                                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+                                    )
+                                }
+                            </div>
+                            {
+                                expandedDemos.has(index) && (
+                                    <p className="text-xs md:text-sm text-gray-300 pl-4 leading-relaxed relative before:absolute before:left-0 before:top-0 before:content-['•'] before:text-gray-300">
+                                        {demo.description}
+                                    </p>
+                                )
+                            }
+                            {selectedDemo === index && (
+                                <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden mt-2">
+                                    <div
+                                        className="bg-orange-500 h-full transition-all duration-[100ms]"
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    ))
+                }
+            </div>
+            <div className="flex flex-col flex-grow h-full">
+                <p className="h-10 md:h-20"></p>
+                <div className="w-full h-[300px] md:h-full rounded-xl overflow-hidden">
+                    {DEMOS[selectedDemo].video.type === 'youtube' ? (
+                        <iframe
+                            src={DEMOS[selectedDemo].video.url.replace('watch?v=', 'embed/')}
+                            className="w-full h-full object-cover"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            key={selectedDemo}
+                        />
+                    ) : (
+                        <video
+                            ref={videoRef}
+                            src={DEMOS[selectedDemo].video.url}
+                            className="w-full h-full object-cover"
+                            autoPlay
+                            muted
+                            playsInline
+                            key={selectedDemo}
+                            onLoadedMetadata={(e) => {
+                                const video = e.target as HTMLVideoElement
+                                setVideoDuration(video.duration * 1000)
+                            }}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     )
 }
+
+export default Demos
