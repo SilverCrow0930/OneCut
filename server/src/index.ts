@@ -24,7 +24,7 @@ const app = express()
 // Configure CORS based on environment
 const corsOptions = {
     origin: NODE_ENV === 'production'
-        ? ['https://lemona.studio', 'https://lemona-app.onrender.com', ...(ALLOWED_ORIGINS?.split(',') || [])]
+        ? ['https://lemona.studio', 'https://www.lemona.studio', 'https://lemona-app.onrender.com', ...(ALLOWED_ORIGINS?.split(',') || [])]
         : ['http://localhost:3000'],
     credentials: true
 }
