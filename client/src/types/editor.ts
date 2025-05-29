@@ -11,7 +11,7 @@ export interface ToolPanel {
     component: React.ComponentType
 }
 
-export type TrackType = 'video' | 'audio'
+export type TrackType = 'video' | 'audio' | 'text'
 
 export interface Track {
     id: string

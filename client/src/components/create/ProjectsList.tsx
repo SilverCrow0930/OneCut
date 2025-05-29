@@ -110,13 +110,13 @@ export default function ProjectsList() {
                         }}
                     >
                         {/* Thumbnail */}
-                        <img
-                            src="/nikokado.jpg"
-                            alt="Project thumbnail"
-                            className="absolute inset-0 w-full h-full object-cover"
+                        <div
+                            className="absolute inset-0 w-full h-full bg-black"
                         />
+
                         {/* Dark overlay on hover */}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
+
                         {/* Title and duration container */}
                         <div className="relative z-20 w-full flex flex-col">
                             <span className="w-full px-4 py-3 text-white text-base font-medium text-ellipsis overflow-hidden whitespace-nowrap">

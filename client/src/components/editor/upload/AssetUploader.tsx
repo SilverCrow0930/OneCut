@@ -1,28 +1,44 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { Upload } from 'lucide-react'
+
+interface UploadProgress {
+    fileName: string;
+    progress: number;
+    error?: string;
+}
 
 export default function AssetUploader({ onUpload }: { onUpload: () => void }) {
     const { session } = useAuth()
     const inputRef = useRef<HTMLInputElement>(null)
     const [uploading, setUploading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [isDragging, setIsDragging] = useState<boolean>(false);
+    const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([])
+    const [isDragging, setIsDragging] = useState<boolean>(false)
+    const [showProgress, setShowProgress] = useState(false)
 
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-
-        if (!file) {
-            return setError('No file selected')
+    // Auto-hide progress UI when all uploads are successful
+    useEffect(() => {
+        if (uploadProgress.length > 0) {
+            const allSuccessful = uploadProgress.every(p => p.progress === 100 && !p.error)
+            if (allSuccessful) {
+                const timer = setTimeout(() => {
+                    setShowProgress(false)
+                    setUploadProgress([])
+                }, 1000) // Wait 1 second before hiding
+                return () => clearTimeout(timer)
+            }
         }
+    }, [uploadProgress])
 
+    const uploadFile = async (file: File): Promise<void> => {
         if (!session?.access_token) {
-            return setError('Not signed in')
+            throw new Error('Not signed in')
         }
 
-        setUploading(true)
-        setError(null)
+        // Add file to progress tracking
+        setUploadProgress(prev => [...prev, { fileName: file.name, progress: 0 }])
+        setShowProgress(true)
 
         try {
             // 1) measure duration in ms
@@ -60,14 +76,33 @@ export default function AssetUploader({ onUpload }: { onUpload: () => void }) {
                 throw new Error(`Upload failed ${response.status}: ${text}`)
             }
 
-            // success!
-            onUpload()
-        }
-        catch (err: any) {
+            // Update progress to 100%
+            setUploadProgress(prev =>
+                prev.map(p => p.fileName === file.name ? { ...p, progress: 100 } : p)
+            )
+        } catch (err: any) {
             console.error('Asset upload error:', err)
-            setError(err.message)
+            setUploadProgress(prev =>
+                prev.map(p => p.fileName === file.name ? { ...p, error: err.message } : p)
+            )
+            throw err
         }
-        finally {
+    }
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || [])
+        if (files.length === 0) return
+
+        setUploading(true)
+        setUploadProgress([])
+        setShowProgress(true)
+
+        try {
+            await Promise.all(files.map(file => uploadFile(file)))
+            onUpload()
+        } catch (err) {
+            console.error('Batch upload error:', err)
+        } finally {
             setUploading(false)
             if (inputRef.current) {
                 inputRef.current.value = ''
@@ -80,21 +115,22 @@ export default function AssetUploader({ onUpload }: { onUpload: () => void }) {
             <div
                 className={`
                     relative flex flex-col w-full min-h-64 items-center justify-center
-                    p-2 rounded-xl gap-2
-                    border-0 transition-colors duration-500 
+                    p-6 rounded-xl gap-4
+                    border-2 border-gray-300 bg-gray-200 transition-all duration-300 ease-in-out
                     ${isDragging ?
-                        'border-blue-500 bg-gray-100' :
-                        'border-gray-400 bg-gray-200'
+                        'border-blue-400 bg-blue-100 shadow-inner' :
+                        ''
                     }
                 `}
             >
                 <label className="
                     flex flex-row gap-2 items-center text-white 
-                    px-5 py-2 rounded-2xl
-                    bg-blue-200 hover:bg-blue-500 duration-500
+                    px-6 py-3 rounded-xl
+                    bg-blue-400 hover:bg-blue-500 active:bg-blue-600
+                    transition-all duration-200
                     cursor-pointer
                 ">
-                    <Upload className='w-4 h-4 mb-[2px]' />
+                    <Upload className='w-5 h-5' />
                     {uploading ? 'Uploading…' : 'Upload'}
                     <input
                         type="file"
@@ -102,14 +138,65 @@ export default function AssetUploader({ onUpload }: { onUpload: () => void }) {
                         ref={inputRef}
                         onChange={handleUpload}
                         disabled={uploading}
+                        multiple
                         className="hidden"
                     />
                 </label>
-                <p className="text-gray-900 text-sm">
+                <p className="text-gray-500 text-sm">
                     or drag here
                 </p>
             </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+
+            {/* Upload Progress */}
+            {showProgress && uploadProgress.length > 0 && (
+                <div className="w-full space-y-4 bg-white/60 backdrop-blur-md rounded-xl p-4 shadow-sm border border-gray-100 transition-all duration-500 ease-in-out">
+                    {uploadProgress.map((progress, index) => (
+                        <div key={index} className="w-full group">
+                            <div className="flex justify-between items-center mb-2.5">
+                                <div className="flex items-center gap-2">
+                                    <div className={`
+                                        w-2 h-2 rounded-full
+                                        ${progress.error
+                                            ? 'bg-red-400 animate-pulse'
+                                            : progress.progress === 100
+                                                ? 'bg-green-400'
+                                                : 'bg-blue-400 animate-pulse'
+                                        }
+                                    `} />
+                                    <span className="text-sm font-medium text-gray-800 truncate max-w-[200px]">
+                                        {progress.fileName}
+                                    </span>
+                                </div>
+                                <span className="text-sm font-medium text-gray-500 tabular-nums min-w-[3rem] text-right">
+                                    {progress.progress}%
+                                </span>
+                            </div>
+                            <div className="w-full h-1 bg-gray-100/80 rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-500 ease-out ${progress.error
+                                        ? 'bg-gradient-to-r from-red-400 to-red-500'
+                                        : progress.progress === 100
+                                            ? 'bg-gradient-to-r from-green-400 to-green-500'
+                                            : 'bg-gradient-to-r from-blue-400 to-blue-500'
+                                        }`}
+                                    style={{
+                                        width: `${progress.progress}%`,
+                                        transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                                    }}
+                                />
+                            </div>
+                            {progress.error && (
+                                <p className="text-red-500 text-xs mt-2 font-medium flex items-center gap-1.5">
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    {progress.error}
+                                </p>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     )
 }

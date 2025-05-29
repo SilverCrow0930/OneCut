@@ -16,6 +16,7 @@ import { useEditor } from '@/contexts/EditorContext'
 import { v4 as uuid } from 'uuid'
 import { useParams } from 'next/navigation'
 import { TrackType } from '@/types/editor'
+import PanelHeader from './PanelHeader'
 
 type ProcessingState = 'idle' | 'starting' | 'generatingurl' | 'analyzing' | 'completed' | 'error';
 
@@ -45,6 +46,7 @@ const FuturisticThought: React.FC<{
     const [displayedText, setDisplayedText] = useState('');
     const [cursorVisible, setCursorVisible] = useState(true);
     const textRef = useRef(text);
+    const contentRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         console.log('FuturisticThought mounted/updated:', { text, index, total });
@@ -62,11 +64,16 @@ const FuturisticThought: React.FC<{
             if (currentIndex < currentText.length) {
                 setDisplayedText(prev => prev + currentText[currentIndex]);
                 currentIndex++;
+
+                // Scroll to bottom after each character is added
+                if (contentRef.current) {
+                    contentRef.current.scrollTop = contentRef.current.scrollHeight;
+                }
             } else {
                 clearInterval(typingInterval);
-                onTypingComplete?.(); // Use optional chaining to call onTypingComplete if it exists
+                onTypingComplete?.();
             }
-        }, 20); // Faster typing speed for more dynamic feel
+        }, 20);
 
         return () => {
             clearInterval(typingInterval);
@@ -114,8 +121,8 @@ const FuturisticThought: React.FC<{
                         </div>
                     </div>
 
-                    {/* Content area with markdown support */}
-                    <div className="prose prose-sm max-w-none">
+                    {/* Content area with markdown support and scrolling */}
+                    <div className="prose prose-sm max-w-none max-h-[400px] overflow-y-auto custom-scrollbar-hidden" ref={contentRef}>
                         <div className="relative">
                             <ReactMarkdown
                                 components={{
@@ -231,18 +238,24 @@ const SceneCard: React.FC<SceneCardProps> = ({ scene, index }) => {
                     <h3 className="text-sm font-medium text-gray-900">Scene Captions</h3>
                 </div>
                 <div className="space-y-3">
-                    {scene.captions.map((caption, capIndex) => (
-                        <div
-                            key={capIndex}
-                            className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
-                        >
-                            {/* Caption number badge */}
-                            <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-blue-100 rounded-full text-blue-700 text-xs font-medium">
-                                {capIndex + 1}
+                    {scene.captions && scene.captions.length > 0 ? (
+                        scene.captions.map((caption, capIndex) => (
+                            <div
+                                key={capIndex}
+                                className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+                            >
+                                {/* Caption number badge */}
+                                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-blue-100 rounded-full text-blue-700 text-xs font-medium">
+                                    {capIndex + 1}
+                                </div>
+                                <p className="text-sm text-gray-700 flex-1 leading-relaxed">{caption}</p>
                             </div>
-                            <p className="text-sm text-gray-700 flex-1 leading-relaxed">{caption}</p>
+                        ))
+                    ) : (
+                        <div className="text-sm text-gray-500 italic p-3">
+                            No captions available for this scene
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
         </div>
@@ -459,11 +472,20 @@ const AutoCutToolPanel = () => {
                 }
 
                 console.log('Processed thoughtsText:', thoughtsText);
-                // Split thoughts and ensure we have valid entries
+                // Split thoughts and ensure we have valid entries, filtering out any JSON/cuts content
                 const processedThoughts = thoughtsText
                     .split('\n\n')
                     .map(thought => thought.trim())
-                    .filter(thought => thought && thought.length > 0);
+                    .filter((thought: string) => {
+                        // Filter out any thoughts that contain JSON or look like cuts
+                        return thought &&
+                            thought.length > 0 &&
+                            !thought.includes('```json') &&
+                            !thought.includes('{') &&
+                            !thought.includes('[') &&
+                            !thought.includes('"src_start"') &&
+                            !thought.includes('"src_end"');
+                    });
 
                 console.log('Processed thoughts array:', processedThoughts);
                 thoughtsRef.current = processedThoughts;
@@ -656,265 +678,218 @@ const AutoCutToolPanel = () => {
     };
 
     return (
-        <div className="flex flex-col gap-2 p-4 overflow-y-auto custom-scrollbar-hidden">
-            <style>{styles}</style>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept="video/*"
-                className="hidden"
+        <div className="flex flex-col gap-6 p-4 bg-white rounded-lg h-full">
+            <PanelHeader
+                icon={Brain}
+                title="AI Pilot"
+                iconBgColor="bg-purple-50"
+                iconColor="text-purple-600"
             />
-            <div className="sticky top-0 z-10 bg-white">
-                <UploadButton
-                    onClick={() => {
-                        fileInputRef.current?.click()
-                    }}
-                />
-            </div>
-            <div className="flex-1 flex flex-col gap-4">
-                {((isUploading || processingState !== 'idle') && !showThoughts && !showResponse) && (
-                    <ProcessingStatus
-                        processingState={processingState}
-                        isUploading={isUploading}
-                        uploadProgress={uploadProgress}
-                        processingMessage={getProcessingMessage()}
+            <div className="space-y-4 flex-1 min-h-0">
+                <div className="flex flex-col gap-2 h-full">
+                    <style>{styles}</style>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        accept="video/*"
+                        className="hidden"
                     />
-                )}
-                {
-                    showThoughts && modelResponse && thoughtsRef.current.length > 0 && (
-                        <div className="h-fit">
-                            <FuturisticThought
-                                text={thoughtsRef.current.join('\n\n')}
-                                index={0}
-                                total={1}
-                                onTypingComplete={() => {
-                                    // Wait a bit after typing is complete before showing response
-                                    setTimeout(() => {
-                                        setShowThoughts(false);
-                                        setShowResponse(true);
-                                    }, 2000);
-                                }}
-                            />
-                        </div>
-                    )
-                }
-                {
-                    ((isUploading || processingState !== 'idle' || uploadedAsset || showThoughts || showResponse)) ? (
-                        <VideoDetailsSection
-                            isExpanded={isExpanded}
-                            setIsExpanded={setIsExpanded}
-                            processingState={processingState}
-                            selectedFile={selectedFile}
-                            uploadedAsset={uploadedAsset}
-                            prompt={prompt}
-                            lastPrompt={lastPrompt}
-                            assets={assets}
-                            showThoughts={showThoughts}
-                            showResponse={showResponse}
+                    <div className="sticky top-0 z-10 bg-white mb-2">
+                        <UploadButton
+                            onClick={() => {
+                                fileInputRef.current?.click()
+                            }}
                         />
-                    ) : null
-                }
-                {
-                    error && (
-                        <div className="text-sm text-red-500 animate-fadeIn">
-                            {error}
-                        </div>
-                    )
-                }
-                {
-                    showResponse && modelResponse && (
-                        <div className="animate-slideUp">
-                            <div className="flex flex-col gap-4 bg-white rounded-lg">
-                                <div className="flex items-center gap-3 p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
-                                    <div className="p-2 bg-white rounded-lg shadow-sm">
-                                        <img
-                                            src="/assets/icons/lemon.png"
-                                            alt="AI Pilot"
-                                            className="w-5 h-5"
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium text-gray-900">AI Pilot</p>
-                                    </div>
-                                    <button
-                                        className="p-2 hover:bg-gray-300 rounded-lg transition-colors duration-500"
-                                        onClick={() => {
-                                            if (!modelResponse?.textOutput || !uploadedAsset?.id) return;
+                    </div>
+                    <div className="flex-1 flex flex-col gap-4 min-h-0">
+                        {
+                            ((isUploading || processingState !== 'idle') && !showThoughts && !showResponse) && (
+                                <ProcessingStatus
+                                    processingState={processingState}
+                                    isUploading={isUploading}
+                                    uploadProgress={uploadProgress}
+                                    processingMessage={getProcessingMessage()}
+                                />
+                            )
+                        }
+                        {
+                            showThoughts && modelResponse && thoughtsRef.current.length > 0 && (
+                                <div className="h-fit">
+                                    <FuturisticThought
+                                        text={thoughtsRef.current.join('\n\n')}
+                                        index={0}
+                                        total={1}
+                                        onTypingComplete={() => {
+                                            // Wait a bit after typing is complete before showing response
+                                            setTimeout(() => {
+                                                setShowThoughts(false);
+                                                setShowResponse(true);
+                                            }, 2000);
+                                        }}
+                                    />
+                                </div>
+                            )
+                        }
+                        {
+                            ((isUploading || processingState !== 'idle' || uploadedAsset || showThoughts || showResponse)) ? (
+                                <VideoDetailsSection
+                                    isExpanded={isExpanded}
+                                    setIsExpanded={setIsExpanded}
+                                    processingState={processingState}
+                                    selectedFile={selectedFile}
+                                    uploadedAsset={uploadedAsset}
+                                    prompt={prompt}
+                                    lastPrompt={lastPrompt}
+                                    assets={assets}
+                                    showThoughts={showThoughts}
+                                    showResponse={showResponse}
+                                />
+                            ) : null
+                        }
+                        {
+                            error && (
+                                <div className="text-sm text-red-500 animate-fadeIn">
+                                    {error}
+                                </div>
+                            )
+                        }
+                        {
+                            showResponse && modelResponse && (
+                                <div className="animate-slideUp flex-1 min-h-0">
+                                    <div className="flex flex-col gap-4 bg-white rounded-lg h-full">
+                                        <div className="flex items-center gap-3 p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+                                            <div className="p-2 bg-white rounded-lg shadow-sm">
+                                                <img
+                                                    src="/assets/icons/lemon.png"
+                                                    alt="AI Pilot"
+                                                    className="w-5 h-5"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-gray-900">AI Pilot</p>
+                                            </div>
+                                            <button
+                                                className="p-2 hover:bg-gray-300 rounded-lg transition-colors duration-500"
+                                                onClick={() => {
+                                                    if (!modelResponse?.textOutput || !uploadedAsset?.id) return;
 
-                                            try {
-                                                // Extract JSON from markdown code block if present
-                                                let jsonStr = modelResponse.textOutput;
-                                                const jsonMatch = jsonStr.match(/```json\n([\s\S]*?)\n```/);
-                                                if (jsonMatch) {
-                                                    jsonStr = jsonMatch[1].trim();
-                                                } else {
-                                                    // If no markdown block, try to find JSON array
-                                                    const arrayMatch = jsonStr.match(/\[\s*\{[\s\S]*\}\s*\]/);
-                                                    if (arrayMatch) {
-                                                        jsonStr = arrayMatch[0].trim();
-                                                    }
-                                                }
+                                                    try {
+                                                        // Extract JSON from markdown code block if present
+                                                        let jsonStr = modelResponse.textOutput;
+                                                        const jsonMatch = jsonStr.match(/```json\n([\s\S]*?)\n```/);
+                                                        if (jsonMatch) {
+                                                            jsonStr = jsonMatch[1].trim();
+                                                        } else {
+                                                            // If no markdown block, try to find JSON array
+                                                            const arrayMatch = jsonStr.match(/\[\s*\{[\s\S]*\}\s*\]/);
+                                                            if (arrayMatch) {
+                                                                jsonStr = arrayMatch[0].trim();
+                                                            }
+                                                        }
 
-                                                // Parse the scenes from the extracted JSON
-                                                const scenes: Scene[] = JSON.parse(jsonStr);
+                                                        // Parse the scenes from the extracted JSON
+                                                        const scenes: Scene[] = JSON.parse(jsonStr);
 
-                                                // Create a new video track
-                                                const newTrack = {
-                                                    id: uuid(),
-                                                    projectId: projectId!,
-                                                    index: tracks.length, // Add at the end
-                                                    type: 'video' as TrackType,
-                                                    createdAt: new Date().toISOString(),
-                                                    name: 'AutoCut Video Track',
-                                                    isLocked: false,
-                                                    isMuted: false,
-                                                    isSolo: false,
-                                                    volume: 1,
-                                                    pan: 0,
-                                                };
-
-                                                // Create a single video track for all captions (using video type instead of text)
-                                                const textTrack = {
-                                                    id: uuid(),
-                                                    projectId: projectId!,
-                                                    index: tracks.length + 1, // Add after video track
-                                                    type: 'text' as TrackType,
-                                                    createdAt: new Date().toISOString(),
-                                                    name: 'AutoCut Captions',
-                                                    isLocked: false,
-                                                    isMuted: false,
-                                                    isSolo: false,
-                                                    volume: 1,
-                                                    pan: 0,
-                                                };
-
-                                                // First, collect all tracks and clips
-                                                const allTracks = [newTrack, textTrack];
-                                                const allClips = [];
-
-                                                // Create all the clips
-                                                const newClips = scenes.map((scene, index) => {
-                                                    const duration = scene.src_end - scene.src_start;
-                                                    const timelineStartMs = index === 0 ? 0 : scenes.slice(0, index).reduce((acc, s) => acc + (s.src_end - s.src_start), 0);
-                                                    const timelineEndMs = timelineStartMs + duration;
-
-                                                    const videoClip = {
-                                                        id: uuid(),
-                                                        trackId: newTrack.id,
-                                                        assetId: uploadedAsset.id,
-                                                        type: 'video' as const,
-                                                        sourceStartMs: scene.src_start,
-                                                        sourceEndMs: scene.src_end,
-                                                        timelineStartMs,
-                                                        timelineEndMs,
-                                                        assetDurationMs: uploadedAsset.duration || 0,
-                                                        volume: 1,
-                                                        speed: 1,
-                                                        properties: {
-                                                            name: `Scene ${index + 1}`,
+                                                        // Create a new video track
+                                                        const newTrack = {
+                                                            id: uuid(),
+                                                            projectId: projectId!,
+                                                            index: tracks.length, // Add at the end
+                                                            type: 'video' as TrackType,
+                                                            createdAt: new Date().toISOString(),
+                                                            name: 'AutoCut Video Track',
                                                             isLocked: false,
                                                             isMuted: false,
                                                             isSolo: false,
-                                                        },
-                                                        createdAt: new Date().toISOString(),
-                                                    };
+                                                            volume: 1,
+                                                            pan: 0,
+                                                        };
 
-                                                    // Create text clips for each caption
-                                                    const textClips = scene.captions.map((caption, capIndex) => {
-                                                        // Calculate timing for this caption
-                                                        const clipDuration = videoClip.timelineEndMs - videoClip.timelineStartMs;
-                                                        const captionDuration = Math.round(clipDuration / scene.captions.length);
-                                                        const captionStart = Math.round(videoClip.timelineStartMs + (capIndex * captionDuration));
-                                                        const captionEnd = Math.round(captionStart + captionDuration);
+                                                        // First, collect all tracks and clips
+                                                        const allTracks = [newTrack];
+                                                        const allClips = [];
 
-                                                        return {
-                                                            clip: {
+                                                        // Create all the clips
+                                                        const newClips = scenes.map((scene, index) => {
+                                                            const duration = scene.src_end - scene.src_start;
+                                                            const timelineStartMs = index === 0 ? 0 : scenes.slice(0, index).reduce((acc, s) => acc + (s.src_end - s.src_start), 0);
+                                                            const timelineEndMs = timelineStartMs + duration;
+
+                                                            const videoClip = {
                                                                 id: uuid(),
-                                                                trackId: textTrack.id,
-                                                                type: 'text' as const,
-                                                                sourceStartMs: 0,
-                                                                sourceEndMs: captionDuration,
-                                                                timelineStartMs: captionStart,
-                                                                timelineEndMs: captionEnd,
-                                                                assetDurationMs: captionDuration,
+                                                                trackId: newTrack.id,
+                                                                assetId: uploadedAsset.id,
+                                                                type: 'video' as const,
+                                                                sourceStartMs: scene.src_start,
+                                                                sourceEndMs: scene.src_end,
+                                                                timelineStartMs,
+                                                                timelineEndMs,
+                                                                assetDurationMs: uploadedAsset.duration || 0,
                                                                 volume: 1,
                                                                 speed: 1,
                                                                 properties: {
-                                                                    text: caption,
-                                                                    name: `Caption ${capIndex + 1}`,
+                                                                    name: `Scene ${index + 1}`,
                                                                     isLocked: false,
                                                                     isMuted: false,
                                                                     isSolo: false,
-                                                                    style: {
-                                                                        overflow: 'hidden',
-                                                                        whiteSpace: 'nowrap',
-                                                                        textOverflow: 'ellipsis',
-                                                                    }
                                                                 },
                                                                 createdAt: new Date().toISOString(),
+                                                            };
+
+                                                            return {
+                                                                videoClip
+                                                            };
+                                                        });
+
+                                                        // Add track and clips in a single batch command
+                                                        executeCommand({
+                                                            type: 'BATCH',
+                                                            payload: {
+                                                                commands: [
+                                                                    // First, add all tracks
+                                                                    ...allTracks.map(track => ({
+                                                                        type: 'ADD_TRACK' as const,
+                                                                        payload: { track }
+                                                                    })),
+                                                                    // Then, add all clips
+                                                                    ...newClips.map(({ videoClip }) => ({
+                                                                        type: 'ADD_CLIP' as const,
+                                                                        payload: { clip: videoClip }
+                                                                    }))
+                                                                ]
                                                             }
-                                                        };
-                                                    });
-
-                                                    return {
-                                                        videoClip,
-                                                        textClips
-                                                    };
-                                                });
-
-                                                // Add track and clips in a single batch command
-                                                executeCommand({
-                                                    type: 'BATCH',
-                                                    payload: {
-                                                        commands: [
-                                                            // First, add all tracks
-                                                            ...allTracks.map(track => ({
-                                                                type: 'ADD_TRACK' as const,
-                                                                payload: { track }
-                                                            })),
-                                                            // Then, add all clips
-                                                            ...newClips.flatMap(({ videoClip, textClips }) => [
-                                                                {
-                                                                    type: 'ADD_CLIP' as const,
-                                                                    payload: { clip: videoClip }
-                                                                },
-                                                                ...textClips.map(({ clip }) => ({
-                                                                    type: 'ADD_CLIP' as const,
-                                                                    payload: { clip }
-                                                                }))
-                                                            ])
-                                                        ]
+                                                        });
+                                                    } catch (error) {
+                                                        console.error('Error adding cuts to timeline:', error);
                                                     }
-                                                });
-                                            } catch (error) {
-                                                console.error('Error adding cuts to timeline:', error);
-                                            }
-                                        }}
-                                    >
-                                        <Play className="w-4 h-4 text-blue-600" />
-                                    </button>
+                                                }}
+                                            >
+                                                <Play className="w-4 h-4 text-blue-600" />
+                                            </button>
+                                        </div>
+                                        <div className="text-sm text-gray-600 overflow-y-auto custom-scrollbar-hidden flex-1 min-h-0">
+                                            <AnalysisResult data={modelResponse.textOutput} />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-sm text-gray-600 overflow-y-auto custom-scrollbar-hidden">
-                                    <AnalysisResult data={modelResponse.textOutput} />
-                                </div>
-                            </div>
-                        </div>
-                    )
-                }
+                            )
+                        }
+                    </div>
+                </div>
+                <PromptModal
+                    isOpen={showPromptModal}
+                    onClose={handleCloseModal}
+                    selectedFile={selectedFile}
+                    prompt={prompt}
+                    onPromptChange={setPrompt}
+                    onSubmit={handlePromptSubmit}
+                    isUploading={isUploading}
+                    error={error}
+                    uploadProgress={uploadProgress}
+                />
             </div>
-            <PromptModal
-                isOpen={showPromptModal}
-                onClose={handleCloseModal}
-                selectedFile={selectedFile}
-                prompt={prompt}
-                onPromptChange={setPrompt}
-                onSubmit={handlePromptSubmit}
-                isUploading={isUploading}
-                error={error}
-                uploadProgress={uploadProgress}
-            />
-        </div>
+        </div >
     );
 };
 

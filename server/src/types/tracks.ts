@@ -1,4 +1,4 @@
-export type TrackType = 'audio' | 'video'
+export type TrackType = 'audio' | 'video' | 'text'
 
 export interface DBTrack {
     /** UUID primary key */

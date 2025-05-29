@@ -11,17 +11,17 @@ export default function TrackRow({
     track,
     clips,
     timelineSetIsDragOver,
-    isSelected,
-    onClick,
+    onClipSelect,
+    selectedClipId,
 }: {
     track: Track
     clips: Clip[]
     timelineSetIsDragOver: (isDragOver: boolean) => void
-    isSelected: boolean
-    onClick: () => void
+    onClipSelect: (id: string | null) => void
+    selectedClipId: string | null
 }) {
     const rowRef = useRef<HTMLDivElement>(null)
-    const { executeCommand, tracks, clips: allClips, setSelectedClipId } = useEditor()
+    const { executeCommand, tracks, clips: allClips } = useEditor()
     const { assets } = useAssets()
     const { zoomLevel } = useZoom()
     const timeScale = getTimeScale(zoomLevel)
@@ -188,11 +188,8 @@ export default function TrackRow({
                     transition-all duration-200 rounded-md
                     bg-gray-50 hover:bg-gray-100
                     shadow-sm
-                    cursor-pointer
-                    ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}
                 `}
                 onContextMenu={handleContextMenu}
-                onClick={onClick}
                 onDragOver={e => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -215,14 +212,43 @@ export default function TrackRow({
                 }}
                 onDrop={handleDrop}
             >
-                {
-                    clips.map(c => (
-                        <ClipItem
-                            key={c.id}
-                            clip={c}
-                        />
-                    ))
-                }
+                {/* Background div that receives timeline clicks */}
+                <div
+                    className="absolute inset-0"
+                    onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        // Get the timeline container
+                        const timelineContainer = rowRef.current?.closest('.timeline-container')
+                        if (timelineContainer) {
+                            const rect = timelineContainer.getBoundingClientRect()
+                            const x = e.clientX - rect.left + timelineContainer.scrollLeft
+
+                            // Create a new click event on the timeline container
+                            const clickEvent = new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                clientX: e.clientX,
+                                clientY: e.clientY
+                            })
+                            timelineContainer.dispatchEvent(clickEvent)
+                        }
+                    }}
+                />
+
+                {/* Clips container */}
+                <div className="absolute inset-0">
+                    {
+                        clips.map(c => (
+                            <ClipItem
+                                key={c.id}
+                                clip={c}
+                                onSelect={onClipSelect}
+                                selected={selectedClipId === c.id}
+                            />
+                        ))
+                    }
+                </div>
             </div>
             {
                 showContextMenu && (

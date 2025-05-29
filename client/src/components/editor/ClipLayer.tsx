@@ -21,7 +21,13 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const updateIntervalRef = useRef<number>(0)
 
     // Crop area state
-    const [crop, setCrop] = useState({ width: 320, height: 180, left: 0, top: 0 }) // default 16:9
+    const [crop, setCrop] = useState({
+        width: clip.type === 'text' ? 240 : 320,
+        height: clip.type === 'text' ? 100 : 180,
+        left: 0,
+        top: 0
+    }) // default 16:9, smaller for text
+
     // Pan/zoom state for media inside crop
     const [mediaPos, setMediaPos] = useState({ x: 0, y: 0 })
     const [mediaScale, setMediaScale] = useState(1)
@@ -178,6 +184,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             transform: `translate(-50%, -50%) scale(${mediaScale})`,
             userSelect: 'none' as const,
         }
+
         switch (clip.type) {
             case 'video':
                 return (
@@ -208,7 +215,8 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                             position: 'absolute',
                             left: 0,
                             right: 0,
-                            bottom: '10%',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -218,15 +226,11 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                     >
                         <div
                             style={{
-                                color: '#ffffff',
-                                fontSize: '1.5rem',
+                                ...clip.properties?.style,
                                 textAlign: 'center',
-                                fontFamily: 'system-ui, -apple-system, sans-serif',
-                                fontWeight: '500',
                                 lineHeight: '1.4',
-                                textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)',
                                 padding: '0.5rem 1rem',
-                                maxWidth: '90%',
+                                maxWidth: '80%',
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
                             }}
@@ -243,6 +247,8 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     useEffect(() => {
         const v = videoRef.current;
         if (!v || clip.type !== 'video') return;
+
+        let playPromise: Promise<void> | undefined;
 
         // Calculate target time
         const targetTime = sourceTime !== undefined
@@ -261,16 +267,27 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
         if (isPlaying) {
             v.volume = 1;
             v.muted = false;
-            const playPromise = v.play();
+            playPromise = v.play();
             if (playPromise !== undefined) {
-                playPromise.catch(() => {
-                    v.muted = true;
-                    v.play();
+                playPromise.catch((error) => {
+                    // Only handle AbortError if the video is still in the DOM
+                    if (error.name === 'AbortError' && document.contains(v)) {
+                        v.muted = true;
+                        v.play().catch(() => { }); // Ignore subsequent errors
+                    }
                 });
             }
         } else {
             v.pause();
         }
+
+        // Cleanup function
+        return () => {
+            if (playPromise) {
+                playPromise.catch(() => { }); // Prevent unhandled promise rejection
+            }
+            v.pause();
+        };
     }, [sourceTime, localMs, clip.type, isPlaying]);
 
     // Center crop area in player on first render
@@ -284,8 +301,9 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                 if (crop.left === 0 && crop.top === 0) {
                     return {
                         ...crop,
-                        left: (rect.width - crop.width) / 2,
-                        top: (rect.height - crop.height) / 2
+                        height: rect.height, // Cover player vertically
+                        top: 0,              // Start at top
+                        left: (rect.width - crop.width) / 2 // Center horizontally
                     };
                 }
                 return crop;
@@ -318,7 +336,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                     top: crop.top,
                     overflow: 'visible',
                     position: 'absolute',
-                    background: clip.type === 'text' ? 'rgba(0, 0, 0, 0.1)' : 'black',
+                    background: clip.type === 'text' ? 'rgba(0, 0, 0, 0)' : 'black',
                 }}
                 onClick={handleClick}
             >

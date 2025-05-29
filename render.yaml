@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: lemona-backend
+    env: node
+    buildCommand: cd server && npm install && npm run build
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: ALLOWED_ORIGINS
+        value: https://lemona.studio,https://lemona-app.onrender.com
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: GIPHY_API_KEY
+        sync: false
+      - key: GOOGLE_CLOUD_STORAGE_BUCKET
+        sync: false
+      - key: GOOGLE_CLOUD_PROJECT_ID
+        sync: false
+      - key: GOOGLE_CLOUD_PRIVATE_KEY
+        sync: false
+      - key: GOOGLE_CLOUD_CLIENT_EMAIL
+        sync: false 

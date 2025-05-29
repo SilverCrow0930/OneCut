@@ -16,11 +16,19 @@ dotenv.config();
 const {
     ALLOWED_ORIGINS,
     PORT = '8080',
+    NODE_ENV = 'development'
 } = process.env
 
 const app = express()
 
-app.use(cors({ origin: ALLOWED_ORIGINS }))
+// Configure CORS based on environment
+const corsOptions = {
+    origin: NODE_ENV === 'production'
+        ? ['https://lemona.studio', 'https://lemona-app.onrender.com', ...(ALLOWED_ORIGINS?.split(',') || [])]
+        : ['http://localhost:3000'],
+    credentials: true
+}
+app.use(cors(corsOptions))
 app.use(helmet())
 app.use(express.json())
 app.use(bodyParser.json())

@@ -2,19 +2,6 @@ import React from 'react'
 import { useZoom } from '@/contexts/ZoomContext'
 import { formatTimeMs } from '@/lib/utils'
 
-// Configure your intervals here
-// Each entry represents: [zoomLevel, intervalInMs]
-const ZOOM_INTERVALS = [
-    [3, 50],     // 50ms intervals when zoomed in 300%+
-    [2, 200],    // 200ms intervals when zoomed in 200%+
-    [1.5, 500],  // 500ms intervals when zoomed in 150%+
-    [1, 1000],   // 1s intervals at normal zoom
-    [0.75, 2000], // 2s intervals when slightly zoomed out
-    [0.5, 5000],  // 5s intervals when zoomed out
-    [0.25, 10000], // 10s intervals when very zoomed out
-    [0, 20000],   // 20s intervals when extremely zoomed out
-] as const
-
 interface RulerProps {
     /** total duration of the timeline in milliseconds */
     totalMs: number;
@@ -24,6 +11,18 @@ interface RulerProps {
     heightPx?: number;
 }
 
+// Helper: find a "nice" interval
+function getNiceInterval(minMs: number) {
+    const intervals = [
+        1000, 2000, 5000, 10000, 15000, 30000, // seconds
+        60000, 120000, 300000, 600000, 1800000, 3600000 // minutes/hours
+    ];
+    for (const interval of intervals) {
+        if (interval >= minMs) return interval;
+    }
+    return intervals[intervals.length - 1];
+}
+
 export default function Ruler({
     totalMs,
     timeScale,
@@ -31,39 +30,28 @@ export default function Ruler({
 }: RulerProps) {
     const { zoomLevel } = useZoom()
 
-    const getInterval = () => {
-        for (const [zoomThreshold, interval] of ZOOM_INTERVALS) {
-            if (zoomLevel >= zoomThreshold) {
-                return interval
-            }
-        }
-        return ZOOM_INTERVALS[ZOOM_INTERVALS.length - 1][1] // fallback to last interval
-    }
-
-    const intervalMs = getInterval()
-    const ticks = []
+    const minLabelSpacingPx = 80;
+    const minIntervalMs = minLabelSpacingPx / timeScale;
+    const intervalMs = getNiceInterval(minIntervalMs);
+    let lastLabelX = -Infinity;
+    const ticks = [];
     for (let ms = 0; ms <= totalMs; ms += intervalMs) {
-        const x = ms * timeScale
-
-        // Major tick every second
-        const isMajorTick = ms % 1000 === 0
-
-        // Only render major ticks
-        if (isMajorTick) {
-            ticks.push(
-                <div key={ms} className="absolute" style={{ left: x }}>
-                    {/* the vertical tick line */}
-                    <div className="h-2 border-l border-gray-400" />
-                    {/* the label */}
+        const x = ms * timeScale;
+        const showLabel = x - lastLabelX >= minLabelSpacingPx;
+        if (showLabel) lastLabelX = x;
+        ticks.push(
+            <div key={ms} className="absolute" style={{ left: x }}>
+                <div className="h-2 border-l border-gray-400" />
+                {showLabel && (
                     <div
                         className="absolute top-2 text-xs select-none text-gray-600 font-medium"
                         style={{ transform: 'translateX(-50%)' }}
                     >
                         {formatTimeMs(ms)}
                     </div>
-                </div>
-            )
-        }
+                )}
+            </div>
+        );
     }
 
     return (

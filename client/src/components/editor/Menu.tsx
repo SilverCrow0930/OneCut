@@ -48,9 +48,9 @@ const Menu = () => {
                         className={`cursor-pointer ${!canRedo ? 'opacity-50' : ''}`}
                     />
                 </div> */}
-                {/* <div className="flex flex-row items-center gap-3">
+                <div className="flex flex-row items-center gap-3">
                     <SaveStatusIndicator />
-                </div> */}
+                </div>
             </div>
             <div className="flex flex-row items-center gap-3">
                 <ShareButton />

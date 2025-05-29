@@ -11,6 +11,7 @@ import { usePlayback } from '@/contexts/PlaybackContext'
 import { useZoom } from '@/contexts/ZoomContext'
 import Playhead from './Playhead'
 import EmptyTimeline from './EmptyTimeline'
+import TimelineLoading from './TimelineLoading'
 
 export default function Timeline() {
     const params = useParams()
@@ -32,7 +33,7 @@ export default function Timeline() {
         ? params.projectId[0]
         : params.projectId
 
-    const { tracks, clips, loadingTimeline, timelineError, executeCommand, setSelectedClipId, selectedTrackId, setSelectedTrackId } = useEditor()
+    const { tracks, clips, loadingTimeline, timelineError, executeCommand, setSelectedClipId, selectedClipId } = useEditor()
     const { currentTime, setDuration, isPlaying, setCurrentTime } = usePlayback()
     const currentTimeMs = currentTime * 1000
 
@@ -58,6 +59,27 @@ export default function Timeline() {
     const paddingMs = Math.max(1000, Math.ceil(targetMsAtMinZoom * (0.1 / zoomLevel)))
     const paddedMaxMs = maxMs + paddingMs
     const totalPx = Math.ceil(paddedMaxMs * timeScale)
+
+    // NEW: Ensure timeline fills the container
+    const [containerWidth, setContainerWidth] = useState(0)
+    useEffect(() => {
+        const handleResize = () => {
+            if (containerRef.current) {
+                setContainerWidth(containerRef.current.clientWidth)
+            }
+        }
+        handleResize()
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+    useEffect(() => {
+        if (containerRef.current) {
+            setContainerWidth(containerRef.current.clientWidth)
+        }
+    }, [tracks.length])
+    const minTimelineMs = 5 * 60000 // 5 minutes in ms
+    const minTimelinePx = minTimelineMs * timeScale
+    const timelineContentWidth = Math.max(totalPx, containerWidth, minTimelinePx)
 
     const playheadX = currentTimeMs * timeScale
 
@@ -222,13 +244,23 @@ export default function Timeline() {
     }
 
     const handleTimelineClick = (e: React.MouseEvent) => {
-        if (isPlaying || !containerRef.current) return
+        if (isPlaying || !containerRef.current) return;
 
-        const rect = containerRef.current.getBoundingClientRect()
-        const x = e.clientX - rect.left + containerRef.current.scrollLeft
-        const newTimeMs = Math.max(0, Math.round(x / timeScale))
-        setCurrentTime(newTimeMs / 1000)
-    }
+        // Get the target element
+        const target = e.target as HTMLElement;
+
+        // If the click is on a clip or its children, don't handle it
+        if (target.closest('[data-clip-layer]')) return;
+
+        // If the click is on the ruler or playhead, don't handle it
+        if (target.closest('.ruler') || target.closest('.playhead')) return;
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left + containerRef.current.scrollLeft;
+        const newTimeMs = Math.max(0, Math.round(x / timeScale));
+        setCurrentTime(newTimeMs / 1000);
+        setSelectedClipId(null);
+    };
 
     const handlePlayheadDrag = (e: React.MouseEvent) => {
         if (isPlaying || !containerRef.current) return
@@ -253,11 +285,7 @@ export default function Timeline() {
     }
 
     if (loadingTimeline) {
-        return (
-            <p className="p-4">
-                Loading timeline ...
-            </p>
-        )
+        return <TimelineLoading />
     }
 
     if (timelineError) {
@@ -274,7 +302,10 @@ export default function Timeline() {
             className={`
                 w-full h-full overflow-auto
                 transition-colors duration-500
-                ${isDragOver ? 'border-2 border-cyan-400 bg-cyan-50/50' : 'border border-transparent bg-white'}
+                timeline-container
+                ${isDragOver ?
+                    'border-2 border-cyan-400 bg-cyan-50/50' :
+                    'border border-transparent bg-white'}
             `}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -282,42 +313,44 @@ export default function Timeline() {
             onDrop={onDrop}
             onClick={handleTimelineClick}
         >
-            {tracks.length === 0 ? (
-                <EmptyTimeline />
-            ) : (
-                <div
-                    className="relative flex flex-col w-full gap-2"
-                    style={{
-                        width: totalPx + 1,
-                        minHeight: '100%',
-                        height: 'max-content'
-                    }}
-                >
-                    <Ruler
-                        totalMs={paddedMaxMs}
-                        timeScale={timeScale}
-                    />
-                    <Playhead
-                        playheadX={playheadX}
-                        onDrag={handlePlayheadDrag}
-                        isPlaying={isPlaying}
-                    />
-                    <div className="flex flex-col overflow-y-scroll gap-2">
-                        {
-                            tracks.map(t => (
-                                <TrackRow
-                                    key={t.id}
-                                    track={t}
-                                    clips={clipsByTrack.get(t.id) ?? []}
-                                    timelineSetIsDragOver={setIsDragOver}
-                                    isSelected={t.id === selectedTrackId}
-                                    onClick={() => setSelectedTrackId(t.id)}
-                                />
-                            ))
-                        }
+            {
+                tracks.length === 0 ? (
+                    <EmptyTimeline />
+                ) : (
+                    <div
+                        className="relative flex flex-col w-full gap-2"
+                        style={{
+                            width: timelineContentWidth + 1,
+                            minHeight: '100%',
+                            height: 'max-content'
+                        }}
+                    >
+                        <Ruler
+                            totalMs={timelineContentWidth / timeScale}
+                            timeScale={timeScale}
+                        />
+                        <Playhead
+                            playheadX={playheadX}
+                            onDrag={handlePlayheadDrag}
+                            isPlaying={isPlaying}
+                        />
+                        <div className="flex flex-col overflow-y-scroll gap-2">
+                            {
+                                tracks.map(t => (
+                                    <TrackRow
+                                        key={t.id}
+                                        track={t}
+                                        clips={clipsByTrack.get(t.id) ?? []}
+                                        timelineSetIsDragOver={setIsDragOver}
+                                        onClipSelect={setSelectedClipId}
+                                        selectedClipId={selectedClipId}
+                                    />
+                                ))
+                            }
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div>
     )
 }

@@ -29,7 +29,7 @@ export const PromptModal: React.FC<PromptModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 animate-fadeIn">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-5000 animate-fadeIn">
             <div className="bg-white rounded-xl p-6 w-[450px] max-w-[90%] shadow-2xl transform transition-all animate-slideUp">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">

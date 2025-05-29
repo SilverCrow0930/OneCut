@@ -87,7 +87,11 @@ export const initialHistory: HistoryState = {
 }
 
 // Base time scale (pixels per millisecond)
-export const BASE_TIME_SCALE = 0.1
+export const BASE_TIME_SCALE = 0.0016667
 
 // Function to calculate time scale based on zoom level
 export const getTimeScale = (zoomLevel: number) => BASE_TIME_SCALE * zoomLevel
+
+// If there is a zoom level array or max zoom constant, increase it to allow higher zooms (e.g., 400%)
+// Example (add or update as needed):
+export const MAX_ZOOM_LEVEL = 10; // 1000%

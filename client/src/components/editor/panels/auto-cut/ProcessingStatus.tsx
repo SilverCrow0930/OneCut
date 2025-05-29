@@ -40,15 +40,34 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
                     />
                 </div>
             )}
-            {processingState !== 'idle' && !isUploading && (
+            {/* Indeterminate bar for analyzing state */}
+            {processingState === 'analyzing' && !isUploading && (
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden relative">
+                    <div
+                        className="absolute left-0 top-0 h-full bg-blue-400/60 rounded-full"
+                        style={{
+                            width: '30%',
+                            animation: 'indeterminate-bar 1.2s linear infinite'
+                        }}
+                    />
+                    <style>{`
+                        @keyframes indeterminate-bar {
+                            0% { left: -30%; }
+                            100% { left: 100%; }
+                        }
+                    `}</style>
+                </div>
+            )}
+            {/* Determinate bar for other processing states */}
+            {processingState !== 'idle' && !isUploading && processingState !== 'analyzing' && (
                 <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                        className={`
-                            h-full transition-all duration-300 ease-out
-                            ${processingState === 'completed' ? 'bg-green-500' :
+                        className={
+                            `h-full transition-all duration-300 ease-out ` +
+                            (processingState === 'completed' ? 'bg-green-500' :
                                 processingState === 'error' ? 'bg-red-500' :
-                                    'bg-blue-500 animate-pulse'}
-                        `}
+                                    'bg-blue-500 animate-pulse')
+                        }
                         style={{ width: processingState === 'completed' ? '100%' : '90%' }}
                     />
                 </div>

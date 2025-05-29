@@ -219,4 +219,86 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
     }
 })
 
+// GET /api/v1/assets/pexels — fetch assets from Pexels API
+router.get(
+    '/pexels',
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const type = String(req.query.type || 'image');
+            const page = String(req.query.page || '1');
+            const per_page = String(req.query.per_page || '20');
+            const query = (req.query.query && String(req.query.query).trim()) || 'vertical';
+
+            if (!process.env.PEXELS_API_KEY) {
+                return res.status(500).json({ error: 'Pexels API key not configured' });
+            }
+
+            const orientation = 'portrait';
+            let url = '';
+            if (type === 'video') {
+                url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&orientation=${orientation}&page=${page}&per_page=${per_page}`;
+            } else {
+                url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=${orientation}&page=${page}&per_page=${per_page}`;
+            }
+
+            console.log('PEXELS API URL:', url);
+
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': process.env.PEXELS_API_KEY
+                }
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Pexels API error: ${response.statusText} - ${text}`);
+            }
+
+            const data = await response.json();
+            res.json(data);
+        }
+        catch (err) {
+            next(err);
+        }
+    }
+);
+
+// GET /api/v1/assets/giphy/stickers — fetch stickers from Giphy API
+router.get(
+    '/giphy/stickers',
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const page = String(req.query.page || '1');
+            const limit = String(req.query.limit || '20');
+            const query = (req.query.q && String(req.query.q).trim()) || '';
+
+            if (!process.env.GIPHY_API_KEY) {
+                return res.status(500).json({ error: 'Giphy API key not configured' });
+            }
+
+            let url;
+            if (query) {
+                url = `https://api.giphy.com/v1/stickers/search?api_key=${process.env.GIPHY_API_KEY}&limit=${limit}&offset=${(parseInt(page) - 1) * parseInt(limit)}&q=${encodeURIComponent(query)}`;
+            } else {
+                url = `https://api.giphy.com/v1/stickers/trending?api_key=${process.env.GIPHY_API_KEY}&limit=${limit}&offset=${(parseInt(page) - 1) * parseInt(limit)}`;
+            }
+
+            console.log('GIPHY API URL:', url);
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Giphy API error: ${response.statusText} - ${text}`);
+            }
+
+            const data = await response.json();
+            res.json(data);
+        }
+        catch (err) {
+            next(err);
+        }
+    }
+);
+
 export default router

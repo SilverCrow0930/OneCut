@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useEditor } from '@/contexts/EditorContext'
-import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { ClipLayer } from './ClipLayer'
 
 export default function Player() {
@@ -33,11 +32,17 @@ export default function Player() {
     // Attach events on the <video> once it's in the DOM
     useEffect(() => {
         const vid = videoRef.current
-        if (!vid) return
+
+        if (!vid) {
+            return
+        }
+
         const onMeta = () => setDuration(vid.duration * 1000) // Convert to ms
         const onTime = () => setCurrentTime(vid.currentTime)
+
         vid.addEventListener('loadedmetadata', onMeta)
         vid.addEventListener('timeupdate', onTime)
+
         return () => {
             vid.removeEventListener('loadedmetadata', onMeta)
             vid.removeEventListener('timeupdate', onTime)
@@ -52,7 +57,9 @@ export default function Player() {
                 width: '100%',
                 maxWidth: '20rem'
             }}
-            onClick={() => setSelectedClipId(null)}
+            onClick={() => {
+                setSelectedClipId(null)
+            }}
         >
             {/* Render active clips in order with their source times */}
             {

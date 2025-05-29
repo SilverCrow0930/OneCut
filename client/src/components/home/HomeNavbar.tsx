@@ -26,15 +26,8 @@ export default function HomeNavbar() {
     }, []);
 
     const handleSignIn = () => {
-        const div = document.createElement('div');
-        div.setAttribute('data-tf-live', '01JW7CG4SPCPSZXP8JWESVN5D2');
-        document.body.appendChild(div);
-
-        // Force reload the script to initialize the new embed
-        const script = document.createElement('script');
-        script.src = '//embed.typeform.com/next/embed.js';
-        script.async = true;
-        document.body.appendChild(script);
+        signIn()
+        console.log('signing in')
     }
 
     const handleSignOut = () => {

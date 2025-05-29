@@ -43,9 +43,13 @@ const Editor = () => {
     useEffect(() => {
         const handleGlobalClick = (e: MouseEvent) => {
             // Only deselect if the click is not inside a clip (ClipLayer uses data-clip-layer)
+            // or inside the text tool panel
             let el = e.target as HTMLElement | null
             while (el) {
-                if (el.hasAttribute && el.hasAttribute('data-clip-layer')) return
+                if (el.hasAttribute && (
+                    el.hasAttribute('data-clip-layer') ||
+                    el.closest('[data-text-tool-panel]')
+                )) return
                 el = el.parentElement
             }
             setSelectedClipId(null)
@@ -116,7 +120,10 @@ const Editor = () => {
                 </div>
                 <EditorContent />
                 <div className="relative" style={{ width: assistantWidth }}>
-                    <ResizeHandle className="absolute -left-2 z-10" onResize={handleAssistantResize} />
+                    <ResizeHandle
+                        className="absolute -left-2 z-10"
+                        onResize={handleAssistantResize}
+                    />
                     <Assistant />
                 </div>
             </div>

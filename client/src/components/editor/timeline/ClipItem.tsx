@@ -8,8 +8,8 @@ import { useAssets } from '@/contexts/AssetsContext'
 import { formatTime } from '@/lib/utils'
 import TextClipItem from './TextClipItem'
 
-export default function ClipItem({ clip }: { clip: Clip }) {
-    const { executeCommand, clips, tracks, selectedClipId, setSelectedClipId } = useEditor()
+export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onSelect: (id: string | null) => void, selected: boolean }) {
+    const { executeCommand, clips, tracks } = useEditor()
     const { url } = useAssetUrl(clip.assetId)
     const { assets } = useAssets()
     const { zoomLevel } = useZoom()
@@ -117,10 +117,9 @@ export default function ClipItem({ clip }: { clip: Clip }) {
 
     // click handler to select
     const onClick = (e: React.MouseEvent) => {
+        e.preventDefault()
         e.stopPropagation()
-        console.log('Clip clicked:', { clipId: clip.id, currentSelectedId: selectedClipId })
-        setSelectedClipId(clip.id)
-        console.log('After setting selectedClipId:', { newSelectedId: clip.id })
+        onSelect(clip.id)
     }
 
     // Limit the number of thumbnails to prevent performance issues
@@ -488,28 +487,31 @@ export default function ClipItem({ clip }: { clip: Clip }) {
         setIsOverlapping(false)
     }
 
-    console.log('Rendering clip:', { clipId: clip.id, selectedClipId, isSelected: selectedClipId === clip.id })
     return (
         <>
             <div
                 ref={clipRef}
+                data-clip-layer
                 className={`
                     absolute h-full bg-blue-500 text-white text-xs
                     flex items-center justify-center rounded
                     overflow-hidden
                     ${isResizing ? 'cursor-ew-resize' : 'cursor-move'}
-                    ${selectedClipId === clip.id ? 'ring-4 ring-blue-300 border-4 border-blue-300 shadow-xl' : ''}
+                    ${selected ? 'ring-2 ring-blue-300 shadow-xl' : ''}
                     ${isDragging ? 'opacity-0' : ''}
+                    z-10
                 `}
                 style={{
                     left,
                     width,
-                    border: selectedClipId === clip.id ? '4px solid #93c5fd' : 'none',
-                    boxShadow: selectedClipId === clip.id ? '0 0 16px rgba(147, 197, 253, 0.8)' : 'none',
-                    outline: selectedClipId === clip.id ? '4px solid #93c5fd' : 'none',
-                    outlineOffset: selectedClipId === clip.id ? '2px' : '0'
+                    border: selected ? '2px solid #93c5fd' : 'none',
+                    boxShadow: selected ? '0 0 16px rgba(147, 197, 253, 0.8)' : 'none'
                 }}
-                onClick={onClick}
+                onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onSelect(clip.id)
+                }}
                 onContextMenu={handleContextMenu}
                 draggable={!isResizing}
                 onDragStart={handleDragStart}
@@ -519,16 +521,16 @@ export default function ClipItem({ clip }: { clip: Clip }) {
             >
                 {/* Left edge hover area */}
                 <div
-                    className="absolute left-0 top-0 bottom-0 w-6 cursor-ew-resize hover:bg-blue-400/20"
+                    className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-blue-400/20"
                     onMouseDown={(e) => handleResizeStart(e, 'start')}
-                    style={{ zIndex: 30 }}
+                    style={{ zIndex: 20 }}
                 />
 
                 {/* Right edge hover area */}
                 <div
-                    className="absolute right-0 top-0 bottom-0 w-6 cursor-ew-resize hover:bg-blue-400/20"
+                    className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-blue-400/20"
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
-                    style={{ zIndex: 30 }}
+                    style={{ zIndex: 20 }}
                 />
 
                 {

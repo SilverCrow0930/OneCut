@@ -4,8 +4,6 @@ import {
     createPartFromUri,
 } from '@google/genai'
 
-const model = "gemini-2.5-flash-preview-05-20"
-
 if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not set')
 }
@@ -22,6 +20,8 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 })
 
+const model = "gemini-2.5-flash-preview-05-20"
+
 const systemInstruction = `
     You are a video editor.
     Given a prompt and a video, you will make cuts to the video to create a short video clip of 40 to 60 seconds.
@@ -33,6 +33,7 @@ const systemInstruction = `
     The sum of all captions should be the transcript of the video.
     Please make it interesting, captivating, and engaging.
     Drop the introduction and the conclusion.
+    Try to uses cuts where we can see people's faces, and where we can see the action.
 `
 
 const waitForFileActive = async (fileId: string, delayMs = 5000) => {
