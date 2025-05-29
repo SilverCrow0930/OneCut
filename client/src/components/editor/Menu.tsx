@@ -30,7 +30,7 @@ const Menu = () => {
                 <ChevronLeft
                     className="cursor-pointer"
                     onClick={() => {
-                        router.push(`/create`)
+                        router.push(`/creation`)
                     }}
                 />
                 <p className="text-xl font-bold">

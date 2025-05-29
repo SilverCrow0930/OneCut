@@ -1,8 +1,8 @@
 'use client'
 
 import BubbleEffect from "@/components/ui/backgrounds/BubbleEffect";
-import ProjectsList from "@/components/create/ProjectsList";
-import ProjectsHeader from "@/components/create/ProjectsHeader";
+import ProjectsList from "@/components/creation/ProjectsList";
+import ProjectsHeader from "@/components/creation/ProjectsHeader";
 import HomeNavbar from "@/components/home/HomeNavbar";
 
 export default function CreatePage() {

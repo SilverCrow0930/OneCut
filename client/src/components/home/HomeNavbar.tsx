@@ -3,6 +3,7 @@ import LemonaLogo from '../common/LemonaLogo';
 import LogoutButton from '../ui/buttons/LogoutButton';
 import AuthButton from '../ui/buttons/AuthButton';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 declare global {
     interface Window {
@@ -12,6 +13,7 @@ declare global {
 
 export default function HomeNavbar() {
     const { user, signIn, signOut } = useAuth()
+    const router = useRouter()
 
     useEffect(() => {
         // Load Typeform embed script
@@ -27,7 +29,7 @@ export default function HomeNavbar() {
 
     const handleSignIn = () => {
         signIn()
-        console.log('signing in')
+        router.push('/creation')
     }
 
     const handleSignOut = () => {

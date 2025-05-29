@@ -1,19 +1,17 @@
 import React from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 const HomeFirstSection = () => {
     const router = useRouter()
+    const { user, signIn } = useAuth()
 
     const handleJoinBeta = () => {
-        const div = document.createElement('div');
-        div.setAttribute('data-tf-live', '01JW7CG4SPCPSZXP8JWESVN5D2');
-        document.body.appendChild(div);
-
-        // Force reload the script to initialize the new embed
-        const script = document.createElement('script');
-        script.src = '//embed.typeform.com/next/embed.js';
-        script.async = true;
-        document.body.appendChild(script);
+        if (user) {
+            router.push('/creation')
+        } else {
+            signIn()
+        }
     }
 
     return (
@@ -65,7 +63,7 @@ const HomeFirstSection = () => {
                 "
                     onClick={handleJoinBeta}
                 >
-                    Join the Beta
+                    {user ? 'Start the Journey' : 'Sign In to Start'}
                 </button>
 
             </div>
