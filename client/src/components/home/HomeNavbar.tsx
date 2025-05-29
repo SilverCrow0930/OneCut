@@ -50,8 +50,8 @@ export default function HomeNavbar() {
                     {/* Navigation Links */}
                     <div className="hidden md:flex items-center space-x-8">
                         <a href="#" className="text-white hover:text-gray-300 transition-colors">Product</a>
-                        <a href="#" className="text-white hover:text-gray-300 transition-colors">Pricing</a>
-                        <a href="#" className="text-white hover:text-gray-300 transition-colors">Contact</a>
+                        <a href="/pricing" className="text-white hover:text-gray-300 transition-colors">Pricing</a>
+                        <a href="https://x.com/lemona_labs" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-300 transition-colors">Contact</a>
                     </div>
                     {
                         user ? (

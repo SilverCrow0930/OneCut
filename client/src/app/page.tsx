@@ -11,7 +11,7 @@ export default function Home() {
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
 
   return (
-    <div className="relative flex flex-col items-center w-screen h-full bg-black">
+    <div className="relative flex flex-col items-center w-full h-full bg-black overflow-x-hidden">
 
       {/* Background */}
       {/* <div className="absolute top-0 left-0 w-full h-full opacity-30">
@@ -46,7 +46,7 @@ export default function Home() {
 
         <div className="
           flex flex-col w-full min-h-screen
-          overflow-y-auto
+          overflow-y-auto overflow-x-hidden
         ">
           <HomeFirstSection />
         </div>
