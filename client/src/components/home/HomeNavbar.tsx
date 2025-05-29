@@ -45,10 +45,10 @@ export default function HomeNavbar() {
                 <LemonaLogo />
 
                 <div
-                    className="flex flex-row items-center gap-4 md:gap-10"
+                    className="flex flex-row items-center gap-4 md:gap-16"
                 >
                     {/* Navigation Links */}
-                    <div className="hidden md:flex items-center space-x-8">
+                    <div className="hidden md:flex items-center space-x-12">
                         <a href="#" className="text-white hover:text-gray-300 transition-colors">Product</a>
                         <a href="/pricing" className="text-white hover:text-gray-300 transition-colors">Pricing</a>
                         <a href="https://x.com/lemona_labs" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-300 transition-colors">Contact</a>

@@ -16,8 +16,8 @@ const plans = [
             'Basic multi-modal support',
         ],
         highlighted: false,
-        buttonText: 'Get Started',
-        buttonStyle: 'bg-white/10 hover:bg-white/20'
+        buttonText: 'Your current plan',
+        buttonStyle: 'bg-white/5 hover:bg-white/10'
     },
     {
         name: 'Hobby',
@@ -30,7 +30,7 @@ const plans = [
             'Premium assets',
         ],
         highlighted: true,
-        buttonText: 'Start Free Trial',
+        buttonText: 'Get Hobby',
         buttonStyle: 'bg-blue-500 hover:bg-blue-600'
     },
     {
@@ -44,7 +44,7 @@ const plans = [
             'Faster AI responses',
         ],
         highlighted: false,
-        buttonText: 'Start Free Trial',
+        buttonText: 'Get Pro',
         buttonStyle: 'bg-white/10 hover:bg-white/20'
     }
 ];
@@ -58,7 +58,7 @@ export default function PricingPage() {
             <HomeNavbar />
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-40 pb-32">
                 {/* Header */}
                 <div className="text-center">
                     <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
