@@ -20,7 +20,7 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 })
 
-const model = "gemini-2.5-pro-preview-05-20"
+const model = "gemini-2.5-pro-preview-05-06"
 
 const systemInstruction = `
     You are a video editor.
@@ -241,14 +241,39 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
             preview: textOutput?.substring(0, 100) + '...'
         });
 
+        // Parse the JSON output from the model
+        let cuts: Array<{ src_start: number, src_end: number, description: string, captions: string[] }> = [];
+        try {
+            // Extract JSON array from the text output
+            const jsonMatch = textOutput?.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (jsonMatch) {
+                cuts = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('No valid JSON array found in model output');
+            }
+
+            // Validate the cuts array
+            if (!Array.isArray(cuts)) {
+                throw new Error('Model output is not an array');
+            }
+
+            // Validate each cut
+            cuts.forEach((cut, index) => {
+                if (!cut.src_start || !cut.src_end || !cut.description || !Array.isArray(cut.captions)) {
+                    throw new Error(`Invalid cut format at index ${index}`);
+                }
+            });
+        } catch (error) {
+            console.error('Failed to parse model output:', error);
+            throw new Error(`Failed to parse model output: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
         console.log('=== GOOGLE GENAI CONTENT GENERATION COMPLETED ===');
         return {
             thoughts: {
                 text: thoughts || ''
             },
-            textOutput: {
-                text: textOutput || ''
-            }
+            cuts: cuts
         }
     }
     catch (error) {
