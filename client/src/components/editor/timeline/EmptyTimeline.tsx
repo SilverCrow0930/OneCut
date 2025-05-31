@@ -46,22 +46,22 @@ export default function EmptyTimeline() {
 
         // 1) parse payload
         let payload: { assetId?: string, type?: string, assetType?: string, asset?: any }
-        try { 
+        try {
             payload = JSON.parse(e.dataTransfer.getData('application/json'))
             console.log('EmptyTimeline drop payload:', payload)
         }
-        catch (error) { 
+        catch (error) {
             console.error('EmptyTimeline failed to parse drop data:', error)
-            return 
+            return
         }
 
         // Handle external assets (Pexels/stickers)
         if (payload.type === 'external_asset') {
             console.log('Handling external asset on empty timeline:', payload)
-            
+
             // Extract the correct URL based on asset type and source
             let mediaUrl = ''
-            
+
             if (payload.asset.isSticker) {
                 // Giphy sticker
                 mediaUrl = payload.asset.url || payload.asset.images?.original?.url
@@ -72,14 +72,14 @@ export default function EmptyTimeline() {
                 // Pexels video - get the first available video file
                 mediaUrl = payload.asset.video_files?.[0]?.link || payload.asset.url
             }
-            
+
             console.log('Extracted media URL for empty timeline:', mediaUrl)
-            
+
             if (!mediaUrl) {
                 console.error('Could not extract media URL from external asset:', payload.asset)
                 return
             }
-            
+
             // Create a temporary asset-like object for external assets
             const externalAsset = {
                 id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -148,7 +148,7 @@ export default function EmptyTimeline() {
             console.log('No assetId found in EmptyTimeline payload')
             return
         }
-        
+
         console.log('Looking for asset in EmptyTimeline:', payload.assetId)
         const asset = assets.find(a => a.id === payload.assetId)
         if (!asset) {
@@ -191,7 +191,19 @@ export default function EmptyTimeline() {
             assetDurationMs: dur,
             volume: 1,
             speed: 1,
-            properties: {},
+            properties: asset.mime_type.startsWith('image/') ? {
+                crop: {
+                    width: 320,  // Default 16:9 aspect ratio
+                    height: 180,
+                    left: 0,
+                    top: 0
+                },
+                mediaPos: {
+                    x: 0,
+                    y: 0
+                },
+                mediaScale: 1
+            } : {},
             createdAt: new Date().toISOString(),
         }
 
@@ -249,7 +261,7 @@ export default function EmptyTimeline() {
             <h3 className={`text-xl font-medium mb-2 transition-colors duration-500 ${isDragOver ? 'text-cyan-600' : ''}`}>
                 Your timeline is empty
             </h3>
-           
+
             <div className={`
                 flex items-center gap-2 text-sm
                 transition-colors duration-500

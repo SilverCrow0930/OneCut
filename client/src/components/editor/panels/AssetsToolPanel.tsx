@@ -6,6 +6,7 @@ import { apiPath } from '@/lib/config'
 import { Asset } from './types/assets'
 import { ASSET_TABS } from './constants/assets'
 import AssetGridItem from './components/AssetGridItem'
+import { useAssets } from '@/contexts/AssetsContext'
 
 const AssetsToolPanel = () => {
     const [selectedTab, setSelectedTab] = useState<'image' | 'video'>('video')
@@ -15,6 +16,7 @@ const AssetsToolPanel = () => {
     const [page, setPage] = useState(1)
     const [searchQuery, setSearchQuery] = useState('')
     const { session } = useAuth()
+    const { refresh } = useAssets()
 
     useEffect(() => {
         setAssets([])
@@ -60,8 +62,95 @@ const AssetsToolPanel = () => {
         setPage(1)
     }
 
+    // Function to download and upload Pexels asset
+    const handlePexelsAssetDownload = async (asset: any, assetType: 'image' | 'video') => {
+        if (!session?.access_token) {
+            throw new Error('Not signed in')
+        }
+
+        try {
+            // 1. Get the media URL based on asset type
+            let mediaUrl = ''
+            if (assetType === 'image') {
+                mediaUrl = asset.src?.original || asset.src?.large2x || asset.src?.large
+            } else {
+                mediaUrl = asset.video_files?.[0]?.link || asset.url
+            }
+
+            if (!mediaUrl) {
+                throw new Error('Could not find media URL')
+            }
+
+            // 2. Download the asset
+            const response = await fetch(mediaUrl)
+            if (!response.ok) {
+                throw new Error('Failed to download asset')
+            }
+
+            // 3. Get the file blob and create a File object
+            const blob = await response.blob()
+            const file = new File([blob], `${asset.id}.${assetType === 'video' ? 'mp4' : 'jpg'}`, {
+                type: assetType === 'video' ? 'video/mp4' : 'image/jpeg'
+            })
+
+            // 4. Get media duration if it's a video
+            let durationSeconds = 0
+            if (assetType === 'video') {
+                const url = URL.createObjectURL(file)
+                const video = document.createElement('video')
+                video.preload = 'metadata'
+                video.src = url
+
+                await new Promise<void>((resolve, reject) => {
+                    video.onloadedmetadata = () => resolve()
+                    video.onerror = () => reject(new Error('Could not load video metadata'))
+                })
+
+                durationSeconds = video.duration || 0
+                URL.revokeObjectURL(url)
+            }
+
+            // 5. Upload to our server
+            const form = new FormData()
+            form.append('file', file)
+            form.append('duration', String(durationSeconds))
+
+            const uploadResponse = await fetch(apiPath('assets/upload'), {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: form,
+            })
+
+            if (!uploadResponse.ok) {
+                throw new Error('Failed to upload asset')
+            }
+
+            const uploadedAsset = await uploadResponse.json()
+            refresh() // Refresh the assets list
+            return uploadedAsset
+        } catch (err) {
+            console.error('Asset download/upload error:', err)
+            throw err
+        }
+    }
+
+    // Expose the function to the window object
+    React.useEffect(() => {
+        const panel = document.querySelector('[data-assets-panel]')
+        if (panel) {
+            (panel as any).handlePexelsAssetDownload = handlePexelsAssetDownload
+        }
+        return () => {
+            if (panel) {
+                delete (panel as any).handlePexelsAssetDownload
+            }
+        }
+    }, [session?.access_token]) // Re-expose when session changes
+
     return (
-        <div className="flex flex-col h-full bg-white rounded-lg">
+        <div className="flex flex-col h-full bg-white rounded-lg" data-assets-panel>
             <div className="p-4">
                 <PanelHeader icon={Image} title="Assets" />
             </div>

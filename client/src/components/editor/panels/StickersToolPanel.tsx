@@ -4,6 +4,7 @@ import PanelHeader from './PanelHeader'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { GiphySticker } from './types/stickers'
+import { useAssets } from '@/contexts/AssetsContext'
 
 const StickersToolPanel = () => {
     const [stickers, setStickers] = useState<GiphySticker[]>([])
@@ -12,6 +13,7 @@ const StickersToolPanel = () => {
     const [page, setPage] = useState(1)
     const [searchQuery, setSearchQuery] = useState('')
     const { session } = useAuth()
+    const { refresh } = useAssets()
 
     useEffect(() => {
         setStickers([])
@@ -61,8 +63,72 @@ const StickersToolPanel = () => {
 
     const handleLoadMore = () => setPage(p => p + 1)
 
+    // Function to download and upload sticker
+    const handleStickerDownload = async (sticker: GiphySticker) => {
+        if (!session?.access_token) {
+            throw new Error('Not signed in')
+        }
+
+        try {
+            // 1. Get the sticker URL
+            const mediaUrl = sticker.images.original.url
+            if (!mediaUrl) {
+                throw new Error('Could not find sticker URL')
+            }
+
+            // 2. Download the sticker
+            const response = await fetch(mediaUrl)
+            if (!response.ok) {
+                throw new Error('Failed to download sticker')
+            }
+
+            // 3. Get the file blob and create a File object
+            const blob = await response.blob()
+            const file = new File([blob], `${sticker.id}.gif`, {
+                type: 'image/gif'
+            })
+
+            // 4. Upload to our server
+            const form = new FormData()
+            form.append('file', file)
+            form.append('duration', '5000') // Default 5 seconds for stickers
+
+            const uploadResponse = await fetch(apiPath('assets/upload'), {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: form,
+            })
+
+            if (!uploadResponse.ok) {
+                throw new Error('Failed to upload sticker')
+            }
+
+            const uploadedAsset = await uploadResponse.json()
+            refresh() // Refresh the assets list
+            return uploadedAsset
+        } catch (err) {
+            console.error('Sticker download/upload error:', err)
+            throw err
+        }
+    }
+
+    // Expose the function to the window object
+    React.useEffect(() => {
+        const panel = document.querySelector('[data-stickers-panel]')
+        if (panel) {
+            (panel as any).handleStickerDownload = handleStickerDownload
+        }
+        return () => {
+            if (panel) {
+                delete (panel as any).handleStickerDownload
+            }
+        }
+    }, [session?.access_token]) // Re-expose when session changes
+
     return (
-        <div className="flex flex-col h-full bg-white rounded-lg">
+        <div className="flex flex-col h-full bg-white rounded-lg" data-stickers-panel>
             <div className="p-4">
                 <PanelHeader icon={Sticker} title="Stickers" />
             </div>
@@ -91,32 +157,33 @@ const StickersToolPanel = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {
                         stickers.map((sticker, index) => {
-                            const handleDragStart = (e: React.DragEvent<HTMLElement>) => {
-                                // Create a payload with sticker information
-                                const dragData = {
-                                    type: 'external_asset',
-                                    assetType: 'image',
-                                    asset: {
-                                        id: sticker.id,
-                                        title: sticker.title,
-                                        url: sticker.images.original.url,
-                                        width: sticker.images.original.width,
-                                        height: sticker.images.original.height,
-                                        isSticker: true
+                            const handleDragStart = async (e: React.DragEvent<HTMLElement>) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+
+                                try {
+                                    // Download and upload the sticker
+                                    const uploadedAsset = await handleStickerDownload(sticker)
+
+                                    // Create a payload with the uploaded asset ID
+                                    const dragData = {
+                                        assetId: uploadedAsset.id
                                     }
-                                };
-                                
-                                e.dataTransfer.setData(
-                                    'application/json',
-                                    JSON.stringify(dragData)
-                                );
-                                e.dataTransfer.effectAllowed = 'copy';
-                                
-                                // Set a drag image if needed
-                                if (e.target instanceof HTMLElement) {
-                                    e.dataTransfer.setDragImage(e.target, 0, 0);
+
+                                    e.dataTransfer.setData(
+                                        'application/json',
+                                        JSON.stringify(dragData)
+                                    )
+                                    e.dataTransfer.effectAllowed = 'copy'
+
+                                    // Set a drag image if needed
+                                    if (e.target instanceof HTMLElement) {
+                                        e.dataTransfer.setDragImage(e.target, 0, 0)
+                                    }
+                                } catch (err) {
+                                    console.error('Failed to handle sticker drag:', err)
                                 }
-                            };
+                            }
 
                             return (
                                 <div
@@ -147,7 +214,7 @@ const StickersToolPanel = () => {
                                         </div>
                                     )}
                                 </div>
-                            );
+                            )
                         })
                     }
                 </div>
@@ -163,7 +230,7 @@ const StickersToolPanel = () => {
                 }
             </div>
         </div>
-    );
+    )
 }
 
 export default StickersToolPanel
