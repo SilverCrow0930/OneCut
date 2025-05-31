@@ -10,10 +10,24 @@ interface AssetGridItemProps {
 }
 
 export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
-    const { url, loading } = useAssetUrl(asset.id)
+    const { url: uploadedUrl, loading } = useAssetUrl(asset.id)
     const { deleteAsset } = useAssets()
     const [isDownloading, setIsDownloading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    // Get the appropriate URL based on asset type
+    const getAssetUrl = () => {
+        if (asset.src || asset.video_files) {
+            // Pexels asset
+            if (type === 'image') {
+                return asset.src?.original || asset.src?.large2x || asset.src?.large
+            } else {
+                return asset.video_files?.[0]?.link || asset.url
+            }
+        }
+        // Regular uploaded asset
+        return uploadedUrl
+    }
 
     const handleDragStart = async (e: React.DragEvent) => {
         // If it's a Pexels asset (has src or video_files property)
@@ -77,6 +91,7 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
         )
     }
 
+    const url = getAssetUrl()
     if (!url) {
         return (
             <div className="relative w-full aspect-video bg-red-100 text-red-500 flex items-center justify-center rounded">
