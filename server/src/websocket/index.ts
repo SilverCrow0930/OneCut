@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io';
+import { generativeModel } from '../integrations/vertexAI.js';
 import { generateContent } from '../integrations/googleGenAI.js';
 import { bucket } from '../integrations/googleStorage.js';
 
@@ -61,14 +62,21 @@ export const setupWebSocket = (server: any) => {
         });
 
         // Initialize chat session for this socket
-        chatSessions.set(socket.id, {
+        chatSessions.set(socket.id, generativeModel.startChat({
             systemInstruction: `
                 You are Melody, an AI video editing assistant. 
                 Your role is to help users create and edit videos effectively.
 
-                
+                Key Responsibilities:
+                1. Use the Google Search API to find relevant information when needed, but do not mention "Google Search" in your response.
+                2. When providing product suggestions to the user, each product should have a why, a budget, and a content angle.
+                3. When the user chooses a product, you should provide a detailed explanation of the product, including a shot, text overlay (optional), audio (optional), and a verbal CTA (optional).
+
+                Remember to:
+                - Keep your responses concise and to the point.
+                - Do not mention "Google Search" in your response.
             `,
-        });
+        }));
 
         // Handle chat messages
         socket.on('chat_message', async (data: { message: string, useIdeation: boolean }) => {
@@ -80,17 +88,36 @@ export const setupWebSocket = (server: any) => {
             console.log('Generating a response from the model');
 
             try {
-                const response = await generateContent(
-                    data.message,
-                    "",
-                    'text/plain'
-                );
+                const chat = chatSessions.get(socket.id);
+                if (!chat) {
+                    throw new Error('Chat session not found');
+                }
 
-                if (response.textOutput?.text) {
+                // Configure the model based on ideation mode
+                const generationConfig = {
+                    temperature: 0.7,
+                    topP: 0.8,
+                    topK: 40,
+                    maxOutputTokens: 2048,
+                };
+
+                const resp = await chat.sendMessage(data.message, {
+                    generationConfig,
+                    tools: data.useIdeation ?
+                        [googleSearchRetrievalTool] :
+                        undefined
+                })
+
+                const contentResponse = resp.response;
+
+                console.log('Response from the model: ' + JSON.stringify(contentResponse));
+
+                if (contentResponse.candidates?.[0]?.content.parts[0].text) {
                     io.emit('chat_message', {
-                        text: response.textOutput.text,
+                        text: contentResponse.candidates?.[0]?.content.parts[0].text,
                     });
-                } else {
+                }
+                else {
                     io.emit('chat_message', {
                         text: 'An error occurred while generating a response from the model',
                     });
