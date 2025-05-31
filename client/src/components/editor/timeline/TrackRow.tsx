@@ -48,23 +48,27 @@ export default function TrackRow({
         let payload: { clipId?: string, assetId?: string, type?: string, assetType?: string, asset?: any }
         try {
             payload = JSON.parse(e.dataTransfer.getData('application/json'))
-        } catch {
+            console.log('TrackRow drop payload:', payload)
+        } catch (error) {
+            console.error('TrackRow failed to parse drop data:', error)
             return
         }
 
-        // Handle external assets (Pexels/stickers)
+        // Handle external assets (Pexels/stickers) - simplified for now
         if (payload.type === 'external_asset') {
-            // For external assets, we need to download and upload them first
-            // This is a placeholder - you'd need to implement the download/upload logic
-            console.log('External asset drop detected on track:', payload)
-            // TODO: Implement external asset handling
+            console.log('External asset detected on track, but not implemented yet:', payload)
+            alert('External assets (Pexels/Stickers) are not yet supported. Please upload media files using the Upload panel.')
             return
         }
 
         // Handle clip drops
         if (payload.clipId) {
+            console.log('Handling clip drop:', payload.clipId)
             const droppedClip = allClips.find(c => c.id === payload.clipId)
-            if (!droppedClip) return
+            if (!droppedClip) {
+                console.error('Dropped clip not found:', payload.clipId)
+                return
+            }
 
             // Calculate new start time
             const rect = rowRef.current.getBoundingClientRect()
@@ -80,7 +84,12 @@ export default function TrackRow({
                 return !(startMs + clipWidth <= clipLeft || startMs >= clipRight)
             })
 
-            if (wouldOverlap) return
+            if (wouldOverlap) {
+                console.log('Clip drop would overlap, cancelling')
+                return
+            }
+
+            console.log('Moving clip to track:', track.id, 'at time:', startMs)
 
             // Update the clip position and track
             executeCommand({
@@ -99,15 +108,26 @@ export default function TrackRow({
         }
 
         // Handle regular asset drops
-        if (!payload.assetId) return
+        if (!payload.assetId) {
+            console.log('No assetId found in TrackRow payload')
+            return
+        }
 
+        console.log('Looking for asset in TrackRow:', payload.assetId)
         const asset = assets.find(a => a.id === payload.assetId)
-        if (!asset) return
+        if (!asset) {
+            console.error('Asset not found in TrackRow:', payload.assetId)
+            return
+        }
+
+        console.log('Found asset in TrackRow:', asset)
 
         // compute time position
         const rect = rowRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left
         const startMs = Math.max(0, Math.round(x / timeScale))
+
+        console.log('Creating clip in TrackRow at time:', startMs)
 
         // build new clip
         const dur = asset.duration ? Math.floor(asset.duration) : 0 // Duration is already in ms
@@ -126,6 +146,8 @@ export default function TrackRow({
             properties: {},
             createdAt: new Date().toISOString(),
         }
+
+        console.log('Creating clip in TrackRow:', newClip)
 
         executeCommand({
             type: 'ADD_CLIP',

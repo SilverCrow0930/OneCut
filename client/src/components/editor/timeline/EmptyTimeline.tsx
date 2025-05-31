@@ -46,22 +46,36 @@ export default function EmptyTimeline() {
 
         // 1) parse payload
         let payload: { assetId?: string, type?: string, assetType?: string, asset?: any }
-        try { payload = JSON.parse(e.dataTransfer.getData('application/json')) }
-        catch { return }
+        try { 
+            payload = JSON.parse(e.dataTransfer.getData('application/json'))
+            console.log('EmptyTimeline drop payload:', payload)
+        }
+        catch (error) { 
+            console.error('EmptyTimeline failed to parse drop data:', error)
+            return 
+        }
 
-        // Handle external assets (Pexels/stickers)
+        // Handle external assets (Pexels/stickers) - simplified for now
         if (payload.type === 'external_asset') {
-            // For external assets, we need to download and upload them first
-            // This is a placeholder - you'd need to implement the download/upload logic
-            console.log('External asset drop detected on empty timeline:', payload)
-            // TODO: Implement external asset handling
+            console.log('External asset detected on empty timeline, but not implemented yet:', payload)
+            alert('External assets (Pexels/Stickers) are not yet supported. Please upload media files using the Upload panel.')
             return
         }
 
         // Handle regular uploaded assets
-        if (!payload.assetId) return
+        if (!payload.assetId) {
+            console.log('No assetId found in EmptyTimeline payload')
+            return
+        }
+        
+        console.log('Looking for asset in EmptyTimeline:', payload.assetId)
         const asset = assets.find(a => a.id === payload.assetId)
-        if (!asset) return
+        if (!asset) {
+            console.error('Asset not found in EmptyTimeline:', payload.assetId)
+            return
+        }
+
+        console.log('Found asset in EmptyTimeline:', asset)
 
         // 2) CREATE TRACK
         const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
@@ -72,6 +86,8 @@ export default function EmptyTimeline() {
             type: trackType,
             createdAt: new Date().toISOString(),
         }
+
+        console.log('Creating track in EmptyTimeline:', newTrack)
 
         executeCommand({
             type: 'ADD_TRACK',
@@ -97,6 +113,8 @@ export default function EmptyTimeline() {
             properties: {},
             createdAt: new Date().toISOString(),
         }
+
+        console.log('Creating clip in EmptyTimeline:', newClip)
 
         executeCommand({
             type: 'ADD_CLIP',

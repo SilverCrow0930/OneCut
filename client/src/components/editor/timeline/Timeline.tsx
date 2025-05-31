@@ -180,24 +180,35 @@ export default function Timeline() {
         let payload: { assetId?: string, type?: string, assetType?: string, asset?: any }
         try {
             payload = JSON.parse(e.dataTransfer.getData('application/json'))
-        } catch {
+            console.log('Drop payload:', payload)
+        } catch (error) {
+            console.error('Failed to parse drop data:', error)
             return
         }
 
-        // Handle external assets (Pexels/stickers)
+        // Handle external assets (Pexels/stickers) - simplified for now
         if (payload.type === 'external_asset') {
-            // For external assets, we need to download and upload them first
-            // This is a placeholder - you'd need to implement the download/upload logic
-            console.log('External asset drop detected:', payload)
-            // TODO: Implement external asset handling
+            console.log('External asset detected, but not implemented yet:', payload)
+            alert('External assets (Pexels/Stickers) are not yet supported. Please upload media files using the Upload panel.')
             return
         }
 
         // Handle regular uploaded assets
-        if (!payload.assetId) return
+        if (!payload.assetId) {
+            console.log('No assetId found in payload')
+            return
+        }
+
+        console.log('Looking for asset with ID:', payload.assetId)
+        console.log('Available assets:', assets.map(a => ({ id: a.id, name: a.name })))
 
         const asset = assets.find(a => a.id === payload.assetId)
-        if (!asset) return
+        if (!asset) {
+            console.error('Asset not found:', payload.assetId)
+            return
+        }
+
+        console.log('Found asset:', asset)
 
         // 2) compute time position
         const rect = containerRef.current.getBoundingClientRect()
@@ -210,6 +221,8 @@ export default function Timeline() {
         const rawIndex = Math.floor(y / rowHeight)
         const newIndex = Math.max(0, Math.min(tracks.length, rawIndex))
 
+        console.log('Creating track at index:', newIndex, 'time:', startMs)
+
         // 4) CREATE TRACK
         const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
 
@@ -220,6 +233,8 @@ export default function Timeline() {
             type: trackType,
             createdAt: new Date().toISOString(),
         }
+
+        console.log('Creating track:', newTrack)
 
         executeCommand({
             type: 'ADD_TRACK',
@@ -248,6 +263,8 @@ export default function Timeline() {
             properties: {},
             createdAt: new Date().toISOString(),
         }
+
+        console.log('Creating clip:', newClip)
 
         executeCommand({
             type: 'ADD_CLIP',
