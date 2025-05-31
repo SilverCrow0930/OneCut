@@ -138,9 +138,7 @@ export default function EmptyTimeline() {
             <h3 className={`text-xl font-medium mb-2 transition-colors duration-500 ${isDragOver ? 'text-cyan-600' : ''}`}>
                 Your timeline is empty
             </h3>
-            <p className="text-center max-w-md mb-4">
-                Drag and drop media from your assets panel to create your first track
-            </p>
+           
             <div className={`
                 flex items-center gap-2 text-sm
                 transition-colors duration-500
