@@ -165,9 +165,14 @@ const StickersToolPanel = () => {
                                     // Download and upload the sticker
                                     const uploadedAsset = await handleStickerDownload(sticker)
 
-                                    // Create a payload with the uploaded asset ID
+                                    // Create a payload with the uploaded asset ID and external asset info
                                     const dragData = {
-                                        assetId: uploadedAsset.id
+                                        type: 'external_asset',
+                                        assetType: 'image',
+                                        asset: {
+                                            ...sticker,
+                                            isSticker: true
+                                        }
                                     }
 
                                     e.dataTransfer.setData(
@@ -182,6 +187,7 @@ const StickersToolPanel = () => {
                                     }
                                 } catch (err) {
                                     console.error('Failed to handle sticker drag:', err)
+                                    e.preventDefault()
                                 }
                             }
 

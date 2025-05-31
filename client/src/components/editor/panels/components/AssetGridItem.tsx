@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { formatTimeMs } from '@/lib/utils'
-import DraggableAsset from '../../upload/DraggableAsset'
 import { useAssets } from '@/contexts/AssetsContext'
 import { Asset } from '@/types/assets'
 
@@ -89,31 +88,30 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
     const isVideo = type === 'video'
 
     return (
-        <DraggableAsset assetId={asset.id}>
-            <div
-                className="relative w-full aspect-video rounded overflow-hidden cursor-grab active:cursor-grabbing"
-                onDragStart={handleDragStart}
-            >
-                {isVideo ? (
-                    <video
-                        src={url}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                    />
-                ) : (
-                    <img
-                        src={url}
-                        alt={asset.alt || 'Asset'}
-                        className="w-full h-full object-cover"
-                    />
-                )}
-                {isVideo && asset.duration && (
-                    <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1 rounded">
-                        {formatTimeMs(asset.duration)}
-                    </div>
-                )}
-            </div>
-        </DraggableAsset>
+        <div
+            className="relative w-full aspect-video rounded overflow-hidden cursor-grab active:cursor-grabbing"
+            draggable={true}
+            onDragStart={handleDragStart}
+        >
+            {isVideo ? (
+                <video
+                    src={url}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                />
+            ) : (
+                <img
+                    src={url}
+                    alt={asset.alt || 'Asset'}
+                    className="w-full h-full object-cover"
+                />
+            )}
+            {isVideo && asset.duration && (
+                <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1 rounded">
+                    {formatTimeMs(asset.duration)}
+                </div>
+            )}
+        </div>
     )
 } 
