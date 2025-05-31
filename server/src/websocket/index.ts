@@ -12,7 +12,7 @@ const googleSearchRetrievalTool = {
 export const setupWebSocket = (server: any) => {
     const io = new Server(server, {
         cors: {
-            origin: process.env.FRONTEND_URL || "http://localhost:3000",
+            origin: process.env.ALLOWED_ORIGINS?.split(',') || ["http://localhost:3000"],
             methods: ["GET", "POST"],
             credentials: true
         },
@@ -32,7 +32,8 @@ export const setupWebSocket = (server: any) => {
         console.log('Connection details:', {
             transport: socket.conn.transport.name,
             protocol: socket.conn.protocol,
-            readyState: socket.conn.readyState
+            readyState: socket.conn.readyState,
+            origin: socket.handshake.headers.origin
         });
 
         // Handle connection errors
@@ -62,14 +63,24 @@ export const setupWebSocket = (server: any) => {
         });
 
         // Initialize chat session for this socket
-        chatSessions.set(socket.id, generativeModel.startChat({
-            systemInstruction: `
-                You are Melody, an AI video editing assistant. 
-                Your role is to help users create and edit videos effectively.
-
-                
-            `,
-        }));
+        try {
+            const chat = generativeModel.startChat({
+                systemInstruction: `
+                    You are Melody, an AI video editing assistant. 
+                    Your role is to help users create and edit videos effectively.
+                    You are knowledgeable about video editing techniques, transitions, effects, and best practices.
+                    You can provide guidance on making videos more engaging and professional.
+                    You understand concepts like pacing, timing, visual flow, and storytelling through video.
+                `,
+            });
+            chatSessions.set(socket.id, chat);
+            console.log('Chat session initialized for socket:', socket.id);
+        } catch (error) {
+            console.error('Failed to initialize chat session:', error);
+            socket.emit('chat_message', {
+                text: 'Failed to initialize chat session. Please try refreshing the page.',
+            });
+        }
 
         // Handle chat messages
         socket.on('chat_message', async (data: { message: string, useIdeation: boolean }) => {

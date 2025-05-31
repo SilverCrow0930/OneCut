@@ -20,20 +20,17 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 })
 
-const model = "gemini-2.5-pro-preview-05-06"
+const model = "gemini-2.5-flash-preview-05-20"
 
 const systemInstruction = `
     You are a video editor.
-    Given a prompt and a video, you will make cuts to the video to create a short video clip of 40 to 60 seconds.
+    Given a prompt and a video, you will make cuts to the video to create a short video clip of 40 to 90 seconds.
     Each cut should be of the format { src_start: number, src_end: number, description: string, captions: string[] }
     The src_start and src_end should be the start and end of the clip in milliseconds.
     The description should be a short justification for the cut.
     The captions should be a list of captions for the clip.
-    Each caption should be at most 5 words.
-    The sum of all captions should be the transcript of the video.
-    Please make it interesting, captivating, and engaging.
-    Drop the introduction and the conclusion.
-    Try to uses cuts where we can see people's faces, and where we can see the action.
+    Each caption should be at most 6 words.
+
 `
 
 const waitForFileActive = async (fileId: string, delayMs = 5000) => {
