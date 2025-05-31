@@ -59,11 +59,32 @@ export default function EmptyTimeline() {
         if (payload.type === 'external_asset') {
             console.log('Handling external asset on empty timeline:', payload)
             
+            // Extract the correct URL based on asset type and source
+            let mediaUrl = ''
+            
+            if (payload.asset.isSticker) {
+                // Giphy sticker
+                mediaUrl = payload.asset.url || payload.asset.images?.original?.url
+            } else if (payload.assetType === 'image') {
+                // Pexels image
+                mediaUrl = payload.asset.src?.original || payload.asset.src?.large2x || payload.asset.src?.large
+            } else if (payload.assetType === 'video') {
+                // Pexels video - get the first available video file
+                mediaUrl = payload.asset.video_files?.[0]?.link || payload.asset.url
+            }
+            
+            console.log('Extracted media URL for empty timeline:', mediaUrl)
+            
+            if (!mediaUrl) {
+                console.error('Could not extract media URL from external asset:', payload.asset)
+                return
+            }
+            
             // Create a temporary asset-like object for external assets
             const externalAsset = {
                 id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                url: payload.asset.url || payload.asset.src?.original || payload.asset.images?.original?.url,
-                name: payload.asset.title || `External ${payload.assetType}`,
+                url: mediaUrl,
+                name: payload.asset.title || payload.asset.alt || `External ${payload.assetType}`,
                 mime_type: payload.assetType === 'video' ? 'video/mp4' : 'image/jpeg',
                 duration: payload.assetType === 'video' ? 10000 : 5000, // Default durations in ms
                 isExternal: true,
