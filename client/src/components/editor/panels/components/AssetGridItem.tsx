@@ -7,20 +7,44 @@ interface AssetGridItemProps {
 }
 
 const AssetGridItem: React.FC<AssetGridItemProps> = ({ asset, type }) => {
+    const handleDragStart = (e: React.DragEvent<HTMLElement>) => {
+        // Create a payload with external asset information
+        const dragData = {
+            type: 'external_asset',
+            assetType: type,
+            asset: asset
+        };
+        
+        e.dataTransfer.setData(
+            'application/json',
+            JSON.stringify(dragData)
+        );
+        e.dataTransfer.effectAllowed = 'copy';
+        
+        // Set a drag image if needed
+        if (e.target instanceof HTMLElement) {
+            e.dataTransfer.setDragImage(e.target, 0, 0);
+        }
+    };
+
     return (
-        <div className="relative aspect-[9/16] rounded-lg overflow-hidden group shadow hover:shadow-lg transition-shadow cursor-pointer">
+        <div 
+            className="relative aspect-[9/16] rounded-lg overflow-hidden group shadow hover:shadow-lg transition-shadow cursor-grab active:cursor-grabbing"
+            draggable={true}
+            onDragStart={handleDragStart}
+        >
             {type === 'image' ? (
                 <img
                     src={(asset as PexelsPhoto).src.portrait}
                     alt="pexels asset"
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105 pointer-events-none"
                 />
             ) : (
                 <div className="w-full h-full bg-black flex items-center justify-center">
                     <img
                         src={(asset as PexelsVideo).image}
                         alt="pexels video thumbnail"
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105 pointer-events-none"
                     />
                 </div>
             )}

@@ -44,10 +44,22 @@ export default function EmptyTimeline() {
         dragCounter.current = 0
         setIsDragOver(false)
 
-        // 1) parse assetId
-        let payload: { assetId: string }
+        // 1) parse payload
+        let payload: { assetId?: string, type?: string, assetType?: string, asset?: any }
         try { payload = JSON.parse(e.dataTransfer.getData('application/json')) }
         catch { return }
+
+        // Handle external assets (Pexels/stickers)
+        if (payload.type === 'external_asset') {
+            // For external assets, we need to download and upload them first
+            // This is a placeholder - you'd need to implement the download/upload logic
+            console.log('External asset drop detected on empty timeline:', payload)
+            // TODO: Implement external asset handling
+            return
+        }
+
+        // Handle regular uploaded assets
+        if (!payload.assetId) return
         const asset = assets.find(a => a.id === payload.assetId)
         if (!asset) return
 

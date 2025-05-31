@@ -44,17 +44,26 @@ export default function TrackRow({
 
         if (!rowRef.current) return
 
-        // Try to parse as clip data first
-        let clipPayload: { clipId: string } | undefined
+        // Try to parse the payload
+        let payload: { clipId?: string, assetId?: string, type?: string, assetType?: string, asset?: any }
         try {
-            clipPayload = JSON.parse(e.dataTransfer.getData('application/json'))
+            payload = JSON.parse(e.dataTransfer.getData('application/json'))
         } catch {
-            // Not a clip, continue to try asset data
+            return
         }
 
-        if (clipPayload?.clipId) {
-            // Handle clip drop
-            const droppedClip = allClips.find(c => c.id === clipPayload.clipId)
+        // Handle external assets (Pexels/stickers)
+        if (payload.type === 'external_asset') {
+            // For external assets, we need to download and upload them first
+            // This is a placeholder - you'd need to implement the download/upload logic
+            console.log('External asset drop detected on track:', payload)
+            // TODO: Implement external asset handling
+            return
+        }
+
+        // Handle clip drops
+        if (payload.clipId) {
+            const droppedClip = allClips.find(c => c.id === payload.clipId)
             if (!droppedClip) return
 
             // Calculate new start time
@@ -89,17 +98,10 @@ export default function TrackRow({
             return
         }
 
-        // Try to parse as asset data
-        let assetPayload: { assetId: string } | undefined
-        try {
-            assetPayload = JSON.parse(e.dataTransfer.getData('application/json'))
-        } catch {
-            return
-        }
+        // Handle regular asset drops
+        if (!payload.assetId) return
 
-        if (!assetPayload?.assetId) return
-
-        const asset = assets.find(a => a.id === assetPayload.assetId)
+        const asset = assets.find(a => a.id === payload.assetId)
         if (!asset) return
 
         // compute time position

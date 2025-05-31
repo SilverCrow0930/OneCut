@@ -180,7 +180,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             top: '50%',
             width: '100%',
             height: '100%',
-            objectFit: 'contain' as const,
+            objectFit: 'cover' as const,
             transform: `translate(-50%, -50%) scale(${mediaScale})`,
             userSelect: 'none' as const,
         }
