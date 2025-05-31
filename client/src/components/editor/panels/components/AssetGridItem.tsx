@@ -2,18 +2,21 @@ import React, { useState } from 'react'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { formatTimeMs } from '@/lib/utils'
 import { useAssets } from '@/contexts/AssetsContext'
+import { useEditor } from '@/contexts/EditorContext'
 import { Asset } from '@/types/assets'
 
 interface AssetGridItemProps {
     asset: Asset | any // Can be either our Asset type or Pexels asset
     type: 'image' | 'video'
+    onUploadAndHighlight?: (assetId: string) => void // optional callback for highlight
 }
 
-export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
+export default function AssetGridItem({ asset, type, onUploadAndHighlight }: AssetGridItemProps) {
     // Only use useAssetUrl for regular uploaded assets
     const isPexelsAsset = asset.src || asset.video_files
     const { url: uploadedUrl, loading } = useAssetUrl(isPexelsAsset ? undefined : asset.id)
     const { deleteAsset } = useAssets()
+    const { setSelectedTool } = useEditor()
     const [isUploading, setIsUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -50,6 +53,29 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
             }
         }
         return 0
+    }
+
+    // Click-to-upload logic
+    const handleClick = async () => {
+        if (!isPexelsAsset) return // Only for Pexels assets
+        setIsUploading(true)
+        setError(null)
+        try {
+            // Get the parent AssetsToolPanel component
+            const assetsPanel = document.querySelector('[data-assets-panel]')
+            if (!assetsPanel) throw new Error('Could not find AssetsToolPanel')
+            // Call the download function
+            const uploadedAsset = await (assetsPanel as any).handlePexelsAssetDownload(asset, type)
+            // Switch to Upload panel
+            setSelectedTool('Upload')
+            // Optionally highlight the new asset
+            if (onUploadAndHighlight) onUploadAndHighlight(uploadedAsset.id)
+            // Optionally: show a toast or feedback
+        } catch (err: any) {
+            setError(err.message)
+        } finally {
+            setIsUploading(false)
+        }
     }
 
     // Drag and drop logic
@@ -116,10 +142,14 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
 
     return (
         <div
-            className="relative w-full aspect-video rounded overflow-hidden cursor-grab active:cursor-grabbing"
+            className="relative w-full aspect-video rounded overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition"
             draggable={true}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onClick={isPexelsAsset ? handleClick : undefined}
+            tabIndex={0}
+            role="button"
+            aria-label="Upload asset"
         >
             {isVideo ? (
                 <video
