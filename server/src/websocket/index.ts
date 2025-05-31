@@ -1,5 +1,4 @@
 import { Server, Socket } from 'socket.io';
-import { generativeModel } from '../integrations/vertexAI.js';
 import { generateContent } from '../integrations/googleGenAI.js';
 import { bucket } from '../integrations/googleStorage.js';
 
@@ -62,14 +61,14 @@ export const setupWebSocket = (server: any) => {
         });
 
         // Initialize chat session for this socket
-        chatSessions.set(socket.id, generativeModel.startChat({
+        chatSessions.set(socket.id, {
             systemInstruction: `
                 You are Melody, an AI video editing assistant. 
                 Your role is to help users create and edit videos effectively.
 
                 
             `,
-        }));
+        });
 
         // Handle chat messages
         socket.on('chat_message', async (data: { message: string, useIdeation: boolean }) => {
@@ -81,36 +80,17 @@ export const setupWebSocket = (server: any) => {
             console.log('Generating a response from the model');
 
             try {
-                const chat = chatSessions.get(socket.id);
-                if (!chat) {
-                    throw new Error('Chat session not found');
-                }
+                const response = await generateContent(
+                    data.message,
+                    "",
+                    'text/plain'
+                );
 
-                // Configure the model based on ideation mode
-                const generationConfig = {
-                    temperature: 0.7,
-                    topP: 0.8,
-                    topK: 40,
-                    maxOutputTokens: 2048,
-                };
-
-                const resp = await chat.sendMessage(data.message, {
-                    generationConfig,
-                    tools: data.useIdeation ?
-                        [googleSearchRetrievalTool] :
-                        undefined
-                })
-
-                const contentResponse = resp.response;
-
-                console.log('Response from the model: ' + JSON.stringify(contentResponse));
-
-                if (contentResponse.candidates?.[0]?.content.parts[0].text) {
+                if (response.textOutput?.text) {
                     io.emit('chat_message', {
-                        text: contentResponse.candidates?.[0]?.content.parts[0].text,
+                        text: response.textOutput.text,
                     });
-                }
-                else {
+                } else {
                     io.emit('chat_message', {
                         text: 'An error occurred while generating a response from the model',
                     });

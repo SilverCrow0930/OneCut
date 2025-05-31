@@ -772,12 +772,12 @@ const AutoCutToolPanel = () => {
                                             <div className="p-2 bg-white rounded-lg shadow-sm">
                                                 <img
                                                     src="/assets/icons/lemon.png"
-                                                    alt="Cut my video!"
+                                                    alt="AI Pilot"
                                                     className="w-5 h-5"
                                                 />
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900">AI Pilot</p>
+                                                <p className="text-sm font-medium text-gray-900">Cut my video!</p>
                                             </div>
                                             <button
                                                 className="p-2 hover:bg-gray-300 rounded-lg transition-colors duration-500"

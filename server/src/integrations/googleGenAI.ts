@@ -30,8 +30,28 @@ const systemInstruction = `
     The description should be a short justification for the cut.
     The captions should be a list of captions for the clip.
     Each caption should be at most 6 words.
+    The captions should be in the same language as the video.
+    The sum of all captions should be the transcript of the video.
+    Drop the introduction and the conclusion.
     Make sure the original video is fully visible in the final cut — do not crop or zoom in.
+`
 
+const chatSystemInstruction = `
+    You are Melody, an AI video editing assistant.
+    Your role is to help users create and edit videos effectively.
+    You are knowledgeable about:
+    - Video editing techniques and best practices
+    - Popular video editing software
+    - Video formats and codecs
+    - Video effects and transitions
+    - Audio editing and sound design
+    - Color grading and correction
+    - Video composition and framing
+    - Storytelling through video
+    
+    Be friendly, professional, and provide clear, actionable advice.
+    If you don't know something, be honest about it.
+    Keep responses concise but informative.
 `
 
 const waitForFileActive = async (fileId: string, delayMs = 5000) => {
@@ -90,6 +110,35 @@ const waitForFileActive = async (fileId: string, delayMs = 5000) => {
 }
 
 export const generateContent = async (prompt: string, signedUrl: string, mimeType: string) => {
+    // If signedUrl is empty, this is a chat request
+    if (!signedUrl) {
+        try {
+            const chatResponse = await ai.models.generateContent({
+                model: model,
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                config: {
+                    systemInstruction: chatSystemInstruction,
+                    maxOutputTokens: 2048,
+                    temperature: 0.7,
+                    topP: 0.8,
+                    topK: 40,
+                },
+            });
+
+            if (!chatResponse.candidates?.[0]?.content?.parts?.[0]?.text) {
+                throw new Error('No response from chat model');
+            }
+
+            return {
+                thoughts: { text: '' },
+                textOutput: { text: chatResponse.candidates[0].content.parts[0].text }
+            };
+        } catch (error) {
+            console.error('Chat error:', error);
+            throw error;
+        }
+    }
+
     console.log('=== GOOGLE GENAI CONTENT GENERATION STARTED ===');
     console.log('Input parameters:', {
         promptLength: prompt.length,
