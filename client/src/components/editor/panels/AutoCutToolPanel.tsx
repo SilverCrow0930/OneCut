@@ -772,7 +772,7 @@ const AutoCutToolPanel = () => {
                                             <div className="p-2 bg-white rounded-lg shadow-sm">
                                                 <img
                                                     src="/assets/icons/lemon.png"
-                                                    alt="AI Pilot"
+                                                    alt="Cut my video!"
                                                     className="w-5 h-5"
                                                 />
                                             </div>

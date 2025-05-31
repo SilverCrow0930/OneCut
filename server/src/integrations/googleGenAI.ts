@@ -30,6 +30,7 @@ const systemInstruction = `
     The description should be a short justification for the cut.
     The captions should be a list of captions for the clip.
     Each caption should be at most 6 words.
+    Make sure the original video is fully visible in the final cut — do not crop or zoom in.
 
 `
 
