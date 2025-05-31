@@ -91,12 +91,7 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
                     {/* duration badge */}
                     {
                         asset.duration && (
-                            <div className="
-                                absolute bottom-1 right-1
-                                bg-black bg-opacity-60
-                                text-white text-xs
-                                px-1 py-px rounded
-                            ">
+                            <div className="absolute bottom-1 right-1 bg-black bg-opacity-60 text-white text-xs px-1 py-px rounded">
                                 {formatTimeMs(asset.duration)}
                             </div>
                         )
