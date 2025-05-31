@@ -80,8 +80,8 @@ export const setupWebSocket = (server: any) => {
 
         // Handle chat messages
         socket.on('chat_message', async (data: { message: string, useIdeation: boolean }) => {
-            // Send the message to all connected clients
-            io.emit('state_change', {
+            // Send the message to the original client
+            socket.emit('state_change', {
                 state: 'generating_output',
             });
 
@@ -113,24 +113,24 @@ export const setupWebSocket = (server: any) => {
                 console.log('Response from the model: ' + JSON.stringify(contentResponse));
 
                 if (contentResponse.candidates?.[0]?.content.parts[0].text) {
-                    io.emit('chat_message', {
+                    socket.emit('chat_message', {
                         text: contentResponse.candidates?.[0]?.content.parts[0].text,
                     });
                 }
                 else {
-                    io.emit('chat_message', {
+                    socket.emit('chat_message', {
                         text: 'An error occurred while generating a response from the model',
                     });
                 }
             } catch (error) {
                 console.error('Error in chat:', error);
-                io.emit('chat_message', {
+                socket.emit('chat_message', {
                     text: 'An error occurred while processing your message. Please try again.',
                 });
             }
 
-            // Send the message to the user who sent it
-            io.emit('state_change', {
+            // Send the message to the original client
+            socket.emit('state_change', {
                 state: 'idle',
             });
         });
