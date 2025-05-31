@@ -88,34 +88,16 @@ export const setupWebSocket = (server: any) => {
             console.log('Generating a response from the model');
 
             try {
-                const chat = chatSessions.get(socket.id);
-                if (!chat) {
-                    throw new Error('Chat session not found');
-                }
+                const response = await generateContent(
+                    data.message,
+                    "",
+                    'text/plain'
+                );
 
-                // Configure the model based on ideation mode
-                const generationConfig = {
-                    temperature: 0.7,
-                    topP: 0.8,
-                    topK: 40,
-                    maxOutputTokens: 2048,
-                };
-
-                const resp = await chat.sendMessage(data.message, {
-                    generationConfig,
-                    tools: data.useIdeation ?
-                        [googleSearchRetrievalTool] :
-                        undefined
-                })
-
-                const contentResponse = resp.response;
-
-                console.log('Response from the model: ' + JSON.stringify(contentResponse));
-
-                if (contentResponse.candidates?.[0]?.content.parts[0].text) {
+                if (response.textOutput?.text) {
                     socket.emit('chat_message', {
-                        text: contentResponse.candidates?.[0]?.content.parts[0].text,
-                    });
+                        text: response.textOutput.text,
+                    })
                 }
                 else {
                     socket.emit('chat_message', {
