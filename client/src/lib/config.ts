@@ -3,8 +3,7 @@
  * Falls back to http://localhost:8080 if the env var isn't set.
  */
 export const API_URL =
-    //(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/+$/, '')
-    (process.env.NEXT_PUBLIC_API_URL || 'https://lemona-app.onrender.com').replace(/\/+$/, '')
+    (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/+$/, '')
 
 /**
  * Prefix for all your versioned API routes.
