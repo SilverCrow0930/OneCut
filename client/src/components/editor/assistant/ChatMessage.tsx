@@ -45,7 +45,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
                     </div>
                 </div>
             ) : (
-                <code className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-sm" {...props}>
+                <code className="bg-gray-100 rounded px-1 py-0.5 text-sm" {...props}>
                     {children}
                 </code>
             );
@@ -54,12 +54,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
             <p className="my-2 leading-6">{children}</p>
         ),
         h1: ({ children }: any) => (
-            <h1 className="text-3xl font-bold my-6 pb-2 border-b border-gray-200 dark:border-gray-700 text-black">
+            <h1 className="text-3xl font-bold my-6 pb-2 border-b border-gray-200 text-black">
                 {children}
             </h1>
         ),
         h2: ({ children }: any) => (
-            <h2 className="text-2xl font-semibold my-4 pl-3 border-l-4 border-blue-300 bg-gray-50 dark:bg-gray-800 rounded-md text-black">
+            <h2 className="text-2xl font-semibold my-4 pl-3 border-l-4 border-blue-300 bg-gray-50 rounded-md text-black">
                 {children}
             </h2>
         ),
@@ -89,7 +89,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
 
             if (!hasListChild) {
                 return (
-                    <li {...props} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm px-5 py-4 min-w-[220px] max-w-full flex-1 transition hover:shadow-md flex flex-col items-start">
+                    <li {...props} className="bg-gray-50 border border-gray-200 rounded-xl shadow-sm px-5 py-4 min-w-[220px] max-w-full flex-1 transition hover:shadow-md flex flex-col items-start">
                         <div className="flex items-center w-full">
                             <span className="text-black flex-1">{children}</span>
                         </div>
@@ -117,12 +117,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
 
     const renderContent = () => {
         if (renderError) {
-            return <div className="text-gray-900 dark:text-gray-100">{message}</div>;
+            return <div className="text-gray-900">{message}</div>;
         }
 
         try {
             return (
-                <div className="markdown-body prose prose-sm max-w-none dark:prose-invert">
+                <div className="markdown-body prose prose-sm max-w-none">
                     <ReactMarkdown
                         children={message}
                         components={renderers}
@@ -132,7 +132,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
             );
         } catch (error) {
             setRenderError(true);
-            return <div className="text-gray-900 dark:text-gray-100">{message}</div>;
+            return <div className="text-gray-900">{message}</div>;
         }
     };
 
@@ -148,7 +148,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
                         {message}
                     </div>
                 ) : (
-                    <div className="w-fit max-w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-t-2xl rounded-br-2xl rounded-bl-lg px-5 py-3 shadow-sm">
+                    <div className="w-fit max-w-full bg-white text-gray-900 border border-gray-200 rounded-t-2xl rounded-br-2xl rounded-bl-lg px-5 py-3 shadow-sm">
                         {renderContent()}
                     </div>
                 )
