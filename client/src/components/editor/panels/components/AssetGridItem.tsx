@@ -10,14 +10,16 @@ interface AssetGridItemProps {
 }
 
 export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
-    const { url: uploadedUrl, loading } = useAssetUrl(asset.id)
+    // Only use useAssetUrl for regular uploaded assets
+    const isPexelsAsset = asset.src || asset.video_files
+    const { url: uploadedUrl, loading } = useAssetUrl(isPexelsAsset ? undefined : asset.id)
     const { deleteAsset } = useAssets()
     const [isDownloading, setIsDownloading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     // Get the appropriate URL based on asset type
     const getAssetUrl = () => {
-        if (asset.src || asset.video_files) {
+        if (isPexelsAsset) {
             // Pexels asset
             if (type === 'image') {
                 return asset.src?.original || asset.src?.large2x || asset.src?.large
@@ -31,7 +33,7 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
 
     const handleDragStart = async (e: React.DragEvent) => {
         // If it's a Pexels asset (has src or video_files property)
-        if (asset.src || asset.video_files) {
+        if (isPexelsAsset) {
             e.preventDefault() // Prevent default drag start
             setIsDownloading(true)
             setError(null)
