@@ -10,9 +10,11 @@ interface AssetThumbnailProps {
         mime_type: string
         duration: number | null  // in milliseconds
     }
+    highlight?: boolean
+    uploading?: boolean
 }
 
-export default function AssetThumbnail({ asset }: AssetThumbnailProps) {
+export default function AssetThumbnail({ asset, highlight, uploading }: AssetThumbnailProps) {
     const { url, loading } = useAssetUrl(asset.id)
     const { deleteAsset } = useAssets()
     const [showContextMenu, setShowContextMenu] = useState(false)
@@ -38,13 +40,13 @@ export default function AssetThumbnail({ asset }: AssetThumbnailProps) {
 
     if (loading) {
         return (
-            <div className="relative w-24 aspect-video bg-gray-200 animate-pulse rounded" />
+            <div className="relative w-24 aspect-video bg-gray-200 animate-pulse rounded h-full" />
         )
     }
 
     if (!url) {
         return (
-            <div className="relative w-24 aspect-video bg-red-100 text-red-500 flex items-center justify-center rounded">
+            <div className="relative w-24 aspect-video bg-red-100 text-red-500 flex items-center justify-center rounded h-full">
                 !
             </div>
         )
@@ -56,12 +58,20 @@ export default function AssetThumbnail({ asset }: AssetThumbnailProps) {
         <>
             <DraggableAsset assetId={asset.id}>
                 <div
-                    className="
-                        relative w-full aspect-video rounded-lg overflow-hidden 
+                    className={`
+                        relative w-full h-full aspect-video rounded-lg overflow-hidden 
                         bg-black hover:opacity-80 transition-opacity duration-500
-                    "
+                        flex
+                        ${highlight ? 'ring-4 ring-blue-400 animate-pulse-fast' : ''}
+                        ${uploading ? 'opacity-60 pointer-events-none' : ''}
+                    `}
                     onContextMenu={handleContextMenu}
                 >
+                    {uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                        </div>
+                    )}
                     {
                         isVideo ? (
                             <video
@@ -112,6 +122,16 @@ export default function AssetThumbnail({ asset }: AssetThumbnailProps) {
                     </div>
                 )
             }
+            <style jsx>{`
+                @keyframes pulse-fast {
+                    0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.7); }
+                    70% { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
+                    100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+                }
+                .animate-pulse-fast {
+                    animation: pulse-fast 1s cubic-bezier(0.4, 0, 0.6, 1) 2;
+                }
+            `}</style>
         </>
     )
 }

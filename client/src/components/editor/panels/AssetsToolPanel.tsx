@@ -7,8 +7,14 @@ import { Asset } from './types/assets'
 import { ASSET_TABS } from './constants/assets'
 import AssetGridItem from './components/AssetGridItem'
 import { useAssets } from '@/contexts/AssetsContext'
+import { useEditor } from '@/contexts/EditorContext'
 
-const AssetsToolPanel = () => {
+interface AssetsToolPanelProps {
+    setHighlightedAssetId?: (id: string | null) => void
+    setUploadingAssetId?: (id: string | null) => void
+}
+
+const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId, setUploadingAssetId }) => {
     const [selectedTab, setSelectedTab] = useState<'image' | 'video'>('video')
     const [assets, setAssets] = useState<Asset[]>([])
     const [loading, setLoading] = useState(false)
@@ -17,6 +23,7 @@ const AssetsToolPanel = () => {
     const [searchQuery, setSearchQuery] = useState('')
     const { session } = useAuth()
     const { refresh } = useAssets()
+    const { selectedTool } = useEditor()
 
     useEffect(() => {
         setAssets([])
@@ -60,6 +67,20 @@ const AssetsToolPanel = () => {
         setSearchQuery(e.target.value)
         setAssets([])
         setPage(1)
+    }
+
+    // Function to handle upload and highlight state
+    const handleUploadAndHighlight = (assetId: string, uploading?: boolean) => {
+        if (setUploadingAssetId && setHighlightedAssetId) {
+            if (uploading) {
+                setUploadingAssetId(assetId)
+                setHighlightedAssetId(null)
+            } else {
+                setUploadingAssetId(null)
+                setHighlightedAssetId(assetId)
+                setTimeout(() => setHighlightedAssetId(null), 1600)
+            }
+        }
     }
 
     // Function to download and upload Pexels asset
@@ -202,6 +223,7 @@ const AssetsToolPanel = () => {
                                 key={`${selectedTab}-${index}`}
                                 asset={asset}
                                 type={selectedTab}
+                                onUploadAndHighlight={handleUploadAndHighlight}
                             />
                         ))
                     }

@@ -5,7 +5,12 @@ import AssetThumbnail from '../upload/AssetThumbnail'
 import { Upload, Loader2 } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 
-const UploadToolPanel: React.FC = () => {
+interface UploadToolPanelProps {
+    highlightedAssetId?: string | null
+    uploadingAssetId?: string | null
+}
+
+const UploadToolPanel: React.FC<UploadToolPanelProps> = ({ highlightedAssetId, uploadingAssetId }) => {
     const { assets, loading, error, refresh } = useAssets()
 
     return (
@@ -41,6 +46,8 @@ const UploadToolPanel: React.FC = () => {
                                     <AssetThumbnail
                                         key={index}
                                         asset={asset}
+                                        highlight={highlightedAssetId === asset.id}
+                                        uploading={uploadingAssetId === asset.id}
                                     />
                                 ))
                             }

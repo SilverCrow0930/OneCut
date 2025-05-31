@@ -8,7 +8,7 @@ import { Asset } from '@/types/assets'
 interface AssetGridItemProps {
     asset: Asset | any // Can be either our Asset type or Pexels asset
     type: 'image' | 'video'
-    onUploadAndHighlight?: (assetId: string) => void // optional callback for highlight
+    onUploadAndHighlight?: (assetId: string, uploading?: boolean) => void // callback for highlight/progress
 }
 
 export default function AssetGridItem({ asset, type, onUploadAndHighlight }: AssetGridItemProps) {
@@ -58,21 +58,21 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
     // Click-to-upload logic
     const handleClick = async () => {
         if (!isPexelsAsset) return // Only for Pexels assets
+        setSelectedTool('Upload') // Switch panel immediately
         setIsUploading(true)
         setError(null)
+        if (onUploadAndHighlight) onUploadAndHighlight(asset.id, true) // Indicate uploading started
         try {
             // Get the parent AssetsToolPanel component
             const assetsPanel = document.querySelector('[data-assets-panel]')
             if (!assetsPanel) throw new Error('Could not find AssetsToolPanel')
             // Call the download function
             const uploadedAsset = await (assetsPanel as any).handlePexelsAssetDownload(asset, type)
-            // Switch to Upload panel
-            setSelectedTool('Upload')
             // Optionally highlight the new asset
-            if (onUploadAndHighlight) onUploadAndHighlight(uploadedAsset.id)
-            // Optionally: show a toast or feedback
+            if (onUploadAndHighlight) onUploadAndHighlight(uploadedAsset.id, false)
         } catch (err: any) {
             setError(err.message)
+            if (onUploadAndHighlight) onUploadAndHighlight('', false)
         } finally {
             setIsUploading(false)
         }
