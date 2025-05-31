@@ -439,6 +439,16 @@ const AutoCutToolPanel = () => {
                     errorMessage = 'The video file could not be found. Please try uploading the video again.';
                 } else if (errorMessage.includes('Failed to generate signed URL')) {
                     errorMessage = 'There was an issue accessing the video file. Please try uploading the video again.';
+                } else if (errorMessage.includes('503') || errorMessage.includes('Service Unavailable')) {
+                    errorMessage = 'The AI service is temporarily unavailable. This usually happens when the service is under heavy load. Please wait a few minutes and try again.';
+                } else if (errorMessage.includes('timeout')) {
+                    errorMessage = 'The video processing timed out. Please try with a shorter video or wait a few minutes before retrying.';
+                } else if (errorMessage.includes('No valid JSON array found')) {
+                    errorMessage = 'The AI had trouble analyzing your video. Please try with a different video or adjust your prompt.';
+                } else if (errorMessage.includes('Failed to download video file')) {
+                    errorMessage = 'There was an issue downloading your video for processing. Please try uploading it again.';
+                } else if (errorMessage.includes('Video file is empty')) {
+                    errorMessage = 'The uploaded video file appears to be empty or corrupted. Please try uploading a different video.';
                 }
 
                 setError(errorMessage);

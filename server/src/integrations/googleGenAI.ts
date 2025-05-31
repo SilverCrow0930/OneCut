@@ -205,9 +205,28 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
                     topP: 0.8,
                     topK: 40,
                 },
+            }).catch((error) => {
+                console.error('Gemini API error details:', {
+                    message: error.message,
+                    status: error.status,
+                    code: error.code,
+                    details: error.details,
+                    stack: error.stack
+                });
+                
+                // Provide more specific error messages
+                if (error.message?.includes('503') || error.status === 503) {
+                    throw new Error('got status: 503 Service Unavailable. The AI service is temporarily overloaded. Please try again in a few minutes.');
+                } else if (error.message?.includes('quota') || error.message?.includes('limit')) {
+                    throw new Error('API quota or rate limit exceeded. Please try again later.');
+                } else if (error.message?.includes('timeout')) {
+                    throw new Error('Request timed out. Please try with a shorter video.');
+                } else {
+                    throw error;
+                }
             }),
             new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('Model generation timeout')), 24 * 60 * 60 * 1000)
+                setTimeout(() => reject(new Error('Model generation timeout after 24 hours')), 24 * 60 * 60 * 1000)
             )
         ]);
 
@@ -273,7 +292,9 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
             thoughts: {
                 text: thoughts || ''
             },
-            cuts: cuts
+            textOutput: {
+                text: JSON.stringify(cuts, null, 2)
+            }
         }
     }
     catch (error) {

@@ -26,4 +26,10 @@ services:
       - key: GOOGLE_CLOUD_PRIVATE_KEY
         sync: false
       - key: GOOGLE_CLOUD_CLIENT_EMAIL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_CLOUD_PROJECT
+        sync: false
+      - key: GOOGLE_CLOUD_LOCATION
         sync: false 
