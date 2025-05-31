@@ -14,7 +14,7 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
     const isPexelsAsset = asset.src || asset.video_files
     const { url: uploadedUrl, loading } = useAssetUrl(isPexelsAsset ? undefined : asset.id)
     const { deleteAsset } = useAssets()
-    const [isDownloading, setIsDownloading] = useState(false)
+    const [isUploading, setIsUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     // Get the appropriate URL based on asset type
@@ -31,40 +31,40 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
         return uploadedUrl
     }
 
-    const handleDragStart = async (e: React.DragEvent) => {
-        // If it's a Pexels asset (has src or video_files property)
-        if (isPexelsAsset) {
-            e.preventDefault() // Prevent default drag start
-            setIsDownloading(true)
-            setError(null)
+    // Get the poster for Pexels videos
+    const getVideoPoster = () => {
+        if (isPexelsAsset && type === 'video') {
+            return asset.image || undefined
+        }
+        return undefined
+    }
 
-            try {
-                // Get the parent AssetsToolPanel component
-                const assetsPanel = document.querySelector('[data-assets-panel]')
-                if (!assetsPanel) {
-                    throw new Error('Could not find AssetsToolPanel')
-                }
-
-                // Call the download function
-                const uploadedAsset = await (assetsPanel as any).handlePexelsAssetDownload(asset, type)
-
-                // Now set the drag data with the uploaded asset ID
-                e.dataTransfer.setData(
-                    'application/json',
-                    JSON.stringify({ assetId: uploadedAsset.id })
-                )
-                e.dataTransfer.effectAllowed = 'copy'
-
-                // Set a drag image if needed
-                if (e.target instanceof HTMLElement) {
-                    e.dataTransfer.setDragImage(e.target, 0, 0)
-                }
-            } catch (err: any) {
-                console.error('Failed to download/upload asset:', err)
-                setError(err.message)
-            } finally {
-                setIsDownloading(false)
+    // Get the duration in ms for display
+    const getDuration = () => {
+        if (type === 'video') {
+            if (isPexelsAsset) {
+                // Pexels duration is in seconds
+                return asset.duration ? asset.duration * 1000 : 0
+            } else {
+                return asset.duration || 0
             }
+        }
+        return 0
+    }
+
+    // Drag and drop logic
+    const handleDragStart = (e: React.DragEvent) => {
+        if (isPexelsAsset) {
+            // For Pexels, set a custom drag type and show spinner overlay
+            e.dataTransfer.setData(
+                'application/json',
+                JSON.stringify({ pexelsAsset: asset, type })
+            )
+            e.dataTransfer.effectAllowed = 'copy'
+            if (e.target instanceof HTMLElement) {
+                e.dataTransfer.setDragImage(e.target, 0, 0)
+            }
+            setIsUploading(true)
         } else {
             // Regular asset, use normal drag behavior
             e.dataTransfer.setData(
@@ -72,16 +72,24 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
                 JSON.stringify({ assetId: asset.id })
             )
             e.dataTransfer.effectAllowed = 'copy'
-
             if (e.target instanceof HTMLElement) {
                 e.dataTransfer.setDragImage(e.target, 0, 0)
             }
         }
     }
 
-    if (loading || isDownloading) {
+    // Listen for drag end to remove spinner overlay
+    const handleDragEnd = async (e: React.DragEvent) => {
+        if (isPexelsAsset) {
+            setIsUploading(false)
+        }
+    }
+
+    if (loading || isUploading) {
         return (
-            <div className="relative w-full aspect-video bg-gray-200 animate-pulse rounded" />
+            <div className="relative w-full aspect-video bg-gray-200 rounded flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            </div>
         )
     }
 
@@ -103,12 +111,15 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
     }
 
     const isVideo = type === 'video'
+    const durationMs = getDuration()
+    const poster = getVideoPoster()
 
     return (
         <div
             className="relative w-full aspect-video rounded overflow-hidden cursor-grab active:cursor-grabbing"
             draggable={true}
             onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
         >
             {isVideo ? (
                 <video
@@ -116,6 +127,7 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
                     className="w-full h-full object-cover"
                     muted
                     playsInline
+                    poster={poster}
                 />
             ) : (
                 <img
@@ -124,9 +136,9 @@ export default function AssetGridItem({ asset, type }: AssetGridItemProps) {
                     className="w-full h-full object-cover"
                 />
             )}
-            {isVideo && asset.duration && (
+            {isVideo && durationMs > 0 && (
                 <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1 rounded">
-                    {formatTimeMs(asset.duration)}
+                    {formatTimeMs(durationMs)}
                 </div>
             )}
         </div>
