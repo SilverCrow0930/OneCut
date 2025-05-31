@@ -54,10 +54,56 @@ export default function TrackRow({
             return
         }
 
-        // Handle external assets (Pexels/stickers) - simplified for now
+        // Handle external assets (Pexels/stickers)
         if (payload.type === 'external_asset') {
-            console.log('External asset detected on track, but not implemented yet:', payload)
-            alert('External assets (Pexels/Stickers) are not yet supported. Please upload media files using the Upload panel.')
+            console.log('Handling external asset on track:', payload)
+            
+            // Create a temporary asset-like object for external assets
+            const externalAsset = {
+                id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                url: payload.asset.url || payload.asset.src?.original || payload.asset.images?.original?.url,
+                name: payload.asset.title || `External ${payload.assetType}`,
+                mime_type: payload.assetType === 'video' ? 'video/mp4' : 'image/jpeg',
+                duration: payload.assetType === 'video' ? 10000 : 5000, // Default durations in ms
+                isExternal: true,
+                originalData: payload.asset
+            }
+
+            console.log('Created external asset for track:', externalAsset)
+
+            // compute time position
+            const rect = rowRef.current.getBoundingClientRect()
+            const x = e.clientX - rect.left
+            const startMs = Math.max(0, Math.round(x / timeScale))
+
+            console.log('Creating external clip in TrackRow at time:', startMs)
+
+            // build new clip
+            const dur = externalAsset.duration
+            const newClip: Clip = {
+                id: uuid(),
+                trackId: track.id,
+                assetId: externalAsset.id,
+                type: payload.assetType === 'video' ? 'video' : 'video', // Images also go on video tracks
+                sourceStartMs: 0,
+                sourceEndMs: dur,
+                timelineStartMs: startMs,
+                timelineEndMs: startMs + dur,
+                assetDurationMs: dur,
+                volume: 1,
+                speed: 1,
+                properties: {
+                    externalAsset: externalAsset // Store external asset data in properties
+                },
+                createdAt: new Date().toISOString(),
+            }
+
+            console.log('Creating external clip in TrackRow:', newClip)
+
+            executeCommand({
+                type: 'ADD_CLIP',
+                payload: { clip: newClip }
+            })
             return
         }
 

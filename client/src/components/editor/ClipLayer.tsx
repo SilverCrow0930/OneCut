@@ -52,27 +52,39 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
 
     const { url } = useAssetUrl(clip.assetId)
 
+    // Check if this is an external asset
+    const externalAsset = clip.properties?.externalAsset
+    const mediaUrl = externalAsset?.url || url
+
+    console.log('ClipLayer render:', { 
+        clipId: clip.id, 
+        assetId: clip.assetId, 
+        isExternal: !!externalAsset,
+        mediaUrl,
+        externalAsset 
+    })
+
     // Get asset aspect ratio
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
     useEffect(() => {
-        if (clip.type === 'video' && url) {
+        if (clip.type === 'video' && mediaUrl) {
             const media = document.createElement('video')
-            media.src = url
+            media.src = mediaUrl
             media.addEventListener('loadedmetadata', () => {
                 if (media.videoWidth && media.videoHeight) {
                     setAspectRatio(media.videoWidth / media.videoHeight)
                 }
             })
-        } else if (clip.type === 'image' && url) {
+        } else if (clip.type === 'image' && mediaUrl) {
             const media = document.createElement('img')
-            media.src = url
+            media.src = mediaUrl
             media.addEventListener('load', () => {
                 if (media.naturalWidth && media.naturalHeight) {
                     setAspectRatio(media.naturalWidth / media.naturalHeight)
                 }
             })
         }
-    }, [url, clip.type])
+    }, [mediaUrl, clip.type])
 
     // --- Crop area resizing ---
     const handleResizeStart = (e: React.MouseEvent, type: 'nw' | 'ne' | 'sw' | 'se') => {
@@ -180,8 +192,8 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             top: '50%',
             width: '100%',
             height: '100%',
-            objectFit: 'cover' as const, // Fills editor completely, may crop edges to maintain aspect ratio
-            transform: `translate(-50%, -50%)`,
+            objectFit: 'contain' as const,
+            transform: `translate(-50%, -50%) scale(${mediaScale})`,
             userSelect: 'none' as const,
         }
 
@@ -190,7 +202,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                 return (
                     <video
                         ref={videoRef}
-                        src={url!}
+                        src={mediaUrl!}
                         style={style}
                         preload="auto"
                         playsInline
@@ -202,7 +214,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             case 'image':
                 return (
                     <img
-                        src={url!}
+                        src={mediaUrl!}
                         style={style}
                         onClick={handleClick}
                         draggable={false}

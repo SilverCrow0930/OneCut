@@ -186,10 +186,85 @@ export default function Timeline() {
             return
         }
 
-        // Handle external assets (Pexels/stickers) - simplified for now
+        // Handle external assets (Pexels/stickers)
         if (payload.type === 'external_asset') {
-            console.log('External asset detected, but not implemented yet:', payload)
-            alert('External assets (Pexels/Stickers) are not yet supported. Please upload media files using the Upload panel.')
+            console.log('Handling external asset:', payload)
+            
+            // Create a temporary asset-like object for external assets
+            const externalAsset = {
+                id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                url: payload.asset.url || payload.asset.src?.original || payload.asset.images?.original?.url,
+                name: payload.asset.title || `External ${payload.assetType}`,
+                mime_type: payload.assetType === 'video' ? 'video/mp4' : 'image/jpeg',
+                duration: payload.assetType === 'video' ? 10000 : 5000, // Default durations in ms
+                isExternal: true,
+                originalData: payload.asset
+            }
+
+            console.log('Created external asset:', externalAsset)
+
+            // 2) compute time position
+            const rect = containerRef.current.getBoundingClientRect()
+            const x = e.clientX - rect.left
+            const startMs = Math.max(0, Math.round(x / timeScale))
+
+            // 3) compute new track index from Y position
+            const y = e.clientY - rect.top
+            const rowHeight = containerRef.current.firstElementChild?.clientHeight ?? 68
+            const rawIndex = Math.floor(y / rowHeight)
+            const newIndex = Math.max(0, Math.min(tracks.length, rawIndex))
+
+            console.log('Creating external track at index:', newIndex, 'time:', startMs)
+
+            // 4) CREATE TRACK
+            const trackType: TrackType = payload.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+
+            const newTrack = {
+                id: uuid(),
+                projectId: projectId!,
+                index: newIndex,
+                type: trackType,
+                createdAt: new Date().toISOString(),
+            }
+
+            console.log('Creating external track:', newTrack)
+
+            executeCommand({
+                type: 'ADD_TRACK',
+                payload: { track: newTrack }
+            })
+
+            // 5) CREATE CLIP in that track
+            const dur = externalAsset.duration
+
+            // Calculate the maximum allowed start time to fit the clip
+            const maxStartMs = Math.max(0, paddedMaxMs - dur)
+            const adjustedStartMs = Math.min(startMs, maxStartMs)
+
+            const newClip = {
+                id: uuid(),
+                trackId: newTrack.id,
+                assetId: externalAsset.id,
+                type: trackType,
+                sourceStartMs: 0,
+                sourceEndMs: dur,
+                timelineStartMs: adjustedStartMs,
+                timelineEndMs: adjustedStartMs + dur,
+                assetDurationMs: dur,
+                volume: 1,
+                speed: 1,
+                properties: {
+                    externalAsset: externalAsset // Store external asset data in properties
+                },
+                createdAt: new Date().toISOString(),
+            }
+
+            console.log('Creating external clip:', newClip)
+
+            executeCommand({
+                type: 'ADD_CLIP',
+                payload: { clip: newClip }
+            })
             return
         }
 
