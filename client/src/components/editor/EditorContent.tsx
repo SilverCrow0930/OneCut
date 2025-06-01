@@ -41,12 +41,12 @@ const EditorContent = () => {
                 </div>
             </div>
             
-            {/* Timeline area - flexible, adapts to content */}
-            <div className={`
+            {/* Timeline area - adaptive height based on content */}
+            <div className="
                 overflow-hidden
-                ${hasContent ? 'flex-[2]' : 'flex-[1]'}
+                flex-shrink-0
                 min-h-0
-            `}>
+            ">
                 <Timeline />
             </div>
         </div>

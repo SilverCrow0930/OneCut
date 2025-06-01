@@ -131,7 +131,7 @@ export default function Timeline() {
 
     // Update duration when clips change
     useEffect(() => {
-        if (tracks.length === 0) {
+        if (tracks.length === 0 || clips.length === 0) {
             setDuration(0)
             setCurrentTime(0) // Always reset to 0:00 when no content
         } else {
@@ -143,7 +143,14 @@ export default function Timeline() {
                 setCurrentTime(maxMs / 1000)
             }
         }
-    }, [maxMs, setDuration, setCurrentTime, tracks.length, currentTime])
+    }, [maxMs, setDuration, setCurrentTime, tracks.length, clips.length, currentTimeMs])
+
+    // Force playhead to start at 0:00 on component mount
+    useEffect(() => {
+        if (currentTimeMs !== 0 && (tracks.length === 0 || clips.length === 0)) {
+            setCurrentTime(0)
+        }
+    }, [tracks.length, clips.length, currentTimeMs, setCurrentTime])
 
     // Smooth scrolling animation
     useEffect(() => {
@@ -495,7 +502,7 @@ export default function Timeline() {
             onClick={handleTimelineClick}
         >
             <div
-                className="relative flex flex-col gap-3 p-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
+                className="relative flex flex-col gap-3 p-2 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
                 style={{
                     width: timelineContentWidth,
                 }}
@@ -512,7 +519,8 @@ export default function Timeline() {
                 <div 
                     className="flex flex-col gap-3 px-1 overflow-y-auto"
                     style={{
-                        maxHeight: `${Math.min(displayTracks.length * 60, 240)}px`, // Adaptive height: 48px track + 12px gap = 60px per track, max 4 tracks
+                        height: `${displayTracks.length * 60}px`, // Exact height: 48px track + 12px gap = 60px per track
+                        maxHeight: '240px', // Still keep a max height to enable scrolling when there are too many tracks
                         minHeight: 0, // Allow flex item to shrink
                     }}
                 >
