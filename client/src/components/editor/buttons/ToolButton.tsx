@@ -21,14 +21,14 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon, onClick, isSelecte
             {
                 aiTool && (
                     <div className="absolute top-1 right-2">
-                        <div className="text-xs font-medium">
+                        <div className="text-xs font-medium text-black/50">
                             AI
                         </div>
                     </div>
                 )
             }
-            <img src={icon} alt={label} className='w-5 h-5 object-contain' />
-            <p className='text-[10px]'>{label}</p>
+            <img src={icon} alt={label} className='w-7 h-7 object-contain opacity-50' />
+            <p className='text-xs text-black/50'>{label}</p>
         </button>
     )
 }
