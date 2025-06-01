@@ -106,9 +106,10 @@ export default function Timeline() {
         }
     }, [tracks.length])
     
-    // No more forced minimum timeline - let it adapt naturally to content
+    // No more forced minimum timeline - let it adapt naturally to content but ensure good space utilization
+    const minReasonableWidth = containerWidth 
     const timelineContentWidth = Math.min(
-        Math.max(totalPx, 1000), // Only ensure minimum 1 second for empty timeline
+        Math.max(totalPx, minReasonableWidth, 1000), // Ensure good space utilization and minimum 1 second for empty timeline
         Math.max(containerWidth * 50, 50000) // Max width cap
     )
 
@@ -132,11 +133,13 @@ export default function Timeline() {
     useEffect(() => {
         if (tracks.length === 0) {
             setDuration(0)
-            setCurrentTime(0)
+            setCurrentTime(0) // Always reset to 0:00 when no content
         } else {
             setDuration(maxMs)
-            // Ensure playhead stays within bounds
-            if (currentTimeMs > maxMs) {
+            // Ensure playhead stays within bounds - both min and max
+            if (currentTimeMs < 0) {
+                setCurrentTime(0) // Don't allow going before 0:00
+            } else if (currentTimeMs > maxMs) {
                 setCurrentTime(maxMs / 1000)
             }
         }
@@ -425,7 +428,7 @@ export default function Timeline() {
 
         const rect = containerRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left + containerRef.current.scrollLeft;
-        const newTimeMs = Math.max(0, Math.round(x / timeScale));
+        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs)); // Constrain between 0 and max
         setCurrentTime(newTimeMs / 1000);
         setSelectedClipId(null);
     };
@@ -435,7 +438,7 @@ export default function Timeline() {
 
         const rect = containerRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left + containerRef.current.scrollLeft
-        const newTimeMs = Math.min(paddedMaxMs, Math.max(0, Math.round(x / timeScale)))
+        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs)) // Strict bounds: 0 <= time <= paddedMaxMs
         setCurrentTime(newTimeMs / 1000)
 
         // Auto-scroll when dragging near the edges
