@@ -139,7 +139,7 @@ const ClipTools = () => {
                 onClick={handleSplit}
                 disabled={!hasSelectedClip}
             >
-                <SquareSplitHorizontal size={18} />
+                <SquareSplitHorizontal size={22} />
             </button>
             <button
                 className={`
@@ -150,7 +150,7 @@ const ClipTools = () => {
                 onClick={handleDelete}
                 disabled={!hasSelectedClip}
             >
-                <Trash2 size={18} />
+                <Trash2 size={22} />
             </button>
         </div>
     )
