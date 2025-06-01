@@ -270,7 +270,14 @@ export default function Timeline() {
             // 2) compute time position
             const rect = containerRef.current.getBoundingClientRect()
             const x = e.clientX - rect.left
-            const startMs = Math.max(0, Math.round(x / timeScale))
+            let startMs = Math.round(x / timeScale)
+            
+            // Snap to 00:00 if we're very close to the beginning (within 10px)
+            if (x < 10) {
+                startMs = 0
+            } else {
+                startMs = Math.max(0, startMs)
+            }
 
             // 3) compute new track index from Y position
             const y = e.clientY - rect.top
@@ -352,7 +359,14 @@ export default function Timeline() {
         // 2) compute time position
         const rect = containerRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left
-        const startMs = Math.max(0, Math.round(x / timeScale))
+        let startMs = Math.round(x / timeScale)
+        
+        // Snap to 00:00 if we're very close to the beginning (within 10px)
+        if (x < 10) {
+            startMs = 0
+        } else {
+            startMs = Math.max(0, startMs)
+        }
 
         // 3) compute new track index from Y position
         const y = e.clientY - rect.top

@@ -136,7 +136,14 @@ export default function TrackRow({
             // compute time position
             const rect = rowRef.current.getBoundingClientRect()
             const x = e.clientX - rect.left
-            const startMs = Math.max(0, Math.round(x / timeScale))
+            let startMs = Math.round(x / timeScale)
+            
+            // Snap to 00:00 if we're very close to the beginning (within 10px)
+            if (x < 10) {
+                startMs = 0
+            } else {
+                startMs = Math.max(0, startMs)
+            }
 
             console.log('Creating external clip in TrackRow at time:', startMs)
 
@@ -181,7 +188,14 @@ export default function TrackRow({
             // Calculate new start time
             const rect = rowRef.current.getBoundingClientRect()
             const x = e.clientX - rect.left
-            const startMs = Math.max(0, Math.round(x / timeScale))
+            let startMs = Math.round(x / timeScale)
+            
+            // Snap to 00:00 if we're very close to the beginning (within 10px)
+            if (x < 10) {
+                startMs = 0
+            } else {
+                startMs = Math.max(0, startMs)
+            }
 
             // Check for overlaps with existing clips in this track
             const existingClips = clips.filter(c => c.id !== droppedClip.id)
@@ -233,7 +247,14 @@ export default function TrackRow({
         // compute time position
         const rect = rowRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left
-        const startMs = Math.max(0, Math.round(x / timeScale))
+        let startMs = Math.round(x / timeScale)
+        
+        // Snap to 00:00 if we're very close to the beginning (within 10px)
+        if (x < 10) {
+            startMs = 0
+        } else {
+            startMs = Math.max(0, startMs)
+        }
 
         console.log('Creating clip in TrackRow at time:', startMs)
 
@@ -372,14 +393,14 @@ export default function TrackRow({
                 {/* Track type indicator - only for real tracks */}
                 {!((track as any).isEmpty) && (
                     <div className={`
-                        absolute left-0 top-0 bottom-0 w-1 rounded-l-lg
+                        absolute left-1 top-0 bottom-0 w-1 rounded-l-lg
                         ${track.type === 'video' ? 'bg-blue-500' : 
                           track.type === 'audio' ? 'bg-green-500' : 'bg-purple-500'}
                     `} />
                 )}
 
                 {/* Track label */}
-                <div className="absolute left-3 top-2 text-xs font-medium text-gray-600 pointer-events-none">
+                <div className="absolute left-4 top-2 text-xs font-medium text-gray-600 pointer-events-none">
                     {(track as any).isEmpty 
                         ? "Drop content here to create track"
                         : `Track ${track.index + 1} • ${track.type}`
@@ -388,7 +409,8 @@ export default function TrackRow({
 
                 {/* Background div that receives timeline clicks */}
                 <div
-                    className="absolute inset-0 rounded-lg"
+                    className="absolute inset-0 rounded-lg pointer-events-auto"
+                    style={{ pointerEvents: isDragOver ? 'none' : 'auto' }}
                     onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -411,7 +433,7 @@ export default function TrackRow({
                 />
 
                 {/* Clips container */}
-                <div className="absolute inset-0 rounded-lg overflow-hidden">
+                <div className="absolute inset-0 rounded-lg overflow-hidden pl-1">
                     {
                         clips.map(c => (
                             <ClipItem
