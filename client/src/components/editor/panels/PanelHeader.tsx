@@ -17,9 +17,9 @@ export default function PanelHeader({
     return (
         <div className="flex items-center gap-3 pb-6 border-b border-gray-100">
             <div className={`p-2 ${iconBgColor} rounded-lg`}>
-                <Icon className={`w-5 h-5 ${iconColor}`} />
+                <Icon className={`w-6 h-6 ${iconColor}`} />
             </div>
-            <span className="text-base font-semibold text-gray-800">{title}</span>
+            <span className="text-lg font-semibold text-black/50">{title}</span>
         </div>
     )
 } 

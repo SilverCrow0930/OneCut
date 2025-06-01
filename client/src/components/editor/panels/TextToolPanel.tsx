@@ -156,7 +156,7 @@ export default function TextToolPanel() {
             <PanelHeader icon={Type} title={selectedClip ? "Edit Text" : "Add Text"} />
             <div className="space-y-6">
                 <div className="space-y-2">
-                    <label htmlFor="text" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="text" className="block text-base font-medium text-black/50">
                         Content
                     </label>
                     <textarea
@@ -167,15 +167,15 @@ export default function TextToolPanel() {
                         onMouseDown={(e) => e.stopPropagation()}
                         placeholder="Enter your text here..."
                         className="
-                            w-full px-4 py-4 text-sm border border-gray-200 rounded-lg 
+                            w-full px-4 py-4 text-base border border-gray-200 rounded-lg 
                             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent 
-                            transition-all duration-200 placeholder:text-gray-400 overflow-hidden
-                            resize-none
+                            transition-all duration-200 placeholder:text-black/50 overflow-hidden
+                            resize-none text-black/50
                         "
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-base font-medium text-black/50">
                         Style
                     </label>
                     <TextStyleSelector
@@ -191,7 +191,7 @@ export default function TextToolPanel() {
                     disabled={!text.trim()}
                     className="
                         flex items-center justify-center w-full gap-2 px-4 py-3 
-                        text-sm font-medium text-white bg-blue-600 rounded-lg 
+                        text-base font-medium text-white bg-blue-600 rounded-lg 
                         hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 
                         disabled:opacity-50 disabled:cursor-not-allowed 
                         transition-all duration-200 shadow-sm hover:shadow-md
@@ -201,7 +201,7 @@ export default function TextToolPanel() {
                         "Apply Edit"
                     ) : (
                         <>
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-6 h-6" />
                             Add Text Clip
                         </>
                     )}
