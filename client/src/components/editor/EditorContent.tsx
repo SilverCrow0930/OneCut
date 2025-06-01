@@ -13,21 +13,18 @@ const EditorContent = () => {
     const hasContent = tracks.length > 0 && clips.length > 0
     
     return (
-        <div className="
-            flex flex-col h-full overflow-hidden 
-            gap-2 p-2 rounded-lg
-            focus:outline-none
-        ">
-            {/* Player area - dynamic height based on content */}
+        <div className="flex flex-col h-full overflow-hidden gap-2 p-2 rounded-lg focus:outline-none">
+            {/* Player area - flexible but prioritized */}
             <div className={`
                 bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg 
-                flex-shrink-0 overflow-hidden
-                ${hasContent ? 'h-[60vh]' : 'h-[70vh]'}
+                overflow-hidden
+                ${hasContent ? 'flex-[3]' : 'flex-[4]'}
+                min-h-0
             `}>
                 <Player />
             </div>
             
-            {/* Controls bar - fixed height, no overlap */}
+            {/* Controls bar - fixed height */}
             <div className="
                 flex w-full justify-between 
                 bg-white/80 backdrop-blur-sm py-3 px-4 rounded-lg shadow-sm border border-gray-200/60
@@ -44,8 +41,12 @@ const EditorContent = () => {
                 </div>
             </div>
             
-            {/* Timeline area - takes remaining space with minimum height */}
-            <div className="flex-1 overflow-hidden min-h-[250px]">
+            {/* Timeline area - flexible, adapts to content */}
+            <div className={`
+                overflow-hidden
+                ${hasContent ? 'flex-[2]' : 'flex-[1]'}
+                min-h-0
+            `}>
                 <Timeline />
             </div>
         </div>
