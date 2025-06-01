@@ -354,7 +354,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             >
                 <div
                     className="w-full h-full"
-                    style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}
+                    style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: '0.75rem' }}
                     onMouseDown={handleCropMouseDown}
                 >
                     {renderContent()}

@@ -510,9 +510,10 @@ export default function Timeline() {
                     isPlaying={isPlaying}
                 />
                 <div 
-                    className={`flex flex-col gap-3 px-1 ${needsVerticalScroll ? 'overflow-y-auto' : ''}`}
+                    className={`flex flex-col gap-3 px-1 overflow-y-auto`}
                     style={{
-                        maxHeight: needsVerticalScroll ? '280px' : 'auto', // 4 tracks * 70px (16*4 + gaps)
+                        maxHeight: 'calc(100vh - 400px)', // Dynamic height based on viewport, leaving space for other UI elements
+                        minHeight: '280px', // Minimum height to show at least 4 tracks
                     }}
                 >
                     {
