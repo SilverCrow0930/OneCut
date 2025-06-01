@@ -6,7 +6,7 @@ const ZoomSlider = () => {
 
     // More reasonable zoom range
     const minZoom = 0.1;  // 10%
-    const maxZoom = 10;   // 1000% (instead of 5000%)
+    const maxZoom = 50;   // 5000% (reverted back)
 
     // Detect and normalize browser zoom to prevent conflicts
     useEffect(() => {

@@ -112,7 +112,13 @@ export default function Timeline() {
     }, [tracks.length])
     const minTimelineMs = 5 * 60000 // 5 minutes in ms
     const minTimelinePx = minTimelineMs * timeScale
-    const timelineContentWidth = Math.max(totalPx, containerWidth, minTimelinePx)
+    
+    // Prevent extremely large widths that can break layout
+    const maxReasonableWidth = Math.max(containerWidth * 50, 50000) // Max 50x container width or 50k pixels
+    const timelineContentWidth = Math.min(
+        Math.max(totalPx, containerWidth, minTimelinePx),
+        maxReasonableWidth
+    )
 
     const playheadX = currentTimeMs * timeScale
 
@@ -454,6 +460,11 @@ export default function Timeline() {
         }
     }
 
+    // Determine if we need scrollbars based on content
+    const hasActualContent = clips.length > 0 || tracks.length > 0
+    const needsHorizontalScroll = hasActualContent && (timelineContentWidth > containerWidth || zoomLevel > 1)
+    const needsVerticalScroll = false // Never show vertical scroll for tracks - they should fit in container
+
     if (loadingTimeline) {
         return <TimelineLoading />
     }
@@ -470,13 +481,19 @@ export default function Timeline() {
         <div
             ref={containerRef}
             className={`
-                w-full h-full overflow-auto
+                w-full h-full
                 transition-colors duration-500
                 timeline-container
                 ${isDragOver ?
                     'border-2 border-cyan-400 bg-cyan-50/50' :
                     'border border-transparent bg-white'}
             `}
+            style={{
+                // Prevent container from growing beyond its bounds
+                maxWidth: '100%',
+                overflowX: needsHorizontalScroll ? 'auto' : 'hidden',
+                overflowY: needsVerticalScroll ? 'auto' : 'hidden'
+            }}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
@@ -488,10 +505,11 @@ export default function Timeline() {
                     <EmptyTimeline />
                 ) : (
                     <div
-                        className="relative flex flex-col w-full gap-3 p-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
+                        className="relative flex flex-col gap-3 p-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
                         style={{
-                            width: timelineContentWidth + 1,
-                            height: 'fit-content'
+                            width: timelineContentWidth,
+                            height: 'fit-content',
+                            minWidth: '100%' // Ensure it's at least as wide as container
                         }}
                     >
                         <Ruler
