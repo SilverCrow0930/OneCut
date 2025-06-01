@@ -109,7 +109,7 @@ export default function Timeline() {
     // Prevent extremely large widths that can break layout
     const maxReasonableWidth = Math.max(containerWidth * 50, 50000) // Max 50x container width or 50k pixels
     const timelineContentWidth = Math.min(
-        Math.max(totalPx, containerWidth, minTimelinePx),
+        Math.max(totalPx, minTimelinePx), // Remove containerWidth - let timeline be shorter than container
         maxReasonableWidth
     )
 
@@ -511,7 +511,7 @@ export default function Timeline() {
                 <div 
                     className="flex flex-col gap-3 px-1 overflow-y-auto"
                     style={{
-                        maxHeight: '216px', // Fixed height for exactly 4 tracks (48px height + 12px gap) * 4 = 240px, minus padding = 216px
+                        maxHeight: `${Math.min(displayTracks.length * 60, 240)}px`, // Adaptive height: 48px track + 12px gap = 60px per track, max 4 tracks
                         minHeight: 0, // Allow flex item to shrink
                     }}
                 >
