@@ -329,7 +329,7 @@ export default function TrackRow({
             <div
                 ref={rowRef}
                 className={`
-                    relative h-16
+                    relative h-12
                     transition-all duration-200 rounded-lg
                     ${(track as any).isEmpty 
                         ? 'bg-gray-50/50 border-2 border-dashed border-gray-200/60 hover:border-gray-300/60 hover:bg-gray-100/50' 

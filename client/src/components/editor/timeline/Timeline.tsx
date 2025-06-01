@@ -81,8 +81,8 @@ export default function Timeline() {
 
     // compute overall width
     const maxMs = clips.reduce((mx, c) => Math.max(mx, c.timelineEndMs), 0)
-    const targetMsAtMinZoom = 150000 // 2.5 minutes in ms
-    const paddingMs = Math.max(1000, Math.ceil(targetMsAtMinZoom * (0.1 / zoomLevel)))
+    const targetMsAtMinZoom = 30000 // 30 seconds in ms (reduced from 2.5 minutes)
+    const paddingMs = Math.max(500, Math.ceil(targetMsAtMinZoom * (0.05 / zoomLevel))) // Reduced padding factor
     const paddedMaxMs = maxMs + paddingMs
     const totalPx = Math.ceil(paddedMaxMs * timeScale)
 
@@ -511,7 +511,7 @@ export default function Timeline() {
                 <div 
                     className="flex flex-col gap-3 px-1 overflow-y-auto"
                     style={{
-                        maxHeight: '280px', // Fixed height for exactly 4 tracks (64px height + 12px gap) * 4 = 280px
+                        maxHeight: '216px', // Fixed height for exactly 4 tracks (48px height + 12px gap) * 4 = 240px, minus padding = 216px
                         minHeight: 0, // Allow flex item to shrink
                     }}
                 >
