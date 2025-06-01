@@ -40,13 +40,13 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
 
     if (loading) {
         return (
-            <div className="relative w-24 h-24 bg-gray-200 animate-pulse rounded" />
+            <div className="relative w-32 h-32 bg-gray-200 animate-pulse rounded-lg" />
         )
     }
 
     if (!url) {
         return (
-            <div className="relative w-24 h-24 bg-red-100 text-red-500 flex items-center justify-center rounded">
+            <div className="relative w-32 h-32 bg-red-100 text-red-500 flex items-center justify-center rounded-lg">
                 !
             </div>
         )
@@ -59,9 +59,9 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
             <DraggableAsset assetId={asset.id}>
                 <div
                     className={`
-                        relative w-24 h-24 rounded-lg overflow-hidden 
-                        bg-black hover:opacity-80 transition-opacity duration-500
-                        flex items-center justify-center
+                        relative w-32 h-32 rounded-lg overflow-hidden 
+                        bg-gray-50 hover:opacity-80 transition-all duration-200
+                        flex items-center justify-center shadow-sm hover:shadow-md
                         ${highlight ? 'ring-4 ring-blue-400 animate-pulse-fast' : ''}
                         ${uploading ? 'opacity-60 pointer-events-none' : ''}
                     `}
@@ -76,14 +76,14 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
                         isVideo ? (
                             <video
                                 src={url}
-                                className="max-w-full max-h-full object-contain"
+                                className="max-w-full max-h-full object-contain rounded"
                                 muted
                                 loop
                             />
                         ) : (
                             <img
                                 src={url}
-                                className="max-w-full max-h-full object-contain"
+                                className="max-w-full max-h-full object-contain rounded"
                             />
                         )
                     }
@@ -91,7 +91,7 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
                     {/* duration badge */}
                     {
                         asset.duration && (
-                            <div className="absolute bottom-1 right-1 bg-black bg-opacity-60 text-white text-xs px-1 py-px rounded">
+                            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
                                 {formatTimeMs(asset.duration)}
                             </div>
                         )

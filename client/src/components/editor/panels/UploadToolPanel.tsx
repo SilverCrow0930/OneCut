@@ -40,15 +40,16 @@ const UploadToolPanel: React.FC<UploadToolPanelProps> = ({ highlightedAssetId, u
                 }
                 {
                     !loading && !error && (
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-4">
                             {
                                 assets.map((asset, index) => (
-                                    <AssetThumbnail
-                                        key={index}
-                                        asset={asset}
-                                        highlight={highlightedAssetId === asset.id}
-                                        uploading={uploadingAssetId === asset.id}
-                                    />
+                                    <div key={index} className="flex justify-center">
+                                        <AssetThumbnail
+                                            asset={asset}
+                                            highlight={highlightedAssetId === asset.id}
+                                            uploading={uploadingAssetId === asset.id}
+                                        />
+                                    </div>
                                 ))
                             }
                         </div>

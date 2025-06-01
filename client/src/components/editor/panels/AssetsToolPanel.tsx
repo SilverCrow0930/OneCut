@@ -219,15 +219,16 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
                         <div className="text-red-500 text-center py-4">{error}</div>
                     )
                 }
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-4 sm:gap-6">
                     {
                         assets.map((asset, index) => (
-                            <AssetGridItem
-                                key={`${selectedTab}-${index}`}
-                                asset={asset}
-                                type={selectedTab}
-                                onUploadAndHighlight={handleUploadAndHighlight}
-                            />
+                            <div key={`${selectedTab}-${index}`} className="flex justify-center">
+                                <AssetGridItem
+                                    asset={asset}
+                                    type={selectedTab}
+                                    onUploadAndHighlight={handleUploadAndHighlight}
+                                />
+                            </div>
                         ))
                     }
                 </div>

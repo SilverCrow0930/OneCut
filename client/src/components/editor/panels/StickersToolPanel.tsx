@@ -154,7 +154,7 @@ const StickersToolPanel = () => {
                         <div className="text-red-500 text-center py-4">{error}</div>
                     )
                 }
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-4 sm:gap-6">
                     {
                         stickers.map((sticker, index) => {
                             const handleDragStart = async (e: React.DragEvent<HTMLElement>) => {
@@ -194,14 +194,14 @@ const StickersToolPanel = () => {
                             return (
                                 <div
                                     key={index}
-                                    className="relative aspect-square rounded-lg overflow-hidden group shadow hover:shadow-lg transition-shadow cursor-grab active:cursor-grabbing"
+                                    className="relative h-40 rounded-lg overflow-hidden group shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing bg-gray-50 flex items-center justify-center"
                                     draggable={true}
                                     onDragStart={handleDragStart}
                                 >
                                     <img
                                         src={sticker.images.fixed_height.url}
                                         alt={sticker.title}
-                                        className="w-full h-full object-contain transition-transform group-hover:scale-105 pointer-events-none"
+                                        className="max-w-full max-h-full object-contain transition-transform group-hover:scale-105 pointer-events-none rounded"
                                     />
                                     {sticker.user && (
                                         <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
