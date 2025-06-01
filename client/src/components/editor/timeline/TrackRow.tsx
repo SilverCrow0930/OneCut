@@ -287,7 +287,7 @@ export default function TrackRow({
             <div
                 ref={rowRef}
                 className={`
-                    relative h-16
+                    relative h-12
                     transition-all duration-200 rounded-md
                     bg-gray-50 hover:bg-gray-100
                     shadow-sm

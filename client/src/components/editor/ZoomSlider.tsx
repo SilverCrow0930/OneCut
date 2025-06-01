@@ -49,14 +49,15 @@ const ZoomSlider = () => {
 
     return (
         <div className="
-            flex items-center gap-3 px-3 py-2 h-full
-            backdrop-blur-sm rounded-lg text-black
+            flex items-center gap-3 px-3 py-2.5 
+            backdrop-blur-sm rounded-xl text-black
+            bg-white/20 border border-gray-200/30
         ">
             <div className="relative w-28 h-5 flex items-center">
                 <div
-                    className="absolute w-full h-2.5 rounded-full"
+                    className="absolute w-full h-3 rounded-full shadow-inner"
                     style={{
-                        background: `linear-gradient(to right, #4B5563 ${percentage}%, #D1D5DB ${percentage}%)`
+                        background: `linear-gradient(to right, #3B82F6 ${percentage}%, #E5E7EB ${percentage}%)`
                     }}
                 ></div>
                 <input
@@ -66,7 +67,7 @@ const ZoomSlider = () => {
                     step={0.001}
                     value={sliderValue}
                     onChange={handleZoomChange}
-                    className="w-full h-2.5 bg-transparent appearance-none cursor-pointer relative z-10
+                    className="w-full h-3 bg-transparent appearance-none cursor-pointer relative z-10
                         [&::-webkit-slider-thumb]:appearance-none 
                         [&::-webkit-slider-thumb]:w-5 
                         [&::-webkit-slider-thumb]:h-5 
@@ -74,20 +75,21 @@ const ZoomSlider = () => {
                         [&::-webkit-slider-thumb]:bg-white
                         [&::-webkit-slider-thumb]:shadow-lg 
                         [&::-webkit-slider-thumb]:border-2
-                        [&::-webkit-slider-thumb]:border-gray-300
+                        [&::-webkit-slider-thumb]:border-blue-400
                         [&::-webkit-slider-thumb]:cursor-pointer 
                         [&::-webkit-slider-thumb]:hover:shadow-xl
+                        [&::-webkit-slider-thumb]:transition-all
                         [&::-moz-range-thumb]:w-5 
                         [&::-moz-range-thumb]:h-5 
                         [&::-moz-range-thumb]:rounded-full 
                         [&::-moz-range-thumb]:bg-white 
                         [&::-moz-range-thumb]:border-2 
-                        [&::-moz-range-thumb]:border-gray-300 
+                        [&::-moz-range-thumb]:border-blue-400 
                         [&::-moz-range-thumb]:shadow-lg 
                         [&::-moz-range-thumb]:cursor-pointer"
                 />
             </div>
-            <span className="text-sm font-medium tabular-nums whitespace-nowrap min-w-[2.5rem] text-gray-700 text-right">
+            <span className="text-sm font-medium tabular-nums whitespace-nowrap min-w-[2.5rem] text-gray-700">
                 {Math.round(zoomLevel * 100)}%
             </span>
         </div>

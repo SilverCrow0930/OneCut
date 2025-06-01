@@ -9,7 +9,7 @@ interface ToolBarProps {
 
 const ToolBar = ({ selectedTool, onToolSelect }: ToolBarProps) => {
     return (
-        <div className="flex flex-col items-center w-fit h-full p-1 gap-0.5">
+        <div className="flex flex-col items-center w-fit h-full py-1 px-1">
             {
                 TOOLS.map(
                     (tool, index) => (

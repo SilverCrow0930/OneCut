@@ -121,9 +121,9 @@ const ClipTools = () => {
 
     return (
         <div className={`
-            flex items-center gap-4
+            flex items-center gap-3
             backdrop-blur-sm
-            px-5 py-3 rounded-xl
+            px-4 py-2.5 rounded-xl
             text-black
             transition-all duration-200
         `}>
@@ -139,7 +139,7 @@ const ClipTools = () => {
                 onClick={handleSplit}
                 disabled={!hasSelectedClip}
             >
-                <SquareSplitHorizontal size={24} />
+                <SquareSplitHorizontal size={26} />
             </button>
             <button
                 className={`
@@ -150,7 +150,7 @@ const ClipTools = () => {
                 onClick={handleDelete}
                 disabled={!hasSelectedClip}
             >
-                <Trash2 size={24} />
+                <Trash2 size={26} />
             </button>
         </div>
     )
