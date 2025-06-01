@@ -525,7 +525,7 @@ export default function Timeline() {
                         }}
                     >
                         <Ruler
-                            totalMs={timelineContentWidth / timeScale}
+                            totalMs={paddedMaxMs}
                             timeScale={timeScale}
                         />
                         <Playhead
