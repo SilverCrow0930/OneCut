@@ -10,7 +10,6 @@ import Ruler from './Ruler'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useZoom } from '@/contexts/ZoomContext'
 import Playhead from './Playhead'
-import EmptyTimeline from './EmptyTimeline'
 import TimelineLoading from './TimelineLoading'
 
 export default function Timeline() {
@@ -500,44 +499,38 @@ export default function Timeline() {
             onDrop={onDrop}
             onClick={handleTimelineClick}
         >
-            {
-                tracks.length === 0 ? (
-                    <EmptyTimeline />
-                ) : (
-                    <div
-                        className="relative flex flex-col gap-3 p-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
-                        style={{
-                            width: timelineContentWidth,
-                            height: 'fit-content',
-                            minWidth: '100%' // Ensure it's at least as wide as container
-                        }}
-                    >
-                        <Ruler
-                            totalMs={timelineContentWidth / timeScale}
-                            timeScale={timeScale}
-                        />
-                        <Playhead
-                            playheadX={playheadX}
-                            onDrag={handlePlayheadDrag}
-                            isPlaying={isPlaying}
-                        />
-                        <div className="flex flex-col gap-3 px-1">
-                            {
-                                displayTracks.map(t => (
-                                    <TrackRow
-                                        key={t.id}
-                                        track={t}
-                                        clips={clipsByTrack.get(t.id) ?? []}
-                                        timelineSetIsDragOver={setIsDragOver}
-                                        onClipSelect={setSelectedClipId}
-                                        selectedClipId={selectedClipId}
-                                    />
-                                ))
-                            }
-                        </div>
-                    </div>
-                )
-            }
+            <div
+                className="relative flex flex-col gap-3 p-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
+                style={{
+                    width: timelineContentWidth,
+                    height: 'fit-content',
+                    minWidth: '100%' // Ensure it's at least as wide as container
+                }}
+            >
+                <Ruler
+                    totalMs={timelineContentWidth / timeScale}
+                    timeScale={timeScale}
+                />
+                <Playhead
+                    playheadX={playheadX}
+                    onDrag={handlePlayheadDrag}
+                    isPlaying={isPlaying}
+                />
+                <div className="flex flex-col gap-3 px-1">
+                    {
+                        displayTracks.map(t => (
+                            <TrackRow
+                                key={t.id}
+                                track={t}
+                                clips={clipsByTrack.get(t.id) ?? []}
+                                timelineSetIsDragOver={setIsDragOver}
+                                onClipSelect={setSelectedClipId}
+                                selectedClipId={selectedClipId}
+                            />
+                        ))
+                    }
+                </div>
+            </div>
         </div>
     )
 }
