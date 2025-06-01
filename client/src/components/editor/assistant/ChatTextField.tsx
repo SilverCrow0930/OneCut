@@ -70,14 +70,6 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
             bg-white border border-gray-300 rounded-lg
         ">
             <div className="flex flex-col gap-2 w-full h-full">
-                <div className="flex flex-row gap-1">
-                    <div className="
-                        flex flex-row items-center justify-center gap-1
-                        bg-gradient-to-r from-blue-500 to-purple-600 text-[11px] text-white px-2 py-1 rounded-md
-                    ">
-                        Chat with Melody
-                    </div>
-                </div>
                 <div className="flex flex-row gap-1 w-full">
                     <textarea
                         ref={textareaRef}

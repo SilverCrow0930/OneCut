@@ -56,6 +56,43 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state }) => {
                 hide-scrollbar
             "
         >
+            {/* Welcome message when no chat messages */}
+            {chatMessages.length === 0 && state === 'idle' && (
+                <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                    <div className="flex flex-col items-center gap-4">
+                        {/* Cute emoji/icon */}
+                        <div className="text-6xl">🎬</div>
+                        
+                        {/* Welcome text */}
+                        <div className="flex flex-col gap-2">
+                            <h3 className="text-lg font-semibold text-gray-700">
+                                Hi there! 👋
+                            </h3>
+                            <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
+                                I'm your creative assistant! Ask me anything about video editing, 
+                                content ideas, or just chat about your project.
+                            </p>
+                        </div>
+                        
+                        {/* Suggestion bubbles */}
+                        <div className="flex flex-col gap-2 mt-2">
+                            <div className="text-xs text-gray-400 font-medium">Try asking:</div>
+                            <div className="flex flex-col gap-1">
+                                <div className="bg-blue-50 text-blue-600 text-xs px-3 py-1 rounded-full">
+                                    "Help me brainstorm video ideas"
+                                </div>
+                                <div className="bg-purple-50 text-purple-600 text-xs px-3 py-1 rounded-full">
+                                    "What's trending in content?"
+                                </div>
+                                <div className="bg-green-50 text-green-600 text-xs px-3 py-1 rounded-full">
+                                    "How can I improve my editing?"
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {
                 chatMessages.map((message) => (
                     <ChatMessage
