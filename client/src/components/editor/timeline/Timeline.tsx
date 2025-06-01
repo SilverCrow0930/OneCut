@@ -81,8 +81,8 @@ export default function Timeline() {
 
     // compute overall width
     const maxMs = clips.reduce((mx, c) => Math.max(mx, c.timelineEndMs), 0)
-    const targetMsAtMinZoom = 30000 // 30 seconds in ms (reduced from 2.5 minutes)
-    const paddingMs = Math.max(500, Math.ceil(targetMsAtMinZoom * (0.05 / zoomLevel))) // Reduced padding factor
+    const targetMsAtMinZoom = 10000 // 10 seconds in ms (tight default view)
+    const paddingMs = Math.max(200, Math.ceil(targetMsAtMinZoom * (0.02 / zoomLevel))) // Minimal padding
     const paddedMaxMs = maxMs + paddingMs
     const totalPx = Math.ceil(paddedMaxMs * timeScale)
 
@@ -103,7 +103,7 @@ export default function Timeline() {
             setContainerWidth(containerRef.current.clientWidth)
         }
     }, [tracks.length])
-    const minTimelineMs = 1 * 60000 // 30 seconds in ms
+    const minTimelineMs = 10 * 1000 // 10 seconds in ms (tight default view)
     const minTimelinePx = minTimelineMs * timeScale
     
     // Prevent extremely large widths that can break layout
