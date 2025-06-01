@@ -51,31 +51,31 @@ export default function Player() {
 
     return (
         <div className="flex items-center justify-center h-full p-4">
-            <div
+        <div
                 className="relative bg-black rounded-xl shadow-2xl ring-1 ring-gray-200/20"
-                style={{
-                    aspectRatio: '9 / 16',
+            style={{
+                aspectRatio: '9 / 16',
                     height: '100%',
                     maxHeight: '100%',
                     width: 'auto'
-                }}
-                onClick={() => {
-                    setSelectedClipId(null)
-                }}
-            >
+            }}
+            onClick={() => {
+                setSelectedClipId(null)
+            }}
+        >
                 {/* Subtle glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl pointer-events-none" />
                 
-                {/* Render active clips in order with their source times */}
-                {
-                    clipsWithSourceTime.map(clip => (
-                        <ClipLayer
-                            key={clip.id}
-                            clip={clip}
-                            sourceTime={clip.sourceTime}
-                        />
-                    ))
-                }
+            {/* Render active clips in order with their source times */}
+            {
+                clipsWithSourceTime.map(clip => (
+                    <ClipLayer
+                        key={clip.id}
+                        clip={clip}
+                        sourceTime={clip.sourceTime}
+                    />
+                ))
+            }
             </div>
         </div>
     )

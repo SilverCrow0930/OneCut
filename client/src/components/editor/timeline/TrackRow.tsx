@@ -360,8 +360,8 @@ export default function TrackRow({
                     }
                     ${isDragOver
                         ? (track as any).isEmpty
-                            ? 'border-blue-400 bg-blue-50 shadow-lg'
-                            : 'border-blue-400 bg-blue-50 shadow-lg' 
+                            ? 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]'
+                            : 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]' 
                         : (track as any).isEmpty
                             ? ''
                             : 'border-gray-200/80 hover:border-gray-300 hover:bg-gray-50/80 shadow-sm hover:shadow-md'

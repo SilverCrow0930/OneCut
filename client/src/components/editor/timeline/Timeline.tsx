@@ -86,7 +86,7 @@ export default function Timeline() {
     const basePadding = Math.max(1000, maxMs * 0.1) // 10% padding or 1 second minimum
     const paddingMs = Math.min(basePadding, 5000) // Cap padding at 5 seconds
     const paddedMaxMs = maxMs + paddingMs
-    const totalContentPx = Math.ceil(paddedMaxMs * timeScale)
+    const totalPx = Math.ceil(paddedMaxMs * timeScale)
 
     // NEW: Ensure timeline fills the container
     const [containerWidth, setContainerWidth] = useState(0)
@@ -106,10 +106,16 @@ export default function Timeline() {
         }
     }, [tracks.length])
     
-    // Fixed timeline approach: Keep timeline content width reasonable and always allow scrolling
-    // The timeline content should be the actual content width, not constrained to viewport
-    const minTimelineWidth = Math.max(containerWidth, 1000) // At least container width or 1 second
-    const timelineContentWidth = Math.max(totalContentPx, minTimelineWidth)
+    // Fixed: Set reasonable timeline width constraints with proper scrolling
+    const minTimelineWidth = Math.max(containerWidth || 1000, 1000) // Minimum 1000px or container width
+    const maxTimelineWidth = Math.max(containerWidth * 10, 20000) // Maximum 10x container width or 20000px
+    
+    // Calculate content width based on actual content, but within reasonable bounds
+    const contentBasedWidth = Math.max(totalPx, minTimelineWidth)
+    const timelineContentWidth = Math.min(contentBasedWidth, maxTimelineWidth)
+    
+    // Always enable horizontal scrolling when content exceeds container
+    const needsHorizontalScroll = totalPx > (containerWidth || 1000)
 
     const playheadX = currentTimeMs * timeScale
 
@@ -476,8 +482,8 @@ export default function Timeline() {
         }
     }
 
-    // Determine if we need scrollbars - always show horizontal scroll for content longer than container
-    const needsHorizontalScroll = timelineContentWidth > containerWidth
+    // Determine if we need scrollbars based on content
+    const hasActualContent = clips.length > 0 || tracks.length > 0
 
     if (loadingTimeline) {
         return <TimelineLoading />
@@ -503,10 +509,14 @@ export default function Timeline() {
                     'border border-transparent bg-white'}
             `}
             style={{
-                // Prevent container from growing beyond its bounds
+                // Ensure container stays within bounds and enables scrolling when needed
                 maxWidth: '100%',
-                overflowX: 'auto', // Always allow horizontal scrolling for long content
-                overflowY: 'hidden' // Never scroll vertically on main container - tracks handle their own scrolling
+                width: '100%',
+                overflowX: needsHorizontalScroll ? 'auto' : 'hidden',
+                overflowY: 'hidden', // Never scroll vertically on main container
+                // Prevent the container from expanding beyond its parent
+                minWidth: 0,
+                flexShrink: 1
             }}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -514,44 +524,49 @@ export default function Timeline() {
             onDrop={onDrop}
             onClick={handleTimelineClick}
         >
-            <div
+                    <div
                 className="relative flex flex-col gap-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
-                style={{
-                    width: timelineContentWidth,
+                        style={{
+                    // Use the actual content width for proper scrolling
+                    width: Math.max(timelineContentWidth, totalPx),
+                    minWidth: minTimelineWidth,
                     padding: '8px 8px 8px 0', // Remove left padding to align with ruler
-                }}
-            >
-                <Ruler
-                    totalMs={timelineContentWidth / timeScale}
-                    timeScale={timeScale}
-                />
-                <Playhead
-                    playheadX={playheadX}
-                    onDrag={handlePlayheadDrag}
-                    isPlaying={isPlaying}
-                />
+                        }}
+                    >
+                        <Ruler
+                            totalMs={Math.max(timelineContentWidth, totalPx) / timeScale}
+                            timeScale={timeScale}
+                        />
+                        <Playhead
+                            playheadX={playheadX}
+                            onDrag={handlePlayheadDrag}
+                            isPlaying={isPlaying}
+                        />
                 <div 
                     className="flex flex-col gap-3 overflow-y-auto"
                     style={{
                         height: `${displayTracks.length * 60}px`, // Exact height: 48px track + 12px gap = 60px per track
                         maxHeight: '240px', // Still keep a max height to enable scrolling when there are too many tracks
                         minHeight: 0, // Allow flex item to shrink
+                        // Ensure tracks container doesn't overflow
+                        width: '100%',
+                        minWidth: 0
                     }}
                 >
-                    {
+                            {
                         displayTracks.map(t => (
-                            <TrackRow
-                                key={t.id}
-                                track={t}
-                                clips={clipsByTrack.get(t.id) ?? []}
-                                timelineSetIsDragOver={setIsDragOver}
-                                onClipSelect={setSelectedClipId}
-                                selectedClipId={selectedClipId}
-                            />
-                        ))
-                    }
-                </div>
-            </div>
+                                    <TrackRow
+                                        key={t.id}
+                                        track={t}
+                                        clips={clipsByTrack.get(t.id) ?? []}
+                                        timelineSetIsDragOver={setIsDragOver}
+                                        onClipSelect={setSelectedClipId}
+                                        selectedClipId={selectedClipId}
+                                    />
+                                ))
+                            }
+                        </div>
+                    </div>
         </div>
     )
 }
