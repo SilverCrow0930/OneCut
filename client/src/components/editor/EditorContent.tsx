@@ -4,21 +4,34 @@ import PlaybackControls from './PlaybackControls'
 import ClipTools from './ClipTools'
 import ZoomSlider from './ZoomSlider'
 import Timeline from './timeline/Timeline'
+import { useEditor } from '@/contexts/EditorContext'
 
 const EditorContent = () => {
+    const { tracks, clips } = useEditor()
+    
+    // Determine if timeline has content
+    const hasContent = tracks.length > 0 && clips.length > 0
+    
     return (
         <div className="
-            flex flex-col flex-1 overflow-hidden h-full 
-            gap-0 p-2 rounded-lg
+            flex flex-col h-full overflow-hidden 
+            gap-2 p-2 rounded-lg
             focus:outline-none
         ">
-            <div className="flex-1 pb-3 bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg min-h-0">
+            {/* Player area - dynamic height based on content */}
+            <div className={`
+                bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg 
+                flex-shrink-0 overflow-hidden
+                ${hasContent ? 'h-1/2' : 'h-[70vh]'}
+            `}>
                 <Player />
             </div>
+            
+            {/* Controls bar - fixed height, no overlap */}
             <div className="
                 flex w-full justify-between 
                 bg-white/80 backdrop-blur-sm py-3 px-4 rounded-lg shadow-sm border border-gray-200/60
-                mx-auto flex-shrink-0
+                flex-shrink-0 z-10
             ">
                 <div className="flex w-64 items-center">
                     <ClipTools />
@@ -30,7 +43,12 @@ const EditorContent = () => {
                     <ZoomSlider />
                 </div>
             </div>
-            <div className="flex-1 pt-2 min-h-0 overflow-hidden">
+            
+            {/* Timeline area - takes remaining space with minimum height */}
+            <div className={`
+                flex-1 overflow-hidden
+                ${hasContent ? 'min-h-[300px]' : 'min-h-[200px]'}
+            `}>
                 <Timeline />
             </div>
         </div>
