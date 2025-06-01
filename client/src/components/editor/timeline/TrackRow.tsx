@@ -14,7 +14,7 @@ export default function TrackRow({
     onClipSelect,
     selectedClipId,
 }: {
-    track: Track
+    track: Track & { isEmpty?: boolean }
     clips: Clip[]
     timelineSetIsDragOver: (isDragOver: boolean) => void
     onClipSelect: (id: string | null) => void
@@ -236,6 +236,9 @@ export default function TrackRow({
 
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault()
+        // Don't show context menu for empty tracks
+        if ((track as any).isEmpty) return
+        
         setContextMenuPosition({ x: e.clientX, y: e.clientY })
         setShowContextMenu(true)
     }
@@ -289,12 +292,16 @@ export default function TrackRow({
                 className={`
                     relative h-16
                     transition-all duration-200 rounded-lg
-                    bg-white border-2 
-                    ${isDragOver 
-                        ? 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]' 
-                        : 'border-gray-200/80 hover:border-gray-300 hover:bg-gray-50/80 shadow-sm hover:shadow-md'
+                    ${(track as any).isEmpty 
+                        ? 'bg-gray-50/50 border-2 border-dashed border-gray-200/60 hover:border-gray-300/60 hover:bg-gray-100/50' 
+                        : 'bg-white border-2 backdrop-blur-sm'
                     }
-                    backdrop-blur-sm
+                    ${!((track as any).isEmpty) && isDragOver 
+                        ? 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]' 
+                        : !((track as any).isEmpty) 
+                            ? 'border-gray-200/80 hover:border-gray-300 hover:bg-gray-50/80 shadow-sm hover:shadow-md'
+                            : ''
+                    }
                 `}
                 onContextMenu={handleContextMenu}
                 onDragOver={e => {
@@ -319,16 +326,21 @@ export default function TrackRow({
                 }}
                 onDrop={handleDrop}
             >
-                {/* Track type indicator */}
-                <div className={`
-                    absolute left-0 top-0 bottom-0 w-1 rounded-l-lg
-                    ${track.type === 'video' ? 'bg-blue-500' : 
-                      track.type === 'audio' ? 'bg-green-500' : 'bg-purple-500'}
-                `} />
+                {/* Track type indicator - only for real tracks */}
+                {!((track as any).isEmpty) && (
+                    <div className={`
+                        absolute left-0 top-0 bottom-0 w-1 rounded-l-lg
+                        ${track.type === 'video' ? 'bg-blue-500' : 
+                          track.type === 'audio' ? 'bg-green-500' : 'bg-purple-500'}
+                    `} />
+                )}
 
                 {/* Track label */}
                 <div className="absolute left-3 top-2 text-xs font-medium text-gray-600 pointer-events-none">
-                    Track {track.index + 1} • {track.type}
+                    {(track as any).isEmpty 
+                        ? "Drop content here to create track"
+                        : `Track ${track.index + 1} • ${track.type}`
+                    }
                 </div>
 
                 {/* Background div that receives timeline clicks */}

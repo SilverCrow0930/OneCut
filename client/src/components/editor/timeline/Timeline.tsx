@@ -53,6 +53,39 @@ export default function Timeline() {
         return map
     }, [tracks, clips])
 
+    // Create display tracks: actual tracks + one empty track for new content
+    const displayTracks = useMemo(() => {
+        const tracksInUse = tracks.filter(track => {
+            const trackClips = clipsByTrack.get(track.id) ?? []
+            return trackClips.length > 0
+        })
+        
+        // If no tracks are in use, create one empty track for display
+        if (tracksInUse.length === 0) {
+            return [{
+                id: 'empty-track-0',
+                projectId: projectId!,
+                index: 0,
+                type: 'video' as TrackType,
+                createdAt: new Date().toISOString(),
+                isEmpty: true
+            }]
+        }
+        
+        // Show all tracks in use + one additional empty track
+        const maxIndex = Math.max(...tracksInUse.map(t => t.index))
+        const emptyTrack = {
+            id: `empty-track-${maxIndex + 1}`,
+            projectId: projectId!,
+            index: maxIndex + 1,
+            type: 'video' as TrackType,
+            createdAt: new Date().toISOString(),
+            isEmpty: true
+        }
+        
+        return [...tracksInUse.sort((a, b) => a.index - b.index), emptyTrack]
+    }, [tracks, clipsByTrack, projectId])
+
     // compute overall width
     const maxMs = clips.reduce((mx, c) => Math.max(mx, c.timelineEndMs), 0)
     const targetMsAtMinZoom = 150000 // 2.5 minutes in ms
@@ -473,7 +506,7 @@ export default function Timeline() {
                         />
                         <div className="flex flex-col overflow-y-scroll gap-3 px-1">
                             {
-                                tracks.map(t => (
+                                displayTracks.map(t => (
                                     <TrackRow
                                         key={t.id}
                                         track={t}
