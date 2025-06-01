@@ -22,7 +22,7 @@ const EditorContent = () => {
             <div className={`
                 bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg 
                 flex-shrink-0 overflow-hidden
-                ${hasContent ? 'h-1/2' : 'h-[70vh]'}
+                ${hasContent ? 'h-[60vh]' : 'h-[70vh]'}
             `}>
                 <Player />
             </div>
@@ -45,10 +45,7 @@ const EditorContent = () => {
             </div>
             
             {/* Timeline area - takes remaining space with minimum height */}
-            <div className={`
-                flex-1 overflow-hidden
-                ${hasContent ? 'min-h-[300px]' : 'min-h-[200px]'}
-            `}>
+            <div className="flex-1 overflow-hidden min-h-[250px]">
                 <Timeline />
             </div>
         </div>

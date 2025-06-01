@@ -55,8 +55,9 @@ export default function Player() {
                 className="relative bg-black rounded-xl shadow-2xl ring-1 ring-gray-200/20"
                 style={{
                     aspectRatio: '9 / 16',
-                    width: '100%',
-                    maxWidth: '20rem'
+                    height: '100%',
+                    maxHeight: '100%',
+                    width: 'auto'
                 }}
                 onClick={() => {
                     setSelectedClipId(null)
