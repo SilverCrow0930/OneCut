@@ -493,19 +493,21 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 ref={clipRef}
                 data-clip-layer
                 className={`
-                    absolute h-full bg-blue-500 text-white text-xs
-                    flex items-center justify-center rounded
-                    overflow-hidden
+                    absolute h-full text-white text-xs
+                    flex items-center justify-center rounded-lg
+                    overflow-hidden transition-all duration-200
                     ${isResizing ? 'cursor-ew-resize' : 'cursor-move'}
-                    ${selected ? 'ring-2 ring-blue-300 shadow-xl' : ''}
+                    ${selected ? 'ring-2 ring-blue-400 shadow-2xl scale-[1.02] z-20' : 'shadow-md hover:shadow-lg z-10'}
                     ${isDragging ? 'opacity-0' : ''}
-                    z-10
+                    ${isVideo ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 
+                      isAudio ? 'bg-gradient-to-r from-green-500 to-green-600' : 
+                      isImage ? 'bg-gradient-to-r from-purple-500 to-purple-600' :
+                      'bg-gradient-to-r from-gray-500 to-gray-600'}
+                    border border-white/20
                 `}
                 style={{
                     left,
                     width,
-                    border: selected ? '2px solid #93c5fd' : 'none',
-                    boxShadow: selected ? '0 0 16px rgba(147, 197, 253, 0.8)' : 'none'
                 }}
                 onClick={(e) => {
                     e.preventDefault()
@@ -521,21 +523,21 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             >
                 {/* Left edge hover area */}
                 <div
-                    className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-blue-400/20"
+                    className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20 transition-colors duration-200 rounded-l-lg"
                     onMouseDown={(e) => handleResizeStart(e, 'start')}
                     style={{ zIndex: 20 }}
                 />
 
                 {/* Right edge hover area */}
                 <div
-                    className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-blue-400/20"
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20 transition-colors duration-200 rounded-r-lg"
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
                     style={{ zIndex: 20 }}
                 />
 
                 {
                     url && (
-                        <div className="absolute inset-0 flex">
+                        <div className="absolute inset-0 flex rounded-lg overflow-hidden">
                             {
                                 isVideo ? (
                                     // For video, create a limited number of video thumbnails
@@ -548,7 +550,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                                 loop
                                                 playsInline
                                             />
-                                            <div className="absolute inset-0 bg-black/5" />
+                                            <div className="absolute inset-0 bg-black/20" />
                                         </div>
                                     ))
                                 ) : isImage ? (
@@ -560,14 +562,14 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                                 className="w-full h-full object-cover"
                                                 alt=""
                                             />
-                                            <div className="absolute inset-0 bg-black/5" />
+                                            <div className="absolute inset-0 bg-black/20" />
                                         </div>
                                     ))
                                 ) : isAudio ? (
                                     // For audio, create a limited number of audio icons
                                     Array.from({ length: Math.min(Math.ceil(width / thumbWidth), MAX_THUMBNAILS) }).map((_, i) => (
-                                        <div key={i} className="relative flex items-center justify-center bg-blue-600" style={{ width: thumbWidth, height: '100%' }}>
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div key={i} className="relative flex items-center justify-center bg-green-600" style={{ width: thumbWidth, height: '100%' }}>
+                                            <svg className="w-5 h-5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                                             </svg>
                                         </div>
@@ -581,7 +583,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                             backgroundRepeat: 'repeat-x',
                                             backgroundSize: `${thumbWidth}px ${thumbHeight}`,
                                             backgroundPosition: 'left center',
-                                            opacity: 0.7,
+                                            opacity: 0.8,
                                         }}
                                     />
                                 )
@@ -589,7 +591,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         </div>
                     )
                 }
-                <div className="relative z-10 bg-black/50 px-2 py-1 rounded">
+                <div className="relative z-10 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-medium">
                     {formatTime(durationMs)}
                 </div>
             </div>

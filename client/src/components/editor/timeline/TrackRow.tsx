@@ -287,10 +287,14 @@ export default function TrackRow({
             <div
                 ref={rowRef}
                 className={`
-                    relative h-12
-                    transition-all duration-200 rounded-md
-                    bg-gray-50 hover:bg-gray-100
-                    shadow-sm
+                    relative h-16
+                    transition-all duration-200 rounded-lg
+                    bg-white border-2 
+                    ${isDragOver 
+                        ? 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]' 
+                        : 'border-gray-200/80 hover:border-gray-300 hover:bg-gray-50/80 shadow-sm hover:shadow-md'
+                    }
+                    backdrop-blur-sm
                 `}
                 onContextMenu={handleContextMenu}
                 onDragOver={e => {
@@ -315,9 +319,21 @@ export default function TrackRow({
                 }}
                 onDrop={handleDrop}
             >
+                {/* Track type indicator */}
+                <div className={`
+                    absolute left-0 top-0 bottom-0 w-1 rounded-l-lg
+                    ${track.type === 'video' ? 'bg-blue-500' : 
+                      track.type === 'audio' ? 'bg-green-500' : 'bg-purple-500'}
+                `} />
+
+                {/* Track label */}
+                <div className="absolute left-3 top-2 text-xs font-medium text-gray-600 pointer-events-none">
+                    Track {track.index + 1} • {track.type}
+                </div>
+
                 {/* Background div that receives timeline clicks */}
                 <div
-                    className="absolute inset-0"
+                    className="absolute inset-0 rounded-lg"
                     onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -340,7 +356,7 @@ export default function TrackRow({
                 />
 
                 {/* Clips container */}
-                <div className="absolute inset-0">
+                <div className="absolute inset-0 rounded-lg overflow-hidden">
                     {
                         clips.map(c => (
                             <ClipItem

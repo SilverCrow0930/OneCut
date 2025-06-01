@@ -121,16 +121,17 @@ const ClipTools = () => {
 
     return (
         <div className={`
-            flex items-center gap-4
-            px-4 py-3 rounded-xl
+            flex items-center gap-3
+            backdrop-blur-sm
+            px-4 py-2.5 rounded-xl
             text-black
-            transition-all duration-300
+            transition-all duration-200
         `}>
             <button
                 className={`
-                    p-2.5 rounded-xl transition-all duration-300
+                    p-1 rounded-lg transition-all duration-200
                     ${hasSelectedClip ?
-                        'hover:bg-blue-50 hover:text-blue-600 hover:shadow-md active:scale-95' :
+                        'hover:bg-gray-300' :
                         'opacity-40 cursor-not-allowed'
                     }
                 `}
@@ -142,11 +143,8 @@ const ClipTools = () => {
             </button>
             <button
                 className={`
-                    p-2.5 rounded-xl transition-all duration-300
-                    ${hasSelectedClip ? 
-                        'hover:bg-red-50 hover:text-red-600 hover:shadow-md active:scale-95' : 
-                        'opacity-40 cursor-not-allowed'
-                    }
+                    p-1 rounded-lg transition-all duration-200
+                    ${hasSelectedClip ? 'hover:bg-gray-300' : 'opacity-40 cursor-not-allowed'}
                 `}
                 title="Delete clip"
                 onClick={handleDelete}

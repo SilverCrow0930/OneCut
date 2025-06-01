@@ -455,7 +455,7 @@ export default function Timeline() {
                     <EmptyTimeline />
                 ) : (
                     <div
-                        className="relative flex flex-col w-full gap-2"
+                        className="relative flex flex-col w-full gap-3 p-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
                         style={{
                             width: timelineContentWidth + 1,
                             minHeight: '100%',
@@ -471,7 +471,7 @@ export default function Timeline() {
                             onDrag={handlePlayheadDrag}
                             isPlaying={isPlaying}
                         />
-                        <div className="flex flex-col overflow-y-scroll gap-2">
+                        <div className="flex flex-col overflow-y-scroll gap-3 px-1">
                             {
                                 tracks.map(t => (
                                     <TrackRow
