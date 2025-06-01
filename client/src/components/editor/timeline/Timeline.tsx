@@ -518,9 +518,10 @@ export default function Timeline() {
             onClick={handleTimelineClick}
         >
             <div
-                className="relative flex flex-col gap-3 p-2 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
+                className="relative flex flex-col gap-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
                 style={{
                     width: timelineContentWidth,
+                    padding: '8px 8px 8px 0', // Remove left padding to align with ruler
                 }}
             >
                 <Ruler
@@ -533,7 +534,7 @@ export default function Timeline() {
                     isPlaying={isPlaying}
                 />
                 <div 
-                    className="flex flex-col gap-3 px-1 overflow-y-auto"
+                    className="flex flex-col gap-3 overflow-y-auto"
                     style={{
                         height: `${displayTracks.length * 60}px`, // Exact height: 48px track + 12px gap = 60px per track
                         maxHeight: '240px', // Still keep a max height to enable scrolling when there are too many tracks

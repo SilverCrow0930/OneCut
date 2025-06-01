@@ -393,14 +393,14 @@ export default function TrackRow({
                 {/* Track type indicator - only for real tracks */}
                 {!((track as any).isEmpty) && (
                     <div className={`
-                        absolute left-1 top-0 bottom-0 w-1 rounded-l-lg
+                        absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg z-30
                         ${track.type === 'video' ? 'bg-blue-500' : 
                           track.type === 'audio' ? 'bg-green-500' : 'bg-purple-500'}
                     `} />
                 )}
 
                 {/* Track label */}
-                <div className="absolute left-4 top-2 text-xs font-medium text-gray-600 pointer-events-none">
+                <div className="absolute left-2 top-2 text-xs font-medium text-gray-600 pointer-events-none">
                     {(track as any).isEmpty 
                         ? "Drop content here to create track"
                         : `Track ${track.index + 1} • ${track.type}`
@@ -433,7 +433,7 @@ export default function TrackRow({
                 />
 
                 {/* Clips container */}
-                <div className="absolute inset-0 rounded-lg overflow-hidden pl-1">
+                <div className="absolute inset-0 rounded-lg overflow-hidden">
                     {
                         clips.map(c => (
                             <ClipItem
