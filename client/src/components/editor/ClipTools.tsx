@@ -129,7 +129,7 @@ const ClipTools = () => {
         `}>
             <button
                 className={`
-                    p-2 rounded-lg transition-all duration-200
+                    p-1 rounded-lg transition-all duration-200
                     ${hasSelectedClip ?
                         'hover:bg-gray-300' :
                         'opacity-40 cursor-not-allowed'
@@ -143,7 +143,7 @@ const ClipTools = () => {
             </button>
             <button
                 className={`
-                    p-2 rounded-lg transition-all duration-200
+                    p-1 rounded-lg transition-all duration-200
                     ${hasSelectedClip ? 'hover:bg-gray-300' : 'opacity-40 cursor-not-allowed'}
                 `}
                 title="Delete clip"
