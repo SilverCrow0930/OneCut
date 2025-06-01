@@ -113,7 +113,7 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
 
     if (loading || isUploading) {
         return (
-            <div className="relative w-full aspect-video bg-gray-200 rounded flex items-center justify-center">
+            <div className="relative w-full h-32 bg-gray-200 rounded flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
         )
@@ -121,7 +121,7 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
 
     if (error) {
         return (
-            <div className="relative w-full aspect-video bg-red-100 text-red-500 flex items-center justify-center rounded">
+            <div className="relative w-full h-32 bg-red-100 text-red-500 flex items-center justify-center rounded">
                 {error}
             </div>
         )
@@ -130,7 +130,7 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
     const url = getAssetUrl()
     if (!url) {
         return (
-            <div className="relative w-full aspect-video bg-red-100 text-red-500 flex items-center justify-center rounded">
+            <div className="relative w-full h-32 bg-red-100 text-red-500 flex items-center justify-center rounded">
                 !
             </div>
         )
@@ -142,7 +142,7 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
 
     return (
         <div
-            className="relative w-full aspect-video rounded overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition"
+            className="relative w-full h-32 rounded overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition bg-black flex items-center justify-center"
             draggable={true}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
@@ -154,7 +154,7 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
             {isVideo ? (
                 <video
                     src={url}
-                    className="w-full h-full object-cover"
+                    className="max-w-full max-h-full object-contain"
                     muted
                     playsInline
                     poster={poster}
@@ -163,7 +163,7 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
                 <img
                     src={url}
                     alt={asset.alt || 'Asset'}
-                    className="w-full h-full object-cover"
+                    className="max-w-full max-h-full object-contain"
                 />
             )}
             {isVideo && durationMs > 0 && (

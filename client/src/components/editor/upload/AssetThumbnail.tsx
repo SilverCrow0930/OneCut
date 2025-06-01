@@ -40,13 +40,13 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
 
     if (loading) {
         return (
-            <div className="relative w-24 aspect-video bg-gray-200 animate-pulse rounded h-full" />
+            <div className="relative w-24 h-24 bg-gray-200 animate-pulse rounded" />
         )
     }
 
     if (!url) {
         return (
-            <div className="relative w-24 aspect-video bg-red-100 text-red-500 flex items-center justify-center rounded h-full">
+            <div className="relative w-24 h-24 bg-red-100 text-red-500 flex items-center justify-center rounded">
                 !
             </div>
         )
@@ -59,9 +59,9 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
             <DraggableAsset assetId={asset.id}>
                 <div
                     className={`
-                        relative w-full h-full aspect-video rounded-lg overflow-hidden 
+                        relative w-24 h-24 rounded-lg overflow-hidden 
                         bg-black hover:opacity-80 transition-opacity duration-500
-                        flex
+                        flex items-center justify-center
                         ${highlight ? 'ring-4 ring-blue-400 animate-pulse-fast' : ''}
                         ${uploading ? 'opacity-60 pointer-events-none' : ''}
                     `}
@@ -76,14 +76,14 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
                         isVideo ? (
                             <video
                                 src={url}
-                                className="object-cover w-full h-full"
+                                className="max-w-full max-h-full object-contain"
                                 muted
                                 loop
                             />
                         ) : (
                             <img
                                 src={url}
-                                className="object-cover w-full h-full"
+                                className="max-w-full max-h-full object-contain"
                             />
                         )
                     }
