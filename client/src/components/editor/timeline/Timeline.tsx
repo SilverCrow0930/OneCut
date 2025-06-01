@@ -493,10 +493,9 @@ export default function Timeline() {
             onClick={handleTimelineClick}
         >
             <div
-                className="relative flex flex-col gap-3 p-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
+                className="relative flex flex-col gap-3 p-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg h-full"
                 style={{
                     width: timelineContentWidth,
-                    height: 'fit-content',
                     minWidth: '100%' // Ensure it's at least as wide as container
                 }}
             >
@@ -510,10 +509,9 @@ export default function Timeline() {
                     isPlaying={isPlaying}
                 />
                 <div 
-                    className={`flex flex-col gap-3 px-1 overflow-y-auto`}
+                    className="flex flex-col gap-3 px-1 overflow-y-auto flex-1"
                     style={{
-                        maxHeight: 'calc(100vh - 400px)', // Dynamic height based on viewport, leaving space for other UI elements
-                        minHeight: '280px', // Minimum height to show at least 4 tracks
+                        minHeight: 0, // Allow flex item to shrink
                     }}
                 >
                     {
