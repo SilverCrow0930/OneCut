@@ -116,7 +116,7 @@ export default function AssetUploader({ onUpload }: { onUpload: () => void }) {
                 className={`
                     relative flex flex-col w-full min-h-64 items-center justify-center
                     p-6 rounded-xl gap-4
-                    border-2 border-gray-300 bg-gray-200 transition-all duration-300 ease-in-out
+                    border-2 border-gray-200 bg-gray-50 transition-all duration-300 ease-in-out
                     ${isDragging ?
                         'border-blue-400 bg-blue-100 shadow-inner' :
                         ''
