@@ -106,16 +106,12 @@ export default function Timeline() {
         }
     }, [tracks.length])
     
-    // Fixed: Set reasonable timeline width constraints with proper scrolling
-    const minTimelineWidth = Math.max(containerWidth || 1000, 1000) // Minimum 1000px or container width
-    const maxTimelineWidth = Math.max(containerWidth * 10, 20000) // Maximum 10x container width or 20000px
-    
-    // Calculate content width based on actual content, but within reasonable bounds
-    const contentBasedWidth = Math.max(totalPx, minTimelineWidth)
-    const timelineContentWidth = Math.min(contentBasedWidth, maxTimelineWidth)
-    
-    // Always enable horizontal scrolling when content exceeds container
-    const needsHorizontalScroll = totalPx > (containerWidth || 1000)
+    // No more forced minimum timeline - let it adapt naturally to content but ensure good space utilization
+    const minReasonableWidth = containerWidth 
+    const timelineContentWidth = Math.min(
+        Math.max(totalPx, minReasonableWidth, 1000), // Ensure good space utilization and minimum 1 second for empty timeline
+        Math.max(containerWidth * 50, 50000) // Max width cap
+    )
 
     const playheadX = currentTimeMs * timeScale
 
@@ -484,6 +480,7 @@ export default function Timeline() {
 
     // Determine if we need scrollbars based on content
     const hasActualContent = clips.length > 0 || tracks.length > 0
+    const needsHorizontalScroll = hasActualContent && (timelineContentWidth > containerWidth || zoomLevel > 1)
 
     if (loadingTimeline) {
         return <TimelineLoading />
@@ -509,14 +506,10 @@ export default function Timeline() {
                     'border border-transparent bg-white'}
             `}
             style={{
-                // Ensure container stays within bounds and enables scrolling when needed
+                // Prevent container from growing beyond its bounds
                 maxWidth: '100%',
-                width: '100%',
                 overflowX: needsHorizontalScroll ? 'auto' : 'hidden',
-                overflowY: 'hidden', // Never scroll vertically on main container
-                // Prevent the container from expanding beyond its parent
-                minWidth: 0,
-                flexShrink: 1
+                overflowY: 'hidden' // Never scroll vertically on main container - tracks handle their own scrolling
             }}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -527,14 +520,12 @@ export default function Timeline() {
                     <div
                 className="relative flex flex-col gap-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
                         style={{
-                    // Use the actual content width for proper scrolling
-                    width: Math.max(timelineContentWidth, totalPx),
-                    minWidth: minTimelineWidth,
+                    width: timelineContentWidth,
                     padding: '8px 8px 8px 0', // Remove left padding to align with ruler
                         }}
                     >
                         <Ruler
-                            totalMs={Math.max(timelineContentWidth, totalPx) / timeScale}
+                            totalMs={timelineContentWidth / timeScale}
                             timeScale={timeScale}
                         />
                         <Playhead
@@ -543,14 +534,11 @@ export default function Timeline() {
                             isPlaying={isPlaying}
                         />
                 <div 
-                    className="flex flex-col gap-3 overflow-y-auto"
+                    className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden"
                     style={{
                         height: `${displayTracks.length * 60}px`, // Exact height: 48px track + 12px gap = 60px per track
                         maxHeight: '240px', // Still keep a max height to enable scrolling when there are too many tracks
                         minHeight: 0, // Allow flex item to shrink
-                        // Ensure tracks container doesn't overflow
-                        width: '100%',
-                        minWidth: 0
                     }}
                 >
                             {

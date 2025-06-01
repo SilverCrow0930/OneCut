@@ -41,13 +41,11 @@ const EditorContent = () => {
                 </div>
             </div>
             
-            {/* Timeline area - fixed height to prevent overflow */}
+            {/* Timeline area - adaptive height based on content */}
             <div className="
                 overflow-hidden
                 flex-shrink-0
                 min-h-0
-                h-80
-                max-h-80
             ">
                 <Timeline />
             </div>
