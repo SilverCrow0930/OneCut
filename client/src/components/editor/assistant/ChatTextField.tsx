@@ -1,6 +1,5 @@
 import React, { ChangeEvent, useEffect, useRef, useState } from "react"
 import ChatSendButton from "./ChatSendButton";
-import IdeationButton from "./IdeationButton";
 
 interface ChatTextFieldProps {
     onSend: (message: string, useIdeation: boolean) => void;
@@ -9,9 +8,6 @@ interface ChatTextFieldProps {
 }
 
 const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessage }) => {
-
-    // Ideation State
-    const [isIdeationEnabled, setIsIdeationEnabled] = useState<boolean>(false);
 
     // Textarea Ref
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -28,12 +24,11 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
             return;
         }
 
-        // Send message with ideation state
-        onSend(message.trim(), isIdeationEnabled);
+        // Send message without ideation
+        onSend(message.trim(), false);
 
-        // Clear message and reset ideation
+        // Clear message
         setMessage("");
-        setIsIdeationEnabled(false);
     };
 
     // Handle Key Down Event
@@ -95,11 +90,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                     />
                 </div>
             </div>
-            <div className="flex flex-row items-center justify-between">
-                <IdeationButton
-                    isToggled={isIdeationEnabled}
-                    onClick={setIsIdeationEnabled}
-                />
+            <div className="flex flex-row items-center justify-end">
                 <ChatSendButton
                     onSend={handleSend}
                 />
