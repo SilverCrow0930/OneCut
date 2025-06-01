@@ -86,7 +86,7 @@ export default function Timeline() {
     const basePadding = Math.max(1000, maxMs * 0.1) // 10% padding or 1 second minimum
     const paddingMs = Math.min(basePadding, 5000) // Cap padding at 5 seconds
     const paddedMaxMs = maxMs + paddingMs
-    const totalPx = Math.ceil(paddedMaxMs * timeScale)
+    const totalContentPx = Math.ceil(paddedMaxMs * timeScale)
 
     // NEW: Ensure timeline fills the container
     const [containerWidth, setContainerWidth] = useState(0)
@@ -106,12 +106,10 @@ export default function Timeline() {
         }
     }, [tracks.length])
     
-    // No more forced minimum timeline - let it adapt naturally to content but ensure good space utilization
-    const minReasonableWidth = containerWidth 
-    const timelineContentWidth = Math.min(
-        Math.max(totalPx, minReasonableWidth, 1000), // Ensure good space utilization and minimum 1 second for empty timeline
-        Math.max(containerWidth * 50, 50000) // Max width cap
-    )
+    // Fixed timeline approach: Keep timeline content width reasonable and always allow scrolling
+    // The timeline content should be the actual content width, not constrained to viewport
+    const minTimelineWidth = Math.max(containerWidth, 1000) // At least container width or 1 second
+    const timelineContentWidth = Math.max(totalContentPx, minTimelineWidth)
 
     const playheadX = currentTimeMs * timeScale
 
@@ -478,9 +476,8 @@ export default function Timeline() {
         }
     }
 
-    // Determine if we need scrollbars based on content
-    const hasActualContent = clips.length > 0 || tracks.length > 0
-    const needsHorizontalScroll = hasActualContent && (timelineContentWidth > containerWidth || zoomLevel > 1)
+    // Determine if we need scrollbars - always show horizontal scroll for content longer than container
+    const needsHorizontalScroll = timelineContentWidth > containerWidth
 
     if (loadingTimeline) {
         return <TimelineLoading />
@@ -508,7 +505,7 @@ export default function Timeline() {
             style={{
                 // Prevent container from growing beyond its bounds
                 maxWidth: '100%',
-                overflowX: needsHorizontalScroll ? 'auto' : 'hidden',
+                overflowX: 'auto', // Always allow horizontal scrolling for long content
                 overflowY: 'hidden' // Never scroll vertically on main container - tracks handle their own scrolling
             }}
             onDragEnter={handleDragEnter}
