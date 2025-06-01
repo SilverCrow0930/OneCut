@@ -103,7 +103,7 @@ export default function Timeline() {
             setContainerWidth(containerRef.current.clientWidth)
         }
     }, [tracks.length])
-    const minTimelineMs = 5 * 60000 // 5 minutes in ms
+    const minTimelineMs = 1 * 60000 // 30 seconds in ms
     const minTimelinePx = minTimelineMs * timeScale
     
     // Prevent extremely large widths that can break layout
@@ -509,8 +509,9 @@ export default function Timeline() {
                     isPlaying={isPlaying}
                 />
                 <div 
-                    className="flex flex-col gap-3 px-1 overflow-y-auto flex-1"
+                    className="flex flex-col gap-3 px-1 overflow-y-auto"
                     style={{
+                        maxHeight: '280px', // Fixed height for exactly 4 tracks (64px height + 12px gap) * 4 = 280px
                         minHeight: 0, // Allow flex item to shrink
                     }}
                 >
