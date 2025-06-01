@@ -106,10 +106,8 @@ export default function Timeline() {
         }
     }, [tracks.length])
     
-    // Fixed timeline approach: timeline content width should be exactly the content size, not constrained to viewport
-    // This allows horizontal scrolling for long content without expanding the timeline container
-    const minTimelineWidth = Math.max(containerWidth, 1000) // At least container width or 1 second
-    const timelineContentWidth = Math.max(totalContentPx, minTimelineWidth)
+    // Fixed timeline approach: Keep timeline container at fixed width, let tracks handle their own scrolling
+    const timelineContainerWidth = containerWidth || 1000 // Fixed width for timeline container
 
     const playheadX = currentTimeMs * timeScale
 
@@ -478,7 +476,7 @@ export default function Timeline() {
 
     // Determine if we need scrollbars based on content
     const hasActualContent = clips.length > 0 || tracks.length > 0
-    const needsHorizontalScroll = hasActualContent && (timelineContentWidth > containerWidth || zoomLevel > 1)
+    const needsHorizontalScroll = hasActualContent && (timelineContainerWidth > containerWidth || zoomLevel > 1)
 
     if (loadingTimeline) {
         return <TimelineLoading />
@@ -518,12 +516,12 @@ export default function Timeline() {
             <div
                 className="relative flex flex-col gap-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
                 style={{
-                    width: timelineContentWidth,
+                    width: timelineContainerWidth,
                     padding: '8px 8px 8px 0', // Remove left padding to align with ruler
                 }}
             >
                 <Ruler
-                    totalMs={timelineContentWidth / timeScale}
+                    totalMs={timelineContainerWidth / timeScale}
                     timeScale={timeScale}
                 />
                 <Playhead
