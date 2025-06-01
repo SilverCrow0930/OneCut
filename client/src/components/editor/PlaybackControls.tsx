@@ -25,15 +25,15 @@ export default function PlaybackControls() {
                         undefined
                 }
                 className={`
-                    p-1 rounded-lg
+                    p-2 rounded-lg
                     transition-all duration-200
                     ${hasTracks ? 'hover:bg-gray-300' : 'cursor-not-allowed'}
                 `}
                 disabled={!hasTracks}
             >
                 {isPlaying ?
-                    <Pause size={18} /> :
-                    <Play size={18} />}
+                    <Pause size={22} /> :
+                    <Play size={22} />}
             </button>
             <span className="text-sm font-medium tabular-nums whitespace-nowrap">
                 {formatTimeMs(currentTime * 1000)} / {hasTracks ? formatTimeMs(duration) : '0:00'}

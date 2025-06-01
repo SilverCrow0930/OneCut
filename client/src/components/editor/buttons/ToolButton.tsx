@@ -12,7 +12,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon, onClick, isSelecte
     return (
         <button
             className={`
-                relative flex flex-col items-center justify-center gap-1 w-16 h-16 
+                relative flex flex-col items-center justify-center gap-0.5 w-16 h-14 
                 rounded-lg transition-all duration-300 ease-out
                 ${isSelected 
                     ? 'bg-blue-100 shadow-md border border-blue-200 scale-105' 
@@ -24,7 +24,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon, onClick, isSelecte
         >
             {
                 aiTool && (
-                    <div className="absolute top-1 right-1">
+                    <div className="absolute top-0.5 right-0.5">
                         <div className="text-[13px] font-semibold text-black opacity-70 bg-white/80 px-1 py-0.5 rounded-full">
                             AI
                         </div>

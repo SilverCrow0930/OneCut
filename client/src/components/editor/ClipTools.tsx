@@ -121,15 +121,15 @@ const ClipTools = () => {
 
     return (
         <div className={`
-            flex items-center gap-3
+            flex items-center gap-4
             backdrop-blur-sm
-            px-4 py-2.5 rounded-xl
+            px-5 py-3 rounded-xl
             text-black
             transition-all duration-200
         `}>
             <button
                 className={`
-                    p-1 rounded-lg transition-all duration-200
+                    p-2 rounded-lg transition-all duration-200
                     ${hasSelectedClip ?
                         'hover:bg-gray-300' :
                         'opacity-40 cursor-not-allowed'
@@ -139,18 +139,18 @@ const ClipTools = () => {
                 onClick={handleSplit}
                 disabled={!hasSelectedClip}
             >
-                <SquareSplitHorizontal size={22} />
+                <SquareSplitHorizontal size={24} />
             </button>
             <button
                 className={`
-                    p-1 rounded-lg transition-all duration-200
+                    p-2 rounded-lg transition-all duration-200
                     ${hasSelectedClip ? 'hover:bg-gray-300' : 'opacity-40 cursor-not-allowed'}
                 `}
                 title="Delete clip"
                 onClick={handleDelete}
                 disabled={!hasSelectedClip}
             >
-                <Trash2 size={22} />
+                <Trash2 size={24} />
             </button>
         </div>
     )
