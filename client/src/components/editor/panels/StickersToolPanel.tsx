@@ -91,7 +91,7 @@ const StickersToolPanel = () => {
             // 4. Upload to our server
             const form = new FormData()
             form.append('file', file)
-            form.append('duration', '5000') // Default 5 seconds for stickers
+            form.append('duration', '3') // 3 seconds for GIFs (server expects seconds, not ms)
 
             const uploadResponse = await fetch(apiPath('assets/upload'), {
                 method: 'POST',

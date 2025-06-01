@@ -129,6 +129,9 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
 
                 durationSeconds = video.duration || 0
                 URL.revokeObjectURL(url)
+            } else {
+                // For images, set a default duration of 5 seconds
+                durationSeconds = 5
             }
 
             // 5. Upload to our server

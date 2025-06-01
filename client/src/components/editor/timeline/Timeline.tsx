@@ -257,8 +257,10 @@ export default function Timeline() {
                 id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 url: mediaUrl,
                 name: payload.asset.title || payload.asset.alt || `External ${payload.assetType}`,
-                mime_type: payload.assetType === 'video' ? 'video/mp4' : 'image/jpeg',
-                duration: payload.assetType === 'video' ? 10000 : 5000, // Default durations in ms
+                mime_type: payload.assetType === 'video' ? 'video/mp4' : 
+                          (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
+                duration: payload.assetType === 'video' ? 10000 : 
+                         (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 3000 : 5000, // 3s for GIFs, 5s for images
                 isExternal: true,
                 originalData: payload.asset
             }
