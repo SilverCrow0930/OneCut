@@ -53,26 +53,15 @@ export default function Timeline() {
     }, [tracks, clips])
 
     // Create display tracks: actual tracks + one empty track for new content
-    const displayTracks = useMemo(() => {
+    // Show all tracks but limit container height to 4 tracks with vertical scrolling
+    const [allTracksWithEmpty, needsVerticalScroll] = useMemo(() => {
         const tracksInUse = tracks.filter(track => {
             const trackClips = clipsByTrack.get(track.id) ?? []
             return trackClips.length > 0
-        })
+        }).sort((a, b) => a.index - b.index)
         
-        // If no tracks are in use, create one empty track for display
-        if (tracksInUse.length === 0) {
-            return [{
-                id: 'empty-track-0',
-                projectId: projectId!,
-                index: 0,
-                type: 'video' as TrackType,
-                createdAt: new Date().toISOString(),
-                isEmpty: true
-            }]
-        }
-        
-        // Show all tracks in use + one additional empty track
-        const maxIndex = Math.max(...tracksInUse.map(t => t.index))
+        // Always include an empty track at the end
+        const maxIndex = tracksInUse.length > 0 ? Math.max(...tracksInUse.map(t => t.index)) : -1
         const emptyTrack = {
             id: `empty-track-${maxIndex + 1}`,
             projectId: projectId!,
@@ -82,8 +71,13 @@ export default function Timeline() {
             isEmpty: true
         }
         
-        return [...tracksInUse.sort((a, b) => a.index - b.index), emptyTrack]
+        const allTracksArray = [...tracksInUse, emptyTrack]
+        const needsScroll = allTracksArray.length > 4
+        
+        return [allTracksArray, needsScroll]
     }, [tracks, clipsByTrack, projectId])
+
+    const displayTracks = allTracksWithEmpty
 
     // compute overall width
     const maxMs = clips.reduce((mx, c) => Math.max(mx, c.timelineEndMs), 0)
@@ -462,7 +456,6 @@ export default function Timeline() {
     // Determine if we need scrollbars based on content
     const hasActualContent = clips.length > 0 || tracks.length > 0
     const needsHorizontalScroll = hasActualContent && (timelineContentWidth > containerWidth || zoomLevel > 1)
-    const needsVerticalScroll = false // Never show vertical scroll for tracks - they should fit in container
 
     if (loadingTimeline) {
         return <TimelineLoading />
@@ -491,7 +484,7 @@ export default function Timeline() {
                 // Prevent container from growing beyond its bounds
                 maxWidth: '100%',
                 overflowX: needsHorizontalScroll ? 'auto' : 'hidden',
-                overflowY: needsVerticalScroll ? 'auto' : 'hidden'
+                overflowY: 'hidden' // Never scroll vertically on main container - tracks handle their own scrolling
             }}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -516,7 +509,12 @@ export default function Timeline() {
                     onDrag={handlePlayheadDrag}
                     isPlaying={isPlaying}
                 />
-                <div className="flex flex-col gap-3 px-1">
+                <div 
+                    className={`flex flex-col gap-3 px-1 ${needsVerticalScroll ? 'overflow-y-auto' : ''}`}
+                    style={{
+                        maxHeight: needsVerticalScroll ? '280px' : 'auto', // 4 tracks * 70px (16*4 + gaps)
+                    }}
+                >
                     {
                         displayTracks.map(t => (
                             <TrackRow
