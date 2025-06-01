@@ -54,6 +54,45 @@ export default function TrackRow({
             return
         }
 
+        // Check if this is an empty track - if so, we need to create a real track first
+        const isEmptyTrack = (track as any).isEmpty === true
+        
+        // For empty tracks, we need to create a real track first, then add the clip
+        if (isEmptyTrack) {
+            console.log('Dropping on empty track, creating real track first')
+            
+            // Determine track type based on asset
+            let trackType: 'audio' | 'video' = 'video'
+            
+            if (payload.type === 'external_asset') {
+                trackType = payload.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+            } else if (payload.assetId) {
+                const asset = assets.find(a => a.id === payload.assetId)
+                if (asset) {
+                    trackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
+                }
+            }
+
+            // Create the real track
+            const newTrack = {
+                id: uuid(),
+                projectId: track.projectId,
+                index: track.index,
+                type: trackType,
+                createdAt: new Date().toISOString(),
+            }
+
+            console.log('Creating real track for empty track:', newTrack)
+
+            executeCommand({
+                type: 'ADD_TRACK',
+                payload: { track: newTrack }
+            })
+
+            // Update track reference for the rest of the function
+            track = newTrack as any
+        }
+
         // Handle external assets (Pexels/stickers)
         if (payload.type === 'external_asset') {
             console.log('Handling external asset on track:', payload)
@@ -296,11 +335,13 @@ export default function TrackRow({
                         ? 'bg-gray-50/50 border-2 border-dashed border-gray-200/60 hover:border-gray-300/60 hover:bg-gray-100/50' 
                         : 'bg-white border-2 backdrop-blur-sm'
                     }
-                    ${!((track as any).isEmpty) && isDragOver 
-                        ? 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]' 
-                        : !((track as any).isEmpty) 
-                            ? 'border-gray-200/80 hover:border-gray-300 hover:bg-gray-50/80 shadow-sm hover:shadow-md'
-                            : ''
+                    ${isDragOver
+                        ? (track as any).isEmpty
+                            ? 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]'
+                            : 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]' 
+                        : (track as any).isEmpty
+                            ? ''
+                            : 'border-gray-200/80 hover:border-gray-300 hover:bg-gray-50/80 shadow-sm hover:shadow-md'
                     }
                 `}
                 onContextMenu={handleContextMenu}
