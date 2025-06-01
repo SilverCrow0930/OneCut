@@ -61,7 +61,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state }) => {
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                     <div className="flex flex-col items-center gap-4">
                         {/* Cute emoji/icon */}
-                        <div className="text-6xl">🎬</div>
+                        <div className="text-6xl">🐹</div>
                         
                         {/* Welcome text */}
                         <div className="flex flex-col gap-2">
@@ -69,8 +69,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state }) => {
                                 Hi there! 👋
                             </h3>
                             <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
-                                I'm your creative assistant! Ask me anything about video editing, 
-                                content ideas, or just chat about your project.
+                                I'm your creative assistant!
                             </p>
                         </div>
                         

@@ -74,7 +74,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                     <textarea
                         ref={textareaRef}
                         className="focus:outline-none text-sm overflow-auto resize-none mt-[2px] w-full"
-                        placeholder="Tell me your idea, ask me anything ..."
+                        placeholder="Plan, search, ask anything"
                         rows={2}
                         value={message}
                         onChange={handleChange}

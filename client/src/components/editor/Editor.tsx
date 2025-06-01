@@ -11,14 +11,14 @@ import EditorContent from './EditorContent'
 const LoadingSpinner = () => (
     <div className="relative w-5 h-5">
         <div className="absolute inset-0 border-2 border-gray-200 rounded-full" />
-        <div className="absolute inset-0 border-2 border-gray-400 rounded-full animate-[spin_0.8s_linear_infinite] border-t-transparent" />
+        <div className="absolute inset-0 border-2 border-blue-400 rounded-full animate-[spin_0.8s_linear_infinite] border-t-transparent" />
     </div>
 )
 
 const StateMessage = ({ children, icon }: { children: React.ReactNode, icon?: React.ReactNode }) => (
-    <div className="flex items-center gap-3 text-gray-600">
+    <div className="flex items-center gap-3 text-gray-600 bg-gray-50 px-6 py-4 rounded-xl shadow-sm">
         {icon}
-        {children}
+        <span className="font-medium">{children}</span>
     </div>
 )
 
@@ -63,7 +63,7 @@ const Editor = () => {
     // Render states
     if (!session) {
         return (
-            <div className="flex items-center justify-center w-screen h-screen bg-white">
+            <div className="flex items-center justify-center w-screen h-screen bg-gradient-to-br from-gray-50 to-gray-100">
                 <StateMessage icon={<LoadingSpinner />}>
                     Signing in...
                 </StateMessage>
@@ -73,7 +73,7 @@ const Editor = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center w-screen h-screen bg-white">
+            <div className="flex items-center justify-center w-screen h-screen bg-gradient-to-br from-gray-50 to-gray-100">
                 <StateMessage icon={<LoadingSpinner />}>
                     Loading project...
                 </StateMessage>
@@ -83,7 +83,7 @@ const Editor = () => {
 
     if (error) {
         return (
-            <div className="flex items-center justify-center w-screen h-screen bg-white">
+            <div className="flex items-center justify-center w-screen h-screen bg-gradient-to-br from-gray-50 to-gray-100">
                 <StateMessage icon={<LoadingSpinner />}>
                     <span className="text-red-500">Error:</span> {error}
                 </StateMessage>
@@ -93,7 +93,7 @@ const Editor = () => {
 
     if (!project) {
         return (
-            <div className="flex items-center justify-center w-screen h-screen bg-white">
+            <div className="flex items-center justify-center w-screen h-screen bg-gradient-to-br from-gray-50 to-gray-100">
                 <StateMessage>
                     Project not found
                 </StateMessage>
@@ -104,22 +104,25 @@ const Editor = () => {
     return (
         <div className="
             flex flex-col w-screen h-screen overflow-hidden
+            bg-gradient-to-br from-slate-50 to-gray-100
         ">
             <Menu />
             <div className="
-                flex flex-row flex-1 min-h-0
+                flex flex-row flex-1 min-h-0 gap-1 p-1
             ">
-                <div className="w-fit h-full border-r border-gray-300">
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60">
                     <ToolBar
                         selectedTool={selectedTool}
                         onToolSelect={setSelectedTool}
                     />
                 </div>
-                <div className="w-80 h-full">
+                <div className="w-80 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60">
                     <ToolPanel />
                 </div>
-                <EditorContent />
-                <div className="relative" style={{ width: assistantWidth }}>
+                <div className="flex-1 bg-white/60 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60">
+                    <EditorContent />
+                </div>
+                <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60" style={{ width: assistantWidth }}>
                     <ResizeHandle
                         className="absolute -left-2 z-10"
                         onResize={handleAssistantResize}

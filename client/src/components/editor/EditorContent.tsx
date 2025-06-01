@@ -9,27 +9,28 @@ const EditorContent = () => {
     return (
         <div className="
             flex flex-col flex-1 overflow-hidden h-full 
-            gap-0 pt-2 border-l border-r border-gray-300
+            gap-0 p-2 rounded-lg
             focus:outline-none
         ">
-            <div className="h-full pb-2">
+            <div className="h-full pb-3 bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg">
                 <Player />
             </div>
             <div className="
                 flex w-full justify-between 
-                bg-gray-200 py-1
+                bg-white/80 backdrop-blur-sm py-3 px-4 rounded-lg shadow-sm border border-gray-200/60
+                mx-auto
             ">
-                <div className="flex w-64 items-center px-2">
+                <div className="flex w-64 items-center">
                     <ClipTools />
                 </div>
                 <div className="flex w-full items-center justify-center">
                     <PlaybackControls />
                 </div>
-                <div className="flex w-64 items-center justify-end px-2">
+                <div className="flex w-64 items-center justify-end">
                     <ZoomSlider />
                 </div>
             </div>
-            <div className="h-full">
+            <div className="h-full pt-2">
                 <Timeline />
             </div>
         </div>

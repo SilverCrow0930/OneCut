@@ -50,27 +50,32 @@ export default function Player() {
     }, [setCurrentTime, setDuration])
 
     return (
-        <div
-            className="relative mx-auto bg-black"
-            style={{
-                aspectRatio: '9 / 16',
-                width: '100%',
-                maxWidth: '20rem'
-            }}
-            onClick={() => {
-                setSelectedClipId(null)
-            }}
-        >
-            {/* Render active clips in order with their source times */}
-            {
-                clipsWithSourceTime.map(clip => (
-                    <ClipLayer
-                        key={clip.id}
-                        clip={clip}
-                        sourceTime={clip.sourceTime}
-                    />
-                ))
-            }
+        <div className="flex items-center justify-center h-full p-4">
+            <div
+                className="relative bg-black rounded-xl shadow-2xl ring-1 ring-gray-200/20"
+                style={{
+                    aspectRatio: '9 / 16',
+                    width: '100%',
+                    maxWidth: '20rem'
+                }}
+                onClick={() => {
+                    setSelectedClipId(null)
+                }}
+            >
+                {/* Subtle glow effect */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl pointer-events-none" />
+                
+                {/* Render active clips in order with their source times */}
+                {
+                    clipsWithSourceTime.map(clip => (
+                        <ClipLayer
+                            key={clip.id}
+                            clip={clip}
+                            sourceTime={clip.sourceTime}
+                        />
+                    ))
+                }
+            </div>
         </div>
     )
 }

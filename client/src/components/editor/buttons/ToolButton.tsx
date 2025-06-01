@@ -12,23 +12,39 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon, onClick, isSelecte
     return (
         <button
             className={`
-                relative flex flex-col items-center justify-center gap-1 w-16 h-16 duration-500
-                ${isSelected ? 'bg-blue-200 hover:bg-blue-200' : 'hover:bg-blue-100'}
-                cursor-pointer
+                relative flex flex-col items-center justify-center gap-1 w-16 h-16 
+                rounded-lg transition-all duration-300 ease-out
+                ${isSelected 
+                    ? 'bg-blue-100 shadow-md border border-blue-200 scale-105' 
+                    : 'hover:bg-gray-100/70 hover:shadow-sm hover:scale-102 border border-transparent'
+                }
+                cursor-pointer group
             `}
             onClick={onClick}
         >
             {
                 aiTool && (
-                    <div className="absolute top-1 right-2">
-                        <div className="text-xs font-medium text-black opacity-70">
+                    <div className="absolute top-1 right-1">
+                        <div className="text-[9px] font-semibold text-black opacity-70 bg-white/80 px-1 py-0.5 rounded-full">
                             AI
                         </div>
                     </div>
                 )
             }
-            <img src={icon} alt={label} className='w-6 h-6 object-contain opacity-70' />
-            <p className='text-[11px] font-medium text-black opacity-70'>{label}</p>
+            <img 
+                src={icon} 
+                alt={label} 
+                className={`w-6 h-6 object-contain transition-all duration-300 ${
+                    isSelected ? 'opacity-90' : 'opacity-70 group-hover:opacity-85'
+                }`} 
+            />
+            <p className={`text-[11px] font-medium transition-all duration-300 ${
+                isSelected 
+                    ? 'text-blue-700 opacity-90' 
+                    : 'text-black opacity-70 group-hover:opacity-85'
+            }`}>
+                {label}
+            </p>
         </button>
     )
 }
