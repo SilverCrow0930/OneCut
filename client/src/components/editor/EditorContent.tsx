@@ -12,13 +12,13 @@ const EditorContent = () => {
             gap-0 p-2 rounded-lg
             focus:outline-none
         ">
-            <div className="h-full pb-3 bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg">
+            <div className="flex-1 pb-3 bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg min-h-0">
                 <Player />
             </div>
             <div className="
                 flex w-full justify-between 
                 bg-white/80 backdrop-blur-sm py-3 px-4 rounded-lg shadow-sm border border-gray-200/60
-                mx-auto
+                mx-auto flex-shrink-0
             ">
                 <div className="flex w-64 items-center">
                     <ClipTools />
@@ -30,7 +30,7 @@ const EditorContent = () => {
                     <ZoomSlider />
                 </div>
             </div>
-            <div className="h-full pt-2">
+            <div className="flex-1 pt-2 min-h-0 overflow-hidden">
                 <Timeline />
             </div>
         </div>
