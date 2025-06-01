@@ -107,9 +107,13 @@ export default function Timeline() {
     }, [tracks.length])
     
     // Fixed timeline approach: Keep timeline content width reasonable and always allow scrolling
-    // The timeline content should be the actual content width, not constrained to viewport
+    // Cap the timeline content width to a reasonable maximum to prevent extreme widths
     const minTimelineWidth = Math.max(containerWidth, 1000) // At least container width or 1 second
-    const timelineContentWidth = Math.max(totalContentPx, minTimelineWidth)
+    const maxReasonableWidth = containerWidth * 10 // Max 10x the viewport width
+    const timelineContentWidth = Math.max(
+        Math.min(totalContentPx, maxReasonableWidth), // Don't exceed reasonable maximum
+        minTimelineWidth // But at least minimum width
+    )
 
     const playheadX = currentTimeMs * timeScale
 
@@ -522,7 +526,7 @@ export default function Timeline() {
                 }}
             >
                 <Ruler
-                    totalMs={timelineContentWidth / timeScale}
+                    totalMs={paddedMaxMs}
                     timeScale={timeScale}
                 />
                 <Playhead
