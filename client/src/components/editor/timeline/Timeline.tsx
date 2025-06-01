@@ -86,7 +86,7 @@ export default function Timeline() {
     const basePadding = Math.max(1000, maxMs * 0.1) // 10% padding or 1 second minimum
     const paddingMs = Math.min(basePadding, 5000) // Cap padding at 5 seconds
     const paddedMaxMs = maxMs + paddingMs
-    const totalPx = Math.ceil(paddedMaxMs * timeScale)
+    const totalContentPx = Math.ceil(paddedMaxMs * timeScale)
 
     // NEW: Ensure timeline fills the container
     const [containerWidth, setContainerWidth] = useState(0)
@@ -106,12 +106,10 @@ export default function Timeline() {
         }
     }, [tracks.length])
     
-    // No more forced minimum timeline - let it adapt naturally to content but ensure good space utilization
-    const minReasonableWidth = containerWidth 
-    const timelineContentWidth = Math.min(
-        Math.max(totalPx, minReasonableWidth, 1000), // Ensure good space utilization and minimum 1 second for empty timeline
-        Math.max(containerWidth * 50, 50000) // Max width cap
-    )
+    // Fixed timeline approach: timeline content width should be exactly the content size, not constrained to viewport
+    // This allows horizontal scrolling for long content without expanding the timeline container
+    const minTimelineWidth = Math.max(containerWidth, 1000) // At least container width or 1 second
+    const timelineContentWidth = Math.max(totalContentPx, minTimelineWidth)
 
     const playheadX = currentTimeMs * timeScale
 
@@ -478,8 +476,9 @@ export default function Timeline() {
         }
     }
 
-    // Determine if we need scrollbars - always show horizontal scroll for content longer than container
-    const needsHorizontalScroll = timelineContentWidth > containerWidth
+    // Determine if we need scrollbars based on content
+    const hasActualContent = clips.length > 0 || tracks.length > 0
+    const needsHorizontalScroll = hasActualContent && (timelineContentWidth > containerWidth || zoomLevel > 1)
 
     if (loadingTimeline) {
         return <TimelineLoading />
@@ -507,7 +506,7 @@ export default function Timeline() {
             style={{
                 // Prevent container from growing beyond its bounds
                 maxWidth: '100%',
-                overflowX: 'auto', // Always allow horizontal scrolling for long content
+                overflowX: needsHorizontalScroll ? 'auto' : 'hidden',
                 overflowY: 'hidden' // Never scroll vertically on main container - tracks handle their own scrolling
             }}
             onDragEnter={handleDragEnter}
@@ -533,12 +532,11 @@ export default function Timeline() {
                     isPlaying={isPlaying}
                 />
                 <div 
-                    className="flex flex-col gap-3"
+                    className="flex flex-col gap-3 overflow-y-auto"
                     style={{
                         height: `${displayTracks.length * 60}px`, // Exact height: 48px track + 12px gap = 60px per track
                         maxHeight: '240px', // Still keep a max height to enable scrolling when there are too many tracks
                         minHeight: 0, // Allow flex item to shrink
-                        overflowY: displayTracks.length > 4 ? 'auto' : 'hidden', // Only scroll when more than 4 tracks
                     }}
                 >
                     {

@@ -46,8 +46,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
     const assetDuration = asset?.duration ?? 0
 
     // convert ms → px
-    const left = Math.max(0, isResizing ? currentLeft : clip.timelineStartMs * timeScale)
-    const width = Math.max(10, isResizing ? currentWidth : (clip.timelineEndMs - clip.timelineStartMs) * timeScale)
+    const left = isResizing ? currentLeft : clip.timelineStartMs * timeScale
+    const width = isResizing ? currentWidth : (clip.timelineEndMs - clip.timelineStartMs) * timeScale
 
     // If it's a text clip, use the TextClipItem component
     if (isText) {
@@ -167,11 +167,9 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             // Apply minimum duration constraint
             newStartMs = Math.max(minStartMs, Math.min(newStartMs, maxStartMs))
 
-            // Update visual position and width directly - ensure valid values
-            const newLeft = Math.max(0, newStartMs * timeScale)
-            const newWidth = Math.max(10, (clip.timelineEndMs - newStartMs) * timeScale)
-            setCurrentLeft(newLeft)
-            setCurrentWidth(newWidth)
+            // Update visual position and width directly
+            setCurrentLeft(newStartMs * timeScale)
+            setCurrentWidth((clip.timelineEndMs - newStartMs) * timeScale)
         } else {
             // Calculate new end time with constraints
             const minEndMs = clip.timelineStartMs + 100 // Minimum 100ms duration
@@ -191,9 +189,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             // Apply minimum duration and asset duration constraints
             newEndMs = Math.max(minEndMs, Math.min(newEndMs, maxEndMs))
 
-            // Update visual width directly - ensure valid values
-            const newWidth = Math.max(10, (newEndMs - clip.timelineStartMs) * timeScale)
-            setCurrentWidth(newWidth)
+            // Update visual width directly
+            setCurrentWidth((newEndMs - clip.timelineStartMs) * timeScale)
         }
 
         // Always maintain the resize cursor
