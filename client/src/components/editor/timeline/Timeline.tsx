@@ -496,7 +496,6 @@ export default function Timeline() {
                 className="relative flex flex-col gap-3 p-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
                 style={{
                     width: timelineContentWidth,
-                    minWidth: '100%' // Ensure it's at least as wide as container
                 }}
             >
                 <Ruler

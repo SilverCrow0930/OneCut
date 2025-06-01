@@ -86,8 +86,8 @@ export const initialHistory: HistoryState = {
     future: [],
 }
 
-// Base time scale (pixels per millisecond)
-export const BASE_TIME_SCALE = 0.0016667
+// Base time scale (pixels per millisecond) - increased for better clip visibility
+export const BASE_TIME_SCALE = 0.01 // Increased from 0.0016667 for 6x larger clips
 
 // Function to calculate time scale based on zoom level
 export const getTimeScale = (zoomLevel: number) => BASE_TIME_SCALE * zoomLevel
