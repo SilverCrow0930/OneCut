@@ -127,11 +127,9 @@ const ZoomSlider = () => {
                         [&::-moz-range-thumb]:cursor-pointer"
                 />
             </div>
-            <div className="bg-white/70 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-gray-200/60">
-                <span className="text-sm font-medium tabular-nums whitespace-nowrap text-gray-700">
-                    {Math.round(zoomLevel * 100)}%
-                </span>
-            </div>
+            <span className="text-sm font-medium tabular-nums whitespace-nowrap text-gray-700">
+                {Math.round(zoomLevel * 100)}%
+            </span>
         </div>
     )
 }

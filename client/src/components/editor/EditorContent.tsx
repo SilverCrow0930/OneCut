@@ -27,7 +27,7 @@ const EditorContent = () => {
             {/* Controls bar - fixed height */}
             <div className="
                 flex w-full justify-between 
-                bg-white/80 backdrop-blur-sm py-2 px-4 rounded-lg shadow-sm border border-gray-200/60
+                bg-white/80 backdrop-blur-sm py-1 px-4 rounded-lg shadow-sm border border-gray-200/60
                 flex-shrink-0 z-10
             ">
                 <div className="flex w-64 items-center">

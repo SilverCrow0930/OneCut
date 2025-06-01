@@ -473,7 +473,7 @@ export default function Timeline() {
         <div
             ref={containerRef}
             className={`
-                w-full h-full
+                w-full
                 transition-colors duration-500
                 timeline-container
                 ${isDragOver ?
