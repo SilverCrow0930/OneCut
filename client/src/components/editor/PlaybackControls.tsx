@@ -11,11 +11,10 @@ export default function PlaybackControls() {
 
     return (
         <div className={`
-            flex items-center gap-3
-            backdrop-blur-sm
-            px-4 py-2.5 rounded-xl
+            flex items-center gap-4
+            px-4 py-3 rounded-xl
             text-black
-            transition-all duration-200
+            transition-all duration-300
             ${!hasTracks ? 'opacity-40' : ''}
         `}>
             <button
@@ -25,9 +24,12 @@ export default function PlaybackControls() {
                         undefined
                 }
                 className={`
-                    p-2 rounded-lg
-                    transition-all duration-200
-                    ${hasTracks ? 'hover:bg-gray-300' : 'cursor-not-allowed'}
+                    p-2.5 rounded-xl
+                    transition-all duration-300
+                    ${hasTracks ? 
+                        'hover:bg-green-50 hover:text-green-600 hover:shadow-md active:scale-95' : 
+                        'cursor-not-allowed'
+                    }
                 `}
                 disabled={!hasTracks}
             >
@@ -35,7 +37,7 @@ export default function PlaybackControls() {
                     <Pause size={22} /> :
                     <Play size={22} />}
             </button>
-            <span className="text-sm font-medium tabular-nums whitespace-nowrap">
+            <span className="text-sm font-semibold tabular-nums whitespace-nowrap text-gray-700 bg-white/60 px-3 py-1.5 rounded-lg">
                 {formatTimeMs(currentTime * 1000)} / {hasTracks ? formatTimeMs(duration) : '0:00'}
             </span>
         </div>

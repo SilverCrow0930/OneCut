@@ -15,21 +15,34 @@ const EditorContent = () => {
             <div className="h-full pb-3 bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg">
                 <Player />
             </div>
+            
+            {/* Enhanced Control Panel */}
             <div className="
-                flex w-full justify-between 
-                bg-white/80 backdrop-blur-sm py-3 px-4 rounded-lg shadow-sm border border-gray-200/60
-                mx-auto
+                flex w-full justify-between items-center
+                bg-gradient-to-r from-white/95 to-gray-50/95 backdrop-blur-lg 
+                py-4 px-6 mx-2 my-2 rounded-2xl 
+                shadow-lg border border-gray-200/50
+                transition-all duration-300 hover:shadow-xl
             ">
-                <div className="flex w-64 items-center">
-                    <ClipTools />
+                <div className="flex items-center">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-1 shadow-sm border border-gray-200/60">
+                        <ClipTools />
+                    </div>
                 </div>
-                <div className="flex w-full items-center justify-center">
-                    <PlaybackControls />
+                
+                <div className="flex items-center">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-1 shadow-sm border border-gray-200/60">
+                        <PlaybackControls />
+                    </div>
                 </div>
-                <div className="flex w-64 items-center justify-end">
-                    <ZoomSlider />
+                
+                <div className="flex items-center">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-1 shadow-sm border border-gray-200/60">
+                        <ZoomSlider />
+                    </div>
                 </div>
             </div>
+            
             <div className="h-full pt-2">
                 <Timeline />
             </div>

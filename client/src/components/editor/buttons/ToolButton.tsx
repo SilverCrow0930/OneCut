@@ -25,7 +25,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon, onClick, isSelecte
             {
                 aiTool && (
                     <div className="absolute top-1 right-1">
-                        <div className="text-[13px] font-semibold text-black opacity-70 bg-white/80 px-1 py-0.5 rounded-full">
+                        <div className="text-sm font-semibold text-black opacity-70 bg-white/80 px-1 py-0.5 rounded-full">
                             AI
                         </div>
                     </div>
@@ -38,7 +38,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon, onClick, isSelecte
                     isSelected ? 'opacity-90' : 'opacity-70 group-hover:opacity-85'
                 }`} 
             />
-            <p className={`text-[13px] font-medium transition-all duration-300 ${
+            <p className={`text-sm font-medium transition-all duration-300 ${
                 isSelected 
                     ? 'text-blue-700 opacity-90' 
                     : 'text-black opacity-70 group-hover:opacity-85'
