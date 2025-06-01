@@ -1,33 +1,54 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useZoom } from '@/contexts/ZoomContext'
 
 const ZoomSlider = () => {
     const { zoomLevel, setZoomLevel } = useZoom()
 
-    const minZoom = 0.1;
-    const maxZoom = 50;
+    // More reasonable zoom range
+    const minZoom = 0.1;  // 10%
+    const maxZoom = 10;   // 1000% (instead of 5000%)
 
-    // Convert zoomLevel to slider position (0 to 1)
+    // Detect and normalize browser zoom to prevent conflicts
+    useEffect(() => {
+        const handleBrowserZoom = () => {
+            // Get browser zoom level
+            const browserZoom = window.devicePixelRatio;
+            
+            // If browser zoom is significantly different from 1, add a warning class
+            // This helps identify when browser zoom might interfere with app zoom
+            if (Math.abs(browserZoom - 1) > 0.1) {
+                document.body.classList.add('browser-zoom-detected');
+            } else {
+                document.body.classList.remove('browser-zoom-detected');
+            }
+        };
+
+        // Check on mount and when window resizes
+        handleBrowserZoom();
+        window.addEventListener('resize', handleBrowserZoom);
+        
+        return () => {
+            window.removeEventListener('resize', handleBrowserZoom);
+            document.body.classList.remove('browser-zoom-detected');
+        };
+    }, []);
+
+    // Simplified linear scaling for better user experience
     const zoomToSlider = (zoom: number) => {
-        if (zoom === 1) return 0.5; // Center at 100%
-        if (zoom < 1) {
-            // Map 0.1 to 1 to 0 to 0.5
-            return (Math.log10(zoom) - Math.log10(minZoom)) / (Math.log10(1) - Math.log10(minZoom)) * 0.5;
-        } else {
-            // Map 1 to 50 to 0.5 to 1
-            return 0.5 + (Math.log10(zoom) - Math.log10(1)) / (Math.log10(maxZoom) - Math.log10(1)) * 0.5;
-        }
+        // Map zoom range [0.1, 10] to slider range [0, 1]
+        // Use logarithmic scaling but with reasonable bounds
+        const logMin = Math.log10(minZoom);
+        const logMax = Math.log10(maxZoom);
+        const logZoom = Math.log10(zoom);
+        return (logZoom - logMin) / (logMax - logMin);
     };
-    // Convert slider position (0 to 1) to zoomLevel
+
     const sliderToZoom = (sliderValue: number) => {
-        if (sliderValue === 0.5) return 1; // Center at 100%
-        if (sliderValue < 0.5) {
-            // Map 0 to 0.5 to 0.1 to 1
-            return minZoom * Math.pow((1 / minZoom), sliderValue * 2);
-        } else {
-            // Map 0.5 to 1 to 1 to 50
-            return Math.pow(maxZoom, (sliderValue - 0.5) * 2);
-        }
+        // Map slider range [0, 1] to zoom range [0.1, 10]
+        const logMin = Math.log10(minZoom);
+        const logMax = Math.log10(maxZoom);
+        const logZoom = logMin + sliderValue * (logMax - logMin);
+        return Math.pow(10, logZoom);
     };
 
     const sliderValue = zoomToSlider(zoomLevel);
@@ -35,12 +56,34 @@ const ZoomSlider = () => {
     const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const sliderVal = parseFloat(e.target.value);
         let value = sliderToZoom(sliderVal);
-        // Snap to nearest 0.1 below 1, nearest 1 above 1
+        
+        // Better snapping logic
         if (value < 1) {
-            value = Math.round(value * 10) / 10;
+            // Snap to common zoom levels below 100%
+            const snapValues = [0.1, 0.25, 0.5, 0.75];
+            const closest = snapValues.reduce((prev, curr) => 
+                Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+            );
+            if (Math.abs(closest - value) < 0.05) {
+                value = closest;
+            } else {
+                value = Math.round(value * 20) / 20; // Snap to 0.05 increments
+            }
         } else {
-            value = Math.round(value);
+            // Snap to whole numbers above 100%
+            const snapValues = [1, 1.5, 2, 3, 4, 5, 6, 8, 10];
+            const closest = snapValues.reduce((prev, curr) => 
+                Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+            );
+            if (Math.abs(closest - value) < 0.1) {
+                value = closest;
+            } else {
+                value = Math.round(value * 2) / 2; // Snap to 0.5 increments
+            }
         }
+        
+        // Ensure value stays within bounds
+        value = Math.max(minZoom, Math.min(maxZoom, value));
         setZoomLevel(value);
     }
 
