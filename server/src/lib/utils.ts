@@ -1,10 +1,6 @@
-/** YYYYMMDDHHMM, e.g. "202505021141" */
+/** Generate a default project name like "Untitled Project (1)", "Untitled Project (2)", etc. */
 export function generateDefaultName(): string {
     const now = new Date()
-    const yyyy = now.getFullYear()
-    const MM = String(now.getMonth() + 1).padStart(2, '0')
-    const dd = String(now.getDate()).padStart(2, '0')
-    const hh = String(now.getHours()).padStart(2, '0')
-    const mm = String(now.getMinutes()).padStart(2, '0')
-    return `${yyyy}${MM}${dd}${hh}${mm}`
+    const timestamp = now.getTime().toString().slice(-4) // Last 4 digits of timestamp for uniqueness
+    return `Untitled Project (${timestamp})`
 }

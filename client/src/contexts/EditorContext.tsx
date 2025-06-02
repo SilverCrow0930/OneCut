@@ -24,6 +24,7 @@ interface EditorContextType {
     selectedTool: string | null
     setSelectedTool: (tool: string) => void
     refetch: () => void
+    updateProjectName: (name: string) => Promise<void>
 
     // timeline
     tracks: Track[]
@@ -233,11 +234,47 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
     }, [past.length, tracks, clips, session, projectId]);
 
+    const updateProjectName = async (name: string) => {
+        if (!session?.access_token) return
+
+        setLoading(true)
+        setError(null)
+
+        try {
+            const response = await fetch(apiPath(`projects/${projectId}`), {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name
+                }),
+            })
+
+            if (!response.ok) {
+                const text = await response.text()
+                throw new Error(text || response.statusText)
+            }
+
+            const data: Project = await response.json()
+
+            setProject(data)
+        }
+        catch (error: any) {
+            setError(error.message)
+        }
+        finally {
+            setLoading(false)
+        }
+    }
+
     return (
         <EditorContext.Provider value={{
             project, loading, error,
             selectedTool, setSelectedTool,
             refetch: fetchProject,
+            updateProjectName,
 
             // timeline
             tracks, clips, loadingTimeline, timelineError,
