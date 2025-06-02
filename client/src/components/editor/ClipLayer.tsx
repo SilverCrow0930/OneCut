@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { useEditor } from '@/contexts/EditorContext'
@@ -16,14 +16,11 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const localMs = currentTime * 1000 - clip.timelineStartMs
     const durationMs = clip.timelineEndMs - clip.timelineStartMs
     const videoRef = useRef<HTMLVideoElement>(null)
-    const lastUpdateRef = useRef<number>(0)
-    const targetTimeRef = useRef<number>(0)
-    const updateIntervalRef = useRef<number>(0)
+    const lastSyncTime = useRef<number>(0)
+    const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-    // Media loading states
+    // Simplified loading state
     const [isLoading, setIsLoading] = useState(true)
-    const [hasError, setHasError] = useState(false)
-    const [errorMessage, setErrorMessage] = useState('')
 
     // Crop area state
     const [crop, setCrop] = useState({
@@ -31,7 +28,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
         height: clip.type === 'text' ? 100 : 180,
         left: 0,
         top: 0
-    }) // default 16:9, smaller for text
+    })
 
     // Pan/zoom state for media inside crop
     const [mediaPos, setMediaPos] = useState({ x: 0, y: 0 })
@@ -48,7 +45,6 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 })
 
     const isSelected = selectedClipId === clip.id
-    console.log('Clip selection state:', { clipId: clip.id, selectedClipId, isSelected })
 
     // Only render if the playhead is inside this clip's window
     if (localMs < 0 || localMs > durationMs) {
@@ -57,62 +53,24 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
 
     const { url, loading } = useAssetUrl(clip.assetId)
 
-    // Check if this is an external asset
-    const externalAsset = clip.properties?.externalAsset
-    const mediaUrl = externalAsset?.url || url
+    // Get lower quality media URL
+    const getOptimizedMediaUrl = useCallback(() => {
+        const externalAsset = clip.properties?.externalAsset
+        let mediaUrl = externalAsset?.url || url
 
-    console.log('ClipLayer render:', { 
-        clipId: clip.id, 
-        assetId: clip.assetId, 
-        isExternal: !!externalAsset,
-        mediaUrl,
-        loading,
-        hasError,
-        isLoading
-    })
-
-    // Handle loading states
-    useEffect(() => {
-        if (loading) {
-            setIsLoading(true)
-            setHasError(false)
-        } else if (mediaUrl) {
-            // Only set not loading if we have a URL - the media element will handle actual loading
-            setHasError(false)
-        } else if (!loading && !mediaUrl) {
-            setIsLoading(false)
-            setHasError(true)
-            setErrorMessage('Media URL not found')
+        if (mediaUrl && clip.type === 'video') {
+            // Use lower quality for better performance
+            if (mediaUrl.includes('pexels.com')) {
+                mediaUrl = mediaUrl.replace('/original/', '/medium/')
+            } else if (mediaUrl.includes('giphy.com')) {
+                mediaUrl = mediaUrl.replace('.mp4', '_s.mp4')
+            }
         }
-    }, [loading, mediaUrl])
 
-    // Set initial loading state for media types when URL is available
-    useEffect(() => {
-        if (mediaUrl && (clip.type === 'video' || clip.type === 'image')) {
-            console.log('Setting initial loading state for:', clip.type, clip.id)
-            setIsLoading(true)
-            setHasError(false)
-            setErrorMessage('')
-        } else if (clip.type === 'text') {
-            // Text clips don't need loading
-            setIsLoading(false)
-            setHasError(false)
-        }
-    }, [mediaUrl, clip.type, clip.id])
+        return mediaUrl
+    }, [clip.properties?.externalAsset?.url, url, clip.type])
 
-    // Add timeout for loading state to prevent endless spinner
-    useEffect(() => {
-        if (isLoading && mediaUrl) {
-            const timeout = setTimeout(() => {
-                console.warn('Loading timeout for clip:', clip.id)
-                setIsLoading(false)
-                setHasError(true)
-                setErrorMessage('Media loading timeout')
-            }, 10000) // 10 second timeout
-
-            return () => clearTimeout(timeout)
-        }
-    }, [isLoading, mediaUrl, clip.id])
+    const mediaUrl = getOptimizedMediaUrl()
 
     // Get asset aspect ratio
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
@@ -247,7 +205,6 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             userSelect: 'none' as const,
         }
 
-        // Show loading state
         if (isLoading || loading) {
             return (
                 <div 
@@ -260,14 +217,12 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                         textAlign: 'center'
                     }}
                 >
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2" />
-                    <div className="text-sm">Loading...</div>
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto" />
                 </div>
             )
         }
 
-        // Show error state
-        if (hasError || !mediaUrl) {
+        if (!mediaUrl) {
             return (
                 <div 
                     style={{
@@ -276,14 +231,11 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                         top: '50%',
                         transform: 'translate(-50%, -50%)',
                         color: 'white',
-                        textAlign: 'center',
-                        padding: '16px'
+                        textAlign: 'center'
                     }}
                     onClick={handleClick}
                 >
-                    <div className="text-red-400 mb-2">⚠️</div>
-                    <div className="text-sm">Failed to load media</div>
-                    <div className="text-xs text-gray-400 mt-1">{errorMessage}</div>
+                    <div className="text-red-400">⚠️</div>
                 </div>
             )
         }
@@ -295,40 +247,12 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                         ref={videoRef}
                         src={mediaUrl}
                         style={style}
-                        preload="auto"
+                        preload="metadata"
                         playsInline
                         muted={false}
                         onClick={handleClick}
                         draggable={false}
-                        onLoadStart={() => {
-                            console.log('Video load start:', clip.id)
-                            setIsLoading(true)
-                            setHasError(false)
-                        }}
-                        onLoadedData={() => {
-                            console.log('Video loaded data:', clip.id)
-                            setIsLoading(false)
-                            setHasError(false)
-                        }}
-                        onCanPlay={() => {
-                            console.log('Video can play:', clip.id)
-                            setIsLoading(false)
-                            setHasError(false)
-                        }}
-                        onError={(e) => {
-                            console.error('Video load error:', e, clip.id)
-                            setIsLoading(false)
-                            setHasError(true)
-                            setErrorMessage('Video failed to load')
-                        }}
-                        onAbort={() => {
-                            console.log('Video load aborted:', clip.id)
-                            setIsLoading(false)
-                        }}
-                        onStalled={() => {
-                            console.warn('Video stalled:', clip.id)
-                            // Don't immediately set error, but could add logic here
-                        }}
+                        onLoadedData={() => setIsLoading(false)}
                     />
                 )
             case 'image':
@@ -338,22 +262,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                         style={style}
                         onClick={handleClick}
                         draggable={false}
-                        onLoadStart={() => {
-                            console.log('Image load start:', clip.id)
-                            setIsLoading(true)
-                            setHasError(false)
-                        }}
-                        onLoad={() => {
-                            console.log('Image loaded:', clip.id)
-                            setIsLoading(false)
-                            setHasError(false)
-                        }}
-                        onError={(e) => {
-                            console.error('Image load error:', e, clip.id)
-                            setIsLoading(false)
-                            setHasError(true)
-                            setErrorMessage('Image failed to load')
-                        }}
+                        onLoad={() => setIsLoading(false)}
                     />
                 )
             case 'text':
@@ -388,91 +297,66 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                     </div>
                 )
             default:
-                return (
-                    <div 
-                        style={{
-                            position: 'absolute',
-                            left: '50%',
-                            top: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            color: 'white',
-                            textAlign: 'center'
-                        }}
-                        onClick={handleClick}
-                    >
-                        <div className="text-yellow-400 mb-2">⚠️</div>
-                        <div className="text-sm">Unknown media type</div>
-                    </div>
-                )
+                return null
         }
     }
 
+    // Optimized video sync with debouncing
     useEffect(() => {
-        const v = videoRef.current;
-        if (!v || clip.type !== 'video') return;
+        const v = videoRef.current
+        if (!v || clip.type !== 'video') return
 
-        let playPromise: Promise<void> | undefined;
+        const targetTime = sourceTime !== undefined ? sourceTime : Math.max(0, localMs / 1000)
+        
+        // Clear any pending sync
+        if (syncTimeoutRef.current) {
+            clearTimeout(syncTimeoutRef.current)
+        }
 
-        // Calculate target time
-        const targetTime = sourceTime !== undefined
-            ? sourceTime
-            : Math.max(0, localMs / 1000);
-
-        // Only update if enough time has passed since last update
-        const now = performance.now();
-        if (now - lastUpdateRef.current > 50) { // 50ms minimum between updates
-            v.currentTime = targetTime;
-            lastUpdateRef.current = now;
-            targetTimeRef.current = targetTime;
+        // Debounced time sync - only sync if time difference is significant
+        const timeDiff = Math.abs(v.currentTime - targetTime)
+        if (timeDiff > 0.1) { // Only sync if off by more than 100ms
+            v.currentTime = targetTime
+            lastSyncTime.current = performance.now()
         }
 
         // Handle playback
         if (isPlaying) {
-            v.volume = 1;
-            v.muted = false;
-            playPromise = v.play();
-            if (playPromise !== undefined) {
-                playPromise.catch((error) => {
-                    // Only handle AbortError if the video is still in the DOM
-                    if (error.name === 'AbortError' && document.contains(v)) {
-                        v.muted = true;
-                        v.play().catch(() => { }); // Ignore subsequent errors
-                    }
-                });
-            }
+            v.volume = 1
+            v.muted = false
+            v.play().catch(() => {
+                v.muted = true
+                v.play().catch(() => {})
+            })
         } else {
-            v.pause();
+            v.pause()
         }
 
-        // Cleanup function
         return () => {
-            if (playPromise) {
-                playPromise.catch(() => { }); // Prevent unhandled promise rejection
+            if (syncTimeoutRef.current) {
+                clearTimeout(syncTimeoutRef.current)
             }
-            v.pause();
-        };
-    }, [sourceTime, localMs, clip.type, isPlaying]);
+        }
+    }, [sourceTime, localMs, clip.type, isPlaying])
 
     // Center crop area in player on first render
     useEffect(() => {
-        // Find the player size (parent of absolute inset-0)
-        const player = document.querySelector('.mx-auto.bg-black');
+        const player = document.querySelector('.mx-auto.bg-black')
         if (player) {
-            const rect = (player as HTMLElement).getBoundingClientRect();
+            const rect = (player as HTMLElement).getBoundingClientRect()
             setCrop(crop => {
-                // Only center if left/top are 0 (i.e., not moved yet)
                 if (crop.left === 0 && crop.top === 0) {
                     return {
                         ...crop,
-                        height: rect.height, // Cover player vertically
-                        top: 0,              // Start at top
-                        left: (rect.width - crop.width) / 2 // Center horizontally
-                    };
+                        height: rect.height,
+                        top: 0,
+                        left: (rect.width - crop.width) / 2
+                    }
                 }
-                return crop;
-            });
+                return crop
+            })
         }
-    }, []);
+    }, [])
 
     // --- Main render ---
     return (
@@ -512,26 +396,21 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                 </div>
                 {isSelected && (
                     <>
-                        {/* Corner Resize handles - exactly in the corners */}
-                        {/* NW */}
                         <div
                             className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nwse-resize z-50"
                             style={{ left: 0, top: 0, transform: 'translate(-50%, -50%)' }}
                             onMouseDown={(e) => handleResizeStart(e, 'nw')}
                         />
-                        {/* NE */}
                         <div
                             className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nesw-resize z-50"
                             style={{ right: 0, top: 0, transform: 'translate(50%, -50%)' }}
                             onMouseDown={(e) => handleResizeStart(e, 'ne')}
                         />
-                        {/* SW */}
                         <div
                             className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nesw-resize z-50"
                             style={{ left: 0, bottom: 0, transform: 'translate(-50%, 50%)' }}
                             onMouseDown={(e) => handleResizeStart(e, 'sw')}
                         />
-                        {/* SE */}
                         <div
                             className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nwse-resize z-50"
                             style={{ right: 0, bottom: 0, transform: 'translate(50%, 50%)' }}

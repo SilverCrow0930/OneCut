@@ -6,12 +6,7 @@ import { ClipLayer } from './ClipLayer'
 export default function Player() {
     const videoRef = useRef<HTMLVideoElement>(null)
     const { currentTime, duration, setCurrentTime, setDuration } = usePlayback()
-    const { clips, tracks, setSelectedClipId, playerSettings } = useEditor()
-
-    // Debug: Track when playerSettings change
-    useEffect(() => {
-        console.log('Player - playerSettings changed:', playerSettings)
-    }, [playerSettings])
+    const { clips, tracks, setSelectedClipId } = useEditor()
 
     // Get clips that are currently active at the playhead position
     const activeClips = clips.filter(clip => {
@@ -19,31 +14,31 @@ export default function Player() {
         return currentMs >= clip.timelineStartMs && currentMs <= clip.timelineEndMs
     })
 
-    // Get clips that will be active soon (within next 5 seconds) for preloading
+    // Get clips that will be active soon (within next 2 seconds) for minimal preloading
     const upcomingClips = clips.filter(clip => {
         const currentMs = currentTime * 1000
-        const futureMs = currentMs + 5000 // 5 seconds ahead
+        const futureMs = currentMs + 2000 // Reduced to 2 seconds for better performance
         return clip.timelineStartMs > currentMs && clip.timelineStartMs <= futureMs
     })
 
-    // Preload upcoming media elements
+    // Minimal preloading with lower quality
     useEffect(() => {
-        upcomingClips.forEach(clip => {
-            // Check if this is an external asset
+        upcomingClips.slice(0, 2).forEach(clip => { // Limit to 2 clips max
             const externalAsset = clip.properties?.externalAsset
-            const mediaUrl = externalAsset?.url
+            let mediaUrl = externalAsset?.url
             
-            if (mediaUrl) {
-                // Preload external media
-                if (clip.type === 'video') {
-                    const video = document.createElement('video')
-                    video.src = mediaUrl
-                    video.preload = 'metadata'
-                    video.load()
-                } else if (clip.type === 'image') {
-                    const img = new Image()
-                    img.src = mediaUrl
+            if (mediaUrl && clip.type === 'video') {
+                // Add quality parameters for lower bandwidth
+                if (mediaUrl.includes('pexels.com')) {
+                    mediaUrl = mediaUrl.replace('/original/', '/small/')
+                } else if (mediaUrl.includes('giphy.com')) {
+                    mediaUrl = mediaUrl.replace('.mp4', '_s.mp4') // Small version
                 }
+                
+                const video = document.createElement('video')
+                video.src = mediaUrl
+                video.preload = 'none' // Minimal preloading
+                video.load()
             }
         })
     }, [upcomingClips])
@@ -59,19 +54,16 @@ export default function Player() {
     const clipsWithSourceTime = sortedClips.map(clip => {
         const currentMs = currentTime * 1000
         const timelineOffset = currentMs - clip.timelineStartMs
-        const sourceTime = (clip.sourceStartMs + timelineOffset) / 1000 // Convert to seconds
+        const sourceTime = (clip.sourceStartMs + timelineOffset) / 1000
         return { ...clip, sourceTime }
     })
 
-    // Attach events on the <video> once it's in the DOM
+    // Simplified video event handling
     useEffect(() => {
         const vid = videoRef.current
+        if (!vid) return
 
-        if (!vid) {
-            return
-        }
-
-        const onMeta = () => setDuration(vid.duration * 1000) // Convert to ms
+        const onMeta = () => setDuration(vid.duration * 1000)
         const onTime = () => setCurrentTime(vid.currentTime)
 
         vid.addEventListener('loadedmetadata', onMeta)
@@ -83,86 +75,26 @@ export default function Player() {
         }
     }, [setCurrentTime, setDuration])
 
-    // Calculate aspect ratio styles
-    const getAspectRatioStyles = () => {
-        if (playerSettings.aspectRatio === '16:9') {
-            return {
-                aspectRatio: '16 / 9',
-                width: '100%',
-                height: '100%',
-                maxWidth: '100%',
-                maxHeight: '100%'
-            }
-        } else {
-            return {
-                aspectRatio: '9 / 16',
-                width: 'auto',
-                height: '100%',
-                maxHeight: '100%'
-            }
-        }
-    }
-
-    // Calculate background styles
-    const getBackgroundStyles = () => {
-        const background = playerSettings.background
-        console.log('Player - Current background setting:', background)
-        
-        switch (background.type) {
-            case 'white':
-                console.log('Player - Applying white background')
-                return { backgroundColor: '#ffffff' }
-            case 'image':
-                if (background.imageUrl) {
-                    console.log('Player - Applying image background:', background.imageUrl.substring(0, 50) + '...')
-                    return {
-                        backgroundImage: `url(${background.imageUrl})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat'
-                    }
-                } else {
-                    console.log('Player - No image URL, falling back to black')
-                    return { backgroundColor: '#000000' }
-                }
-            case 'black':
-            default:
-                console.log('Player - Applying black background')
-                return { backgroundColor: '#000000' }
-        }
-    }
-
-    const backgroundStyles = getBackgroundStyles()
-    const aspectRatioStyles = getAspectRatioStyles()
-    
-    console.log('Player - Final styles:', { aspectRatioStyles, backgroundStyles })
-
     return (
         <div className="flex items-center justify-center h-full p-4">
             <div
-                className="relative rounded-xl shadow-2xl ring-1 ring-gray-200/20"
+                className="relative bg-black rounded-xl shadow-2xl ring-1 ring-gray-200/20 w-full h-full"
                 style={{
-                    minHeight: '300px', // Minimum height for usability
-                    ...aspectRatioStyles,
-                    ...backgroundStyles
+                    minHeight: '300px',
+                    maxWidth: '100%',
+                    maxHeight: '100%'
                 }}
-                onClick={() => {
-                    setSelectedClipId(null)
-                }}
+                onClick={() => setSelectedClipId(null)}
             >
-                {/* Subtle glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl pointer-events-none" />
                 
-                {/* Render active clips in order with their source times */}
-                {
-                    clipsWithSourceTime.map(clip => (
-                        <ClipLayer
-                            key={clip.id}
-                            clip={clip}
-                            sourceTime={clip.sourceTime}
-                        />
-                    ))
-                }
+                {clipsWithSourceTime.map(clip => (
+                    <ClipLayer
+                        key={clip.id}
+                        clip={clip}
+                        sourceTime={clip.sourceTime}
+                    />
+                ))}
             </div>
         </div>
     )

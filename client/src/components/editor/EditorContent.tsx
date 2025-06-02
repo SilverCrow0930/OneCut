@@ -1,6 +1,5 @@
 import React from 'react'
 import Player from './Player'
-import PlayerControls from './PlayerControls'
 import PlaybackControls from './PlaybackControls'
 import ClipTools from './ClipTools'
 import ZoomSlider from './ZoomSlider'
@@ -18,13 +17,11 @@ const EditorContent = () => {
             {/* Player area - flexible but prioritized */}
             <div className={`
                 bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg 
-                overflow-hidden relative
+                overflow-hidden
                 ${hasContent ? 'flex-[3]' : 'flex-[4]'}
                 min-h-0
             `}>
                 <Player />
-                {/* Player Controls positioned in the player container */}
-                <PlayerControls />
             </div>
             
             {/* Controls bar - fixed height */}
