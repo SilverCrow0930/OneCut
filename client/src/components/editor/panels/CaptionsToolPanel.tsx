@@ -23,28 +23,17 @@ const CaptionsToolPanel = () => {
 
         try {
             setLoading(true)
-            setError(null)
-            
-            const url = apiPath(`captions/${projectId}`)
-            console.log('Loading captions from:', url)
-            
-            const response = await fetch(url, {
+            const response = await fetch(apiPath(`captions/${projectId}`), {
                 headers: {
                     Authorization: `Bearer ${session.access_token}`
                 }
             })
 
-            console.log('Response status:', response.status)
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()))
-
             if (!response.ok) {
-                const text = await response.text()
-                console.error('Failed to load captions - Response text:', text)
-                throw new Error(`Failed to load captions: ${response.status} ${response.statusText}`)
+                throw new Error('Failed to load captions')
             }
 
             const data = await response.json()
-            console.log('Loaded captions:', data)
             setCaptions(data)
         } catch (err) {
             console.error('Failed to load captions:', err)
@@ -56,19 +45,13 @@ const CaptionsToolPanel = () => {
 
     // Generate AI captions
     const generateCaptions = async () => {
-        if (!session?.access_token || !projectId) {
-            setError('Missing authentication or project ID')
-            return
-        }
+        if (!session?.access_token || !projectId) return
 
         try {
             setGenerating(true)
             setError(null)
             
-            const url = apiPath(`captions/${projectId}/generate`)
-            console.log('Generating captions at:', url)
-            
-            const response = await fetch(url, {
+            const response = await fetch(apiPath(`captions/${projectId}/generate`), {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${session.access_token}`,
@@ -76,23 +59,12 @@ const CaptionsToolPanel = () => {
                 }
             })
 
-            console.log('Generate response status:', response.status)
-            console.log('Generate response headers:', Object.fromEntries(response.headers.entries()))
-
             if (!response.ok) {
-                const text = await response.text()
-                console.error('Failed to generate captions - Response text:', text)
-                
-                try {
-                    const errorData = JSON.parse(text)
-                    throw new Error(errorData.error || 'Failed to generate captions')
-                } catch (parseError) {
-                    throw new Error(`Server error: ${response.status} ${response.statusText}. Response: ${text.substring(0, 200)}...`)
-                }
+                const errorData = await response.json()
+                throw new Error(errorData.error || 'Failed to generate captions')
             }
 
             const data: CaptionGenerationResponse = await response.json()
-            console.log('Generated captions:', data)
             setCaptions(data.captions)
             
             // Show success message briefly
@@ -129,8 +101,7 @@ const CaptionsToolPanel = () => {
             })
 
             if (!response.ok) {
-                const text = await response.text()
-                throw new Error(`Failed to update caption: ${text}`)
+                throw new Error('Failed to update caption')
             }
 
             const updatedCaption = await response.json()
@@ -156,8 +127,7 @@ const CaptionsToolPanel = () => {
             })
 
             if (!response.ok) {
-                const text = await response.text()
-                throw new Error(`Failed to delete caption: ${text}`)
+                throw new Error('Failed to delete caption')
             }
 
             setCaptions(prev => prev.filter(c => c.id !== id))
@@ -196,10 +166,13 @@ const CaptionsToolPanel = () => {
 
     // Load captions on component mount
     useEffect(() => {
-        if (projectId) {
-            loadCaptions()
-        }
+        loadCaptions()
     }, [projectId, session?.access_token])
+
+    // Debug log to check if projectId is available
+    useEffect(() => {
+        console.log('CaptionsToolPanel - projectId:', projectId, 'project:', project)
+    }, [projectId, project])
 
     return (
         <div className="flex flex-col w-full gap-4 p-4 max-h-full overflow-hidden">
@@ -213,6 +186,13 @@ const CaptionsToolPanel = () => {
                 </div>
                 <p className="text-sm text-gray-600">Generate AI-powered captions for your videos</p>
             </div>
+            
+            {/* Debug info */}
+            {!projectId && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                    No project loaded. Project ID: {projectId || 'undefined'}
+                </div>
+            )}
             
             {/* Error Display */}
             {error && (
@@ -231,7 +211,7 @@ const CaptionsToolPanel = () => {
                     <h4 className="text-base font-medium text-gray-700">Auto-Generate Captions</h4>
                     <button 
                         onClick={generateCaptions}
-                        disabled={generating || !projectId || !session?.access_token}
+                        disabled={generating || !projectId}
                         className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {generating ? (
