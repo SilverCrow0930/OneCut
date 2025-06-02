@@ -3,6 +3,7 @@ import { Wand2, Download, Copy, RotateCcw, Mic } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAssets } from '@/contexts/AssetsContext'
 import { apiPath } from '@/lib/config'
 
 interface Caption {
@@ -18,27 +19,55 @@ const CaptionsToolPanel = () => {
     const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const { clips } = useEditor()
+    const { assets } = useAssets()
     const { session } = useAuth()
 
     // Get video/audio clips that can be transcribed
     const transcribableClips = clips.filter(clip => {
-        // Debug logging to help identify the issue
-        console.log('Checking clip for transcription:', {
-            id: clip.id,
-            type: clip.type,
-            assetId: clip.assetId,
-            hasExternalAsset: !!clip.properties?.externalAsset,
-            isTextClip: clip.type === 'text'
-        })
+        // Must have an assetId (not text clips or corrupted clips)
+        if (!clip.assetId) return false
         
-        // Exclude text clips and external assets (like Pexels/Giphy content)
-        const isTranscribable = (clip.type === 'video' || clip.type === 'audio') && 
-                               clip.assetId && 
-                               !clip.properties?.externalAsset &&
-                               clip.type !== 'text'
+        // Find the associated asset
+        const asset = assets.find(a => a.id === clip.assetId)
         
-        console.log('Is transcribable:', isTranscribable)
-        return isTranscribable
+        // Check if this is an external asset (from properties)
+        const externalAsset = clip.properties?.externalAsset
+        
+        let hasAudio = false
+        
+        if (externalAsset) {
+            // For external assets, check if it's a video or audio type
+            hasAudio = externalAsset.mime_type?.startsWith('video/') || 
+                      externalAsset.mime_type?.startsWith('audio/')
+        } else if (asset) {
+            // For regular assets, check mime type
+            hasAudio = asset.mime_type?.startsWith('video/') || 
+                      asset.mime_type?.startsWith('audio/')
+        } else {
+            // Fallback to clip type if no asset found
+            hasAudio = clip.type === 'video' || clip.type === 'audio'
+        }
+        
+        return hasAudio
+    })
+
+    console.log('Clips filtering debug:', {
+        totalClips: clips.length,
+        transcribableClips: transcribableClips.length,
+        allClips: clips.map(c => ({
+            id: c.id,
+            type: c.type,
+            assetId: c.assetId,
+            hasAsset: !!assets.find(a => a.id === c.assetId),
+            assetMimeType: assets.find(a => a.id === c.assetId)?.mime_type,
+            externalAsset: !!c.properties?.externalAsset,
+            externalMimeType: c.properties?.externalAsset?.mime_type
+        })),
+        transcribableClipsDetails: transcribableClips.map(c => ({
+            id: c.id,
+            type: c.type,
+            assetId: c.assetId
+        }))
     })
 
     // Parse SRT format to caption objects
@@ -177,11 +206,18 @@ const CaptionsToolPanel = () => {
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
                     >
                         <option value="">Choose a clip...</option>
-                        {transcribableClips.map((clip, index) => (
-                            <option key={clip.id} value={clip.id}>
-                                {clip.type === 'video' ? '📹' : '🎵'} Clip {index + 1}
-                            </option>
-                        ))}
+                        {transcribableClips.map((clip, index) => {
+                            // Get asset or external asset name
+                            const asset = assets.find(a => a.id === clip.assetId)
+                            const externalAsset = clip.properties?.externalAsset
+                            const assetName = externalAsset?.name || asset?.name || 'Unknown Asset'
+                            
+                            return (
+                                <option key={clip.id} value={clip.id}>
+                                    {clip.type === 'video' ? '📹' : '🎵'} {assetName} (Clip {index + 1})
+                                </option>
+                            )
+                        })}
                     </select>
                 )}
             </div>
