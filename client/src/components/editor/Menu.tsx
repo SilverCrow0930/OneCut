@@ -21,7 +21,8 @@ const Menu = () => {
             className="
                 flex flex-row items-center justify-between w-full 
                 px-6 py-3
-                bg-blue-400 text-white
+                bg-gradient-to-r from-slate-700 to-slate-600 text-white
+                border-b border-slate-500/30
             "
         >
             <div className="
