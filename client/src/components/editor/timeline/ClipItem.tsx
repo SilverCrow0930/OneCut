@@ -381,8 +381,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         // Calculate position relative to the timeline container
         const x = e.clientX - timelineRect.left - dragOffset
         
-        // Grid snap to every 100ms for smoother movement
-        const gridSnapMs = 100
+        // Grid snap to every 500ms (0.5 seconds) for better precision
+        const gridSnapMs = 500
         const gridSnapPixels = gridSnapMs * timeScale
         
         // Round to nearest grid position
@@ -394,7 +394,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         const clipWidth = (clip.timelineEndMs - clip.timelineStartMs) * timeScale
 
         // Find nearby clips and check for overlaps and edge snapping
-        const snapDistance = 12 // Slightly increased for easier snapping
+        const snapDistance = 8 // Reduced from 20 to 8 pixels for more precision
         let finalLeft = newLeft
         let hasClipSnap = false
 

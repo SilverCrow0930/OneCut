@@ -247,43 +247,6 @@ const CaptionsToolPanel = () => {
                         ))}
                     </div>
 
-                    {/* Trending Font Styles */}
-                    <div className="flex flex-col gap-3">
-                        <h5 className="text-sm font-semibold text-gray-700">🔥 Trending Styles</h5>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-black text-black" style={{textShadow: '2px 2px 0px white, -2px -2px 0px white, 2px -2px 0px white, -2px 2px 0px white'}}>Bold Impact</span>
-                            </button>
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-bold text-white" style={{textShadow: '2px 2px 4px rgba(0,0,0,0.8)', WebkitTextStroke: '1px black'}}>Outlined Text</span>
-                            </button>
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-bold text-yellow-400" style={{textShadow: '3px 3px 6px rgba(0,0,0,0.7)'}}>Shadow Drop</span>
-                            </button>
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-black text-transparent bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text">Gradient Pop</span>
-                            </button>
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-bold text-red-500" style={{textShadow: '0 0 10px rgba(239,68,68,0.8)'}}>Neon Glow</span>
-                            </button>
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-black text-black bg-yellow-300 px-1 rounded">Highlight Box</span>
-                            </button>
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-bold text-white" style={{textShadow: '1px 1px 0px black, -1px -1px 0px black, 1px -1px 0px black, -1px 1px 0px black, 2px 2px 4px rgba(0,0,0,0.5)'}}>3D Effect</span>
-                            </button>
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-bold text-blue-600 bg-white/90 px-1 py-0.5 rounded border-2 border-blue-600">Boxed Style</span>
-                            </button>
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-black text-transparent bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 bg-clip-text animate-pulse">Rainbow Flash</span>
-                            </button>
-                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-                                <span className="font-bold text-gray-800" style={{letterSpacing: '2px', textTransform: 'uppercase'}}>SPACED CAPS</span>
-                            </button>
-                        </div>
-                    </div>
-
                     {/* Tips */}
                     <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                         <h5 className="text-sm font-semibold text-blue-800 mb-1">💡 Tips</h5>
