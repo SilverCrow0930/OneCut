@@ -267,8 +267,8 @@ export default function Timeline() {
             const rect = containerRef.current.getBoundingClientRect()
             const x = e.clientX - rect.left
             
-            // Grid snap to every 500ms for better precision
-            const gridSnapMs = 500
+            // Grid snap to every 100ms for smoother movement
+            const gridSnapMs = 100
             let startMs = Math.round(x / timeScale / gridSnapMs) * gridSnapMs
             
             // Snap to 00:00 if we're very close to the beginning (within 250ms)
@@ -359,8 +359,8 @@ export default function Timeline() {
         const rect = containerRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left
         
-        // Grid snap to every 500ms for better precision
-        const gridSnapMs = 500
+        // Grid snap to every 100ms for smoother movement
+        const gridSnapMs = 100
         let startMs = Math.round(x / timeScale / gridSnapMs) * gridSnapMs
         
         // Snap to 00:00 if we're very close to the beginning (within 250ms)
