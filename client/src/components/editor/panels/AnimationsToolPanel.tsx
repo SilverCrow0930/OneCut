@@ -17,7 +17,7 @@ const transitions: Transition[] = [
         name: 'Fade In',
         icon: '🌅',
         description: 'Gradually appears from black',
-        duration: 1000,
+        duration: 3000,
         type: 'fade'
     },
     {
@@ -25,7 +25,7 @@ const transitions: Transition[] = [
         name: 'Fade Out',
         icon: '🌇',
         description: 'Gradually disappears to black',
-        duration: 1000,
+        duration: 3000,
         type: 'fade'
     },
     {
@@ -33,7 +33,7 @@ const transitions: Transition[] = [
         name: 'Slide Left',
         icon: '⬅️',
         description: 'Slides in from the right',
-        duration: 800,
+        duration: 3000,
         type: 'slide'
     },
     {
@@ -41,7 +41,7 @@ const transitions: Transition[] = [
         name: 'Slide Right',
         icon: '➡️',
         description: 'Slides in from the left',
-        duration: 800,
+        duration: 3000,
         type: 'slide'
     },
     {
@@ -49,7 +49,7 @@ const transitions: Transition[] = [
         name: 'Zoom In',
         icon: '🔍',
         description: 'Scales up from center',
-        duration: 1200,
+        duration: 3000,
         type: 'zoom'
     },
     {
@@ -57,7 +57,7 @@ const transitions: Transition[] = [
         name: 'Zoom Out',
         icon: '🔎',
         description: 'Scales down to center',
-        duration: 1200,
+        duration: 3000,
         type: 'zoom'
     },
     {
@@ -65,7 +65,7 @@ const transitions: Transition[] = [
         name: 'Wipe Left',
         icon: '◀️',
         description: 'Reveals from right to left',
-        duration: 900,
+        duration: 3000,
         type: 'wipe'
     },
     {
@@ -73,7 +73,7 @@ const transitions: Transition[] = [
         name: 'Wipe Right',
         icon: '▶️',
         description: 'Reveals from left to right',
-        duration: 900,
+        duration: 3000,
         type: 'wipe'
     },
     {
@@ -81,7 +81,7 @@ const transitions: Transition[] = [
         name: 'Dissolve',
         icon: '✨',
         description: 'Smooth crossfade transition',
-        duration: 1500,
+        duration: 3000,
         type: 'dissolve'
     },
     {
@@ -89,7 +89,7 @@ const transitions: Transition[] = [
         name: 'Iris',
         icon: '👁️',
         description: 'Circular reveal effect',
-        duration: 1000,
+        duration: 3000,
         type: 'iris'
     },
     {
@@ -97,7 +97,7 @@ const transitions: Transition[] = [
         name: 'Flip',
         icon: '🔄',
         description: '3D flip transition',
-        duration: 800,
+        duration: 3000,
         type: 'flip'
     },
     {
@@ -105,7 +105,7 @@ const transitions: Transition[] = [
         name: 'Blur',
         icon: '🌫️',
         description: 'Blurred crossfade',
-        duration: 1200,
+        duration: 3000,
         type: 'blur'
     }
 ]

@@ -12,6 +12,7 @@
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.2",
     "@supabase/supabase-js": "^2.49.4",
+    "@types/uuid": "^10.0.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "lucide-react": "^0.506.0",
