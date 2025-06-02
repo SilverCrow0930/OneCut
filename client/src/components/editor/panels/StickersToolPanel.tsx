@@ -213,8 +213,14 @@ const StickersToolPanel = () => {
                                 
                                 console.log('Adding sticker to track via click:', sticker)
                                 
+                                // Format the sticker object properly with isSticker flag
+                                const stickerAsset = {
+                                    ...sticker,
+                                    isSticker: true
+                                }
+                                
                                 // Add the sticker directly to a track as external asset
-                                addAssetToTrack(sticker, tracks, executeCommand, projectId, {
+                                addAssetToTrack(stickerAsset, tracks, executeCommand, projectId, {
                                     isExternal: true,
                                     assetType: 'image',
                                     startTimeMs: 0
