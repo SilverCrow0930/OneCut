@@ -90,7 +90,7 @@ export default function ProjectsList() {
     }
 
     return (
-        <ul className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <ul className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {
                 projects.map((project, index) => (
                     <div
@@ -99,41 +99,68 @@ export default function ProjectsList() {
                             group
                             relative
                             flex flex-col justify-end
-                            rounded-xl overflow-hidden
-                            bg-transparent hover:bg-gray-800/20
-                            text-white transition-colors duration-500
+                            rounded-lg overflow-hidden
+                            bg-gray-900 hover:bg-gray-800
+                            text-white transition-all duration-300
                             cursor-pointer
-                            aspect-[9/16] min-h-[220px]
+                            aspect-video h-32
+                            border border-gray-700 hover:border-gray-600
+                            hover:scale-105
                         "
                         onClick={() => {
                             router.push(`/projects/${project.id}`)
                         }}
                     >
                         {/* Thumbnail */}
-                        <div
-                            className="absolute inset-0 w-full h-full bg-black"
-                        />
+                        <div className="absolute inset-0 w-full h-full">
+                            {project.thumbnail_url ? (
+                                <img
+                                    src={project.thumbnail_url}
+                                    alt={project.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        // Fallback to gradient background if image fails
+                                        e.currentTarget.style.display = 'none';
+                                    }}
+                                />
+                            ) : (
+                                // Default gradient background when no thumbnail
+                                <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                                    <svg 
+                                        className="w-8 h-8 text-gray-400" 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path 
+                                            strokeLinecap="round" 
+                                            strokeLinejoin="round" 
+                                            strokeWidth={1.5} 
+                                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" 
+                                        />
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Dark overlay on hover */}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
 
                         {/* Title and duration container */}
                         <div className="relative z-20 w-full flex flex-col">
-                            <span className="w-full px-4 py-3 text-white text-base font-medium text-ellipsis overflow-hidden whitespace-nowrap">
+                            <span className="w-full px-3 py-2 text-white text-sm font-medium text-ellipsis overflow-hidden whitespace-nowrap">
                                 {project.name}
                             </span>
-                            <span className="
-                                absolute bottom-3 right-4
-                                px-3 py-1 rounded
-                                bg-white/70 backdrop-blur-sm text-xs font-semibold
-                                text-gray-900 shadow-md
-                            ">
-                                {
-                                    project.duration ?
-                                        formatSecondsAsTimestamp(project.duration) :
-                                        '00:00:00'
-                                }
-                            </span>
+                            {project.duration && (
+                                <span className="
+                                    absolute top-2 right-2
+                                    px-2 py-1 rounded
+                                    bg-black/70 backdrop-blur-sm text-xs font-medium
+                                    text-white shadow-md
+                                ">
+                                    {formatSecondsAsTimestamp(project.duration)}
+                                </span>
+                            )}
                         </div>
                     </div>
                 ))
