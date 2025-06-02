@@ -8,6 +8,11 @@ export default function Player() {
     const { currentTime, duration, setCurrentTime, setDuration } = usePlayback()
     const { clips, tracks, setSelectedClipId, playerSettings } = useEditor()
 
+    // Debug: Track when playerSettings change
+    useEffect(() => {
+        console.log('Player - playerSettings changed:', playerSettings)
+    }, [playerSettings])
+
     // Get clips that are currently active at the playhead position
     const activeClips = clips.filter(clip => {
         const currentMs = currentTime * 1000

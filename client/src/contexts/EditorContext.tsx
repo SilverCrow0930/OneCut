@@ -125,10 +125,16 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     })
 
     const updatePlayerSettings = (updates: Partial<PlayerSettings>) => {
-        setPlayerSettings(prev => ({
-            ...prev,
-            ...updates
-        }))
+        console.log('EditorContext - updatePlayerSettings called with:', updates)
+        setPlayerSettings(prev => {
+            const newSettings = {
+                ...prev,
+                ...updates
+            }
+            console.log('EditorContext - Previous settings:', prev)
+            console.log('EditorContext - New settings:', newSettings)
+            return newSettings
+        })
     }
 
     // 4) History + Timeline

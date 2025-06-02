@@ -20,7 +20,10 @@ export default function PlayerControls() {
             fileInputRef.current?.click()
         } else {
             const newSettings = { 
-                background: { type, imageUrl: null } 
+                background: { 
+                    type, 
+                    imageUrl: null 
+                } 
             }
             console.log('Updating player settings with:', newSettings)
             updatePlayerSettings(newSettings)

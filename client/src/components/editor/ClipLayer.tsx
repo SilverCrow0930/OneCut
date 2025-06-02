@@ -77,7 +77,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             setIsLoading(true)
             setHasError(false)
         } else if (mediaUrl) {
-            setIsLoading(false)
+            // Only set not loading if we have a URL - the media element will handle actual loading
             setHasError(false)
         } else if (!loading && !mediaUrl) {
             setIsLoading(false)
@@ -85,6 +85,34 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             setErrorMessage('Media URL not found')
         }
     }, [loading, mediaUrl])
+
+    // Set initial loading state for media types when URL is available
+    useEffect(() => {
+        if (mediaUrl && (clip.type === 'video' || clip.type === 'image')) {
+            console.log('Setting initial loading state for:', clip.type, clip.id)
+            setIsLoading(true)
+            setHasError(false)
+            setErrorMessage('')
+        } else if (clip.type === 'text') {
+            // Text clips don't need loading
+            setIsLoading(false)
+            setHasError(false)
+        }
+    }, [mediaUrl, clip.type, clip.id])
+
+    // Add timeout for loading state to prevent endless spinner
+    useEffect(() => {
+        if (isLoading && mediaUrl) {
+            const timeout = setTimeout(() => {
+                console.warn('Loading timeout for clip:', clip.id)
+                setIsLoading(false)
+                setHasError(true)
+                setErrorMessage('Media loading timeout')
+            }, 10000) // 10 second timeout
+
+            return () => clearTimeout(timeout)
+        }
+    }, [isLoading, mediaUrl, clip.id])
 
     // Get asset aspect ratio
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
@@ -273,18 +301,33 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                         onClick={handleClick}
                         draggable={false}
                         onLoadStart={() => {
+                            console.log('Video load start:', clip.id)
                             setIsLoading(true)
                             setHasError(false)
                         }}
+                        onLoadedData={() => {
+                            console.log('Video loaded data:', clip.id)
+                            setIsLoading(false)
+                            setHasError(false)
+                        }}
                         onCanPlay={() => {
+                            console.log('Video can play:', clip.id)
                             setIsLoading(false)
                             setHasError(false)
                         }}
                         onError={(e) => {
-                            console.error('Video load error:', e)
+                            console.error('Video load error:', e, clip.id)
                             setIsLoading(false)
                             setHasError(true)
                             setErrorMessage('Video failed to load')
+                        }}
+                        onAbort={() => {
+                            console.log('Video load aborted:', clip.id)
+                            setIsLoading(false)
+                        }}
+                        onStalled={() => {
+                            console.warn('Video stalled:', clip.id)
+                            // Don't immediately set error, but could add logic here
                         }}
                     />
                 )
@@ -295,12 +338,18 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                         style={style}
                         onClick={handleClick}
                         draggable={false}
+                        onLoadStart={() => {
+                            console.log('Image load start:', clip.id)
+                            setIsLoading(true)
+                            setHasError(false)
+                        }}
                         onLoad={() => {
+                            console.log('Image loaded:', clip.id)
                             setIsLoading(false)
                             setHasError(false)
                         }}
                         onError={(e) => {
-                            console.error('Image load error:', e)
+                            console.error('Image load error:', e, clip.id)
                             setIsLoading(false)
                             setHasError(true)
                             setErrorMessage('Image failed to load')
