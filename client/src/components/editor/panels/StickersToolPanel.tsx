@@ -17,7 +17,7 @@ const StickersToolPanel = () => {
     const [searchQuery, setSearchQuery] = useState('')
     const { session } = useAuth()
     const { refresh } = useAssets()
-    const { tracks, executeCommand } = useEditor()
+    const { tracks, executeCommand, clips } = useEditor()
     const params = useParams()
 
     // Get project ID
@@ -220,10 +220,9 @@ const StickersToolPanel = () => {
                                 }
                                 
                                 // Add the sticker directly to a track as external asset
-                                addAssetToTrack(stickerAsset, tracks, executeCommand, projectId, {
+                                addAssetToTrack(stickerAsset, tracks, clips, executeCommand, projectId, {
                                     isExternal: true,
-                                    assetType: 'image',
-                                    startTimeMs: 0
+                                    assetType: 'image'
                                 })
                             }
 

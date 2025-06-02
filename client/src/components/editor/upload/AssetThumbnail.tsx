@@ -20,7 +20,7 @@ interface AssetThumbnailProps {
 export default function AssetThumbnail({ asset, highlight, uploading }: AssetThumbnailProps) {
     const { url, loading } = useAssetUrl(asset.id)
     const { deleteAsset } = useAssets()
-    const { tracks, executeCommand } = useEditor()
+    const { tracks, executeCommand, clips } = useEditor()
     const params = useParams()
     const [showContextMenu, setShowContextMenu] = useState(false)
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
@@ -61,9 +61,8 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
         console.log('Adding asset to track via click:', asset)
         
         // Add the asset to a track at the end of the timeline
-        addAssetToTrack(asset, tracks, executeCommand, projectId, {
-            isExternal: false,
-            startTimeMs: 0 // Add at the beginning for now
+        addAssetToTrack(asset, tracks, clips, executeCommand, projectId, {
+            isExternal: false
         })
     }
 

@@ -170,6 +170,7 @@ export function dbToClip(r: any): Clip {
 export function addAssetToTrack(
     asset: any,
     tracks: any[],
+    clips: any[],
     executeCommand: any,
     projectId: string,
     options: {
@@ -248,10 +249,16 @@ export function addAssetToTrack(
     // Calculate start time - place at the end of existing content on the track
     let startTimeMs = options.startTimeMs ?? 0
     if (options.startTimeMs === undefined && targetTrack) {
-        // Find the latest end time on this track
-        // Note: We don't have clips data here, so we'll start at 0 for now
-        // In a more complete implementation, you'd pass clips data or calculate this differently
-        startTimeMs = 0
+        // Find all clips on this track and get the latest end time
+        const trackClips = clips.filter(clip => clip.trackId === targetTrack.id)
+        if (trackClips.length > 0) {
+            const latestEndTime = Math.max(...trackClips.map(clip => clip.timelineEndMs))
+            startTimeMs = latestEndTime
+            console.log('Placing clip after existing content at:', startTimeMs)
+        } else {
+            startTimeMs = 0 // First clip on this track
+            console.log('First clip on track, placing at start')
+        }
     }
     
     // Create new track if needed

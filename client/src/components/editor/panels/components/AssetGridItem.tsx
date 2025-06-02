@@ -18,7 +18,7 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
     const isPexelsAsset = asset.src || asset.video_files
     const { url: uploadedUrl, loading } = useAssetUrl(isPexelsAsset ? undefined : asset.id)
     const { deleteAsset } = useAssets()
-    const { tracks, executeCommand } = useEditor()
+    const { tracks, executeCommand, clips } = useEditor()
     const params = useParams()
     const [isUploading, setIsUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -80,10 +80,9 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
                 console.log('Adding Pexels asset to track via click:', asset)
                 
                 // Add the external asset directly to a track
-                addAssetToTrack(asset, tracks, executeCommand, projectId, {
+                addAssetToTrack(asset, tracks, clips, executeCommand, projectId, {
                     isExternal: true,
-                    assetType: type,
-                    startTimeMs: 0
+                    assetType: type
                 })
                 
                 if (onUploadAndHighlight) onUploadAndHighlight(asset.id, false)
@@ -97,9 +96,8 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
             // For regular uploaded assets, add them directly to track
             console.log('Adding uploaded asset to track via click:', asset)
             
-            addAssetToTrack(asset, tracks, executeCommand, projectId, {
-                isExternal: false,
-                startTimeMs: 0
+            addAssetToTrack(asset, tracks, clips, executeCommand, projectId, {
+                isExternal: false
             })
         }
     }
