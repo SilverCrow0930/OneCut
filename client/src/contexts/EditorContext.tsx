@@ -14,7 +14,7 @@ import { Project } from '@/types/projects'
 import { useParams } from 'next/navigation'
 import { initialHistory } from '@/lib/constants'
 import { dbToClip, dbToTrack, historyReducer } from '@/lib/editor/utils'
-import { Track, Clip, Command, SaveState } from '@/types/editor'
+import { Track, Clip, Command, SaveState, PlayerSettings } from '@/types/editor'
 import { toDbClip, toDbTrack } from '../lib/editor/mapToDb'
 
 interface EditorContextType {
@@ -48,6 +48,10 @@ interface EditorContextType {
     setSelectedClipId: (id: string | null) => void
     selectedTrackId: string | null
     setSelectedTrackId: (id: string | null) => void
+
+    // player settings
+    playerSettings: PlayerSettings
+    updatePlayerSettings: (settings: Partial<PlayerSettings>) => void
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined)
@@ -114,7 +118,20 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     // 2) Selected tool
     const [selectedTool, setSelectedTool] = useState<string | null>('Upload')
 
-    // 3) History + Timeline
+    // 3) Player settings
+    const [playerSettings, setPlayerSettings] = useState<PlayerSettings>({
+        aspectRatio: '16:9',
+        background: { type: 'black', imageUrl: null }
+    })
+
+    const updatePlayerSettings = (updates: Partial<PlayerSettings>) => {
+        setPlayerSettings(prev => ({
+            ...prev,
+            ...updates
+        }))
+    }
+
+    // 4) History + Timeline
     const [history, dispatch] = useReducer(historyReducer, initialHistory)
     const { past, present, future } = history
     const { tracks, clips } = present
@@ -122,7 +139,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     const [loadingTimeline, setLoadingTimeline] = useState(true)
     const [timelineError, setTimelineError] = useState<string | null>(null)
 
-    // 4) Save state
+    // 5) Save state
     const [saveState, setSaveState] = useState<SaveState>('saved')
 
     // selection
@@ -254,6 +271,10 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             setSelectedClipId,
             selectedTrackId,
             setSelectedTrackId,
+
+            // player settings
+            playerSettings,
+            updatePlayerSettings,
         }}>
             {children}
         </EditorContext.Provider>

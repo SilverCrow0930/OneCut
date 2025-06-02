@@ -39,6 +39,17 @@ export interface Clip {
     createdAt?: string
 }
 
+// Player settings types
+export interface PlayerBackground {
+    type: 'black' | 'white' | 'image'
+    imageUrl?: string | null
+}
+
+export interface PlayerSettings {
+    aspectRatio: '16:9' | '9:16'
+    background: PlayerBackground
+}
+
 export type Command
     = {
         type: 'ADD_TRACK';

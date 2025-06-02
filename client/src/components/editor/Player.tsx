@@ -1,15 +1,13 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useEditor } from '@/contexts/EditorContext'
 import { ClipLayer } from './ClipLayer'
-
-type AspectRatio = '16:9' | '9:16'
+import PlayerControls from './PlayerControls'
 
 export default function Player() {
     const videoRef = useRef<HTMLVideoElement>(null)
     const { currentTime, duration, setCurrentTime, setDuration } = usePlayback()
-    const { clips, tracks, setSelectedClipId } = useEditor()
-    const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9')
+    const { clips, tracks, setSelectedClipId, playerSettings } = useEditor()
 
     // Get clips that are currently active at the playhead position
     const activeClips = clips.filter(clip => {
@@ -81,74 +79,61 @@ export default function Player() {
         }
     }, [setCurrentTime, setDuration])
 
-    // Calculate player dimensions based on aspect ratio
-    const getPlayerStyle = () => {
-        const baseStyle = {
-            minHeight: '300px',
-            maxWidth: '100%',
-            maxHeight: '100%'
-        }
-
-        if (aspectRatio === '16:9') {
+    // Calculate aspect ratio styles
+    const getAspectRatioStyles = () => {
+        if (playerSettings.aspectRatio === '16:9') {
             return {
-                ...baseStyle,
-                aspectRatio: '16/9',
-                width: 'auto',
-                height: 'auto'
+                aspectRatio: '16 / 9',
+                maxWidth: '100%',
+                maxHeight: '100%'
             }
         } else {
             return {
-                ...baseStyle,
-                aspectRatio: '9/16',
-                width: 'auto',
-                height: 'auto',
-                maxHeight: '70vh' // Limit height for 9:16 to prevent it from being too tall
+                aspectRatio: '9 / 16',
+                maxWidth: '56.25vh', // 9:16 aspect ratio constraint
+                maxHeight: '100%'
             }
+        }
+    }
+
+    // Calculate background styles
+    const getBackgroundStyles = () => {
+        const background = playerSettings.background
+        
+        switch (background.type) {
+            case 'white':
+                return { backgroundColor: '#ffffff' }
+            case 'image':
+                return background.imageUrl 
+                    ? {
+                        backgroundImage: `url(${background.imageUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                    }
+                    : { backgroundColor: '#000000' }
+            case 'black':
+            default:
+                return { backgroundColor: '#000000' }
         }
     }
 
     return (
         <div className="flex items-center justify-center h-full p-4">
-            {/* Player Container */}
             <div
-                className="relative bg-black rounded-xl shadow-2xl ring-1 ring-gray-200/20"
-                style={getPlayerStyle()}
+                className="relative rounded-xl shadow-2xl ring-1 ring-gray-200/20"
+                style={{
+                    minHeight: '300px', // Minimum height for usability
+                    ...getAspectRatioStyles(),
+                    ...getBackgroundStyles()
+                }}
                 onClick={() => {
                     setSelectedClipId(null)
                 }}
             >
-                {/* Aspect Ratio Controls - Top Left Overlay */}
-                <div className="absolute top-4 left-4 z-50">
-                    <div className="flex items-center gap-1 bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1.5">
-                        <svg className="w-4 h-4 text-white mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth="2"/>
-                            <path d="M9 9h6v6h-6z" strokeWidth="2"/>
-                        </svg>
-                        <div className="flex bg-gray-800/80 rounded-md p-0.5">
-                            <button
-                                onClick={() => setAspectRatio('16:9')}
-                                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-                                    aspectRatio === '16:9'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                                }`}
-                            >
-                                16:9
-                            </button>
-                            <button
-                                onClick={() => setAspectRatio('9:16')}
-                                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-                                    aspectRatio === '9:16'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                                }`}
-                            >
-                                9:16
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
+                {/* Player Controls */}
+                <PlayerControls />
+                
                 {/* Subtle glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl pointer-events-none" />
                 
