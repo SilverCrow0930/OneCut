@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Wand2, Download, Copy, RotateCcw, Mic, CheckCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react'
+import { Wand2, Download, Copy, RotateCcw, Mic, CheckCircle, AlertCircle, Loader2, Sparkles, Plus } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { useParams } from 'next/navigation'
 import { apiPath } from '@/lib/config'
+import { v4 as uuid } from 'uuid'
+import { TrackType } from '@/types/editor'
 
 interface Caption {
     id: number
@@ -19,8 +22,10 @@ const CaptionsToolPanel = () => {
     const [error, setError] = useState<string | null>(null)
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [progressStage, setProgressStage] = useState<'upload' | 'processing' | 'generating' | null>(null)
-    const { clips } = useEditor()
+    const { clips, tracks, executeCommand } = useEditor()
     const { session } = useAuth()
+    const params = useParams()
+    const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
 
     // Get video/audio clips that can be transcribed
     const transcribableClips = clips.filter(clip => 
@@ -82,11 +87,11 @@ const CaptionsToolPanel = () => {
         return parsedCaptions
     }
 
-    // Convert captions back to SRT format
-    const convertToSRT = (captions: Caption[]): string => {
-        return captions.map(caption => 
-            `${caption.id}\n${caption.startTime} --> ${caption.endTime}\n${caption.text}\n`
-        ).join('\n')
+    // Convert SRT time format to milliseconds
+    const srtTimeToMs = (srtTime: string): number => {
+        const [time, ms] = srtTime.split(',')
+        const [hours, minutes, seconds] = time.split(':').map(Number)
+        return (hours * 3600 + minutes * 60 + seconds) * 1000 + Number(ms)
     }
 
     const handleOneClickGenerate = async () => {
@@ -134,7 +139,7 @@ const CaptionsToolPanel = () => {
             if (parsedCaptions.length === 0) {
                 setError('No speech detected. Try with clearer audio or a video with spoken content.')
             } else {
-                setSuccessMessage(`🎉 Generated ${parsedCaptions.length} captions in ${parsedCaptions[0].startTime.split(',')[0]} language!`)
+                setSuccessMessage(`🎉 Generated ${parsedCaptions.length} captions successfully!`)
                 // Auto-clear success message after 5 seconds
                 setTimeout(() => setSuccessMessage(null), 5000)
             }
@@ -148,36 +153,89 @@ const CaptionsToolPanel = () => {
         }
     }
 
-    const handleCopyToClipboard = async () => {
-        if (captions.length === 0) return
-        
-        const srtText = convertToSRT(captions)
+    const handleAddToTimeline = () => {
+        if (captions.length === 0 || !projectId) return
+
         try {
-            await navigator.clipboard.writeText(srtText)
-            setSuccessMessage('📋 Captions copied to clipboard!')
-            setTimeout(() => setSuccessMessage(null), 2000)
+            // Create a new text track at the top
+            const newTrack = {
+                id: uuid(),
+                projectId: projectId,
+                index: 0, // Insert at the beginning
+                type: 'text' as TrackType,
+                createdAt: new Date().toISOString(),
+            }
+
+            // Create text clips for each caption
+            const textClips = captions.map(caption => ({
+                id: uuid(),
+                trackId: newTrack.id,
+                type: 'text' as const,
+                sourceStartMs: 0,
+                sourceEndMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
+                timelineStartMs: srtTimeToMs(caption.startTime),
+                timelineEndMs: srtTimeToMs(caption.endTime),
+                assetDurationMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
+                volume: 1,
+                speed: 1,
+                properties: {
+                    text: caption.text,
+                    style: {
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        fontSize: 18,
+                        fontWeight: 600,
+                        color: '#ffffff',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        textAlign: 'center',
+                        textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+                    },
+                },
+                createdAt: new Date().toISOString(),
+            }))
+
+            // Create commands to:
+            // 1. Shift all existing tracks down
+            // 2. Add the new track
+            // 3. Add all text clips
+            const commands = [
+                // First shift all existing tracks down
+                ...tracks.map(track => ({
+                    type: 'UPDATE_TRACK' as const,
+                    payload: {
+                        before: track,
+                        after: {
+                            ...track,
+                            index: track.index + 1
+                        }
+                    }
+                })),
+                // Then add the new track
+                {
+                    type: 'ADD_TRACK' as const,
+                    payload: { track: newTrack }
+                },
+                // Finally add all text clips
+                ...textClips.map(clip => ({
+                    type: 'ADD_CLIP' as const,
+                    payload: { clip }
+                }))
+            ]
+
+            // Execute all commands in a single batch
+            executeCommand({
+                type: 'BATCH',
+                payload: { commands }
+            })
+
+            setSuccessMessage(`🎬 Added ${captions.length} captions to timeline!`)
+            setTimeout(() => setSuccessMessage(null), 3000)
+
         } catch (error) {
-            console.error('Failed to copy to clipboard:', error)
-            setError('Failed to copy to clipboard')
+            console.error('Failed to add captions to timeline:', error)
+            setError('Failed to add captions to timeline')
         }
-    }
-
-    const handleDownloadSRT = () => {
-        if (captions.length === 0) return
-
-        const srtText = convertToSRT(captions)
-        const blob = new Blob([srtText], { type: 'text/plain' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `captions-${new Date().toISOString().split('T')[0]}.srt`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        
-        setSuccessMessage('📥 SRT file downloaded!')
-        setTimeout(() => setSuccessMessage(null), 2000)
     }
 
     const handleClearCaptions = () => {
@@ -212,8 +270,6 @@ const CaptionsToolPanel = () => {
                 icon={Mic} 
                 title="AI Captions" 
                 description="Generate captions for your video with one click"
-                iconBgColor="bg-purple-50"
-                iconColor="text-purple-600"
             />
             
             {/* Status Messages */}
@@ -234,8 +290,8 @@ const CaptionsToolPanel = () => {
             {/* Main Action */}
             {transcribableClips.length === 0 ? (
                 <div className="text-center py-12">
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
-                        <Mic size={32} className="text-purple-500" />
+                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-blue-100 flex items-center justify-center">
+                        <Mic size={32} className="text-blue-500" />
                     </div>
                     <h3 className="text-xl font-semibold text-gray-700 mb-3">No Media Found</h3>
                     <p className="text-gray-500 max-w-sm mx-auto leading-relaxed">
@@ -246,16 +302,16 @@ const CaptionsToolPanel = () => {
                 <div className="space-y-5">
                     {/* Clip Info */}
                     {selectedClip && (
-                        <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl">
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-xl">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="w-10 h-10 rounded-lg bg-white/80 flex items-center justify-center text-lg">
                                     {selectedClip.type === 'video' ? '📹' : '🎵'}
                                 </div>
                                 <div>
-                                    <div className="text-sm font-semibold text-purple-800">
+                                    <div className="text-sm font-semibold text-blue-800">
                                         {selectedClip.type === 'video' ? 'Video' : 'Audio'} Clip {selectedClipIndex + 1}
                                     </div>
-                                    <div className="text-xs text-purple-600">
+                                    <div className="text-xs text-blue-600">
                                         Duration: {Math.round((selectedClip.timelineEndMs - selectedClip.timelineStartMs) / 1000)}s
                                     </div>
                                 </div>
@@ -269,7 +325,7 @@ const CaptionsToolPanel = () => {
                                 )}
                             </div>
                             {transcribableClips.length > 1 && (
-                                <p className="text-xs text-purple-600">
+                                <p className="text-xs text-blue-600">
                                     Auto-selected longest {selectedClip.type} clip
                                 </p>
                             )}
@@ -283,8 +339,8 @@ const CaptionsToolPanel = () => {
                         className="
                             relative overflow-hidden
                             flex items-center justify-center gap-3 w-full px-6 py-5
-                            bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white rounded-2xl
-                            hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 
+                            bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-2xl
+                            hover:from-blue-700 hover:to-blue-700 
                             disabled:opacity-50 disabled:cursor-not-allowed
                             font-semibold text-lg shadow-lg hover:shadow-xl
                             transform hover:scale-[1.02] active:scale-[0.98]
@@ -316,7 +372,7 @@ const CaptionsToolPanel = () => {
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                                     <div 
-                                        className="bg-gradient-to-r from-purple-600 to-blue-600 h-3 rounded-full transition-all duration-700 ease-out"
+                                        className="bg-gradient-to-r from-blue-600 to-blue-600 h-3 rounded-full transition-all duration-700 ease-out"
                                         style={{width: `${progressContent.percent}%`}}
                                     ></div>
                                 </div>
@@ -332,21 +388,14 @@ const CaptionsToolPanel = () => {
             {/* Results */}
             {captions.length > 0 && (
                 <div className="space-y-5 animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
-                    {/* Action Buttons */}
+                    {/* Add to Timeline Button */}
                     <div className="flex gap-3">
                         <button
-                            onClick={handleCopyToClipboard}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 transform hover:scale-[1.02] font-medium shadow-md"
+                            onClick={handleAddToTimeline}
+                            className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 transform hover:scale-[1.02] font-medium shadow-md text-base"
                         >
-                            <Copy size={18} />
-                            Copy Text
-                        </button>
-                        <button
-                            onClick={handleDownloadSRT}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 transform hover:scale-[1.02] font-medium shadow-md"
-                        >
-                            <Download size={18} />
-                            Download SRT
+                            <Plus size={20} />
+                            Add to Timeline
                         </button>
                         <button
                             onClick={handleClearCaptions}
@@ -361,7 +410,7 @@ const CaptionsToolPanel = () => {
                     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                         <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-3 border-b border-gray-200">
                             <h4 className="text-base font-semibold text-gray-700 flex items-center gap-2">
-                                <Sparkles size={16} className="text-purple-500" />
+                                <Sparkles size={16} className="text-blue-500" />
                                 Generated Captions ({captions.length})
                             </h4>
                         </div>
@@ -369,7 +418,7 @@ const CaptionsToolPanel = () => {
                             {captions.slice(0, 6).map((caption, index) => (
                                 <div key={caption.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-xs font-mono text-white bg-purple-500 px-2 py-1 rounded-md">
+                                        <span className="text-xs font-mono text-white bg-blue-500 px-2 py-1 rounded-md">
                                             {caption.startTime.split(',')[0]}
                                         </span>
                                         <span className="text-xs text-gray-400">#{index + 1}</span>
@@ -389,8 +438,8 @@ const CaptionsToolPanel = () => {
                     {/* Quick tip */}
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-xs text-blue-700 flex items-center gap-1">
-                            <span>💡</span>
-                            <span>Use the SRT file in any video editor or upload platform</span>
+                            <span>✨</span>
+                            <span>Captions will be added to a new text track at the top of your timeline</span>
                         </p>
                     </div>
                 </div>
