@@ -47,7 +47,7 @@ export const TOOLS: Tool[] = [
     },
     {
         label: 'Animations',
-        icon: '/assets/icons/animations.svg',
+        icon: '/assets/icons/animations.png',
         aiTool: false,
     }
 ]
