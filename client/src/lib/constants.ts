@@ -7,7 +7,7 @@ import StickersToolPanel from "@/components/editor/panels/StickersToolPanel"
 import VoiceoverToolPanel from "@/components/editor/panels/VoiceoverToolPanel"
 import CaptionsToolPanel from "@/components/editor/panels/CaptionsToolPanel"
 import AutoCutToolPanel from "@/components/editor/panels/AutoCutToolPanel"
-import AnimationsToolPanel from "@/components/editor/panels/AnimationsToolPanel"
+import TransitionsToolPanel from "@/components/editor/panels/TransitionsToolPanel"
 
 export const TOOLS: Tool[] = [
     {
@@ -83,7 +83,7 @@ export const TOOL_PANELS: ToolPanel[] = [
     },
     {
         label: 'Transitions',
-        component: AnimationsToolPanel
+        component: TransitionsToolPanel
     }
 ]
 

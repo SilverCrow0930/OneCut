@@ -98,7 +98,7 @@ export default function ProjectsList() {
                         className="
                             group
                             relative
-                            flex flex-col justify-end
+                            flex flex-col
                             rounded-lg overflow-hidden
                             bg-gray-900 hover:bg-gray-800
                             text-white transition-all duration-300
@@ -111,7 +111,7 @@ export default function ProjectsList() {
                             router.push(`/projects/${project.id}`)
                         }}
                     >
-                        {/* Thumbnail */}
+                        {/* Thumbnail Background */}
                         <div className="absolute inset-0 w-full h-full">
                             {project.thumbnail_url ? (
                                 <img
@@ -119,48 +119,60 @@ export default function ProjectsList() {
                                     alt={project.name}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
-                                        // Fallback to gradient background if image fails
-                                        e.currentTarget.style.display = 'none';
+                                        // Show fallback background if image fails
+                                        const target = e.currentTarget;
+                                        target.style.display = 'none';
+                                        const fallback = target.parentElement?.querySelector('.fallback-bg');
+                                        if (fallback) {
+                                            (fallback as HTMLElement).style.display = 'flex';
+                                        }
                                     }}
                                 />
-                            ) : (
-                                // Default gradient background when no thumbnail
-                                <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-                                    <svg 
-                                        className="w-8 h-8 text-gray-400" 
-                                        fill="none" 
-                                        stroke="currentColor" 
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={1.5} 
-                                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" 
-                                        />
-                                    </svg>
-                                </div>
-                            )}
+                            ) : null}
+                            
+                            {/* Fallback background - always present but hidden if image loads */}
+                            <div 
+                                className={`fallback-bg w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
+                            >
+                                <svg 
+                                    className="w-8 h-8 text-gray-400" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        strokeWidth={1.5} 
+                                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" 
+                                    />
+                                </svg>
+                            </div>
                         </div>
 
                         {/* Dark overlay on hover */}
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
 
-                        {/* Title and duration container */}
-                        <div className="relative z-20 w-full flex flex-col">
-                            <span className="w-full px-3 py-2 text-white text-sm font-medium text-ellipsis overflow-hidden whitespace-nowrap">
-                                {project.name}
-                            </span>
-                            {project.duration && (
+                        {/* Duration badge - top right */}
+                        {project.duration && project.duration > 0 && (
+                            <div className="absolute top-2 right-2 z-20">
                                 <span className="
-                                    absolute top-2 right-2
                                     px-2 py-1 rounded
                                     bg-black/70 backdrop-blur-sm text-xs font-medium
                                     text-white shadow-md
                                 ">
                                     {formatSecondsAsTimestamp(project.duration)}
                                 </span>
-                            )}
+                            </div>
+                        )}
+
+                        {/* Title - bottom */}
+                        <div className="absolute bottom-0 left-0 right-0 z-20">
+                            <div className="p-3 bg-gradient-to-t from-black/80 to-transparent">
+                                <span className="text-white text-sm font-medium line-clamp-2 leading-tight">
+                                    {project.name}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 ))
