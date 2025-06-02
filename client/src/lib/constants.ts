@@ -46,7 +46,7 @@ export const TOOLS: Tool[] = [
         aiTool: true,
     },
     {
-        label: 'Animations',
+        label: 'Transitions',
         icon: '/assets/icons/animation.png',
         aiTool: false,
     }
@@ -82,7 +82,7 @@ export const TOOL_PANELS: ToolPanel[] = [
         component: CaptionsToolPanel
     },
     {
-        label: 'Animations',
+        label: 'Transitions',
         component: AnimationsToolPanel
     }
 ]

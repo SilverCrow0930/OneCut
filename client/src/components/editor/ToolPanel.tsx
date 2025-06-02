@@ -17,7 +17,7 @@ const toolComponents: { [key: string]: React.ComponentType<any> } = {
     Voiceover: VoiceoverToolPanel,
     Captions: CaptionsToolPanel,
     Autocut: AutoCutToolPanel,
-    Animations: AnimationsToolPanel,
+    Transitions: AnimationsToolPanel,
 }
 
 const ToolPanel = () => {

@@ -177,7 +177,7 @@ const AnimationsToolPanel = () => {
         <div className="flex flex-col w-full gap-4 p-4">
             <div className="flex flex-col gap-3">
                 <h3 className="text-lg font-semibold text-gray-800">Animations</h3>
-                <p className="text-sm text-gray-600">Add smooth transitions and animations to your clips</p>
+                <p className="text-sm text-gray-600">Add smooth transitions to your clips</p>
             </div>
             
             <div className="flex flex-col gap-4">
