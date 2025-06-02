@@ -101,24 +101,36 @@ export default function Player() {
     // Calculate background styles
     const getBackgroundStyles = () => {
         const background = playerSettings.background
+        console.log('Player - Current background setting:', background)
         
         switch (background.type) {
             case 'white':
+                console.log('Player - Applying white background')
                 return { backgroundColor: '#ffffff' }
             case 'image':
-                return background.imageUrl 
-                    ? {
+                if (background.imageUrl) {
+                    console.log('Player - Applying image background:', background.imageUrl.substring(0, 50) + '...')
+                    return {
                         backgroundImage: `url(${background.imageUrl})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat'
                     }
-                    : { backgroundColor: '#000000' }
+                } else {
+                    console.log('Player - No image URL, falling back to black')
+                    return { backgroundColor: '#000000' }
+                }
             case 'black':
             default:
+                console.log('Player - Applying black background')
                 return { backgroundColor: '#000000' }
         }
     }
+
+    const backgroundStyles = getBackgroundStyles()
+    const aspectRatioStyles = getAspectRatioStyles()
+    
+    console.log('Player - Final styles:', { aspectRatioStyles, backgroundStyles })
 
     return (
         <div className="flex items-center justify-center h-full p-4">
@@ -126,8 +138,8 @@ export default function Player() {
                 className="relative rounded-xl shadow-2xl ring-1 ring-gray-200/20"
                 style={{
                     minHeight: '300px', // Minimum height for usability
-                    ...getAspectRatioStyles(),
-                    ...getBackgroundStyles()
+                    ...aspectRatioStyles,
+                    ...backgroundStyles
                 }}
                 onClick={() => {
                     setSelectedClipId(null)

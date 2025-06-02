@@ -6,33 +6,56 @@ export default function PlayerControls() {
     const [showBackgroundOptions, setShowBackgroundOptions] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    console.log('PlayerControls - Current player settings:', playerSettings)
+
     const handleAspectRatioToggle = () => {
         const newRatio = playerSettings.aspectRatio === '16:9' ? '9:16' : '16:9'
+        console.log('Toggling aspect ratio from', playerSettings.aspectRatio, 'to', newRatio)
         updatePlayerSettings({ aspectRatio: newRatio })
     }
 
     const handleBackgroundChange = (type: 'black' | 'white' | 'image') => {
+        console.log('Changing background to:', type)
         if (type === 'image') {
             fileInputRef.current?.click()
         } else {
-            updatePlayerSettings({ 
+            const newSettings = { 
                 background: { type, imageUrl: null } 
-            })
+            }
+            console.log('Updating player settings with:', newSettings)
+            updatePlayerSettings(newSettings)
         }
         setShowBackgroundOptions(false)
     }
 
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
+        console.log('File selected:', file)
         if (file) {
+            // Check if file is an image
+            if (!file.type.startsWith('image/')) {
+                console.error('Selected file is not an image')
+                return
+            }
+
             const reader = new FileReader()
             reader.onload = (e) => {
                 const imageUrl = e.target?.result as string
-                updatePlayerSettings({ 
-                    background: { type: 'image', imageUrl } 
-                })
+                console.log('Image loaded, URL length:', imageUrl?.length)
+                const newSettings = { 
+                    background: { type: 'image' as const, imageUrl } 
+                }
+                console.log('Updating player settings with image:', newSettings)
+                updatePlayerSettings(newSettings)
+            }
+            reader.onerror = (e) => {
+                console.error('Error reading file:', e)
             }
             reader.readAsDataURL(file)
+        }
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ''
         }
         setShowBackgroundOptions(false)
     }
@@ -42,7 +65,7 @@ export default function PlayerControls() {
             {/* Aspect Ratio Toggle */}
             <button
                 onClick={handleAspectRatioToggle}
-                className="bg-black/70 hover:bg-black/80 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm border border-white/10"
+                className="bg-white text-black/70 px-3 py-2 rounded-lg text-sm font-medium transition-colors border border-gray-300 hover:bg-gray-50"
                 title="Toggle aspect ratio"
             >
                 {playerSettings.aspectRatio}
@@ -52,7 +75,7 @@ export default function PlayerControls() {
             <div className="relative">
                 <button
                     onClick={() => setShowBackgroundOptions(!showBackgroundOptions)}
-                    className="bg-black/70 hover:bg-black/80 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm border border-white/10"
+                    className="bg-white text-black/70 px-3 py-2 rounded-lg text-sm font-medium transition-colors border border-gray-300 hover:bg-gray-50"
                     title="Change background"
                 >
                     🎨
