@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { useEditor } from '@/contexts/EditorContext'
@@ -16,11 +16,9 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const localMs = currentTime * 1000 - clip.timelineStartMs
     const durationMs = clip.timelineEndMs - clip.timelineStartMs
     const videoRef = useRef<HTMLVideoElement>(null)
-    const lastSyncTime = useRef<number>(0)
-    const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-    // Simplified loading state
-    const [isLoading, setIsLoading] = useState(true)
+    const lastUpdateRef = useRef<number>(0)
+    const targetTimeRef = useRef<number>(0)
+    const updateIntervalRef = useRef<number>(0)
 
     // Crop area state
     const [crop, setCrop] = useState({
@@ -28,7 +26,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
         height: clip.type === 'text' ? 100 : 180,
         left: 0,
         top: 0
-    })
+    }) // default 16:9, smaller for text
 
     // Pan/zoom state for media inside crop
     const [mediaPos, setMediaPos] = useState({ x: 0, y: 0 })
@@ -45,32 +43,26 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 })
 
     const isSelected = selectedClipId === clip.id
+    console.log('Clip selection state:', { clipId: clip.id, selectedClipId, isSelected })
 
     // Only render if the playhead is inside this clip's window
     if (localMs < 0 || localMs > durationMs) {
         return null
     }
 
-    const { url, loading } = useAssetUrl(clip.assetId)
+    const { url } = useAssetUrl(clip.assetId)
 
-    // Get lower quality media URL
-    const getOptimizedMediaUrl = useCallback(() => {
-        const externalAsset = clip.properties?.externalAsset
-        let mediaUrl = externalAsset?.url || url
+    // Check if this is an external asset
+    const externalAsset = clip.properties?.externalAsset
+    const mediaUrl = externalAsset?.url || url
 
-        if (mediaUrl && clip.type === 'video') {
-            // Use lower quality for better performance
-            if (mediaUrl.includes('pexels.com')) {
-                mediaUrl = mediaUrl.replace('/original/', '/medium/')
-            } else if (mediaUrl.includes('giphy.com')) {
-                mediaUrl = mediaUrl.replace('.mp4', '_s.mp4')
-            }
-        }
-
-        return mediaUrl
-    }, [clip.properties?.externalAsset?.url, url, clip.type])
-
-    const mediaUrl = getOptimizedMediaUrl()
+    console.log('ClipLayer render:', { 
+        clipId: clip.id, 
+        assetId: clip.assetId, 
+        isExternal: !!externalAsset,
+        mediaUrl,
+        externalAsset 
+    })
 
     // Get asset aspect ratio
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
@@ -200,44 +192,9 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             top: '50%',
             width: '100%',
             height: '100%',
-            objectFit: 'contain' as const,
+            objectFit: 'cover' as const,
             transform: `translate(-50%, -50%) scale(${mediaScale})`,
             userSelect: 'none' as const,
-        }
-
-        if (isLoading || loading) {
-            return (
-                <div 
-                    style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        color: 'white',
-                        textAlign: 'center'
-                    }}
-                >
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto" />
-                </div>
-            )
-        }
-
-        if (!mediaUrl) {
-            return (
-                <div 
-                    style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        color: 'white',
-                        textAlign: 'center'
-                    }}
-                    onClick={handleClick}
-                >
-                    <div className="text-red-400">⚠️</div>
-                </div>
-            )
         }
 
         switch (clip.type) {
@@ -245,24 +202,22 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                 return (
                     <video
                         ref={videoRef}
-                        src={mediaUrl}
+                        src={mediaUrl!}
                         style={style}
-                        preload="metadata"
+                        preload="auto"
                         playsInline
                         muted={false}
                         onClick={handleClick}
                         draggable={false}
-                        onLoadedData={() => setIsLoading(false)}
                     />
                 )
             case 'image':
                 return (
                     <img
-                        src={mediaUrl}
+                        src={mediaUrl!}
                         style={style}
                         onClick={handleClick}
                         draggable={false}
-                        onLoad={() => setIsLoading(false)}
                     />
                 )
             case 'text':
@@ -301,62 +256,71 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
         }
     }
 
-    // Optimized video sync with debouncing
     useEffect(() => {
-        const v = videoRef.current
-        if (!v || clip.type !== 'video') return
+        const v = videoRef.current;
+        if (!v || clip.type !== 'video') return;
 
-        const targetTime = sourceTime !== undefined ? sourceTime : Math.max(0, localMs / 1000)
-        
-        // Clear any pending sync
-        if (syncTimeoutRef.current) {
-            clearTimeout(syncTimeoutRef.current)
-        }
+        let playPromise: Promise<void> | undefined;
 
-        // Debounced time sync - only sync if time difference is significant
-        const timeDiff = Math.abs(v.currentTime - targetTime)
-        if (timeDiff > 0.1) { // Only sync if off by more than 100ms
-            v.currentTime = targetTime
-            lastSyncTime.current = performance.now()
+        // Calculate target time
+        const targetTime = sourceTime !== undefined
+            ? sourceTime
+            : Math.max(0, localMs / 1000);
+
+        // Only update if enough time has passed since last update
+        const now = performance.now();
+        if (now - lastUpdateRef.current > 50) { // 50ms minimum between updates
+            v.currentTime = targetTime;
+            lastUpdateRef.current = now;
+            targetTimeRef.current = targetTime;
         }
 
         // Handle playback
         if (isPlaying) {
-            v.volume = 1
-            v.muted = false
-            v.play().catch(() => {
-                v.muted = true
-                v.play().catch(() => {})
-            })
+            v.volume = 1;
+            v.muted = false;
+            playPromise = v.play();
+            if (playPromise !== undefined) {
+                playPromise.catch((error) => {
+                    // Only handle AbortError if the video is still in the DOM
+                    if (error.name === 'AbortError' && document.contains(v)) {
+                        v.muted = true;
+                        v.play().catch(() => { }); // Ignore subsequent errors
+                    }
+                });
+            }
         } else {
-            v.pause()
+            v.pause();
         }
 
+        // Cleanup function
         return () => {
-            if (syncTimeoutRef.current) {
-                clearTimeout(syncTimeoutRef.current)
+            if (playPromise) {
+                playPromise.catch(() => { }); // Prevent unhandled promise rejection
             }
-        }
-    }, [sourceTime, localMs, clip.type, isPlaying])
+            v.pause();
+        };
+    }, [sourceTime, localMs, clip.type, isPlaying]);
 
     // Center crop area in player on first render
     useEffect(() => {
-        const player = document.querySelector('.mx-auto.bg-black')
+        // Find the player container - look for the parent element with aspect ratio styling
+        const player = document.querySelector('[style*="aspectRatio"], [style*="aspect-ratio"]') || 
+                      document.querySelector('.bg-black.rounded-xl');
         if (player) {
-            const rect = (player as HTMLElement).getBoundingClientRect()
+            const rect = (player as HTMLElement).getBoundingClientRect();
             setCrop(crop => {
-                if (crop.left === 0 && crop.top === 0) {
-                    return {
-                        ...crop,
-                        height: rect.height,
-                        top: 0,
-                        left: (rect.width - crop.width) / 2
-                    }
-                }
-                return crop
-            })
+                // Always fill the entire player area for vertical format
+                return {
+                    ...crop,
+                    width: rect.width,    // Fill player width
+                    height: rect.height,  // Fill player height
+                    left: 0,              // Start at left edge
+                    top: 0                // Start at top edge
+                };
+            });
         }
-    }, [])
+    }, []);
 
     // --- Main render ---
     return (
@@ -396,21 +360,26 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                 </div>
                 {isSelected && (
                     <>
+                        {/* Corner Resize handles - exactly in the corners */}
+                        {/* NW */}
                         <div
                             className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nwse-resize z-50"
                             style={{ left: 0, top: 0, transform: 'translate(-50%, -50%)' }}
                             onMouseDown={(e) => handleResizeStart(e, 'nw')}
                         />
+                        {/* NE */}
                         <div
                             className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nesw-resize z-50"
                             style={{ right: 0, top: 0, transform: 'translate(50%, -50%)' }}
                             onMouseDown={(e) => handleResizeStart(e, 'ne')}
                         />
+                        {/* SW */}
                         <div
                             className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nesw-resize z-50"
                             style={{ left: 0, bottom: 0, transform: 'translate(-50%, 50%)' }}
                             onMouseDown={(e) => handleResizeStart(e, 'sw')}
                         />
+                        {/* SE */}
                         <div
                             className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nwse-resize z-50"
                             style={{ right: 0, bottom: 0, transform: 'translate(50%, 50%)' }}
