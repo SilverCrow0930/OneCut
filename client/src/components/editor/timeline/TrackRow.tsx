@@ -362,7 +362,7 @@ export default function TrackRow({
                 ref={rowRef}
                 className={`
                     relative h-12
-                    transition-colors duration-200 rounded-lg overflow-x-auto overflow-y-hidden
+                    rounded-lg overflow-x-auto overflow-y-hidden
                     scrollbar-hide
                     ${(track as any).isEmpty 
                         ? 'bg-gray-50/50 border-2 border-dashed border-gray-200/60 hover:border-gray-300/60 hover:bg-gray-100/50' 
@@ -492,7 +492,7 @@ export default function TrackRow({
                         }}
                     >
                         <button
-                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors duration-150"
+                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50"
                             onClick={handleDeleteTrack}
                         >
                             Delete Track

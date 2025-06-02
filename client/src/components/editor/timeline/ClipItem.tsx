@@ -496,7 +496,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 className={`
                     absolute h-full text-white text-xs
                     flex items-center justify-center rounded-lg
-                    overflow-hidden transition-all duration-200
+                    overflow-hidden
                     ${isResizing ? 'cursor-ew-resize' : 'cursor-move'}
                     ${selected ? 'ring-2 ring-blue-400 shadow-2xl scale-[1.02] z-20' : 'shadow-md hover:shadow-lg z-10'}
                     ${isDragging ? 'opacity-0' : ''}
@@ -524,14 +524,14 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             >
                 {/* Left edge hover area */}
                 <div
-                    className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20 transition-colors duration-200 rounded-l-lg"
+                    className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20 rounded-l-lg"
                     onMouseDown={(e) => handleResizeStart(e, 'start')}
                     style={{ zIndex: 20 }}
                 />
 
                 {/* Right edge hover area */}
                 <div
-                    className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20 transition-colors duration-200 rounded-r-lg"
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20 rounded-r-lg"
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
                     style={{ zIndex: 20 }}
                 />

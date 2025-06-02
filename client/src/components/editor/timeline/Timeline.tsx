@@ -501,7 +501,6 @@ export default function Timeline() {
             ref={containerRef}
             className={`
                 w-full
-                transition-colors duration-500
                 timeline-container
                 ${isDragOver ?
                     'border-2 border-cyan-400 bg-cyan-50/50' :
