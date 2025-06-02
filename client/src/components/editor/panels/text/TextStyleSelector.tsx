@@ -283,18 +283,18 @@ interface TextStyleSelectorProps {
 export default function TextStyleSelector({ selectedStyleIdx, setSelectedStyleIdx, className }: TextStyleSelectorProps) {
     return (
         <div className={className}>
-            <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
                 {stylePresets.map((preset, i) => (
                     <button
                         key={preset.name}
                         type="button"
                         className={`
-                            border rounded-md p-2 flex items-center justify-center transition-colors h-12 text-xs
-                            ${selectedStyleIdx === i ? 'ring-2 ring-blue-500 border-blue-500' : 'hover:bg-blue-100'}
+                            border rounded-lg p-3 flex items-center justify-center transition-all duration-200 h-16 text-sm font-medium
+                            ${selectedStyleIdx === i ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' : 'hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'}
                         `}
                         style={{
                             ...preset.style,
-                            fontSize: 12, // Smaller font for preview
+                            fontSize: 14, // Better readability
                             ...(preset.style.WebkitTextStroke ? { WebkitTextStroke: preset.style.WebkitTextStroke } : {}),
                             ...(preset.style.textShadow ? { textShadow: preset.style.textShadow } : {}),
                             background: preset.style.background !== 'none' ? preset.style.background : undefined
