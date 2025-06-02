@@ -662,7 +662,7 @@ const AutoCutToolPanel = () => {
         <div className="flex flex-col gap-6 p-4 bg-white rounded-lg h-full">
             <PanelHeader
                 icon={Brain}
-                title="AI Pilot"
+                title="Autocut"
                 iconBgColor="bg-purple-50"
                 iconColor="text-purple-600"
             />
@@ -743,7 +743,7 @@ const AutoCutToolPanel = () => {
                                             <div className="p-2 bg-white rounded-lg shadow-sm">
                                                 <img
                                                     src="/assets/icons/lemon.png"
-                                                    alt="AI Pilot"
+                                                    alt="Autocut"
                                                     className="w-5 h-5"
                                                 />
                                             </div>

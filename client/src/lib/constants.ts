@@ -7,6 +7,7 @@ import StickersToolPanel from "@/components/editor/panels/StickersToolPanel"
 import VoiceoverToolPanel from "@/components/editor/panels/VoiceoverToolPanel"
 import CaptionsToolPanel from "@/components/editor/panels/CaptionsToolPanel"
 import AutoCutToolPanel from "@/components/editor/panels/AutoCutToolPanel"
+import AnimationsToolPanel from "@/components/editor/panels/AnimationsToolPanel"
 
 export const TOOLS: Tool[] = [
     {
@@ -30,19 +31,24 @@ export const TOOLS: Tool[] = [
         aiTool: false,
     },
     {
+        label: 'Autocut',
+        icon: '/assets/icons/scissors.png',
+        aiTool: true,
+    },
+    {
         label: 'Voiceover',
         icon: '/assets/icons/voiceover.png',
         aiTool: true,
     },
-    // {
-    //     label: 'Captions',
-    //     icon: '/assets/icons/captions.png',
-    //     aiTool: true,
-    // },
     {
-        label: 'AI Pilot',
-        icon: '/assets/icons/scissors.png',
+        label: 'Captions',
+        icon: '/assets/icons/captions.png',
         aiTool: true,
+    },
+    {
+        label: 'Animations',
+        icon: '/assets/icons/animations.svg',
+        aiTool: false,
     }
 ]
 
@@ -64,6 +70,10 @@ export const TOOL_PANELS: ToolPanel[] = [
         component: StickersToolPanel
     },
     {
+        label: 'Autocut',
+        component: AutoCutToolPanel
+    },
+    {
         label: 'Voiceover',
         component: VoiceoverToolPanel
     },
@@ -72,8 +82,8 @@ export const TOOL_PANELS: ToolPanel[] = [
         component: CaptionsToolPanel
     },
     {
-        label: 'AI Pilot',
-        component: AutoCutToolPanel
+        label: 'Animations',
+        component: AnimationsToolPanel
     }
 ]
 
