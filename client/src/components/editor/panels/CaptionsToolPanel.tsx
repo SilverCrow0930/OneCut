@@ -1,337 +1,264 @@
-import React, { useState, useEffect } from 'react'
-import { Wand2, Loader2, Clock, Trash2, Edit3, Check, X } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import React, { useState } from 'react'
+import { Wand2, Download, Copy, RotateCcw, Mic } from 'lucide-react'
+import PanelHeader from './PanelHeader'
 import { useEditor } from '@/contexts/EditorContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
-import { Caption, CaptionGenerationResponse } from '@/types/captions'
+
+interface Caption {
+    id: number
+    startTime: string
+    endTime: string
+    text: string
+}
 
 const CaptionsToolPanel = () => {
-    const { session } = useAuth()
-    const { project } = useEditor()
-    const projectId = project?.id
-
+    const [isGenerating, setIsGenerating] = useState(false)
     const [captions, setCaptions] = useState<Caption[]>([])
-    const [loading, setLoading] = useState(false)
-    const [generating, setGenerating] = useState(false)
+    const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
-    const [editingId, setEditingId] = useState<string | null>(null)
-    const [editText, setEditText] = useState('')
+    const { clips } = useEditor()
+    const { session } = useAuth()
 
-    // Load existing captions
-    const loadCaptions = async () => {
-        if (!session?.access_token || !projectId) return
+    // Get video/audio clips that can be transcribed
+    const transcribableClips = clips.filter(clip => 
+        (clip.type === 'video' || clip.type === 'audio') && clip.assetId
+    )
 
-        try {
-            setLoading(true)
-            const response = await fetch(apiPath(`captions/${projectId}`), {
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`
+    // Parse SRT format to caption objects
+    const parseSRT = (srtText: string): Caption[] => {
+        const srtBlocks = srtText.trim().split('\n\n')
+        const parsedCaptions: Caption[] = []
+
+        srtBlocks.forEach((block, index) => {
+            const lines = block.trim().split('\n')
+            if (lines.length >= 3) {
+                const timeLine = lines[1]
+                const textLines = lines.slice(2).join(' ')
+                
+                // Parse time format: 00:00:01,000 --> 00:00:03,500
+                const timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/)
+                if (timeMatch) {
+                    parsedCaptions.push({
+                        id: index + 1,
+                        startTime: timeMatch[1],
+                        endTime: timeMatch[2],
+                        text: textLines
+                    })
                 }
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to load captions')
             }
+        })
 
-            const data = await response.json()
-            setCaptions(data)
-        } catch (err) {
-            console.error('Failed to load captions:', err)
-            setError(err instanceof Error ? err.message : 'Failed to load captions')
-        } finally {
-            setLoading(false)
-        }
+        return parsedCaptions
     }
 
-    // Generate AI captions
-    const generateCaptions = async () => {
-        if (!session?.access_token || !projectId) return
+    // Convert captions back to SRT format
+    const convertToSRT = (captions: Caption[]): string => {
+        return captions.map(caption => 
+            `${caption.id}\n${caption.startTime} --> ${caption.endTime}\n${caption.text}\n`
+        ).join('\n')
+    }
+
+    const handleGenerateTranscription = async () => {
+        if (!selectedClipId || !session?.access_token) {
+            setError('Please select a clip and ensure you are logged in')
+            return
+        }
+
+        setIsGenerating(true)
+        setError(null)
+        setCaptions([])
 
         try {
-            setGenerating(true)
-            setError(null)
+            console.log('🎤 Starting transcription for clip:', selectedClipId)
             
-            const response = await fetch(apiPath(`captions/${projectId}/generate`), {
+            const response = await fetch(apiPath('transcription/generate'), {
                 method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.error || 'Failed to generate captions')
-            }
-
-            const data: CaptionGenerationResponse = await response.json()
-            setCaptions(data.captions)
-            
-            // Show success message briefly
-            setTimeout(() => setError(null), 3000)
-            setError(`✅ ${data.message}`)
-            
-        } catch (err) {
-            console.error('Failed to generate captions:', err)
-            setError(err instanceof Error ? err.message : 'Failed to generate captions')
-        } finally {
-            setGenerating(false)
-        }
-    }
-
-    // Update caption
-    const updateCaption = async (id: string, text: string) => {
-        if (!session?.access_token) return
-
-        try {
-            const caption = captions.find(c => c.id === id)
-            if (!caption) return
-
-            const response = await fetch(apiPath(`captions/${id}`), {
-                method: 'PUT',
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify({
-                    text,
-                    start_ms: caption.start_ms,
-                    end_ms: caption.end_ms
+                    clipId: selectedClipId
                 })
             })
 
             if (!response.ok) {
-                throw new Error('Failed to update caption')
+                const errorData = await response.json()
+                throw new Error(errorData.error || `Transcription failed: ${response.status}`)
             }
 
-            const updatedCaption = await response.json()
-            setCaptions(prev => prev.map(c => c.id === id ? updatedCaption : c))
-            setEditingId(null)
-            setEditText('')
-        } catch (err) {
-            console.error('Failed to update caption:', err)
-            setError(err instanceof Error ? err.message : 'Failed to update caption')
+            const result = await response.json()
+            console.log('✅ Transcription completed:', result)
+
+            // Parse the SRT format transcription
+            const parsedCaptions = parseSRT(result.transcription)
+            setCaptions(parsedCaptions)
+
+            if (parsedCaptions.length === 0) {
+                setError('No captions were generated. The audio might be unclear or contain no speech.')
+            }
+
+        } catch (error: any) {
+            console.error('❌ Transcription failed:', error)
+            setError(error.message || 'Failed to generate transcription')
+        } finally {
+            setIsGenerating(false)
         }
     }
 
-    // Delete caption
-    const deleteCaption = async (id: string) => {
-        if (!session?.access_token) return
-
+    const handleCopyToClipboard = async () => {
+        if (captions.length === 0) return
+        
+        const srtText = convertToSRT(captions)
         try {
-            const response = await fetch(apiPath(`captions/${id}`), {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`
-                }
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to delete caption')
-            }
-
-            setCaptions(prev => prev.filter(c => c.id !== id))
-        } catch (err) {
-            console.error('Failed to delete caption:', err)
-            setError(err instanceof Error ? err.message : 'Failed to delete caption')
+            await navigator.clipboard.writeText(srtText)
+            // Could add a toast notification here
+        } catch (error) {
+            console.error('Failed to copy to clipboard:', error)
         }
     }
 
-    // Start editing
-    const startEditing = (caption: Caption) => {
-        setEditingId(caption.id)
-        setEditText(caption.text)
+    const handleDownloadSRT = () => {
+        if (captions.length === 0) return
+
+        const srtText = convertToSRT(captions)
+        const blob = new Blob([srtText], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'captions.srt'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
     }
 
-    // Cancel editing
-    const cancelEditing = () => {
-        setEditingId(null)
-        setEditText('')
+    const handleClearCaptions = () => {
+        setCaptions([])
+        setError(null)
+        setSelectedClipId(null)
     }
-
-    // Save edit
-    const saveEdit = () => {
-        if (editingId && editText.trim()) {
-            updateCaption(editingId, editText.trim())
-        }
-    }
-
-    // Format time for display
-    const formatTime = (ms: number) => {
-        const seconds = Math.floor(ms / 1000)
-        const minutes = Math.floor(seconds / 60)
-        const remainingSeconds = seconds % 60
-        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
-    }
-
-    // Load captions on component mount
-    useEffect(() => {
-        loadCaptions()
-    }, [projectId, session?.access_token])
-
-    // Debug log to check if projectId is available
-    useEffect(() => {
-        console.log('CaptionsToolPanel - projectId:', projectId, 'project:', project)
-    }, [projectId, project])
 
     return (
-        <div className="flex flex-col w-full gap-4 p-4 max-h-full overflow-hidden">
+        <div className="flex flex-col w-full gap-4 p-4">
+            <PanelHeader 
+                icon={Mic} 
+                title="AI Captions" 
+                description="Generate AI-powered captions for your videos"
+            />
+            
+            {/* Clip Selection */}
             <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-gray-800">Captions</h3>
-                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 rounded-full">
-                        <Wand2 className="w-3 h-3 text-blue-600" />
-                        <span className="text-xs font-medium text-blue-600">AI</span>
+                <h4 className="text-base font-medium text-gray-700">Select Clip to Transcribe</h4>
+                {transcribableClips.length === 0 ? (
+                    <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded-lg">
+                        No video or audio clips found. Add media to your timeline first.
                     </div>
-                </div>
-                <p className="text-sm text-gray-600">Generate AI-powered captions for your videos</p>
-            </div>
-            
-            {/* Debug info */}
-            {!projectId && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
-                    No project loaded. Project ID: {projectId || 'undefined'}
-                </div>
-            )}
-            
-            {/* Error Display */}
-            {error && (
-                <div className={`p-3 rounded-lg text-sm ${
-                    error.startsWith('✅') 
-                        ? 'bg-green-50 text-green-700 border border-green-200'
-                        : 'bg-red-50 text-red-700 border border-red-200'
-                }`}>
-                    {error}
-                </div>
-            )}
-            
-            <div className="flex flex-col gap-4">
-                {/* AI Caption Generation */}
-                <div className="flex flex-col gap-3">
-                    <h4 className="text-base font-medium text-gray-700">Auto-Generate Captions</h4>
-                    <button 
-                        onClick={generateCaptions}
-                        disabled={generating || !projectId}
-                        className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                ) : (
+                    <select 
+                        value={selectedClipId || ''} 
+                        onChange={(e) => setSelectedClipId(e.target.value || null)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
                     >
-                        {generating ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Generating Captions...
-                            </>
-                        ) : (
-                            <>
-                                <Wand2 className="w-4 h-4" />
-                                Generate Captions with AI
-                            </>
-                        )}
-                    </button>
-                    <p className="text-xs text-gray-500">
-                        This will analyze your video's audio and create accurate, timed captions automatically.
-                    </p>
-                </div>
+                        <option value="">Choose a clip...</option>
+                        {transcribableClips.map((clip, index) => (
+                            <option key={clip.id} value={clip.id}>
+                                {clip.type === 'video' ? '📹' : '🎵'} Clip {index + 1}
+                            </option>
+                        ))}
+                    </select>
+                )}
+            </div>
 
-                {/* Caption List */}
-                {captions.length > 0 && (
-                    <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-base font-medium text-gray-700">Your Captions</h4>
-                            <span className="text-xs text-gray-500">{captions.length} captions</span>
-                        </div>
-                        
-                        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
-                            {captions.map((caption) => (
-                                <div key={caption.id} className="p-3 border border-gray-200 rounded-lg">
-                                    <div className="flex items-start justify-between gap-2 mb-2">
-                                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                                            <Clock className="w-3 h-3" />
-                                            <span>{formatTime(caption.start_ms)} - {formatTime(caption.end_ms)}</span>
-                                            {caption.confidence && (
-                                                <span className="px-1 py-0.5 bg-gray-100 rounded text-[10px]">
-                                                    {Math.round(caption.confidence * 100)}%
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                onClick={() => startEditing(caption)}
-                                                className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                            >
-                                                <Edit3 className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                                onClick={() => deleteCaption(caption.id)}
-                                                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                            >
-                                                <Trash2 className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                    {editingId === caption.id ? (
-                                        <div className="flex flex-col gap-2">
-                                            <textarea
-                                                value={editText}
-                                                onChange={(e) => setEditText(e.target.value)}
-                                                className="w-full p-2 text-sm border border-gray-200 rounded resize-none focus:outline-none focus:border-blue-500"
-                                                rows={2}
-                                            />
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={saveEdit}
-                                                    className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
-                                                >
-                                                    <Check className="w-3 h-3" />
-                                                    Save
-                                                </button>
-                                                <button
-                                                    onClick={cancelEditing}
-                                                    className="flex items-center gap-1 px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-gray-700">{caption.text}</p>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+            {/* Generate Button */}
+            <div className="flex flex-col gap-3">
+                <button 
+                    onClick={handleGenerateTranscription}
+                    disabled={!selectedClipId || isGenerating}
+                    className="
+                        flex items-center justify-center gap-3 w-full px-4 py-3
+                        bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg
+                        hover:from-purple-700 hover:to-blue-700 transition-all duration-200
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        font-medium shadow-md hover:shadow-lg
+                    "
+                >
+                    <Wand2 size={20} className={isGenerating ? 'animate-spin' : ''} />
+                    {isGenerating ? 'Generating Captions...' : 'Generate AI Captions'}
+                </button>
+                
+                {isGenerating && (
+                    <div className="text-sm text-center text-gray-600">
+                        🎬 Analyzing audio with Gemini AI...
                     </div>
                 )}
+            </div>
 
-                {/* Caption Settings */}
-                <div className="flex flex-col gap-3">
-                    <h4 className="text-base font-medium text-gray-700">Caption Style</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                        <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm">
-                            Bottom Center
-                        </button>
-                        <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm">
-                            Top Center
-                        </button>
-                        <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm">
-                            Custom Position
-                        </button>
-                        <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm">
-                            Animated
-                        </button>
+            {/* Error Display */}
+            {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{error}</p>
+                </div>
+            )}
+
+            {/* Captions Display */}
+            {captions.length > 0 && (
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-base font-medium text-gray-700">
+                            Generated Captions ({captions.length})
+                        </h4>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleCopyToClipboard}
+                                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Copy to clipboard"
+                            >
+                                <Copy size={16} />
+                            </button>
+                            <button
+                                onClick={handleDownloadSRT}
+                                className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Download SRT file"
+                            >
+                                <Download size={16} />
+                            </button>
+                            <button
+                                onClick={handleClearCaptions}
+                                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Clear captions"
+                            >
+                                <RotateCcw size={16} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Captions List */}
+                    <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+                        {captions.map((caption) => (
+                            <div key={caption.id} className="p-3 border-b border-gray-100 last:border-b-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-mono text-gray-500">
+                                        {caption.startTime} → {caption.endTime}
+                                    </span>
+                                </div>
+                                <p className="text-sm text-gray-800">{caption.text}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Tips */}
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <h5 className="text-sm font-semibold text-blue-800 mb-1">💡 Tips</h5>
+                        <ul className="text-xs text-blue-700 space-y-1">
+                            <li>• Download the SRT file to use in other video editors</li>
+                            <li>• Copy captions to clipboard for easy sharing</li>
+                            <li>• For best results, use clear audio without background noise</li>
+                        </ul>
                     </div>
                 </div>
-
-                {/* Font Options */}
-                <div className="flex flex-col gap-3">
-                    <h4 className="text-base font-medium text-gray-700">Font Style</h4>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
-                        <option>Arial</option>
-                        <option>Helvetica</option>
-                        <option>Times New Roman</option>
-                        <option>Roboto</option>
-                    </select>
-                </div>
-            </div>
+            )}
         </div>
     )
 }

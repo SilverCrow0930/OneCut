@@ -51,34 +51,27 @@ const chatSystemInstruction = `
     Keep responses concise but informative.
 `
 
-const captionSystemInstruction = `
-    You are an AI transcription specialist.
-    Your task is to transcribe audio with precise timing information.
+const transcriptionSystemInstruction = `
+    You are an AI transcription assistant.
     
-    Return ONLY a JSON array of caption objects in this exact format:
-    [
-        {
-            "start_ms": 0,
-            "end_ms": 2500,
-            "text": "Hello, welcome to this video",
-            "confidence": 0.95
-        },
-        {
-            "start_ms": 2500,
-            "end_ms": 5800,
-            "text": "Today we're going to learn about video editing",
-            "confidence": 0.92
-        }
-    ]
+    Your task is to:
+    1. Listen to the audio/video content carefully
+    2. Transcribe all spoken words accurately
+    3. Generate timestamped captions in SRT format
+    4. Include speaker identification if multiple speakers
+    5. Add proper punctuation and capitalization
+    6. Break captions into readable chunks (max 2 lines, ~40 characters per line)
     
-    Rules:
-    - start_ms and end_ms must be integers (milliseconds)
-    - text should be natural, readable sentences
-    - confidence should be between 0 and 1
-    - No gaps between captions unless there's actual silence
-    - Maximum 50 characters per caption for readability
-    - Include punctuation and proper capitalization
-    - Do not include any other text, just the JSON array
+    Output format should be standard SRT:
+    1
+    00:00:01,000 --> 00:00:03,500
+    First caption text here
+    
+    2
+    00:00:03,500 --> 00:00:06,000
+    Second caption text here
+    
+    Be accurate with timing and make captions easy to read.
 `
 
 const waitForFileActive = async (fileId: string, delayMs = 5000) => {
@@ -279,7 +272,7 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
                     topP: 0.8,
                     topK: 40,
                 },
-            }).catch((error) => {
+            }).catch((error: any) => {
                 console.error('Gemini API error details:', {
                     message: error.message,
                     status: error.status,
@@ -319,7 +312,7 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
         }
 
         const thoughts = modelResponse.candidates[0].content.parts
-            .find(part => part.thought === true)?.text;
+            .find((part: any) => part.thought === true)?.text;
 
         console.log('Model thoughts:', {
             length: thoughts?.length || 0,
@@ -327,7 +320,7 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
         });
 
         const textOutput = modelResponse.candidates[0].content.parts
-            .find(part => !('thought' in part))?.text;
+            .find((part: any) => !('thought' in part))?.text;
 
         console.log('Model output:', {
             length: textOutput?.length || 0,
@@ -385,18 +378,18 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
     }
 }
 
-export const generateCaptions = async (audioUrl: string, mimeType: string) => {
-    console.log('=== GOOGLE GENAI CAPTION GENERATION STARTED ===');
+export const generateTranscription = async (signedUrl: string, mimeType: string) => {
+    console.log('=== GOOGLE GENAI TRANSCRIPTION STARTED ===');
     console.log('Input parameters:', {
-        audioUrlLength: audioUrl.length,
-        mimeType
+        mimeType,
+        signedUrlLength: signedUrl.length
     });
 
     try {
-        // Download the audio file
-        console.log('Starting audio file download...');
+        // Download the video/audio file
+        console.log('Starting media file download for transcription...');
         const controller = new AbortController();
-        const fileResponse = await fetch(audioUrl, {
+        const fileResponse = await fetch(signedUrl, {
             signal: controller.signal,
         });
 
@@ -406,35 +399,35 @@ export const generateCaptions = async (audioUrl: string, mimeType: string) => {
                 statusText: fileResponse.statusText,
                 headers: Object.fromEntries(fileResponse.headers.entries())
             });
-            throw new Error(`Failed to download audio file: ${fileResponse.status} ${fileResponse.statusText}`);
+            throw new Error(`Failed to download media file: ${fileResponse.status} ${fileResponse.statusText}`);
         }
 
         console.log('Download successful, reading file buffer...');
         const buffer = await Promise.race([
             fileResponse.arrayBuffer(),
             new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('Buffer read timeout')), 10 * 60 * 1000)
+                setTimeout(() => reject(new Error('Buffer read timeout')), 24 * 60 * 60 * 1000)
             )
         ]) as ArrayBuffer;
 
-        console.log('Audio file details:', {
+        console.log('File details:', {
             sizeBytes: buffer.byteLength,
             sizeMB: (buffer.byteLength / (1024 * 1024)).toFixed(2),
             mimeType
         });
 
         if (buffer.byteLength === 0) {
-            throw new Error('Audio file is empty');
+            throw new Error('Media file is empty');
         }
 
         const blob = new Blob([buffer], { type: mimeType });
-        console.log('Blob created:', {
+        console.log('Blob created for transcription:', {
             size: blob.size,
             type: blob.type
         });
 
         // Upload the file to Google GenAI
-        console.log('Initiating file upload to Google GenAI...');
+        console.log('Initiating file upload to Google GenAI for transcription...');
         const uploadStartTime = Date.now();
         const uploadPromise = ai.files.upload({
             file: blob,
@@ -444,11 +437,11 @@ export const generateCaptions = async (audioUrl: string, mimeType: string) => {
         const uploadedFile = await Promise.race([
             uploadPromise,
             new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('File upload timeout')), 10 * 60 * 1000)
+                setTimeout(() => reject(new Error('File upload timeout')), 24 * 60 * 60 * 1000)
             )
         ]);
 
-        console.log('File upload completed:', {
+        console.log('File upload completed for transcription:', {
             duration: `${((Date.now() - uploadStartTime) / 1000).toFixed(2)}s`,
             fileUri: uploadedFile.uri,
             fileName: uploadedFile.name
@@ -462,7 +455,7 @@ export const generateCaptions = async (audioUrl: string, mimeType: string) => {
             throw new Error('File name not returned from upload');
         }
 
-        console.log('Waiting for file to become active...');
+        console.log('Waiting for file to become active for transcription...');
         try {
             await waitForFileActive(uploadedFile.name);
             console.log('File is now active, proceeding with transcription');
@@ -474,11 +467,11 @@ export const generateCaptions = async (audioUrl: string, mimeType: string) => {
                     stack: error.stack
                 } : error
             });
-            throw new Error(`Audio processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw new Error(`Media processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
         const content = createUserContent([
-            "Transcribe this audio file with precise timing. Return only the JSON array as specified.",
+            'Please transcribe this audio/video content and provide timestamped captions in SRT format. Be accurate with timing and make captions readable.',
             createPartFromUri(uploadedFile.uri, mimeType)
         ]);
 
@@ -489,14 +482,14 @@ export const generateCaptions = async (audioUrl: string, mimeType: string) => {
                 model: model,
                 contents: [content],
                 config: {
-                    systemInstruction: captionSystemInstruction,
+                    systemInstruction: transcriptionSystemInstruction,
                     maxOutputTokens: 8192,
-                    temperature: 0.3, // Lower temperature for more consistent formatting
+                    temperature: 0.1, // Lower temperature for more accurate transcription
                     topP: 0.8,
                     topK: 40,
                 },
-            }).catch((error) => {
-                console.error('Gemini API error details:', {
+            }).catch((error: any) => {
+                console.error('Gemini API transcription error details:', {
                     message: error.message,
                     status: error.status,
                     code: error.code,
@@ -510,17 +503,17 @@ export const generateCaptions = async (audioUrl: string, mimeType: string) => {
                 } else if (error.message?.includes('quota') || error.message?.includes('limit')) {
                     throw new Error('API quota or rate limit exceeded. Please try again later.');
                 } else if (error.message?.includes('timeout')) {
-                    throw new Error('Request timed out. Please try with a shorter audio file.');
+                    throw new Error('Request timed out. Please try with a shorter video.');
                 } else {
                     throw error;
                 }
             }),
             new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('Model generation timeout after 10 minutes')), 10 * 60 * 1000)
+                setTimeout(() => reject(new Error('Model generation timeout after 24 hours')), 24 * 60 * 60 * 1000)
             )
         ]);
 
-        console.log('Model generation completed:', {
+        console.log('Model transcription completed:', {
             duration: `${((Date.now() - modelStartTime) / 1000).toFixed(2)}s`,
             hasCandidates: !!modelResponse.candidates,
             candidateCount: modelResponse.candidates?.length
@@ -534,61 +527,21 @@ export const generateCaptions = async (audioUrl: string, mimeType: string) => {
             throw new Error('No parts found in response')
         }
 
-        const textOutput = modelResponse.candidates[0].content.parts
-            .find(part => !('thought' in part))?.text;
+        const transcriptionOutput = modelResponse.candidates[0].content.parts
+            .find((part: any) => !('thought' in part))?.text;
 
-        console.log('Model output:', {
-            length: textOutput?.length || 0,
-            preview: textOutput?.substring(0, 200) + '...'
+        console.log('Model transcription output:', {
+            length: transcriptionOutput?.length || 0,
+            preview: transcriptionOutput?.substring(0, 200) + '...'
         });
 
-        // Parse the JSON output from the model
-        let captions: Array<{ start_ms: number, end_ms: number, text: string, confidence: number }> = [];
-        try {
-            // Extract JSON array from the text output
-            const jsonMatch = textOutput?.match(/\[\s*\{[\s\S]*\}\s*\]/);
-            if (jsonMatch) {
-                captions = JSON.parse(jsonMatch[0]);
-            } else {
-                throw new Error('No valid JSON array found in model output');
-            }
-
-            // Validate the captions array
-            if (!Array.isArray(captions)) {
-                throw new Error('Model output is not an array');
-            }
-
-            // Validate each caption
-            captions.forEach((caption, index) => {
-                if (typeof caption.start_ms !== 'number' || 
-                    typeof caption.end_ms !== 'number' || 
-                    typeof caption.text !== 'string' ||
-                    caption.start_ms < 0 ||
-                    caption.end_ms <= caption.start_ms) {
-                    throw new Error(`Invalid caption format at index ${index}`);
-                }
-                
-                // Set default confidence if missing
-                if (typeof caption.confidence !== 'number') {
-                    caption.confidence = 0.9;
-                }
-            });
-
-            console.log('Parsed captions:', {
-                count: captions.length,
-                totalDuration: captions.length > 0 ? captions[captions.length - 1].end_ms : 0
-            });
-
-        } catch (error) {
-            console.error('Failed to parse model output:', error);
-            throw new Error(`Failed to parse model output: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.log('=== GOOGLE GENAI TRANSCRIPTION COMPLETED ===');
+        return {
+            transcription: transcriptionOutput || ''
         }
-
-        console.log('=== GOOGLE GENAI CAPTION GENERATION COMPLETED ===');
-        return captions;
     }
     catch (error) {
-        console.error('=== GOOGLE GENAI CAPTION GENERATION FAILED ===');
+        console.error('=== GOOGLE GENAI TRANSCRIPTION FAILED ===');
         console.error('Error details:', {
             error: error instanceof Error ? {
                 name: error.name,

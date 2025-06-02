@@ -4,6 +4,7 @@ import { LucideIcon } from 'lucide-react'
 interface PanelHeaderProps {
     icon: LucideIcon
     title: string
+    description?: string
     iconBgColor?: string
     iconColor?: string
 }
@@ -11,6 +12,7 @@ interface PanelHeaderProps {
 export default function PanelHeader({
     icon: Icon,
     title,
+    description,
     iconBgColor = 'bg-blue-50',
     iconColor = 'text-blue-600'
 }: PanelHeaderProps) {
@@ -19,7 +21,12 @@ export default function PanelHeader({
             <div className={`p-2 ${iconBgColor} rounded-lg`}>
                 <Icon className={`w-6 h-6 ${iconColor}`} />
             </div>
-            <span className="text-lg font-semibold text-black/50">{title}</span>
+            <div className="flex flex-col">
+                <span className="text-lg font-semibold text-black/50">{title}</span>
+                {description && (
+                    <span className="text-sm text-gray-500">{description}</span>
+                )}
+            </div>
         </div>
     )
 } 
