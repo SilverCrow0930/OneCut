@@ -380,69 +380,70 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
         // Calculate position relative to the timeline container
         const x = e.clientX - timelineRect.left - dragOffset
-        const newLeft = Math.max(0, Math.round(x / timeScale) * timeScale)
+        
+        // Grid snap to every 500ms (0.5 seconds) for better precision
+        const gridSnapMs = 500
+        const gridSnapPixels = gridSnapMs * timeScale
+        
+        // Round to nearest grid position
+        const snappedX = Math.round(x / gridSnapPixels) * gridSnapPixels
+        const newLeft = Math.max(0, snappedX)
 
         // Check for collisions with other clips in the same track
         const otherClips = clips.filter(c => c.trackId === clip.trackId && c.id !== clip.id)
         const clipWidth = (clip.timelineEndMs - clip.timelineStartMs) * timeScale
 
-        // Find nearby clips and check for overlaps
-        const nearbyClips = otherClips.filter(c => {
-            const clipLeft = c.timelineStartMs * timeScale
-            const clipRight = c.timelineEndMs * timeScale
-            const snapDistance = 20 // pixels to consider for snapping
-
-            // Check for overlap
-            const isOverlap = !(newLeft + clipWidth <= clipLeft || newLeft >= clipRight)
-            if (isOverlap) {
-                setIsOverlapping(true)
-                return false // Don't snap if overlapping
-            }
-
-            return (
-                // Check if we're near the left edge of another clip
-                Math.abs(newLeft - clipLeft) < snapDistance ||
-                // Check if we're near the right edge of another clip
-                Math.abs((newLeft + clipWidth) - clipRight) < snapDistance ||
-                // Check if we're near the end of a gap
-                Math.abs(newLeft - (clipRight + 10)) < snapDistance ||
-                // Check if we're near the start of a gap
-                Math.abs((newLeft + clipWidth + 10) - clipLeft) < snapDistance
-            )
-        })
-
-        // Calculate the final position with snapping
+        // Find nearby clips and check for overlaps and edge snapping
+        const snapDistance = 8 // Reduced from 20 to 8 pixels for more precision
         let finalLeft = newLeft
-        for (const nearbyClip of nearbyClips) {
+        let hasClipSnap = false
+
+        for (const nearbyClip of otherClips) {
             const clipLeft = nearbyClip.timelineStartMs * timeScale
             const clipRight = nearbyClip.timelineEndMs * timeScale
 
-            // Snap to left edge
-            if (Math.abs(newLeft - clipLeft) < 20) {
+            // Check for overlap first
+            const isOverlap = !(newLeft + clipWidth <= clipLeft || newLeft >= clipRight)
+            if (isOverlap) {
+                setIsOverlapping(true)
+                return
+            }
+
+            // Snap to left edge of other clip
+            if (Math.abs(newLeft - clipLeft) < snapDistance) {
                 finalLeft = clipLeft
-                setIsOverlapping(false)
+                hasClipSnap = true
+                break
             }
-            // Snap to right edge
-            else if (Math.abs((newLeft + clipWidth) - clipRight) < 20) {
+            // Snap our right edge to left edge of other clip (no gap)
+            else if (Math.abs((newLeft + clipWidth) - clipLeft) < snapDistance) {
+                finalLeft = clipLeft - clipWidth
+                hasClipSnap = true
+                break
+            }
+            // Snap to right edge of other clip
+            else if (Math.abs((newLeft + clipWidth) - clipRight) < snapDistance) {
                 finalLeft = clipRight - clipWidth
-                setIsOverlapping(false)
+                hasClipSnap = true
+                break
             }
-            // Snap to end of gap
-            else if (Math.abs(newLeft - (clipRight + 10)) < 20) {
-                finalLeft = clipRight + 10
-                setIsOverlapping(false)
+            // Snap our left edge to right edge of other clip (no gap)
+            else if (Math.abs(newLeft - clipRight) < snapDistance) {
+                finalLeft = clipRight
+                hasClipSnap = true
+                break
             }
-            // Snap to start of gap
-            else if (Math.abs((newLeft + clipWidth + 10) - clipLeft) < 20) {
-                finalLeft = clipLeft - clipWidth - 10
-                setIsOverlapping(false)
-            }
+        }
+
+        // If no clip snapping occurred, use grid snapping
+        if (!hasClipSnap) {
+            finalLeft = newLeft // Already grid-snapped above
         }
 
         // Ensure we don't go below 0
         finalLeft = Math.max(0, finalLeft)
 
-        // Update ghost position
+        setIsOverlapping(false)
         setGhostLeft(finalLeft)
     }
 

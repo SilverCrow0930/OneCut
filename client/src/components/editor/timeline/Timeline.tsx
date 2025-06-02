@@ -266,10 +266,13 @@ export default function Timeline() {
             // 2) compute time position
             const rect = containerRef.current.getBoundingClientRect()
             const x = e.clientX - rect.left
-            let startMs = Math.round(x / timeScale)
             
-            // Snap to 00:00 if we're very close to the beginning (within 10px)
-            if (x < 10) {
+            // Grid snap to every 500ms for better precision
+            const gridSnapMs = 500
+            let startMs = Math.round(x / timeScale / gridSnapMs) * gridSnapMs
+            
+            // Snap to 00:00 if we're very close to the beginning (within 250ms)
+            if (startMs < 250) {
                 startMs = 0
             } else {
                 startMs = Math.max(0, startMs)
@@ -355,10 +358,13 @@ export default function Timeline() {
         // 2) compute time position
         const rect = containerRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left
-        let startMs = Math.round(x / timeScale)
         
-        // Snap to 00:00 if we're very close to the beginning (within 10px)
-        if (x < 10) {
+        // Grid snap to every 500ms for better precision
+        const gridSnapMs = 500
+        let startMs = Math.round(x / timeScale / gridSnapMs) * gridSnapMs
+        
+        // Snap to 00:00 if we're very close to the beginning (within 250ms)
+        if (startMs < 250) {
             startMs = 0
         } else {
             startMs = Math.max(0, startMs)

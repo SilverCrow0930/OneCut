@@ -133,13 +133,16 @@ export default function TrackRow({
 
             console.log('Created external asset for track:', externalAsset)
 
-            // compute time position
+            // Calculate new start time
             const rect = rowRef.current.getBoundingClientRect()
             const x = e.clientX - rect.left
-            let startMs = Math.round(x / timeScale)
             
-            // Snap to 00:00 if we're very close to the beginning (within 10px)
-            if (x < 10) {
+            // Grid snap to every 500ms for better precision
+            const gridSnapMs = 500
+            let startMs = Math.round(x / timeScale / gridSnapMs) * gridSnapMs
+            
+            // Snap to 00:00 if we're very close to the beginning (within 250ms)
+            if (startMs < 250) {
                 startMs = 0
             } else {
                 startMs = Math.max(0, startMs)
@@ -188,10 +191,13 @@ export default function TrackRow({
             // Calculate new start time
             const rect = rowRef.current.getBoundingClientRect()
             const x = e.clientX - rect.left
-            let startMs = Math.round(x / timeScale)
             
-            // Snap to 00:00 if we're very close to the beginning (within 10px)
-            if (x < 10) {
+            // Grid snap to every 500ms for better precision
+            const gridSnapMs = 500
+            let startMs = Math.round(x / timeScale / gridSnapMs) * gridSnapMs
+            
+            // Snap to 00:00 if we're very close to the beginning (within 250ms)
+            if (startMs < 250) {
                 startMs = 0
             } else {
                 startMs = Math.max(0, startMs)
@@ -244,13 +250,16 @@ export default function TrackRow({
 
         console.log('Found asset in TrackRow:', asset)
 
-        // compute time position
+        // Calculate new start time
         const rect = rowRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left
-        let startMs = Math.round(x / timeScale)
         
-        // Snap to 00:00 if we're very close to the beginning (within 10px)
-        if (x < 10) {
+        // Grid snap to every 500ms for better precision
+        const gridSnapMs = 500
+        let startMs = Math.round(x / timeScale / gridSnapMs) * gridSnapMs
+        
+        // Snap to 00:00 if we're very close to the beginning (within 250ms)
+        if (startMs < 250) {
             startMs = 0
         } else {
             startMs = Math.max(0, startMs)
