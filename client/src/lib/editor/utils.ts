@@ -232,7 +232,7 @@ export function addAssetToTrack(
     }
     
     // Find the target track or create a new one
-    let targetTrack
+    let targetTrack: any = null
     let targetTrackIndex = trackIndex ?? tracks.length // Default to end
     
     // If no specific track index provided, try to find an existing track of the same type
@@ -249,15 +249,15 @@ export function addAssetToTrack(
     // Calculate start time - place at the end of existing content on the track
     let startTimeMs = options.startTimeMs ?? 0
     if (options.startTimeMs === undefined && targetTrack) {
-        // Find all clips on this track and get the latest end time
+        // Find the latest end time for clips on this track to prevent overlap
         const trackClips = clips.filter(clip => clip.trackId === targetTrack.id)
         if (trackClips.length > 0) {
             const latestEndTime = Math.max(...trackClips.map(clip => clip.timelineEndMs))
-            startTimeMs = latestEndTime
+            startTimeMs = latestEndTime // Place new clip after the last one
             console.log('Placing clip after existing content at:', startTimeMs)
         } else {
-            startTimeMs = 0 // First clip on this track
-            console.log('First clip on track, placing at start')
+            startTimeMs = 0 // First clip on track starts at 0
+            console.log('First clip on track, starting at 0')
         }
     }
     
@@ -277,6 +277,9 @@ export function addAssetToTrack(
             type: 'ADD_TRACK',
             payload: { track: targetTrack }
         })
+        
+        // For new tracks, start at 0 since there are no existing clips
+        startTimeMs = 0
     }
     
     // Create the clip
