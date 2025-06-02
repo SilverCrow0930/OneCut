@@ -203,54 +203,21 @@ export default function TrackRow({
                 startMs = Math.max(0, startMs)
             }
 
-            // Check for overlaps with existing clips in this track and add clip-to-clip snapping
+            // Check for overlaps with existing clips in this track
             const existingClips = clips.filter(c => c.id !== droppedClip.id)
-            const clipDurationMs = droppedClip.timelineEndMs - droppedClip.timelineStartMs
-            
-            // Smart snapping logic
-            const snapDistance = 8 * timeScale // 8 pixels converted to time
-            let finalStartMs = startMs
-            let hasClipSnap = false
-            
-            for (const existingClip of existingClips) {
-                // Check for overlap first
-                const wouldOverlap = !(finalStartMs + clipDurationMs <= existingClip.timelineStartMs || 
-                                       finalStartMs >= existingClip.timelineEndMs)
-                if (wouldOverlap) {
-                    console.log('Clip drop would overlap, cancelling')
-                    return
-                }
-                
-                // Snap to left edge of existing clip
-                if (Math.abs(finalStartMs - existingClip.timelineStartMs) < snapDistance) {
-                    finalStartMs = existingClip.timelineStartMs
-                    hasClipSnap = true
-                    break
-                }
-                // Snap our right edge to left edge of existing clip (no gap)
-                else if (Math.abs((finalStartMs + clipDurationMs) - existingClip.timelineStartMs) < snapDistance) {
-                    finalStartMs = existingClip.timelineStartMs - clipDurationMs
-                    hasClipSnap = true
-                    break
-                }
-                // Snap to right edge of existing clip
-                else if (Math.abs((finalStartMs + clipDurationMs) - existingClip.timelineEndMs) < snapDistance) {
-                    finalStartMs = existingClip.timelineEndMs - clipDurationMs
-                    hasClipSnap = true
-                    break
-                }
-                // Snap our left edge to right edge of existing clip (no gap)
-                else if (Math.abs(finalStartMs - existingClip.timelineEndMs) < snapDistance) {
-                    finalStartMs = existingClip.timelineEndMs
-                    hasClipSnap = true
-                    break
-                }
-            }
-            
-            // Ensure we don't go below 0
-            finalStartMs = Math.max(0, finalStartMs)
+            const clipWidth = (droppedClip.timelineEndMs - droppedClip.timelineStartMs) * timeScale
+            const wouldOverlap = existingClips.some(c => {
+                const clipLeft = c.timelineStartMs * timeScale
+                const clipRight = c.timelineEndMs * timeScale
+                return !(startMs + clipWidth <= clipLeft || startMs >= clipRight)
+            })
 
-            console.log('Moving clip to track:', track.id, 'at time:', finalStartMs, hasClipSnap ? '(snapped)' : '(grid)')
+            if (wouldOverlap) {
+                console.log('Clip drop would overlap, cancelling')
+                return
+            }
+
+            console.log('Moving clip to track:', track.id, 'at time:', startMs)
 
             // Update the clip position and track
             executeCommand({
@@ -260,8 +227,8 @@ export default function TrackRow({
                     after: {
                         ...droppedClip,
                         trackId: track.id,
-                        timelineStartMs: finalStartMs,
-                        timelineEndMs: finalStartMs + clipDurationMs
+                        timelineStartMs: startMs,
+                        timelineEndMs: startMs + (droppedClip.timelineEndMs - droppedClip.timelineStartMs)
                     }
                 }
             })

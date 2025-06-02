@@ -30,7 +30,10 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
     // drag state
     const [isDragging, setIsDragging] = useState(false)
+    const [ghostLeft, setGhostLeft] = useState(0)
+    const [ghostTrackId, setGhostTrackId] = useState<string | null>(null)
     const [dragOffset, setDragOffset] = useState(0)
+    const [isOverlapping, setIsOverlapping] = useState(false)
 
     // Find the asset details
     const asset = assets.find(a => a.id === clip.assetId)
@@ -287,13 +290,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 clipRef.current.style.transform = ''
                 clipRef.current.style.width = ''
             }
-            // Clean up any remaining drag state
-            if (isDragging) {
-                setIsDragging(false)
-                setDragOffset(0)
-            }
         }
-    }, [isDragging])
+    }, [])
 
     useEffect(() => {
         if (isResizing) {
@@ -357,11 +355,137 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         }
 
         setIsDragging(true)
+        setGhostLeft(clip.timelineStartMs * timeScale)
+        setGhostTrackId(clip.trackId)
     }
 
     const handleDragEnd = () => {
         setIsDragging(false)
+        setGhostTrackId(null)
         setDragOffset(0)
+        setIsOverlapping(false)
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+
+        if (!clipRef.current) return
+
+        // Get the timeline container's position
+        const timelineContainer = clipRef.current.closest('.timeline-container')
+        if (!timelineContainer) return
+
+        const timelineRect = timelineContainer.getBoundingClientRect()
+
+        // Calculate position relative to the timeline container
+        const x = e.clientX - timelineRect.left - dragOffset
+        
+        // Grid snap to every 500ms (0.5 seconds) for better precision
+        const gridSnapMs = 500
+        const gridSnapPixels = gridSnapMs * timeScale
+        
+        // Round to nearest grid position
+        const snappedX = Math.round(x / gridSnapPixels) * gridSnapPixels
+        const newLeft = Math.max(0, snappedX)
+
+        // Check for collisions with other clips in the same track
+        const otherClips = clips.filter(c => c.trackId === clip.trackId && c.id !== clip.id)
+        const clipWidth = (clip.timelineEndMs - clip.timelineStartMs) * timeScale
+
+        // Find nearby clips and check for overlaps and edge snapping
+        const snapDistance = 8 // Reduced from 20 to 8 pixels for more precision
+        let finalLeft = newLeft
+        let hasClipSnap = false
+
+        for (const nearbyClip of otherClips) {
+            const clipLeft = nearbyClip.timelineStartMs * timeScale
+            const clipRight = nearbyClip.timelineEndMs * timeScale
+
+            // Check for overlap first
+            const isOverlap = !(newLeft + clipWidth <= clipLeft || newLeft >= clipRight)
+            if (isOverlap) {
+                setIsOverlapping(true)
+                return
+            }
+
+            // Snap to left edge of other clip
+            if (Math.abs(newLeft - clipLeft) < snapDistance) {
+                finalLeft = clipLeft
+                hasClipSnap = true
+                break
+            }
+            // Snap our right edge to left edge of other clip (no gap)
+            else if (Math.abs((newLeft + clipWidth) - clipLeft) < snapDistance) {
+                finalLeft = clipLeft - clipWidth
+                hasClipSnap = true
+                break
+            }
+            // Snap to right edge of other clip
+            else if (Math.abs((newLeft + clipWidth) - clipRight) < snapDistance) {
+                finalLeft = clipRight - clipWidth
+                hasClipSnap = true
+                break
+            }
+            // Snap our left edge to right edge of other clip (no gap)
+            else if (Math.abs(newLeft - clipRight) < snapDistance) {
+                finalLeft = clipRight
+                hasClipSnap = true
+                break
+            }
+        }
+
+        // If no clip snapping occurred, use grid snapping
+        if (!hasClipSnap) {
+            finalLeft = newLeft // Already grid-snapped above
+        }
+
+        // Ensure we don't go below 0
+        finalLeft = Math.max(0, finalLeft)
+
+        setIsOverlapping(false)
+        setGhostLeft(finalLeft)
+    }
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+
+        if (!clipRef.current || isOverlapping) return
+
+        // Get the dropped clip data
+        let payload: { clipId: string }
+        try {
+            payload = JSON.parse(e.dataTransfer.getData('application/json'))
+        } catch {
+            return
+        }
+
+        const droppedClip = clips.find(c => c.id === payload.clipId)
+        if (!droppedClip) return
+
+        // Calculate new start time
+        const newStartMs = Math.round(ghostLeft / timeScale)
+        const durationMs = droppedClip.timelineEndMs - droppedClip.timelineStartMs
+
+        // Update the clip position
+        executeCommand({
+            type: 'UPDATE_CLIP',
+            payload: {
+                before: droppedClip,
+                after: {
+                    ...droppedClip,
+                    timelineStartMs: newStartMs,
+                    timelineEndMs: newStartMs + durationMs
+                }
+            }
+        })
+
+        // Reset drag state
+        setIsDragging(false)
+        setGhostTrackId(null)
+        setDragOffset(0)
+        setIsOverlapping(false)
     }
 
     return (
@@ -395,6 +519,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 draggable={!isResizing}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
             >
                 {/* Left edge hover area */}
                 <div
@@ -470,6 +596,20 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     {formatTime(durationMs)}
                 </div>
             </div>
+            {/* Ghost preview - only show for the clip being dragged */}
+            {
+                isDragging && ghostTrackId === clip.trackId && (
+                    <div
+                        className="absolute top-0 bottom-0 pointer-events-none"
+                        style={{
+                            left: ghostLeft,
+                            width: '2px',
+                            backgroundColor: isOverlapping ? '#ef4444' : '#3b82f6', // red-500 or blue-500
+                            zIndex: 9999
+                        }}
+                    />
+                )
+            }
             {
                 showContextMenu && (
                     <div
