@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Wand2, Download, Copy, RotateCcw, Mic, CheckCircle, AlertCircle, Loader2, Sparkles, Plus, AlignCenter, ArrowUp, ArrowDown } from 'lucide-react'
+import { Wand2, Download, Copy, RotateCcw, Mic, CheckCircle, AlertCircle, Loader2, Sparkles, Plus, AlignCenter, ArrowUp, ArrowDown, Edit2, Check } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -204,9 +204,16 @@ const CaptionsToolPanel = () => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [progressStage, setProgressStage] = useState<'upload' | 'processing' | 'generating' | null>(null)
     
+    // Workflow states: 'initial' | 'generating' | 'editing' | 'styling'
+    const [workflowPhase, setWorkflowPhase] = useState<'initial' | 'generating' | 'editing' | 'styling'>('initial')
+    
     // Caption customization states
     const [selectedStyleIdx, setSelectedStyleIdx] = useState(0)
     const [selectedPlacement, setSelectedPlacement] = useState('bottom')
+    
+    // Editing states
+    const [editingCaptionId, setEditingCaptionId] = useState<number | null>(null)
+    const [editText, setEditText] = useState('')
     
     const { clips, tracks, executeCommand } = useEditor()
     const { session } = useAuth()
@@ -287,6 +294,7 @@ const CaptionsToolPanel = () => {
         }
 
         setIsGenerating(true)
+        setWorkflowPhase('generating')
         setError(null)
         setSuccessMessage(null)
         setCaptions([])
@@ -324,8 +332,10 @@ const CaptionsToolPanel = () => {
 
             if (parsedCaptions.length === 0) {
                 setError('No speech detected. Try with clearer audio or a video with spoken content.')
+                setWorkflowPhase('initial')
             } else {
                 setSuccessMessage(`🎉 Generated ${parsedCaptions.length} captions successfully!`)
+                setWorkflowPhase('editing')
                 // Auto-clear success message after 5 seconds
                 setTimeout(() => setSuccessMessage(null), 5000)
             }
@@ -333,10 +343,37 @@ const CaptionsToolPanel = () => {
         } catch (error: any) {
             console.error('❌ Transcription failed:', error)
             setError(error.message || 'Failed to generate captions')
+            setWorkflowPhase('initial')
         } finally {
             setIsGenerating(false)
             setProgressStage(null)
         }
+    }
+
+    const handleStartEdit = (caption: Caption) => {
+        setEditingCaptionId(caption.id)
+        setEditText(caption.text)
+    }
+
+    const handleSaveEdit = () => {
+        if (editingCaptionId !== null) {
+            setCaptions(prev => prev.map(caption => 
+                caption.id === editingCaptionId 
+                    ? { ...caption, text: editText }
+                    : caption
+            ))
+            setEditingCaptionId(null)
+            setEditText('')
+        }
+    }
+
+    const handleCancelEdit = () => {
+        setEditingCaptionId(null)
+        setEditText('')
+    }
+
+    const handleProceedToStyling = () => {
+        setWorkflowPhase('styling')
     }
 
     const handleAddToTimeline = () => {
@@ -421,6 +458,10 @@ const CaptionsToolPanel = () => {
             })
 
             setSuccessMessage(`🎬 Added ${captions.length} captions to timeline!`)
+            
+            // Reset to initial state
+            setWorkflowPhase('initial')
+            setCaptions([])
             setTimeout(() => setSuccessMessage(null), 3000)
 
         } catch (error) {
@@ -429,10 +470,13 @@ const CaptionsToolPanel = () => {
         }
     }
 
-    const handleClearCaptions = () => {
+    const handleStartOver = () => {
         setCaptions([])
         setError(null)
         setSuccessMessage(null)
+        setWorkflowPhase('initial')
+        setEditingCaptionId(null)
+        setEditText('')
     }
 
     // Get the clip info for display
@@ -478,113 +522,202 @@ const CaptionsToolPanel = () => {
                 </div>
             )}
 
-            {/* Main Action */}
-            {transcribableClips.length === 0 ? (
-                <div className="text-center py-12">
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-blue-100 flex items-center justify-center">
-                        <Mic size={32} className="text-blue-500" />
+            {/* Phase 1: Initial Generation */}
+            {workflowPhase === 'initial' && (
+                transcribableClips.length === 0 ? (
+                    <div className="text-center py-12">
+                        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-blue-100 flex items-center justify-center">
+                            <Mic size={32} className="text-blue-500" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-700 mb-3">No Media Found</h3>
+                        <p className="text-gray-500 max-w-sm mx-auto leading-relaxed">
+                            Add a video or audio clip to your timeline to generate AI captions automatically
+                        </p>
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-700 mb-3">No Media Found</h3>
-                    <p className="text-gray-500 max-w-sm mx-auto leading-relaxed">
-                        Add a video or audio clip to your timeline to generate AI captions automatically
-                    </p>
-                </div>
-            ) : (
-                <div className="space-y-5">
-                    {/* Clip Info */}
-                    {selectedClip && (
-                        <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-xl">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="w-10 h-10 rounded-lg bg-white/80 flex items-center justify-center text-lg">
-                                    {selectedClip.type === 'video' ? '📹' : '🎵'}
+                ) : (
+                    <div className="space-y-5">
+                        {/* Clip Info */}
+                        {selectedClip && (
+                            <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-xl">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 rounded-lg bg-white/80 flex items-center justify-center text-lg">
+                                        {selectedClip.type === 'video' ? '📹' : '🎵'}
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-blue-800">
+                                            {selectedClip.type === 'video' ? 'Video' : 'Audio'} Clip {selectedClipIndex + 1}
+                                        </div>
+                                        <div className="text-xs text-blue-600">
+                                            Duration: {Math.round((selectedClip.timelineEndMs - selectedClip.timelineStartMs) / 1000)}s
+                                        </div>
+                                    </div>
+                                    {transcribableClips.length === 1 && (
+                                        <div className="ml-auto">
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                                <Sparkles size={12} />
+                                                Ready
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                                <div>
-                                    <div className="text-sm font-semibold text-blue-800">
-                                        {selectedClip.type === 'video' ? 'Video' : 'Audio'} Clip {selectedClipIndex + 1}
-                                    </div>
-                                    <div className="text-xs text-blue-600">
-                                        Duration: {Math.round((selectedClip.timelineEndMs - selectedClip.timelineStartMs) / 1000)}s
-                                    </div>
-                                </div>
-                                {transcribableClips.length === 1 && !captions.length && (
-                                    <div className="ml-auto">
-                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                                            <Sparkles size={12} />
-                                            Ready
-                                        </span>
-                                    </div>
+                                {transcribableClips.length > 1 && (
+                                    <p className="text-xs text-blue-600">
+                                        Auto-selected longest {selectedClip.type} clip
+                                    </p>
                                 )}
                             </div>
-                            {transcribableClips.length > 1 && (
-                                <p className="text-xs text-blue-600">
-                                    Auto-selected longest {selectedClip.type} clip
-                                </p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* One-Click Generate Button */}
-                    <button 
-                        onClick={handleOneClickGenerate}
-                        disabled={!autoSelectedClip || isGenerating}
-                        className="
-                            relative overflow-hidden
-                            flex items-center justify-center gap-3 w-full px-6 py-5
-                            bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-2xl
-                            hover:from-blue-700 hover:to-blue-700 
-                            disabled:opacity-50 disabled:cursor-not-allowed
-                            font-semibold text-lg shadow-lg hover:shadow-xl
-                            transform hover:scale-[1.02] active:scale-[0.98]
-                            transition-all duration-300
-                            group
-                        "
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
-                        {isGenerating ? (
-                            <>
-                                <Loader2 size={28} className="animate-spin" />
-                                <span>Generating Captions...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Wand2 size={28} />
-                                <span>
-                                    {transcribableClips.length === 1 ? 'Generate AI Captions' : 'Generate AI Captions'}
-                                </span>
-                            </>
                         )}
-                    </button>
-                    
-                    {isGenerating && (
-                        <div className="space-y-4 animate-in fade-in-50 duration-500">
-                            <div className="text-center space-y-3">
-                                <div className="text-base text-gray-700 font-medium">
-                                    {progressContent.text}
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                                    <div 
-                                        className="bg-gradient-to-r from-blue-600 to-blue-600 h-3 rounded-full transition-all duration-700 ease-out"
-                                        style={{width: `${progressContent.percent}%`}}
-                                    ></div>
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                    This usually takes 30-60 seconds depending on audio length
-                                </div>
-                            </div>
+
+                        {/* One-Click Generate Button */}
+                        <button 
+                            onClick={handleOneClickGenerate}
+                            disabled={!autoSelectedClip}
+                            className="
+                                relative overflow-hidden
+                                flex items-center justify-center gap-3 w-full px-6 py-5
+                                bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-2xl
+                                hover:from-blue-700 hover:to-blue-700 
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                                font-semibold text-lg shadow-lg hover:shadow-xl
+                                transform hover:scale-[1.02] active:scale-[0.98]
+                                transition-all duration-300
+                                group
+                            "
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+                            <Wand2 size={28} />
+                            <span>Generate AI Captions</span>
+                        </button>
+                    </div>
+                )
+            )}
+
+            {/* Phase 2: Generating */}
+            {workflowPhase === 'generating' && (
+                <div className="space-y-4 animate-in fade-in-50 duration-500">
+                    <div className="text-center space-y-3">
+                        <div className="text-base text-gray-700 font-medium">
+                            {progressContent.text}
                         </div>
-                    )}
+                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div 
+                                className="bg-gradient-to-r from-blue-600 to-blue-600 h-3 rounded-full transition-all duration-700 ease-out"
+                                style={{width: `${progressContent.percent}%`}}
+                            ></div>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                            This usually takes 30-60 seconds depending on audio length
+                        </div>
+                    </div>
                 </div>
             )}
 
-            {/* Caption Customization - Only show when captions are generated */}
-            {captions.length > 0 && (
+            {/* Phase 3: Edit Captions */}
+            {workflowPhase === 'editing' && captions.length > 0 && (
                 <div className="space-y-5 animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                            <Edit2 size={18} className="text-blue-500" />
+                            Edit Your Captions ({captions.length})
+                        </h4>
+                        <button
+                            onClick={handleStartOver}
+                            className="text-gray-500 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                            title="Start over"
+                        >
+                            <RotateCcw size={16} />
+                        </button>
+                    </div>
+
+                    {/* Editable Captions List */}
+                    <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                        <div className="max-h-80 overflow-y-auto">
+                            {captions.map((caption, index) => (
+                                <div key={caption.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-xs font-mono text-white bg-blue-500 px-2 py-1 rounded-md">
+                                            {caption.startTime.split(',')[0]}
+                                        </span>
+                                        <span className="text-xs text-gray-400">#{index + 1}</span>
+                                        <div className="ml-auto">
+                                            {editingCaptionId === caption.id ? (
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={handleSaveEdit}
+                                                        className="text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                                                        title="Save"
+                                                    >
+                                                        <Check size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={handleCancelEdit}
+                                                        className="text-gray-500 hover:bg-gray-100 p-1 rounded transition-colors"
+                                                        title="Cancel"
+                                                    >
+                                                        <RotateCcw size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleStartEdit(caption)}
+                                                    className="text-blue-500 hover:bg-blue-50 p-1 rounded transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit2 size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {editingCaptionId === caption.id ? (
+                                        <textarea
+                                            value={editText}
+                                            onChange={(e) => setEditText(e.target.value)}
+                                            className="w-full p-2 border border-blue-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            rows={2}
+                                            autoFocus
+                                        />
+                                    ) : (
+                                        <p className="text-sm text-gray-800 leading-relaxed cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleStartEdit(caption)}>
+                                            {caption.text}
+                                        </p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Proceed Button */}
+                    <button
+                        onClick={handleProceedToStyling}
+                        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 transform hover:scale-[1.02] font-medium shadow-md text-base"
+                    >
+                        <Sparkles size={20} />
+                        Continue to Styling
+                    </button>
+                </div>
+            )}
+
+            {/* Phase 4: Style and Placement */}
+            {workflowPhase === 'styling' && captions.length > 0 && (
+                <div className="space-y-5 animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                            <Sparkles size={18} className="text-blue-500" />
+                            Style Your Captions
+                        </h4>
+                        <button
+                            onClick={() => setWorkflowPhase('editing')}
+                            className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors text-sm"
+                        >
+                            ← Back to Edit
+                        </button>
+                    </div>
+
                     {/* Style Selection */}
                     <div className="space-y-3">
-                        <h4 className="text-base font-semibold text-gray-700 flex items-center gap-2">
-                            <Sparkles size={16} className="text-blue-500" />
-                            Caption Style
-                        </h4>
+                        <h5 className="text-base font-semibold text-gray-700">Font Style</h5>
                         <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
                             {captionStyles.map((style, i) => (
                                 <button
@@ -612,7 +745,7 @@ const CaptionsToolPanel = () => {
 
                     {/* Placement Selection */}
                     <div className="space-y-3">
-                        <h4 className="text-base font-semibold text-gray-700">Caption Placement</h4>
+                        <h5 className="text-base font-semibold text-gray-700">Caption Placement</h5>
                         <div className="flex gap-2">
                             {captionPlacements.map((placement) => {
                                 const Icon = placement.icon
@@ -646,41 +779,12 @@ const CaptionsToolPanel = () => {
                             Add to Timeline
                         </button>
                         <button
-                            onClick={handleClearCaptions}
+                            onClick={handleStartOver}
                             className="px-4 py-3 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                            title="Clear captions"
+                            title="Start over"
                         >
                             <RotateCcw size={18} />
                         </button>
-                    </div>
-
-                    {/* Captions Preview */}
-                    <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                        <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-3 border-b border-gray-200">
-                            <h4 className="text-base font-semibold text-gray-700 flex items-center gap-2">
-                                <Sparkles size={16} className="text-blue-500" />
-                                Generated Captions ({captions.length})
-                            </h4>
-                        </div>
-                        <div className="max-h-64 overflow-y-auto">
-                            {captions.slice(0, 6).map((caption, index) => (
-                                <div key={caption.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-xs font-mono text-white bg-blue-500 px-2 py-1 rounded-md">
-                                            {caption.startTime.split(',')[0]}
-                                        </span>
-                                        <span className="text-xs text-gray-400">#{index + 1}</span>
-                                    </div>
-                                    <p className="text-sm text-gray-800 leading-relaxed">{caption.text}</p>
-                                </div>
-                            ))}
-                            {captions.length > 6 && (
-                                <div className="p-4 text-center text-sm text-gray-500 bg-gray-50/50 border-t">
-                                    <Sparkles size={14} className="inline mr-1" />
-                                    ... and {captions.length - 6} more captions
-                                </div>
-                            )}
-                        </div>
                     </div>
 
                     {/* Quick tip */}
