@@ -21,9 +21,25 @@ const CaptionsToolPanel = () => {
     const { session } = useAuth()
 
     // Get video/audio clips that can be transcribed
-    const transcribableClips = clips.filter(clip => 
-        (clip.type === 'video' || clip.type === 'audio') && clip.assetId
-    )
+    const transcribableClips = clips.filter(clip => {
+        // Debug logging to help identify the issue
+        console.log('Checking clip for transcription:', {
+            id: clip.id,
+            type: clip.type,
+            assetId: clip.assetId,
+            hasExternalAsset: !!clip.properties?.externalAsset,
+            isTextClip: clip.type === 'text'
+        })
+        
+        // Exclude text clips and external assets (like Pexels/Giphy content)
+        const isTranscribable = (clip.type === 'video' || clip.type === 'audio') && 
+                               clip.assetId && 
+                               !clip.properties?.externalAsset &&
+                               clip.type !== 'text'
+        
+        console.log('Is transcribable:', isTranscribable)
+        return isTranscribable
+    })
 
     // Parse SRT format to caption objects
     const parseSRT = (srtText: string): Caption[] => {
@@ -145,7 +161,6 @@ const CaptionsToolPanel = () => {
             <PanelHeader 
                 icon={Mic} 
                 title="AI Captions" 
-                description="Generate AI-powered captions for your videos"
             />
             
             {/* Clip Selection */}
