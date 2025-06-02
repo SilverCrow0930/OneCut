@@ -353,7 +353,7 @@ export default function TrackRow({
                 ref={rowRef}
                 className={`
                     relative h-12
-                    transition-all duration-200 rounded-lg overflow-x-auto overflow-y-hidden
+                    transition-colors duration-200 rounded-lg overflow-x-auto overflow-y-hidden
                     scrollbar-hide
                     ${(track as any).isEmpty 
                         ? 'bg-gray-50/50 border-2 border-dashed border-gray-200/60 hover:border-gray-300/60 hover:bg-gray-100/50' 
@@ -361,8 +361,8 @@ export default function TrackRow({
                     }
                     ${isDragOver
                         ? (track as any).isEmpty
-                            ? 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]'
-                            : 'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]' 
+                            ? 'border-blue-400 bg-blue-50 shadow-lg'
+                            : 'border-blue-400 bg-blue-50 shadow-lg' 
                         : (track as any).isEmpty
                             ? ''
                             : 'border-gray-200/80 hover:border-gray-300 hover:bg-gray-50/80 shadow-sm hover:shadow-md'
