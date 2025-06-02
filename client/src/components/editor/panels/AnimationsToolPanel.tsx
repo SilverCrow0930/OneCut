@@ -120,28 +120,24 @@ const AnimationsToolPanel = () => {
         
         if (!targetTrack) {
             // Create a new video track if none exists
-            targetTrack = {
+            const newTrack = {
                 id: uuid(),
                 projectId: 'current-project', // This should come from context
                 index: tracks.length,
-                type: 'video',
+                type: 'video' as const,
                 createdAt: new Date().toISOString(),
-                name: 'Animation Track',
-                isLocked: false,
-                isMuted: false,
-                isSolo: false,
-                volume: 1,
-                pan: 0,
             }
             
             executeCommand({
                 type: 'ADD_TRACK',
-                payload: { track: targetTrack }
+                payload: { track: newTrack }
             })
+            
+            targetTrack = newTrack
         }
 
         // Find the latest clip end time on this track, or start at 0
-        const trackClips = clips.filter(clip => clip.trackId === targetTrack.id)
+        const trackClips = clips.filter(clip => clip.trackId === targetTrack!.id)
         const latestEndTime = trackClips.length > 0 
             ? Math.max(...trackClips.map(clip => clip.timelineEndMs))
             : 0
@@ -150,8 +146,8 @@ const AnimationsToolPanel = () => {
         const transitionClip = {
             id: uuid(),
             trackId: targetTrack.id,
-            assetId: null, // Transitions don't use assets
-            type: 'transition' as const,
+            assetId: undefined, // Transitions don't use assets
+            type: 'video' as const, // Use 'video' instead of 'transition' for now
             sourceStartMs: 0,
             sourceEndMs: transition.duration,
             timelineStartMs: latestEndTime,
@@ -162,9 +158,7 @@ const AnimationsToolPanel = () => {
             properties: {
                 name: transition.name,
                 transitionType: transition.type,
-                isLocked: false,
-                isMuted: false,
-                isSolo: false,
+                isTransition: true,
             },
             createdAt: new Date().toISOString(),
         }
