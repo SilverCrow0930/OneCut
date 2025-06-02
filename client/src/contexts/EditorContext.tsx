@@ -16,6 +16,7 @@ import { initialHistory } from '@/lib/constants'
 import { dbToClip, dbToTrack, historyReducer } from '@/lib/editor/utils'
 import { Track, Clip, Command, SaveState } from '@/types/editor'
 import { toDbClip, toDbTrack } from '../lib/editor/mapToDb'
+import { generateAndUpdateProjectThumbnail } from '@/lib/thumbnailGenerator'
 
 interface EditorContextType {
     project: Project | null
@@ -25,6 +26,8 @@ interface EditorContextType {
     setSelectedTool: (tool: string) => void
     refetch: () => void
     updateProjectName: (name: string) => Promise<void>
+    updateProjectThumbnail: (thumbnailUrl: string) => Promise<void>
+    generateThumbnail: () => Promise<void>
 
     // timeline
     tracks: Track[]
@@ -269,12 +272,74 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
     }
 
+    const updateProjectThumbnail = async (thumbnailUrl: string) => {
+        if (!session?.access_token) return
+
+        try {
+            const response = await fetch(apiPath(`projects/${projectId}`), {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    thumbnail_url: thumbnailUrl
+                }),
+            })
+
+            if (!response.ok) {
+                const text = await response.text()
+                throw new Error(text || response.statusText)
+            }
+
+            const data: Project = await response.json()
+            setProject(data)
+        }
+        catch (error: any) {
+            console.error('Failed to update project thumbnail:', error)
+            throw error
+        }
+    }
+
+    const generateThumbnail = async () => {
+        if (!session?.access_token || !projectId) return
+
+        try {
+            await generateAndUpdateProjectThumbnail(
+                projectId,
+                clips,
+                session.access_token,
+                updateProjectThumbnail
+            )
+        }
+        catch (error: any) {
+            console.error('Failed to generate thumbnail:', error)
+            setError('Failed to generate thumbnail')
+        }
+    }
+
+    // Auto-generate thumbnail when clips change and we have video clips
+    useEffect(() => {
+        const hasVideoClips = clips.some(clip => clip.type === 'video' && clip.assetId)
+        
+        if (hasVideoClips && session?.access_token && projectId && !project?.thumbnail_url) {
+            // Only generate if we don't already have a thumbnail
+            const timer = setTimeout(() => {
+                generateThumbnail()
+            }, 2000) // Wait 2 seconds after clips change to avoid too many generations
+            
+            return () => clearTimeout(timer)
+        }
+    }, [clips.length, session?.access_token, projectId])
+
     return (
         <EditorContext.Provider value={{
             project, loading, error,
             selectedTool, setSelectedTool,
             refetch: fetchProject,
             updateProjectName,
+            updateProjectThumbnail,
+            generateThumbnail,
 
             // timeline
             tracks, clips, loadingTimeline, timelineError,

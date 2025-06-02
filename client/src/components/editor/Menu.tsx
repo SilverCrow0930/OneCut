@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { ChevronLeft, Redo2, Undo2, Edit2 } from 'lucide-react'
+import { ChevronLeft, Redo2, Undo2, Edit2, Camera } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import SaveStatusIndicator from './SaveStatusIndicator'
 import ShareButton from './ShareButton'
@@ -9,6 +9,7 @@ const Menu = () => {
     const router = useRouter()
     const [isEditing, setIsEditing] = useState(false)
     const [editedName, setEditedName] = useState('')
+    const [generatingThumbnail, setGeneratingThumbnail] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
 
     const {
@@ -17,7 +18,9 @@ const Menu = () => {
         redo,
         canUndo,
         canRedo,
-        updateProjectName
+        updateProjectName,
+        generateThumbnail,
+        clips
     } = useEditor()
 
     // Focus input when editing starts
@@ -67,6 +70,20 @@ const Menu = () => {
             setIsEditing(false)
         }
     }
+
+    const handleGenerateThumbnail = async () => {
+        setGeneratingThumbnail(true)
+        try {
+            await generateThumbnail()
+        } catch (error) {
+            console.error('Failed to generate thumbnail:', error)
+        } finally {
+            setGeneratingThumbnail(false)
+        }
+    }
+
+    // Check if we have video clips for thumbnail generation
+    const hasVideoClips = clips.some(clip => clip.type === 'video' && clip.assetId)
 
     return (
         <div
@@ -120,6 +137,24 @@ const Menu = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Thumbnail Generation Button */}
+                {hasVideoClips && (
+                    <button
+                        onClick={handleGenerateThumbnail}
+                        disabled={generatingThumbnail}
+                        className="
+                            flex items-center gap-2 px-3 py-1.5 rounded-lg
+                            bg-white/10 hover:bg-white/20 transition-colors duration-200
+                            text-sm font-medium
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                        "
+                        title="Generate project thumbnail"
+                    >
+                        <Camera size={16} className={generatingThumbnail ? 'animate-pulse' : ''} />
+                        {generatingThumbnail ? 'Generating...' : 'Generate Thumbnail'}
+                    </button>
+                )}
 
                 {/* <div className="flex flex-row items-center gap-3 mb-[2px]">
                     <Undo2
