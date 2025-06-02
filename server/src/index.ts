@@ -26,9 +26,17 @@ const corsOptions = {
     origin: NODE_ENV === 'production'
         ? ['https://lemona.studio', 'https://www.lemona.studio', 'https://lemona-app.onrender.com', ...(ALLOWED_ORIGINS?.split(',') || [])]
         : ['http://localhost:3000'],
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }
+
 app.use(cors(corsOptions))
+
+// Additional CORS handling for preflight
+app.options('*', cors(corsOptions))
+
 app.use(helmet())
 app.use(express.json())
 app.use(bodyParser.json())
