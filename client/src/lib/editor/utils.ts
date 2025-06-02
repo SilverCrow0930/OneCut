@@ -149,10 +149,14 @@ export function dbToClip(r: any): Clip {
     const start = Number(r.timeline_start_ms) || 0
     const end = Number(r.timeline_end_ms) || start   // never NaN, never < start
 
+    // Handle external assets that have null asset_id by checking properties
+    const hasExternalAsset = r.properties?.externalAsset
+    const assetId = r.asset_id || (hasExternalAsset ? hasExternalAsset.id : `missing_${r.id}`)
+
     return {
         id: r.id,
         trackId: r.track_id,
-        assetId: r.asset_id,
+        assetId: assetId,
         type: r.type,
         sourceStartMs: Number(r.source_start_ms) || 0,
         sourceEndMs: Number(r.source_end_ms) || 0,
