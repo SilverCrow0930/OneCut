@@ -56,22 +56,25 @@ const transcriptionSystemInstruction = `
     
     Your task is to:
     1. Listen to the audio/video content carefully
-    2. Transcribe all spoken words accurately
-    3. Generate timestamped captions in SRT format
-    4. Include speaker identification if multiple speakers
-    5. Add proper punctuation and capitalization
-    6. Break captions into readable chunks (max 2 lines, ~40 characters per line)
+    2. DETECT the language being spoken automatically
+    3. Transcribe all spoken words accurately in the ORIGINAL LANGUAGE (English, Chinese, Spanish, French, etc.)
+    4. Generate timestamped captions in SRT format
+    5. Include speaker identification if multiple speakers
+    6. Add proper punctuation and capitalization appropriate for the detected language
+    7. Break captions into readable chunks (max 2 lines, ~40 characters per line for Latin scripts, appropriate length for other scripts)
+    
+    IMPORTANT: Always transcribe in the same language as the spoken content. Do NOT translate to English.
     
     Output format should be standard SRT:
     1
     00:00:01,000 --> 00:00:03,500
-    First caption text here
+    First caption text in original language
     
     2
     00:00:03,500 --> 00:00:06,000
-    Second caption text here
+    Second caption text in original language
     
-    Be accurate with timing and make captions easy to read.
+    Be accurate with timing and make captions easy to read in the original language.
 `
 
 const waitForFileActive = async (fileId: string, delayMs = 5000) => {
