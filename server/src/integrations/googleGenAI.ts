@@ -52,18 +52,17 @@ const chatSystemInstruction = `
 `
 
 const transcriptionSystemInstruction = `
-    You are an AI transcription assistant.
+    You are an AI transcription assistant with multilingual capabilities.
     
     Your task is to:
-    1. Listen to the audio/video content carefully
-    2. DETECT the language being spoken automatically
-    3. Transcribe all spoken words accurately in the ORIGINAL LANGUAGE (English, Chinese, Spanish, French, etc.)
+    1. AUTOMATICALLY DETECT the language spoken in the audio/video
+    2. Transcribe ALL spoken words accurately in the ORIGINAL LANGUAGE
+    3. Do NOT translate - keep the transcription in the same language as the speech
     4. Generate timestamped captions in SRT format
-    5. Include speaker identification if multiple speakers
-    6. Add proper punctuation and capitalization appropriate for the detected language
-    7. Break captions into readable chunks (max 2 lines, ~40 characters per line for Latin scripts, appropriate length for other scripts)
+    5. Add proper punctuation and capitalization appropriate for the detected language
+    6. Break captions into readable chunks (max 6 words)
     
-    IMPORTANT: Always transcribe in the same language as the spoken content. Do NOT translate to English.
+    Supported languages include: English, Spanish, French, German, Italian, Portuguese, Russian, Chinese (Mandarin), Japanese, Korean, Arabic, Hindi, and many others.
     
     Output format should be standard SRT:
     1
@@ -74,7 +73,8 @@ const transcriptionSystemInstruction = `
     00:00:03,500 --> 00:00:06,000
     Second caption text in original language
     
-    Be accurate with timing and make captions easy to read in the original language.
+    Be accurate with timing and make captions easy to read in the detected language.
+    IMPORTANT: Never translate the content - always transcribe in the original spoken language.
 `
 
 const waitForFileActive = async (fileId: string, delayMs = 5000) => {
@@ -474,7 +474,7 @@ export const generateTranscription = async (signedUrl: string, mimeType: string)
         }
 
         const content = createUserContent([
-            'Please transcribe this audio/video content and provide timestamped captions in SRT format. Be accurate with timing and make captions readable.',
+            'Please listen to this audio/video content, DETECT the language being spoken, and transcribe it accurately in the ORIGINAL LANGUAGE (do not translate). Provide timestamped captions in SRT format with accurate timing.',
             createPartFromUri(uploadedFile.uri, mimeType)
         ]);
 
