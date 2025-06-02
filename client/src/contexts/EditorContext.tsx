@@ -184,6 +184,19 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         })
 
         setSaveState('unsaved') // pending edits
+
+        // Auto-generate thumbnail when video clips are added
+        if (cmd.type === 'ADD_CLIP' && cmd.payload?.clip?.type === 'video' && cmd.payload?.clip?.assetId) {
+            console.log('🎬 Video clip added, scheduling thumbnail generation...')
+            
+            // Schedule thumbnail generation after a short delay
+            setTimeout(() => {
+                if (session?.access_token && projectId && project && !project.thumbnail_url) {
+                    console.log('🎬 Generating thumbnail after video clip addition...')
+                    generateThumbnail()
+                }
+            }, 3000) // Wait 3 seconds for the clip to be properly added and saved
+        }
     }
     const undo = () => dispatch({ type: 'UNDO' })
     const redo = () => dispatch({ type: 'REDO' })
@@ -322,15 +335,36 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const hasVideoClips = clips.some(clip => clip.type === 'video' && clip.assetId)
         
-        if (hasVideoClips && session?.access_token && projectId && !project?.thumbnail_url) {
-            // Only generate if we don't already have a thumbnail
+        // Only generate if:
+        // 1. We have video clips
+        // 2. We have a session and project ID
+        // 3. Project is loaded and doesn't have a thumbnail
+        if (hasVideoClips && session?.access_token && projectId && project && !project.thumbnail_url) {
+            console.log('🎬 Auto-generating thumbnail for project with video clips...')
+            
             const timer = setTimeout(() => {
                 generateThumbnail()
-            }, 2000) // Wait 2 seconds after clips change to avoid too many generations
+            }, 1500) // Wait 1.5 seconds after clips change
             
             return () => clearTimeout(timer)
         }
-    }, [clips.length, session?.access_token, projectId])
+    }, [clips.length, session?.access_token, projectId, project?.thumbnail_url, project?.id])
+
+    // Also trigger when project first loads if it has clips but no thumbnail
+    useEffect(() => {
+        if (project && !project.thumbnail_url && clips.length > 0 && session?.access_token) {
+            const hasVideoClips = clips.some(clip => clip.type === 'video' && clip.assetId)
+            if (hasVideoClips) {
+                console.log('🎬 Project loaded with video clips but no thumbnail, generating...')
+                
+                const timer = setTimeout(() => {
+                    generateThumbnail()
+                }, 2000) // Wait 2 seconds for everything to be ready
+                
+                return () => clearTimeout(timer)
+            }
+        }
+    }, [project?.id, project?.thumbnail_url, clips.length, session?.access_token])
 
     return (
         <EditorContext.Provider value={{
