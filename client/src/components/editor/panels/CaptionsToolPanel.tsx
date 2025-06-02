@@ -3,7 +3,6 @@ import { Wand2, Download, Copy, RotateCcw, Mic } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { useAssets } from '@/contexts/AssetsContext'
 import { apiPath } from '@/lib/config'
 
 interface Caption {
@@ -19,56 +18,12 @@ const CaptionsToolPanel = () => {
     const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const { clips } = useEditor()
-    const { assets } = useAssets()
     const { session } = useAuth()
 
     // Get video/audio clips that can be transcribed
-    const transcribableClips = clips.filter(clip => {
-        // Must have an assetId (not text clips or corrupted clips)
-        if (!clip.assetId) return false
-        
-        // Find the associated asset
-        const asset = assets.find(a => a.id === clip.assetId)
-        
-        // Check if this is an external asset (from properties)
-        const externalAsset = clip.properties?.externalAsset
-        
-        let hasAudio = false
-        
-        if (externalAsset) {
-            // For external assets, check if it's a video or audio type
-            hasAudio = externalAsset.mime_type?.startsWith('video/') || 
-                      externalAsset.mime_type?.startsWith('audio/')
-        } else if (asset) {
-            // For regular assets, check mime type
-            hasAudio = asset.mime_type?.startsWith('video/') || 
-                      asset.mime_type?.startsWith('audio/')
-        } else {
-            // Fallback to clip type if no asset found
-            hasAudio = clip.type === 'video' || clip.type === 'audio'
-        }
-        
-        return hasAudio
-    })
-
-    console.log('Clips filtering debug:', {
-        totalClips: clips.length,
-        transcribableClips: transcribableClips.length,
-        allClips: clips.map(c => ({
-            id: c.id,
-            type: c.type,
-            assetId: c.assetId,
-            hasAsset: !!assets.find(a => a.id === c.assetId),
-            assetMimeType: assets.find(a => a.id === c.assetId)?.mime_type,
-            externalAsset: !!c.properties?.externalAsset,
-            externalMimeType: c.properties?.externalAsset?.mime_type
-        })),
-        transcribableClipsDetails: transcribableClips.map(c => ({
-            id: c.id,
-            type: c.type,
-            assetId: c.assetId
-        }))
-    })
+    const transcribableClips = clips.filter(clip => 
+        (clip.type === 'video' || clip.type === 'audio') && clip.assetId
+    )
 
     // Parse SRT format to caption objects
     const parseSRT = (srtText: string): Caption[] => {
@@ -206,18 +161,11 @@ const CaptionsToolPanel = () => {
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
                     >
                         <option value="">Choose a clip...</option>
-                        {transcribableClips.map((clip, index) => {
-                            // Get asset or external asset name
-                            const asset = assets.find(a => a.id === clip.assetId)
-                            const externalAsset = clip.properties?.externalAsset
-                            const assetName = externalAsset?.name || asset?.name || 'Unknown Asset'
-                            
-                            return (
-                                <option key={clip.id} value={clip.id}>
-                                    {clip.type === 'video' ? '📹' : '🎵'} {assetName} (Clip {index + 1})
-                                </option>
-                            )
-                        })}
+                        {transcribableClips.map((clip, index) => (
+                            <option key={clip.id} value={clip.id}>
+                                {clip.type === 'video' ? '📹' : '🎵'} Clip {index + 1}
+                            </option>
+                        ))}
                     </select>
                 )}
             </div>
@@ -297,6 +245,43 @@ const CaptionsToolPanel = () => {
                                 <p className="text-sm text-gray-800">{caption.text}</p>
                             </div>
                         ))}
+                    </div>
+
+                    {/* Trending Font Styles */}
+                    <div className="flex flex-col gap-3">
+                        <h5 className="text-sm font-semibold text-gray-700">🔥 Trending Styles</h5>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-black text-black" style={{textShadow: '2px 2px 0px white, -2px -2px 0px white, 2px -2px 0px white, -2px 2px 0px white'}}>Bold Impact</span>
+                            </button>
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-bold text-white" style={{textShadow: '2px 2px 4px rgba(0,0,0,0.8)', WebkitTextStroke: '1px black'}}>Outlined Text</span>
+                            </button>
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-bold text-yellow-400" style={{textShadow: '3px 3px 6px rgba(0,0,0,0.7)'}}>Shadow Drop</span>
+                            </button>
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-black text-transparent bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text">Gradient Pop</span>
+                            </button>
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-bold text-red-500" style={{textShadow: '0 0 10px rgba(239,68,68,0.8)'}}>Neon Glow</span>
+                            </button>
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-black text-black bg-yellow-300 px-1 rounded">Highlight Box</span>
+                            </button>
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-bold text-white" style={{textShadow: '1px 1px 0px black, -1px -1px 0px black, 1px -1px 0px black, -1px 1px 0px black, 2px 2px 4px rgba(0,0,0,0.5)'}}>3D Effect</span>
+                            </button>
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-bold text-blue-600 bg-white/90 px-1 py-0.5 rounded border-2 border-blue-600">Boxed Style</span>
+                            </button>
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-black text-transparent bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 bg-clip-text animate-pulse">Rainbow Flash</span>
+                            </button>
+                            <button className="p-2 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <span className="font-bold text-gray-800" style={{letterSpacing: '2px', textTransform: 'uppercase'}}>SPACED CAPS</span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Tips */}
