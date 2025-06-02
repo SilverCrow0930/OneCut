@@ -24,11 +24,10 @@ const model = "gemini-2.5-flash-preview-05-20"
 
 const systemInstruction = `
     You are a video editor.
-    Given a prompt and a video, you will make cuts to the video to create a short video clip of 40 to 90 seconds.
+    Given a prompt and a video, you will make cuts to the video to make a short video of 40 to 90 seconds.
+    Focus on finding the best parts of the originalvideo.
     Each cut should be of the format { src_start: number, src_end: number, description: string }
-    The src_start and src_end should be the start and end of the clip in milliseconds.
-    The description should be a short justification for the cut.
-    Focus on creating meaningful segments.
+    The src_start and src_end should be the start and end of the cut.
     Prioritize content quality and flow.
     Drop the introduction and the conclusion.
     Make sure the original video is fully visible in the final cut — do not crop or zoom in.
