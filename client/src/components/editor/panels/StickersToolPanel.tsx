@@ -5,6 +5,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { GiphySticker } from './types/stickers'
 import { useAssets } from '@/contexts/AssetsContext'
+import { useEditor } from '@/contexts/EditorContext'
+import { useParams } from 'next/navigation'
+import { addAssetToTrack } from '@/lib/editor/utils'
 
 const StickersToolPanel = () => {
     const [stickers, setStickers] = useState<GiphySticker[]>([])
@@ -14,6 +17,13 @@ const StickersToolPanel = () => {
     const [searchQuery, setSearchQuery] = useState('')
     const { session } = useAuth()
     const { refresh } = useAssets()
+    const { tracks, executeCommand } = useEditor()
+    const params = useParams()
+
+    // Get project ID
+    const projectId = Array.isArray(params.projectId) 
+        ? params.projectId[0] 
+        : params.projectId
 
     useEffect(() => {
         setStickers([])
@@ -191,12 +201,33 @@ const StickersToolPanel = () => {
                                 }
                             }
 
+                            // Handle click to add sticker to track
+                            const handleClick = async (e: React.MouseEvent) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                
+                                if (!projectId) {
+                                    console.error('No project ID available')
+                                    return
+                                }
+                                
+                                console.log('Adding sticker to track via click:', sticker)
+                                
+                                // Add the sticker directly to a track as external asset
+                                addAssetToTrack(sticker, tracks, executeCommand, projectId, {
+                                    isExternal: true,
+                                    assetType: 'image',
+                                    startTimeMs: 0
+                                })
+                            }
+
                             return (
                                 <div
                                     key={index}
-                                    className="relative aspect-square rounded-lg overflow-hidden group shadow hover:shadow-lg transition-shadow cursor-grab active:cursor-grabbing"
+                                    className="relative aspect-square rounded-lg overflow-hidden group shadow hover:shadow-lg transition-shadow cursor-pointer hover:ring-2 hover:ring-blue-400"
                                     draggable={true}
                                     onDragStart={handleDragStart}
+                                    onClick={handleClick}
                                 >
                                     <img
                                         src={sticker.images.fixed_height.url}

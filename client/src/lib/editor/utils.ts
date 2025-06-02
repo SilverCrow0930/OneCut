@@ -165,3 +165,150 @@ export function dbToClip(r: any): Clip {
         createdAt: r.created_at,
     }
 }
+
+// Add asset directly to timeline track (helper for click-to-add functionality)
+export function addAssetToTrack(
+    asset: any,
+    tracks: any[],
+    executeCommand: any,
+    projectId: string,
+    options: {
+        isExternal?: boolean,
+        assetType?: 'image' | 'video',
+        trackIndex?: number,
+        startTimeMs?: number
+    } = {}
+) {
+    const { isExternal = false, assetType, trackIndex } = options
+    
+    console.log('Adding asset to track:', { asset, isExternal, assetType, trackIndex })
+    
+    // Determine track type and asset details
+    let trackType: 'audio' | 'video' = 'video'
+    let duration = 0
+    let externalAsset = null
+    
+    if (isExternal) {
+        // Handle external assets (Pexels, Giphy stickers)
+        trackType = assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+        
+        // Extract the correct URL based on asset type and source
+        let mediaUrl = ''
+        
+        if (asset.isSticker) {
+            // Giphy sticker
+            mediaUrl = asset.url || asset.images?.original?.url
+        } else if (assetType === 'image') {
+            // Pexels image
+            mediaUrl = asset.src?.original || asset.src?.large2x || asset.src?.large
+        } else if (assetType === 'video') {
+            // Pexels video
+            mediaUrl = asset.video_files?.[0]?.link || asset.url
+        }
+        
+        if (!mediaUrl) {
+            console.error('Could not extract media URL from external asset:', asset)
+            return
+        }
+        
+        // Create external asset data
+        externalAsset = {
+            id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            url: mediaUrl,
+            name: asset.title || asset.alt || `External ${assetType}`,
+            mime_type: assetType === 'video' ? 'video/mp4' : 
+                      (asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
+            duration: assetType === 'video' ? 10000 : 
+                     (asset.isSticker || mediaUrl.includes('.gif')) ? 3000 : 5000, // 3s for GIFs, 5s for images
+            isExternal: true,
+            originalData: asset
+        }
+        duration = externalAsset.duration
+    } else {
+        // Handle regular uploaded assets
+        trackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
+        duration = asset.duration ? Math.floor(asset.duration) : 0
+    }
+    
+    // Find the target track or create a new one
+    let targetTrack
+    let targetTrackIndex = trackIndex ?? tracks.length // Default to end
+    
+    // If no specific track index provided, try to find an existing track of the same type
+    if (trackIndex === undefined) {
+        const existingTrack = tracks.find(t => t.type === trackType)
+        if (existingTrack) {
+            targetTrack = existingTrack
+            targetTrackIndex = existingTrack.index
+        }
+    } else if (trackIndex < tracks.length) {
+        targetTrack = tracks[trackIndex]
+    }
+    
+    // Calculate start time - place at the end of existing content on the track
+    let startTimeMs = options.startTimeMs ?? 0
+    if (options.startTimeMs === undefined && targetTrack) {
+        // Find the latest end time on this track
+        // Note: We don't have clips data here, so we'll start at 0 for now
+        // In a more complete implementation, you'd pass clips data or calculate this differently
+        startTimeMs = 0
+    }
+    
+    // Create new track if needed
+    if (!targetTrack) {
+        targetTrack = {
+            id: `track_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            projectId: projectId,
+            index: targetTrackIndex,
+            type: trackType,
+            createdAt: new Date().toISOString(),
+        }
+        
+        console.log('Creating new track:', targetTrack)
+        
+        executeCommand({
+            type: 'ADD_TRACK',
+            payload: { track: targetTrack }
+        })
+    }
+    
+    // Create the clip
+    const newClip = {
+        id: `clip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        trackId: targetTrack.id,
+        assetId: isExternal ? externalAsset!.id : asset.id,
+        type: trackType,
+        sourceStartMs: 0,
+        sourceEndMs: duration,
+        timelineStartMs: startTimeMs,
+        timelineEndMs: startTimeMs + duration,
+        assetDurationMs: duration,
+        volume: 1,
+        speed: 1,
+        properties: isExternal ? {
+            externalAsset: externalAsset
+        } : (asset.mime_type.startsWith('image/') ? {
+            crop: {
+                width: 320,  // Default 16:9 aspect ratio
+                height: 180,
+                left: 0,
+                top: 0
+            },
+            mediaPos: {
+                x: 0,
+                y: 0
+            },
+            mediaScale: 1
+        } : {}),
+        createdAt: new Date().toISOString(),
+    }
+    
+    console.log('Creating clip:', newClip)
+    
+    executeCommand({
+        type: 'ADD_CLIP',
+        payload: { clip: newClip }
+    })
+    
+    return { track: targetTrack, clip: newClip }
+}

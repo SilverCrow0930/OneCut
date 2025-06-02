@@ -3,6 +3,9 @@ import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { formatTimeMs } from '@/lib/utils'
 import DraggableAsset from './DraggableAsset'
 import { useAssets } from '@/contexts/AssetsContext'
+import { useEditor } from '@/contexts/EditorContext'
+import { useParams } from 'next/navigation'
+import { addAssetToTrack } from '@/lib/editor/utils'
 
 interface AssetThumbnailProps {
     asset: {
@@ -17,8 +20,15 @@ interface AssetThumbnailProps {
 export default function AssetThumbnail({ asset, highlight, uploading }: AssetThumbnailProps) {
     const { url, loading } = useAssetUrl(asset.id)
     const { deleteAsset } = useAssets()
+    const { tracks, executeCommand } = useEditor()
+    const params = useParams()
     const [showContextMenu, setShowContextMenu] = useState(false)
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
+
+    // Get project ID
+    const projectId = Array.isArray(params.projectId) 
+        ? params.projectId[0] 
+        : params.projectId
 
     // Close context menu when clicking outside
     useEffect(() => {
@@ -36,6 +46,25 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
     const handleDelete = async () => {
         await deleteAsset(asset.id)
         setShowContextMenu(false)
+    }
+
+    // Handle click to add asset to track
+    const handleClick = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        if (!projectId) {
+            console.error('No project ID available')
+            return
+        }
+        
+        console.log('Adding asset to track via click:', asset)
+        
+        // Add the asset to a track at the end of the timeline
+        addAssetToTrack(asset, tracks, executeCommand, projectId, {
+            isExternal: false,
+            startTimeMs: 0 // Add at the beginning for now
+        })
     }
 
     if (loading) {
@@ -62,10 +91,12 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
                         relative w-32 h-32 rounded-lg overflow-hidden 
                         bg-gray-50 hover:opacity-80 transition-all duration-200
                         flex items-center justify-center shadow-sm hover:shadow-md
+                        cursor-pointer
                         ${highlight ? 'ring-4 ring-blue-400 animate-pulse-fast' : ''}
                         ${uploading ? 'opacity-60 pointer-events-none' : ''}
                     `}
                     onContextMenu={handleContextMenu}
+                    onClick={handleClick}
                 >
                     {uploading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10">

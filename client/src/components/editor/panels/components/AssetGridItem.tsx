@@ -3,6 +3,8 @@ import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { formatTimeMs } from '@/lib/utils'
 import { useAssets } from '@/contexts/AssetsContext'
 import { useEditor } from '@/contexts/EditorContext'
+import { useParams } from 'next/navigation'
+import { addAssetToTrack } from '@/lib/editor/utils'
 import { Asset } from '@/types/assets'
 
 interface AssetGridItemProps {
@@ -16,9 +18,15 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
     const isPexelsAsset = asset.src || asset.video_files
     const { url: uploadedUrl, loading } = useAssetUrl(isPexelsAsset ? undefined : asset.id)
     const { deleteAsset } = useAssets()
-    const { setSelectedTool } = useEditor()
+    const { tracks, executeCommand } = useEditor()
+    const params = useParams()
     const [isUploading, setIsUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    // Get project ID
+    const projectId = Array.isArray(params.projectId) 
+        ? params.projectId[0] 
+        : params.projectId
 
     // Get the appropriate URL based on asset type
     const getAssetUrl = () => {
@@ -55,26 +63,44 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
         return 0
     }
 
-    // Click-to-upload logic
+    // Click-to-add logic
     const handleClick = async () => {
-        if (!isPexelsAsset) return // Only for Pexels assets
-        setSelectedTool('Upload') // Switch panel immediately
-        setIsUploading(true)
-        setError(null)
-        if (onUploadAndHighlight) onUploadAndHighlight(asset.id, true) // Indicate uploading started
-        try {
-            // Get the parent AssetsToolPanel component
-            const assetsPanel = document.querySelector('[data-assets-panel]')
-            if (!assetsPanel) throw new Error('Could not find AssetsToolPanel')
-            // Call the download function
-            const uploadedAsset = await (assetsPanel as any).handlePexelsAssetDownload(asset, type)
-            // Optionally highlight the new asset
-            if (onUploadAndHighlight) onUploadAndHighlight(uploadedAsset.id, false)
-        } catch (err: any) {
-            setError(err.message)
-            if (onUploadAndHighlight) onUploadAndHighlight('', false)
-        } finally {
-            setIsUploading(false)
+        if (!projectId) {
+            console.error('No project ID available')
+            return
+        }
+
+        if (isPexelsAsset) {
+            // For Pexels assets, add them directly to track as external assets
+            setIsUploading(true)
+            setError(null)
+            if (onUploadAndHighlight) onUploadAndHighlight(asset.id, true)
+            
+            try {
+                console.log('Adding Pexels asset to track via click:', asset)
+                
+                // Add the external asset directly to a track
+                addAssetToTrack(asset, tracks, executeCommand, projectId, {
+                    isExternal: true,
+                    assetType: type,
+                    startTimeMs: 0
+                })
+                
+                if (onUploadAndHighlight) onUploadAndHighlight(asset.id, false)
+            } catch (err: any) {
+                setError(err.message)
+                if (onUploadAndHighlight) onUploadAndHighlight('', false)
+            } finally {
+                setIsUploading(false)
+            }
+        } else {
+            // For regular uploaded assets, add them directly to track
+            console.log('Adding uploaded asset to track via click:', asset)
+            
+            addAssetToTrack(asset, tracks, executeCommand, projectId, {
+                isExternal: false,
+                startTimeMs: 0
+            })
         }
     }
 
@@ -146,10 +172,10 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
             draggable={true}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
-            onClick={isPexelsAsset ? handleClick : undefined}
+            onClick={handleClick}
             tabIndex={0}
             role="button"
-            aria-label="Upload asset"
+            aria-label="Add asset to timeline"
         >
             {isVideo ? (
                 <video
