@@ -2,7 +2,6 @@ import React, { useRef, useEffect } from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useEditor } from '@/contexts/EditorContext'
 import { ClipLayer } from './ClipLayer'
-import PlayerControls from './PlayerControls'
 
 export default function Player() {
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -84,13 +83,16 @@ export default function Player() {
         if (playerSettings.aspectRatio === '16:9') {
             return {
                 aspectRatio: '16 / 9',
+                width: '100%',
+                height: '100%',
                 maxWidth: '100%',
                 maxHeight: '100%'
             }
         } else {
             return {
                 aspectRatio: '9 / 16',
-                maxWidth: '56.25vh', // 9:16 aspect ratio constraint
+                width: 'auto',
+                height: '100%',
                 maxHeight: '100%'
             }
         }
@@ -131,9 +133,6 @@ export default function Player() {
                     setSelectedClipId(null)
                 }}
             >
-                {/* Player Controls */}
-                <PlayerControls />
-                
                 {/* Subtle glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl pointer-events-none" />
                 
