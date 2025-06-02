@@ -7,7 +7,7 @@ export type ClipType = 'video' | 'image' | 'audio' | 'text'
 export interface DBClip {
     id: string         // uuid
     track_id: string         // FK → tracks.id
-    asset_id: string         // FK → assets.id
+    asset_id: string | null         // FK → assets.id (nullable for external assets)
     type: ClipType       // 'video' | 'image' | 'audio' | 'text'
     source_start_ms: number         // trim start in source media
     source_end_ms: number         // trim end in source media
