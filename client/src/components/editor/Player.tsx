@@ -108,34 +108,7 @@ export default function Player() {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center h-full p-4">
-            {/* Aspect Ratio Controls */}
-            <div className="mb-4 flex items-center gap-2 bg-gray-900/80 backdrop-blur-sm rounded-lg px-3 py-2">
-                <span className="text-white text-sm font-medium">Aspect Ratio:</span>
-                <div className="flex bg-gray-800 rounded-md p-1">
-                    <button
-                        onClick={() => setAspectRatio('16:9')}
-                        className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                            aspectRatio === '16:9'
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                        }`}
-                    >
-                        16:9
-                    </button>
-                    <button
-                        onClick={() => setAspectRatio('9:16')}
-                        className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                            aspectRatio === '9:16'
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                        }`}
-                    >
-                        9:16
-                    </button>
-                </div>
-            </div>
-
+        <div className="flex items-center justify-center h-full p-4">
             {/* Player Container */}
             <div
                 className="relative bg-black rounded-xl shadow-2xl ring-1 ring-gray-200/20"
@@ -144,6 +117,38 @@ export default function Player() {
                     setSelectedClipId(null)
                 }}
             >
+                {/* Aspect Ratio Controls - Top Left Overlay */}
+                <div className="absolute top-4 left-4 z-50">
+                    <div className="flex items-center gap-1 bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1.5">
+                        <svg className="w-4 h-4 text-white mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth="2"/>
+                            <path d="M9 9h6v6h-6z" strokeWidth="2"/>
+                        </svg>
+                        <div className="flex bg-gray-800/80 rounded-md p-0.5">
+                            <button
+                                onClick={() => setAspectRatio('16:9')}
+                                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                                    aspectRatio === '16:9'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                                }`}
+                            >
+                                16:9
+                            </button>
+                            <button
+                                onClick={() => setAspectRatio('9:16')}
+                                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                                    aspectRatio === '9:16'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                                }`}
+                            >
+                                9:16
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Subtle glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl pointer-events-none" />
                 
