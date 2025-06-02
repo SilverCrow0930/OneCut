@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { Wand2, Loader2, Clock, Trash2, Edit3, Check, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useParams } from 'next/navigation'
+import { useEditor } from '@/contexts/EditorContext'
 import { apiPath } from '@/lib/config'
 import { Caption, CaptionGenerationResponse } from '@/types/captions'
 
 const CaptionsToolPanel = () => {
     const { session } = useAuth()
-    const params = useParams()
-    const projectId = params?.id as string
+    const { project } = useEditor()
+    const projectId = project?.id
 
     const [captions, setCaptions] = useState<Caption[]>([])
     const [loading, setLoading] = useState(false)
@@ -169,6 +169,11 @@ const CaptionsToolPanel = () => {
         loadCaptions()
     }, [projectId, session?.access_token])
 
+    // Debug log to check if projectId is available
+    useEffect(() => {
+        console.log('CaptionsToolPanel - projectId:', projectId, 'project:', project)
+    }, [projectId, project])
+
     return (
         <div className="flex flex-col w-full gap-4 p-4 max-h-full overflow-hidden">
             <div className="flex flex-col gap-3">
@@ -181,6 +186,13 @@ const CaptionsToolPanel = () => {
                 </div>
                 <p className="text-sm text-gray-600">Generate AI-powered captions for your videos</p>
             </div>
+            
+            {/* Debug info */}
+            {!projectId && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                    No project loaded. Project ID: {projectId || 'undefined'}
+                </div>
+            )}
             
             {/* Error Display */}
             {error && (
