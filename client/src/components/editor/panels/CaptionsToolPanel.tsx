@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Wand2, Download, Copy, RotateCcw, Mic, CheckCircle, AlertCircle, Loader2, Sparkles, Plus } from 'lucide-react'
+import { Wand2, Download, Copy, RotateCcw, Mic, CheckCircle, AlertCircle, Loader2, Sparkles, Plus, AlignCenter, ArrowUp, ArrowDown } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -15,6 +15,187 @@ interface Caption {
     text: string
 }
 
+// Trending font styles for short videos
+export const captionStyles = [
+    {
+        name: 'TikTok Bold',
+        style: {
+            fontFamily: 'Helvetica, Arial, sans-serif',
+            fontSize: 20,
+            fontWeight: 800,
+            color: '#ffffff',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            textAlign: 'center' as const,
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+        },
+    },
+    {
+        name: 'YouTube Classic',
+        style: {
+            fontFamily: 'Roboto, sans-serif',
+            fontSize: 18,
+            fontWeight: 600,
+            color: '#ffffff',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: '6px 12px',
+            borderRadius: '4px',
+            textAlign: 'center' as const,
+            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.9)',
+        },
+    },
+    {
+        name: 'Instagram Story',
+        style: {
+            fontFamily: 'Proxima Nova, Arial, sans-serif',
+            fontSize: 19,
+            fontWeight: 700,
+            color: '#000000',
+            backgroundColor: '#ffffff',
+            padding: '8px 16px',
+            borderRadius: '12px',
+            textAlign: 'center' as const,
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+        },
+    },
+    {
+        name: 'Trending Neon',
+        style: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: 20,
+            fontWeight: 700,
+            color: '#00ff88',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            textAlign: 'center' as const,
+            textShadow: '0 0 10px #00ff88, 0 0 20px #00ff88',
+        },
+    },
+    {
+        name: 'Viral Yellow',
+        style: {
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: 19,
+            fontWeight: 800,
+            color: '#000000',
+            backgroundColor: '#ffff00',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            textAlign: 'center' as const,
+            textShadow: '1px 1px 2px rgba(255, 255, 255, 0.5)',
+        },
+    },
+    {
+        name: 'Netflix Red',
+        style: {
+            fontFamily: 'Helvetica Neue, sans-serif',
+            fontSize: 18,
+            fontWeight: 600,
+            color: '#ffffff',
+            backgroundColor: '#e50914',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            textAlign: 'center' as const,
+            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.7)',
+        },
+    },
+    {
+        name: 'Twitch Purple',
+        style: {
+            fontFamily: 'Roobert, Inter, sans-serif',
+            fontSize: 19,
+            fontWeight: 700,
+            color: '#ffffff',
+            backgroundColor: '#9146ff',
+            padding: '8px 16px',
+            borderRadius: '10px',
+            textAlign: 'center' as const,
+            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+        },
+    },
+    {
+        name: 'Modern Outline',
+        style: {
+            fontFamily: 'SF Pro Display, sans-serif',
+            fontSize: 20,
+            fontWeight: 800,
+            color: '#ffffff',
+            backgroundColor: 'transparent',
+            padding: '6px 12px',
+            borderRadius: '0px',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '2px #000000',
+            textShadow: '3px 3px 6px rgba(0, 0, 0, 0.7)',
+        },
+    },
+    {
+        name: 'Gaming Green',
+        style: {
+            fontFamily: 'Orbitron, monospace',
+            fontSize: 18,
+            fontWeight: 700,
+            color: '#00ff00',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            textAlign: 'center' as const,
+            textShadow: '0 0 8px #00ff00, 0 0 16px #00ff00',
+        },
+    },
+    {
+        name: 'Aesthetic Pink',
+        style: {
+            fontFamily: 'Poppins, sans-serif',
+            fontSize: 19,
+            fontWeight: 600,
+            color: '#ffffff',
+            backgroundColor: '#ff69b4',
+            padding: '8px 16px',
+            borderRadius: '16px',
+            textAlign: 'center' as const,
+            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.6)',
+        },
+    },
+    {
+        name: 'Minimalist',
+        style: {
+            fontFamily: 'System UI, sans-serif',
+            fontSize: 18,
+            fontWeight: 500,
+            color: '#333333',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            padding: '6px 14px',
+            borderRadius: '20px',
+            textAlign: 'center' as const,
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+        },
+    },
+    {
+        name: 'Retro Vibe',
+        style: {
+            fontFamily: 'Courier New, monospace',
+            fontSize: 17,
+            fontWeight: 700,
+            color: '#ff6b35',
+            backgroundColor: '#1a1a1a',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            textAlign: 'center' as const,
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+            border: '2px solid #ff6b35',
+        },
+    },
+]
+
+// Caption placement options
+export const captionPlacements = [
+    { id: 'top', name: 'Top', icon: ArrowUp, position: { top: '10%', bottom: 'auto' } },
+    { id: 'middle', name: 'Middle', icon: AlignCenter, position: { top: '50%', bottom: 'auto', transform: 'translateY(-50%)' } },
+    { id: 'bottom', name: 'Bottom', icon: ArrowDown, position: { top: 'auto', bottom: '10%' } },
+]
+
 const CaptionsToolPanel = () => {
     const [isGenerating, setIsGenerating] = useState(false)
     const [captions, setCaptions] = useState<Caption[]>([])
@@ -22,6 +203,11 @@ const CaptionsToolPanel = () => {
     const [error, setError] = useState<string | null>(null)
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [progressStage, setProgressStage] = useState<'upload' | 'processing' | 'generating' | null>(null)
+    
+    // Caption customization states
+    const [selectedStyleIdx, setSelectedStyleIdx] = useState(0)
+    const [selectedPlacement, setSelectedPlacement] = useState('bottom')
+    
     const { clips, tracks, executeCommand } = useEditor()
     const { session } = useAuth()
     const params = useParams()
@@ -166,7 +352,11 @@ const CaptionsToolPanel = () => {
                 createdAt: new Date().toISOString(),
             }
 
-            // Create text clips for each caption
+            // Get selected style and placement
+            const selectedStyle = captionStyles[selectedStyleIdx].style
+            const placementData = captionPlacements.find(p => p.id === selectedPlacement)
+
+            // Create text clips for each caption with custom styling
             const textClips = captions.map(caption => ({
                 id: uuid(),
                 trackId: newTrack.id,
@@ -181,16 +371,17 @@ const CaptionsToolPanel = () => {
                 properties: {
                     text: caption.text,
                     style: {
-                        fontFamily: 'Inter, system-ui, sans-serif',
-                        fontSize: 18,
-                        fontWeight: 600,
-                        color: '#ffffff',
-                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                        padding: '8px 12px',
-                        borderRadius: '4px',
-                        textAlign: 'center',
-                        textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+                        ...selectedStyle,
+                        // Add placement positioning
+                        position: 'absolute',
+                        left: '50%',
+                        transform: placementData?.position.transform ? 
+                            `translateX(-50%) ${placementData.position.transform.replace('translateY', 'translateY')}` :
+                            'translateX(-50%)',
+                        top: placementData?.position.top || 'auto',
+                        bottom: placementData?.position.bottom || 'auto',
                     },
+                    placement: selectedPlacement,
                 },
                 createdAt: new Date().toISOString(),
             }))
@@ -385,9 +576,66 @@ const CaptionsToolPanel = () => {
                 </div>
             )}
 
-            {/* Results */}
+            {/* Caption Customization - Only show when captions are generated */}
             {captions.length > 0 && (
                 <div className="space-y-5 animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
+                    {/* Style Selection */}
+                    <div className="space-y-3">
+                        <h4 className="text-base font-semibold text-gray-700 flex items-center gap-2">
+                            <Sparkles size={16} className="text-blue-500" />
+                            Caption Style
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                            {captionStyles.map((style, i) => (
+                                <button
+                                    key={style.name}
+                                    type="button"
+                                    className={`
+                                        border rounded-lg p-2 flex items-center justify-center transition-all duration-200 h-12 text-xs font-medium
+                                        ${selectedStyleIdx === i ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' : 'hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'}
+                                    `}
+                                    style={{
+                                        ...style.style,
+                                        fontSize: 12, // Smaller for preview
+                                        padding: '4px 8px',
+                                        WebkitTextStroke: style.style.WebkitTextStroke ? '1px #000000' : undefined,
+                                        textShadow: style.style.textShadow ? '1px 1px 2px rgba(0, 0, 0, 0.5)' : undefined,
+                                    }}
+                                    onClick={() => setSelectedStyleIdx(i)}
+                                    title={style.name}
+                                >
+                                    {style.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Placement Selection */}
+                    <div className="space-y-3">
+                        <h4 className="text-base font-semibold text-gray-700">Caption Placement</h4>
+                        <div className="flex gap-2">
+                            {captionPlacements.map((placement) => {
+                                const Icon = placement.icon
+                                return (
+                                    <button
+                                        key={placement.id}
+                                        onClick={() => setSelectedPlacement(placement.id)}
+                                        className={`
+                                            flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all duration-200
+                                            ${selectedPlacement === placement.id 
+                                                ? 'bg-blue-100 border-2 border-blue-500 text-blue-700' 
+                                                : 'bg-gray-50 border-2 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                                            }
+                                        `}
+                                    >
+                                        <Icon size={16} />
+                                        <span className="text-sm font-medium">{placement.name}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+
                     {/* Add to Timeline Button */}
                     <div className="flex gap-3">
                         <button
