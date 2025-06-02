@@ -14,6 +14,35 @@ export default function Player() {
         return currentMs >= clip.timelineStartMs && currentMs <= clip.timelineEndMs
     })
 
+    // Get clips that will be active soon (within next 5 seconds) for preloading
+    const upcomingClips = clips.filter(clip => {
+        const currentMs = currentTime * 1000
+        const futureMs = currentMs + 5000 // 5 seconds ahead
+        return clip.timelineStartMs > currentMs && clip.timelineStartMs <= futureMs
+    })
+
+    // Preload upcoming media elements
+    useEffect(() => {
+        upcomingClips.forEach(clip => {
+            // Check if this is an external asset
+            const externalAsset = clip.properties?.externalAsset
+            const mediaUrl = externalAsset?.url
+            
+            if (mediaUrl) {
+                // Preload external media
+                if (clip.type === 'video') {
+                    const video = document.createElement('video')
+                    video.src = mediaUrl
+                    video.preload = 'metadata'
+                    video.load()
+                } else if (clip.type === 'image') {
+                    const img = new Image()
+                    img.src = mediaUrl
+                }
+            }
+        })
+    }, [upcomingClips])
+
     // Sort clips by track index (lowest index on top)
     const sortedClips = [...activeClips].sort((a, b) => {
         const trackA = tracks.find(t => t.id === a.trackId)
@@ -52,12 +81,11 @@ export default function Player() {
     return (
         <div className="flex items-center justify-center h-full p-4">
         <div
-                className="relative bg-black rounded-xl shadow-2xl ring-1 ring-gray-200/20"
+                className="relative bg-black rounded-xl shadow-2xl ring-1 ring-gray-200/20 w-full h-full"
             style={{
-                aspectRatio: '9 / 16',
-                    height: '100%',
-                    maxHeight: '100%',
-                    width: 'auto'
+                minHeight: '300px', // Minimum height for usability
+                maxWidth: '100%',
+                maxHeight: '100%'
             }}
             onClick={() => {
                 setSelectedClipId(null)

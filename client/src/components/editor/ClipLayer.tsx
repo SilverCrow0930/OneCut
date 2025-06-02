@@ -20,6 +20,11 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const targetTimeRef = useRef<number>(0)
     const updateIntervalRef = useRef<number>(0)
 
+    // Media loading states
+    const [isLoading, setIsLoading] = useState(true)
+    const [hasError, setHasError] = useState(false)
+    const [errorMessage, setErrorMessage] = useState('')
+
     // Crop area state
     const [crop, setCrop] = useState({
         width: clip.type === 'text' ? 240 : 320,
@@ -50,7 +55,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
         return null
     }
 
-    const { url } = useAssetUrl(clip.assetId)
+    const { url, loading } = useAssetUrl(clip.assetId)
 
     // Check if this is an external asset
     const externalAsset = clip.properties?.externalAsset
@@ -61,8 +66,25 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
         assetId: clip.assetId, 
         isExternal: !!externalAsset,
         mediaUrl,
-        externalAsset 
+        loading,
+        hasError,
+        isLoading
     })
+
+    // Handle loading states
+    useEffect(() => {
+        if (loading) {
+            setIsLoading(true)
+            setHasError(false)
+        } else if (mediaUrl) {
+            setIsLoading(false)
+            setHasError(false)
+        } else if (!loading && !mediaUrl) {
+            setIsLoading(false)
+            setHasError(true)
+            setErrorMessage('Media URL not found')
+        }
+    }, [loading, mediaUrl])
 
     // Get asset aspect ratio
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
@@ -197,27 +219,92 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             userSelect: 'none' as const,
         }
 
+        // Show loading state
+        if (isLoading || loading) {
+            return (
+                <div 
+                    style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        color: 'white',
+                        textAlign: 'center'
+                    }}
+                >
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2" />
+                    <div className="text-sm">Loading...</div>
+                </div>
+            )
+        }
+
+        // Show error state
+        if (hasError || !mediaUrl) {
+            return (
+                <div 
+                    style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        color: 'white',
+                        textAlign: 'center',
+                        padding: '16px'
+                    }}
+                    onClick={handleClick}
+                >
+                    <div className="text-red-400 mb-2">⚠️</div>
+                    <div className="text-sm">Failed to load media</div>
+                    <div className="text-xs text-gray-400 mt-1">{errorMessage}</div>
+                </div>
+            )
+        }
+
         switch (clip.type) {
             case 'video':
                 return (
                     <video
                         ref={videoRef}
-                        src={mediaUrl!}
+                        src={mediaUrl}
                         style={style}
                         preload="auto"
                         playsInline
                         muted={false}
                         onClick={handleClick}
                         draggable={false}
+                        onLoadStart={() => {
+                            setIsLoading(true)
+                            setHasError(false)
+                        }}
+                        onCanPlay={() => {
+                            setIsLoading(false)
+                            setHasError(false)
+                        }}
+                        onError={(e) => {
+                            console.error('Video load error:', e)
+                            setIsLoading(false)
+                            setHasError(true)
+                            setErrorMessage('Video failed to load')
+                        }}
                     />
                 )
             case 'image':
                 return (
                     <img
-                        src={mediaUrl!}
+                        src={mediaUrl}
                         style={style}
                         onClick={handleClick}
                         draggable={false}
+                        onLoad={() => {
+                            setIsLoading(false)
+                            setHasError(false)
+                        }}
+                        onError={(e) => {
+                            console.error('Image load error:', e)
+                            setIsLoading(false)
+                            setHasError(true)
+                            setErrorMessage('Image failed to load')
+                        }}
                     />
                 )
             case 'text':
@@ -252,7 +339,22 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                     </div>
                 )
             default:
-                return null
+                return (
+                    <div 
+                        style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            color: 'white',
+                            textAlign: 'center'
+                        }}
+                        onClick={handleClick}
+                    >
+                        <div className="text-yellow-400 mb-2">⚠️</div>
+                        <div className="text-sm">Unknown media type</div>
+                    </div>
+                )
         }
     }
 
