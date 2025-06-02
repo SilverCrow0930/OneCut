@@ -25,13 +25,11 @@ const model = "gemini-2.5-flash-preview-05-20"
 const systemInstruction = `
     You are a video editor.
     Given a prompt and a video, you will make cuts to the video to create a short video clip of 40 to 90 seconds.
-    Each cut should be of the format { src_start: number, src_end: number, description: string, captions: string[] }
+    Each cut should be of the format { src_start: number, src_end: number, description: string }
     The src_start and src_end should be the start and end of the clip in milliseconds.
     The description should be a short justification for the cut.
-    The captions should be a list of captions for the clip.
-    Each caption should be at most 6 words.
-    The captions should be in the same language as the video.
-    The sum of all captions should be the transcript of the video.
+    Focus on creating meaningful segments of 5-15 seconds that contain complete thoughts or actions.
+    Prioritize content quality and narrative flow over transcription accuracy.
     Drop the introduction and the conclusion.
     Make sure the original video is fully visible in the final cut — do not crop or zoom in.
 `
@@ -308,7 +306,7 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
         });
 
         // Parse the JSON output from the model
-        let cuts: Array<{ src_start: number, src_end: number, description: string, captions: string[] }> = [];
+        let cuts: Array<{ src_start: number, src_end: number, description: string }> = [];
         try {
             // Extract JSON array from the text output
             const jsonMatch = textOutput?.match(/\[\s*\{[\s\S]*\}\s*\]/);
@@ -325,7 +323,7 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
 
             // Validate each cut
             cuts.forEach((cut, index) => {
-                if (!cut.src_start || !cut.src_end || !cut.description || !Array.isArray(cut.captions)) {
+                if (!cut.src_start || !cut.src_end || !cut.description) {
                     throw new Error(`Invalid cut format at index ${index}`);
                 }
             });

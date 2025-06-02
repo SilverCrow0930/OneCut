@@ -8,7 +8,7 @@ import { useAutoCut } from '@/contexts/AutocutContext'
 import { apiPath } from '@/lib/config'
 import { getMediaDuration } from '@/lib/utils'
 import AssetThumbnail from '../upload/AssetThumbnail'
-import { CheckCircle2, AlertCircle, Loader2, Brain, MessageSquare, Sparkles, ChevronDown, ChevronUp, Play } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, Brain, Sparkles, ChevronDown, ChevronUp, Play } from 'lucide-react'
 import VideoDetailsSection from './VideoDetailsSection';
 import ReactMarkdown from 'react-markdown'
 import { Components } from 'react-markdown'
@@ -29,7 +29,6 @@ interface Scene {
     src_start: number;
     src_end: number;
     description: string;
-    captions: string[];
 }
 
 interface SceneCardProps {
@@ -227,36 +226,8 @@ const SceneCard: React.FC<SceneCardProps> = ({ scene, index }) => {
                         </div>
                     </div>
                 </div>
-                {/* Description - Increased bottom margin */}
+                {/* Description */}
                 <p className="text-xs text-gray-700 italic leading-relaxed pl-9">{scene.description}</p>
-            </div>
-
-            {/* Captions section with improved styling */}
-            <div className="px-4 py-4 bg-gradient-to-b from-gray-50 to-white">
-                <div className="flex items-center gap-2 mb-3">
-                    <MessageSquare className="w-4 h-4 text-blue-600" />
-                    <h3 className="text-sm font-medium text-gray-900">Scene Captions</h3>
-                </div>
-                <div className="space-y-3">
-                    {scene.captions && scene.captions.length > 0 ? (
-                        scene.captions.map((caption, capIndex) => (
-                            <div
-                                key={capIndex}
-                                className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
-                            >
-                                {/* Caption number badge */}
-                                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-blue-100 rounded-full text-blue-700 text-xs font-medium">
-                                    {capIndex + 1}
-                                </div>
-                                <p className="text-sm text-gray-700 flex-1 leading-relaxed">{caption}</p>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="text-sm text-gray-500 italic p-3">
-                            No captions available for this scene
-                        </div>
-                    )}
-                </div>
             </div>
         </div>
     );
