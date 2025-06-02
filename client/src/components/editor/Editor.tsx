@@ -30,7 +30,11 @@ const Editor = () => {
         error,
         selectedTool,
         setSelectedTool,
-        setSelectedClipId
+        setSelectedClipId,
+        selectedClipId,
+        executeCommand,
+        clips,
+        tracks
     } = useEditor()
 
     const [assistantWidth, setAssistantWidth] = useState(384)
@@ -38,6 +42,94 @@ const Editor = () => {
     const handleAssistantResize = (deltaX: number) => {
         setAssistantWidth(prev => Math.max(200, Math.min(800, prev - deltaX)))
     }
+
+    // Function to delete selected clip (same logic as in ClipTools.tsx)
+    const handleDeleteSelectedClip = () => {
+        const selectedClip = clips.find(clip => clip.id === selectedClipId)
+        if (!selectedClip) return
+
+        // Find the track
+        const track = tracks.find(t => t.id === selectedClip.trackId)
+        if (!track) return
+
+        // Check if the track becomes empty after removing this clip
+        const remainingClipsInTrack = clips.filter(c => c.trackId === selectedClip.trackId && c.id !== selectedClip.id)
+
+        if (remainingClipsInTrack.length === 0) {
+            // Create a batch command for removing the clip, track, and reindexing
+            const remainingTracks = tracks.filter(t => t.id !== track.id)
+            const reindexedTracks = remainingTracks.map((t, index) => ({
+                ...t,
+                index
+            }))
+
+            executeCommand({
+                type: 'BATCH',
+                payload: {
+                    commands: [
+                        // First remove the clip
+                        {
+                            type: 'REMOVE_CLIP',
+                            payload: {
+                                clip: selectedClip
+                            }
+                        },
+                        // Then remove the track
+                        {
+                            type: 'REMOVE_TRACK',
+                            payload: {
+                                track,
+                                affectedClips: []
+                            }
+                        },
+                        // Then update each track's index
+                        ...reindexedTracks.map(track => ({
+                            type: 'UPDATE_TRACK' as const,
+                            payload: {
+                                before: tracks.find(t => t.id === track.id)!,
+                                after: track
+                            }
+                        }))
+                    ]
+                }
+            })
+        } else {
+            // Just remove the clip
+            executeCommand({
+                type: 'REMOVE_CLIP',
+                payload: {
+                    clip: selectedClip
+                }
+            })
+        }
+
+        // Clear selection after deletion
+        setSelectedClipId(null)
+    }
+
+    // Keyboard event handler
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Only handle keyboard events if we're not in an input/textarea/contenteditable
+            const target = e.target as HTMLElement
+            if (target.tagName === 'INPUT' || 
+                target.tagName === 'TEXTAREA' || 
+                target.contentEditable === 'true') {
+                return
+            }
+
+            // Handle Backspace or Delete key
+            if ((e.key === 'Backspace' || e.key === 'Delete') && selectedClipId) {
+                e.preventDefault()
+                handleDeleteSelectedClip()
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown)
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [selectedClipId, clips, tracks, executeCommand, setSelectedClipId])
 
     // Deselect clip on global click (outside any clip)
     useEffect(() => {
