@@ -51,6 +51,36 @@ const chatSystemInstruction = `
     Keep responses concise but informative.
 `
 
+const captionSystemInstruction = `
+    You are an AI transcription specialist.
+    Your task is to transcribe audio with precise timing information.
+    
+    Return ONLY a JSON array of caption objects in this exact format:
+    [
+        {
+            "start_ms": 0,
+            "end_ms": 2500,
+            "text": "Hello, welcome to this video",
+            "confidence": 0.95
+        },
+        {
+            "start_ms": 2500,
+            "end_ms": 5800,
+            "text": "Today we're going to learn about video editing",
+            "confidence": 0.92
+        }
+    ]
+    
+    Rules:
+    - start_ms and end_ms must be integers (milliseconds)
+    - text should be natural, readable sentences
+    - confidence should be between 0 and 1
+    - No gaps between captions unless there's actual silence
+    - Maximum 50 characters per caption for readability
+    - Include punctuation and proper capitalization
+    - Do not include any other text, just the JSON array
+`
+
 const waitForFileActive = async (fileId: string, delayMs = 5000) => {
     let attempt = 0;
     let lastState: string | undefined = '';
@@ -343,6 +373,222 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
     }
     catch (error) {
         console.error('=== GOOGLE GENAI CONTENT GENERATION FAILED ===');
+        console.error('Error details:', {
+            error: error instanceof Error ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            } : error,
+            timestamp: new Date().toISOString()
+        });
+        throw error;
+    }
+}
+
+export const generateCaptions = async (audioUrl: string, mimeType: string) => {
+    console.log('=== GOOGLE GENAI CAPTION GENERATION STARTED ===');
+    console.log('Input parameters:', {
+        audioUrlLength: audioUrl.length,
+        mimeType
+    });
+
+    try {
+        // Download the audio file
+        console.log('Starting audio file download...');
+        const controller = new AbortController();
+        const fileResponse = await fetch(audioUrl, {
+            signal: controller.signal,
+        });
+
+        if (!fileResponse.ok) {
+            console.error('Download failed:', {
+                status: fileResponse.status,
+                statusText: fileResponse.statusText,
+                headers: Object.fromEntries(fileResponse.headers.entries())
+            });
+            throw new Error(`Failed to download audio file: ${fileResponse.status} ${fileResponse.statusText}`);
+        }
+
+        console.log('Download successful, reading file buffer...');
+        const buffer = await Promise.race([
+            fileResponse.arrayBuffer(),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Buffer read timeout')), 10 * 60 * 1000)
+            )
+        ]) as ArrayBuffer;
+
+        console.log('Audio file details:', {
+            sizeBytes: buffer.byteLength,
+            sizeMB: (buffer.byteLength / (1024 * 1024)).toFixed(2),
+            mimeType
+        });
+
+        if (buffer.byteLength === 0) {
+            throw new Error('Audio file is empty');
+        }
+
+        const blob = new Blob([buffer], { type: mimeType });
+        console.log('Blob created:', {
+            size: blob.size,
+            type: blob.type
+        });
+
+        // Upload the file to Google GenAI
+        console.log('Initiating file upload to Google GenAI...');
+        const uploadStartTime = Date.now();
+        const uploadPromise = ai.files.upload({
+            file: blob,
+            config: { mimeType: mimeType }
+        });
+
+        const uploadedFile = await Promise.race([
+            uploadPromise,
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('File upload timeout')), 10 * 60 * 1000)
+            )
+        ]);
+
+        console.log('File upload completed:', {
+            duration: `${((Date.now() - uploadStartTime) / 1000).toFixed(2)}s`,
+            fileUri: uploadedFile.uri,
+            fileName: uploadedFile.name
+        });
+
+        if (!uploadedFile.uri) {
+            throw new Error('Failed to upload file to Google GenAI');
+        }
+
+        if (!uploadedFile.name) {
+            throw new Error('File name not returned from upload');
+        }
+
+        console.log('Waiting for file to become active...');
+        try {
+            await waitForFileActive(uploadedFile.name);
+            console.log('File is now active, proceeding with transcription');
+        } catch (error) {
+            console.error('Error waiting for file to become active:', {
+                error: error instanceof Error ? {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                } : error
+            });
+            throw new Error(`Audio processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        const content = createUserContent([
+            "Transcribe this audio file with precise timing. Return only the JSON array as specified.",
+            createPartFromUri(uploadedFile.uri, mimeType)
+        ]);
+
+        console.log('Sending content to model for transcription...');
+        const modelStartTime = Date.now();
+        const modelResponse = await Promise.race([
+            ai.models.generateContent({
+                model: model,
+                contents: [content],
+                config: {
+                    systemInstruction: captionSystemInstruction,
+                    maxOutputTokens: 8192,
+                    temperature: 0.3, // Lower temperature for more consistent formatting
+                    topP: 0.8,
+                    topK: 40,
+                },
+            }).catch((error) => {
+                console.error('Gemini API error details:', {
+                    message: error.message,
+                    status: error.status,
+                    code: error.code,
+                    details: error.details,
+                    stack: error.stack
+                });
+                
+                // Provide more specific error messages
+                if (error.message?.includes('503') || error.status === 503) {
+                    throw new Error('got status: 503 Service Unavailable. The AI service is temporarily overloaded. Please try again in a few minutes.');
+                } else if (error.message?.includes('quota') || error.message?.includes('limit')) {
+                    throw new Error('API quota or rate limit exceeded. Please try again later.');
+                } else if (error.message?.includes('timeout')) {
+                    throw new Error('Request timed out. Please try with a shorter audio file.');
+                } else {
+                    throw error;
+                }
+            }),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Model generation timeout after 10 minutes')), 10 * 60 * 1000)
+            )
+        ]);
+
+        console.log('Model generation completed:', {
+            duration: `${((Date.now() - modelStartTime) / 1000).toFixed(2)}s`,
+            hasCandidates: !!modelResponse.candidates,
+            candidateCount: modelResponse.candidates?.length
+        });
+
+        if (!modelResponse.candidates) {
+            throw new Error('No candidates found in response')
+        }
+
+        if (!modelResponse.candidates?.[0]?.content?.parts) {
+            throw new Error('No parts found in response')
+        }
+
+        const textOutput = modelResponse.candidates[0].content.parts
+            .find(part => !('thought' in part))?.text;
+
+        console.log('Model output:', {
+            length: textOutput?.length || 0,
+            preview: textOutput?.substring(0, 200) + '...'
+        });
+
+        // Parse the JSON output from the model
+        let captions: Array<{ start_ms: number, end_ms: number, text: string, confidence: number }> = [];
+        try {
+            // Extract JSON array from the text output
+            const jsonMatch = textOutput?.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (jsonMatch) {
+                captions = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('No valid JSON array found in model output');
+            }
+
+            // Validate the captions array
+            if (!Array.isArray(captions)) {
+                throw new Error('Model output is not an array');
+            }
+
+            // Validate each caption
+            captions.forEach((caption, index) => {
+                if (typeof caption.start_ms !== 'number' || 
+                    typeof caption.end_ms !== 'number' || 
+                    typeof caption.text !== 'string' ||
+                    caption.start_ms < 0 ||
+                    caption.end_ms <= caption.start_ms) {
+                    throw new Error(`Invalid caption format at index ${index}`);
+                }
+                
+                // Set default confidence if missing
+                if (typeof caption.confidence !== 'number') {
+                    caption.confidence = 0.9;
+                }
+            });
+
+            console.log('Parsed captions:', {
+                count: captions.length,
+                totalDuration: captions.length > 0 ? captions[captions.length - 1].end_ms : 0
+            });
+
+        } catch (error) {
+            console.error('Failed to parse model output:', error);
+            throw new Error(`Failed to parse model output: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        console.log('=== GOOGLE GENAI CAPTION GENERATION COMPLETED ===');
+        return captions;
+    }
+    catch (error) {
+        console.error('=== GOOGLE GENAI CAPTION GENERATION FAILED ===');
         console.error('Error details:', {
             error: error instanceof Error ? {
                 name: error.name,
