@@ -1,11 +1,10 @@
-import React, { useRef, useEffect } from 'react'
+import React from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useEditor } from '@/contexts/EditorContext'
 import { ClipLayer } from './ClipLayer'
 
 export default function Player() {
-    const videoRef = useRef<HTMLVideoElement>(null)
-    const { currentTime, duration, setCurrentTime, setDuration } = usePlayback()
+    const { currentTime } = usePlayback()
     const { clips, tracks, setSelectedClipId } = useEditor()
 
     // Get clips that are currently active at the playhead position
@@ -29,30 +28,10 @@ export default function Player() {
         return { ...clip, sourceTime }
     })
 
-    // Attach events on the <video> once it's in the DOM
-    useEffect(() => {
-        const vid = videoRef.current
-
-        if (!vid) {
-            return
-        }
-
-        const onMeta = () => setDuration(vid.duration * 1000) // Convert to ms
-        const onTime = () => setCurrentTime(vid.currentTime)
-
-        vid.addEventListener('loadedmetadata', onMeta)
-        vid.addEventListener('timeupdate', onTime)
-
-        return () => {
-            vid.removeEventListener('loadedmetadata', onMeta)
-            vid.removeEventListener('timeupdate', onTime)
-        }
-    }, [setCurrentTime, setDuration])
-
     return (
         <div className="flex items-center justify-center h-full p-4">
         <div
-                className="relative bg-black rounded-xl shadow-2xl ring-1 ring-gray-200/20"
+                className="relative bg-black shadow-2xl ring-1 ring-gray-200/20"
             style={{
                 aspectRatio: '9 / 16',
                     height: '100%',
@@ -64,7 +43,7 @@ export default function Player() {
             }}
         >
                 {/* Subtle glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
                 
             {/* Render active clips in order with their source times */}
             {

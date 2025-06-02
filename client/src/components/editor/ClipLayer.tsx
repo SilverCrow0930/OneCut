@@ -267,30 +267,47 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             ? sourceTime
             : Math.max(0, localMs / 1000);
 
-        // Only update if enough time has passed since last update
+        // Check if we need to seek (only seek if time difference is significant)
+        const timeDiff = Math.abs(v.currentTime - targetTime);
         const now = performance.now();
-        if (now - lastUpdateRef.current > 50) { // 50ms minimum between updates
+        
+        // Only seek if:
+        // 1. Time difference is > 0.05 seconds (smaller threshold for better audio sync)
+        // 2. Enough time has passed since last update (prevent too frequent seeks)
+        // 3. Video is ready and not currently seeking
+        if (timeDiff > 0.05 && now - lastUpdateRef.current > 80 && v.readyState >= 2 && !v.seeking) {
             v.currentTime = targetTime;
             lastUpdateRef.current = now;
             targetTimeRef.current = targetTime;
         }
 
-        // Handle playback
+        // Handle playback state
         if (isPlaying) {
+            // Ensure audio is enabled for better sync
             v.volume = 1;
             v.muted = false;
-            playPromise = v.play();
-            if (playPromise !== undefined) {
-                playPromise.catch((error) => {
-                    // Only handle AbortError if the video is still in the DOM
-                    if (error.name === 'AbortError' && document.contains(v)) {
-                        v.muted = true;
-                        v.play().catch(() => { }); // Ignore subsequent errors
-                    }
-                });
+            
+            // Set playback rate to ensure smooth audio
+            v.playbackRate = 1;
+            
+            // Only call play() if video is paused to avoid interrupting playback
+            if (v.paused) {
+                playPromise = v.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch((error) => {
+                        // Handle autoplay restrictions
+                        if (error.name === 'AbortError' && document.contains(v)) {
+                            v.muted = true;
+                            v.play().catch(() => { }); // Ignore subsequent errors
+                        }
+                    });
+                }
             }
         } else {
-            v.pause();
+            // Only pause if currently playing to avoid unnecessary state changes
+            if (!v.paused) {
+                v.pause();
+            }
         }
 
         // Cleanup function
@@ -298,7 +315,6 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             if (playPromise) {
                 playPromise.catch(() => { }); // Prevent unhandled promise rejection
             }
-            v.pause();
         };
     }, [sourceTime, localMs, clip.type, isPlaying]);
 
@@ -353,7 +369,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             >
                 <div
                     className="w-full h-full"
-                    style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: '0.75rem' }}
+                    style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}
                     onMouseDown={handleCropMouseDown}
                 >
                     {renderContent()}
