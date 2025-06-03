@@ -79,12 +79,10 @@ const ShareButton = () => {
                 quickExport,
                 onProgress: (progress) => {
                     setExportProgress(Math.min(progress, 100))
-                },
-                optimizationLevel: quickExport ? 'speed' : 'balanced',
-                allowProgressiveQuality: true
+                }
             })
 
-            await exporter.processVideoOptimized()
+            await exporter.processVideo()
             
             // Only set to false if no error occurred
             if (!exportError) {
@@ -118,39 +116,6 @@ const ShareButton = () => {
             
             // For now, just alert the user
             alert(`Found ${clipsToRemove.length} clips with missing uploaded assets to remove. External assets are preserved. This feature needs to be connected to the editor's command system.`)
-        }
-    }
-
-    const handleProjectExport = () => {
-        if (!project) return
-
-        try {
-            const projectData = {
-                project: {
-                    id: project.id,
-                    name: project.name,
-                    created_at: project.created_at,
-                    updated_at: project.updated_at
-                },
-                tracks,
-                clips,
-                exportedAt: new Date().toISOString(),
-                version: '1.0'
-            }
-
-            const dataStr = JSON.stringify(projectData, null, 2)
-            const blob = new Blob([dataStr], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_project_data.json`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
-        } catch (error) {
-            console.error('Project export error:', error)
         }
     }
 
@@ -218,39 +183,14 @@ const ShareButton = () => {
                             <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                                 <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                                 <div>
-                                    <h4 className="text-sm font-semibold text-blue-800">Export Mode: Asset Download</h4>
+                                    <h4 className="text-sm font-semibold text-blue-800">Processing Mode: Standard</h4>
                                     <p className="text-xs text-blue-700 mt-1">
-                                        Browser video processing is not available. The system will download your project assets instead for use with desktop video editors.
-                                    </p>
-                                    <p className="text-xs text-blue-600 mt-1">
-                                        ✓ All project data and assets will be preserved<br/>
-                                        ✓ Compatible with any video editing software
+                                        Video will be processed using standard browser methods. May be slower but will work.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     )}
-
-                    {/* Project Data Export */}
-                    <div className="px-6 py-4 border-b border-gray-200">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Project Data</h4>
-                        <button
-                            onClick={handleProjectExport}
-                            className="
-                                w-full px-4 py-2
-                                bg-gray-100 hover:bg-gray-200
-                                text-gray-900 font-medium rounded-lg
-                                transition-colors duration-200
-                                flex items-center gap-2
-                            "
-                        >
-                            <Download size={16} />
-                            Export Project as JSON
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Download project data for backup or sharing
-                        </p>
-                    </div>
 
                     {/* Video Export Type Selection */}
                     <div className="px-6 py-4">

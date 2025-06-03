@@ -123,11 +123,6 @@ export class VideoExporter {
         try {
             this.ffmpeg = new FFmpeg()
             
-            // Check for SharedArrayBuffer support (required for FFmpeg)
-            if (typeof SharedArrayBuffer === 'undefined') {
-                throw new Error('SharedArrayBuffer is not available. This browser may not support video export. Please try Chrome or Firefox with appropriate security headers.')
-            }
-            
             console.log('[VideoExporter] Loading FFmpeg.wasm for browser environment...')
             await this.ffmpeg.load()
             console.log('[VideoExporter] FFmpeg.wasm loaded successfully')
@@ -236,152 +231,9 @@ export class VideoExporter {
         }
     }
 
-    // New optimized processing methods
-    private selectOptimalProcessingStrategy(capabilities: DeviceCapabilities): 'webgl-fast' | 'ffmpeg-optimized' | 'ffmpeg-standard' | 'fallback' {
-        // Auto-select best strategy based on capabilities and optimization level
-        const level = this.optimizationLevel || 'auto'
-        
-        if (level === 'speed' && capabilities.hasWebGL && capabilities.isHighEndDevice) {
-            return 'webgl-fast'
-        }
-        
-        if (level === 'quality') {
-            return capabilities.hasSharedArrayBuffer ? 'ffmpeg-standard' : 'fallback'
-        }
-        
-        if (level === 'balanced' || level === 'auto') {
-            if (capabilities.hasWebGL && capabilities.memoryAvailable >= 6) {
-                return 'webgl-fast'
-            } else if (capabilities.hasSharedArrayBuffer) {
-                return 'ffmpeg-optimized'
-            } else {
-                return 'fallback'
-            }
-        }
-        
-        // Default fallback
-        return capabilities.hasSharedArrayBuffer ? 'ffmpeg-standard' : 'fallback'
-    }
-
-    private async processWithOptimizations(): Promise<void> {
-        const capabilities = detectDeviceCapabilities()
-        const strategy = this.selectOptimalProcessingStrategy(capabilities)
-        
-        console.log('[VideoExporter] Device capabilities:', capabilities)
-        console.log('[VideoExporter] Selected strategy:', strategy)
-        
-        // Progressive quality: Start with preview if enabled
-        if (this.allowProgressiveQuality && strategy !== 'fallback') {
-            try {
-                await this.generatePreviewQuality(strategy)
-                // Continue with full quality processing
-            } catch (error) {
-                console.warn('[VideoExporter] Preview generation failed, continuing with full quality:', error)
-            }
-        }
-        
-        // Execute the selected strategy
-        switch (strategy) {
-            case 'webgl-fast':
-                return await this.processWithWebGL()
-            case 'ffmpeg-optimized':
-                return await this.processWithOptimizedFFmpeg()
-            case 'ffmpeg-standard':
-                return await this.processVideo() // Use existing method
-            case 'fallback':
-                return await this.processFallbackExport()
-            default:
-                return await this.processVideo() // Safe fallback
-        }
-    }
-
-    private async generatePreviewQuality(strategy: string): Promise<void> {
-        console.log('[VideoExporter] Generating preview quality...')
-        
-        if (this.onProgress) {
-            this.onProgress(25) // Preview progress
-        }
-        
-        // For now, we'll skip actual preview generation but this is where
-        // you'd create a low-quality version for immediate user feedback
-        // This could use WebGL to create a 480p preview very quickly
-        
-        console.log('[VideoExporter] Preview quality ready (placeholder)')
-    }
-
-    private async processWithWebGL(): Promise<void> {
-        console.log('[VideoExporter] Processing with WebGL acceleration...')
-        
-        try {
-            // WebGL can process video frames much faster than FFmpeg
-            // This would be implemented with WebGL shaders for basic operations
-            // For now, fall back to optimized FFmpeg but mark for future implementation
-            console.log('[VideoExporter] WebGL processing not fully implemented yet, using optimized FFmpeg')
-            return await this.processWithOptimizedFFmpeg()
-        } catch (error) {
-            console.warn('[VideoExporter] WebGL processing failed, falling back to FFmpeg:', error)
-            return await this.processWithOptimizedFFmpeg()
-        }
-    }
-
-    private async processWithOptimizedFFmpeg(): Promise<void> {
-        console.log('[VideoExporter] Processing with optimized FFmpeg settings...')
-        
-        // This uses the existing FFmpeg processing but with better optimization
-        const originalQuickExport = this.quickExport
-        
-        try {
-            // Temporarily enable quick export for better performance
-            this.quickExport = true
-            
-            // Use existing processVideo method but with optimizations
-            await this.processVideo()
-        } finally {
-            // Restore original setting
-            this.quickExport = originalQuickExport
-        }
-    }
-
-    // Smart entry point - chooses optimal processing method
-    async processVideoOptimized(): Promise<void> {
-        try {
-            console.log('[VideoExporter] Starting optimized video processing...')
-            
-            // If optimization is explicitly disabled, use original method
-            if (this.optimizationLevel === undefined) {
-                console.log('[VideoExporter] No optimization level set, using original processVideo')
-                return await this.processVideo()
-            }
-            
-            // Use the new optimized processing pipeline
-            return await this.processWithOptimizations()
-            
-        } catch (error) {
-            console.warn('[VideoExporter] Optimized processing failed, falling back to standard processing:', error)
-            
-            // Always fall back to the original method if optimizations fail
-            return await this.processVideo()
-        }
-    }
-
     async processVideo() {
         try {
             console.log('[VideoExporter] Starting processVideo')
-
-            // Check if FFmpeg is available
-            let ffmpegAvailable = true
-            try {
-                await this.initializeFFmpeg()
-            } catch (error) {
-                console.warn('[VideoExporter] FFmpeg not available:', error)
-                ffmpegAvailable = false
-            }
-
-            // If FFmpeg is not available, use fallback method
-            if (!ffmpegAvailable) {
-                console.log('[VideoExporter] Using fallback export method')
-                return await this.processFallbackExport()
-            }
 
             console.log('[VideoExporter] tracks:', this.tracks)
             console.log('[VideoExporter] clips:', this.clips)
@@ -390,6 +242,7 @@ export class VideoExporter {
                 throw new Error('VideoExporter: tracks or clips is not an array')
             }
 
+            // Always try to initialize FFmpeg first
             const ffmpeg = await this.initializeFFmpeg()
             if (!ffmpeg) throw new Error('FFmpeg not initialized')
 
@@ -742,7 +595,7 @@ export class VideoExporter {
                 // Enhanced download with better cross-browser support
                 const a = document.createElement('a')
                 a.href = url
-                a.download = `video-export-${Date.now()}.mp4`
+                a.download = `video-export-${this.exportType}-${Date.now()}.mp4`
                 a.style.display = 'none'
                 
                 // Add to DOM to ensure it works in all browsers
@@ -787,95 +640,6 @@ export class VideoExporter {
         } catch (error) {
             console.error('[VideoExporter] Export error:', error)
             this.onError(error instanceof Error ? error.message : 'Export failed')
-        }
-    }
-
-    private async processFallbackExport() {
-        try {
-            console.log('[VideoExporter] Starting fallback export (no FFmpeg)')
-            
-            if (this.onProgress) this.onProgress(10)
-            
-            await this.loadAssetUrls()
-            
-            if (this.onProgress) this.onProgress(30)
-            
-            // Create a project bundle with all assets and metadata
-            const projectData = {
-                exportInfo: {
-                    type: 'fallback_export',
-                    reason: 'FFmpeg not available - SharedArrayBuffer not supported',
-                    exportedAt: new Date().toISOString(),
-                    browserInfo: {
-                        userAgent: navigator.userAgent,
-                        sharedArrayBufferSupported: typeof SharedArrayBuffer !== 'undefined'
-                    }
-                },
-                tracks: this.tracks,
-                clips: this.clips,
-                assetUrls: Object.fromEntries(this.assetUrls),
-                instructions: {
-                    message: 'Video processing is not available in this browser. Here are your project assets:',
-                    steps: [
-                        '1. Download each asset individually using the URLs provided',
-                        '2. Use desktop video editing software (like DaVinci Resolve, Premiere Pro, or OpenShot)',
-                        '3. Import assets and recreate your timeline using the clip timing data provided',
-                        '4. Alternative: Use Chrome or Firefox with HTTPS hosting for browser-based export'
-                    ]
-                }
-            }
-            
-            if (this.onProgress) this.onProgress(60)
-            
-            // Create and download project bundle
-            const jsonData = JSON.stringify(projectData, null, 2)
-            const blob = new Blob([jsonData], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `project-bundle-${Date.now()}.json`
-            a.style.display = 'none'
-            document.body.appendChild(a)
-            a.click()
-            
-            setTimeout(() => {
-                document.body.removeChild(a)
-                URL.revokeObjectURL(url)
-            }, 100)
-            
-            if (this.onProgress) this.onProgress(80)
-            
-            // Also try to download individual assets if possible
-            let downloadedAssets = 0
-            for (const [assetId, assetUrl] of this.assetUrls.entries()) {
-                try {
-                    // Create download link for each asset
-                    const assetLink = document.createElement('a')
-                    assetLink.href = assetUrl
-                    assetLink.download = `asset-${assetId}`
-                    assetLink.style.display = 'none'
-                    document.body.appendChild(assetLink)
-                    
-                    // Small delay between downloads to avoid overwhelming the browser
-                    setTimeout(() => {
-                        assetLink.click()
-                        document.body.removeChild(assetLink)
-                    }, downloadedAssets * 500)
-                    
-                    downloadedAssets++
-                } catch (error) {
-                    console.warn(`[VideoExporter] Failed to queue download for asset ${assetId}:`, error)
-                }
-            }
-            
-            if (this.onProgress) this.onProgress(100)
-            
-            console.log(`[VideoExporter] Fallback export complete - downloaded project bundle and ${downloadedAssets} assets`)
-            
-        } catch (error) {
-            console.error('[VideoExporter] Fallback export error:', error)
-            throw new Error(`Fallback export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
     }
 } 
