@@ -1,30 +1,13 @@
-import React, { useMemo, useEffect } from 'react'
+import React, { useMemo } from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useEditor } from '@/contexts/EditorContext'
-import { useClipPreloader, cleanupAllPreloadedMedia } from '@/hooks/useClipPreloader'
 import { ClipLayer } from './ClipLayer'
-import { PreloadIndicator } from './PreloadIndicator'
-import { ErrorBoundary } from './ErrorBoundary'
 import type { Clip } from '@/types/editor'
 
 export function Player() {
     const { currentTime } = usePlayback()
     const { clips, tracks, setSelectedClipId } = useEditor()
     const currentTimeMs = currentTime * 1000
-
-    // 🚀 Smart preloading system
-    const { getPreloadedMedia, getPreloadStats, clipsToPreload } = useClipPreloader(clips, {
-        preloadWindowMs: 5000,      // Preload clips 5 seconds ahead
-        maxPreloadedItems: 8,       // Keep max 8 preloaded items
-        cleanupIntervalMs: 10000    // Cleanup every 10 seconds
-    })
-
-    // Cleanup preloaded media when component unmounts
-    useEffect(() => {
-        return () => {
-            cleanupAllPreloadedMedia()
-        }
-    }, [])
 
     // Performance optimization: Only render clips that are currently visible or about to be visible
     const visibleClips = useMemo(() => {
@@ -60,8 +43,6 @@ export function Player() {
         })
     }, [visibleClips, currentTimeMs])
 
-    const preloadStats = getPreloadStats()
-
     return (
         <div className="flex items-center justify-center h-full p-4">
             <div
@@ -79,30 +60,13 @@ export function Player() {
                 {/* Subtle glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
                 
-                {/* Preload indicator - shows in development or when explicitly enabled */}
-                {(process.env.NODE_ENV === 'development' || localStorage.getItem('showPreloadStats') === 'true') && (
-                    <PreloadIndicator 
-                        stats={preloadStats} 
-                        className="absolute top-4 right-4 z-50" 
-                    />
-                )}
-                
                 {/* Render active clips in order with their source times */}
                 {clipsWithSourceTime.map(clip => (
-                    <ErrorBoundary 
-                        key={`error-boundary-${clip.id}`}
-                        onError={(error, errorInfo) => {
-                            console.error(`Error in clip ${clip.id}:`, error, errorInfo)
-                            // Could send to error tracking service here
-                        }}
-                    >
-                        <ClipLayer
-                            key={clip.id}
-                            clip={clip}
-                            sourceTime={clip.sourceTime}
-                            preloadedMedia={getPreloadedMedia(clip.id)}
-                        />
-                    </ErrorBoundary>
+                    <ClipLayer
+                        key={clip.id}
+                        clip={clip}
+                        sourceTime={clip.sourceTime}
+                    />
                 ))}
             </div>
         </div>

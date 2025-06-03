@@ -5,21 +5,12 @@ import { useEditor } from '@/contexts/EditorContext'
 import type { Clip } from '@/types/editor'
 import ClipMenu from './ClipMenu'
 
-interface PreloadedMedia {
-    clipId: string
-    element: HTMLVideoElement | HTMLImageElement | HTMLAudioElement
-    url: string
-    isReady: boolean
-    lastUsed: number
-}
-
 interface ClipLayerProps {
     clip: Clip
     sourceTime?: number
-    preloadedMedia?: PreloadedMedia | null
 }
 
-export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime, preloadedMedia }: ClipLayerProps) {
+export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const { currentTime, isPlaying } = usePlayback()
     const { selectedClipId, selectedClipIds, setSelectedClipId, setSelectedClipIds } = useEditor()
     const localMs = currentTime * 1000 - clip.timelineStartMs
@@ -45,14 +36,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime, prelo
 
     const { url } = useAssetUrl(clip.assetId)
     const externalAsset = clip.properties?.externalAsset
-    
-    // 🚀 Use preloaded media URL if available, otherwise fall back to regular URL
-    const mediaUrl = preloadedMedia?.url || externalAsset?.url || url
-
-    // 🚀 Check if we have a ready preloaded element
-    const hasPreloadedElement = preloadedMedia?.isReady && 
-                               preloadedMedia.element && 
-                               preloadedMedia.element.src === mediaUrl
+    const mediaUrl = externalAsset?.url || url
 
     // Memoize crop state initialization
     const [crop, setCrop] = useState(() => ({
@@ -130,282 +114,192 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime, prelo
         }
     }, [mediaUrl, clip.type])
 
-    // Optimized video playback effect with preloading support
+    // Optimized video playback effect
     useEffect(() => {
         const v = videoRef.current;
         if (!v || clip.type !== 'video') return;
 
-        let isMounted = true; // Track if component is still mounted
+        const targetTime = sourceTime !== undefined ? sourceTime : Math.max(0, localMs / 1000);
+        const now = performance.now();
+        
+        // More conservative seeking - only seek if really necessary
+        const timeDiff = Math.abs(v.currentTime - targetTime);
+        const shouldSeek = timeDiff > 0.15 && // Larger threshold
+                          now - lastUpdateRef.current > 100 && // Less frequent updates
+                          now - lastSeekTimeRef.current > 200 && // Prevent rapid seeking
+                          v.readyState >= 2 && 
+                          !v.seeking;
 
-        const setupVideo = async () => {
-            try {
-                if (hasPreloadedElement && preloadedMedia?.element instanceof HTMLVideoElement) {
-                    const preloadedVideo = preloadedMedia.element
-                    console.log(`📺 Using preloaded video element for clip ${clip.id}`)
-                    
-                    // Use the preloaded video element directly
-                    v.src = preloadedVideo.src
-                    console.log('🚀 Using preloaded video for instant playback:', clip.id)
-                    
-                    // Sync properties
-                    preloadedVideo.currentTime = (sourceTime || 0) / 1000
-                    preloadedVideo.volume = clip.volume || 1
-                    preloadedVideo.playbackRate = clip.speed || 1
-                    preloadedVideo.muted = false
+        if (shouldSeek) {
+            v.currentTime = targetTime;
+            lastUpdateRef.current = now;
+            lastSeekTimeRef.current = now;
+        }
 
-                    if (isPlaying && !preloadedVideo.paused) {
-                        // Already playing, just ensure sync
-                    } else if (isPlaying) {
-                        preloadedVideo.play().catch(console.warn)
-                    } else {
-                        preloadedVideo.pause()
-                    }
-                } else {
-                    console.log(`📺 Creating new video element for clip ${clip.id}:`, {
-                        hasPreloadedElement,
-                        mediaUrl,
-                        reason: !hasPreloadedElement ? 'no preloaded element' : 
-                               !preloadedMedia?.element ? 'no element in preload' :
-                               !(preloadedMedia.element instanceof HTMLVideoElement) ? 'not video element' : 'unknown'
-                    })
-                    
-                    // Create new video element as fallback
-                    v.src = mediaUrl || ''
-                    v.currentTime = (sourceTime || 0) / 1000
-                    v.volume = clip.volume || 1
-                    v.playbackRate = clip.speed || 1
-                    v.preload = 'metadata'
-                    v.playsInline = true
-                    v.crossOrigin = 'anonymous'
-                    v.muted = false
-
-                    if (isPlaying) {
-                        v.play().catch(console.warn)
-                    }
+        // Handle playback state changes
+        if (isPlaying && v.paused) {
+            v.volume = clip.volume || 1;
+            v.muted = false;
+            v.playbackRate = clip.speed || 1;
+            
+            const playPromise = v.play();
+            playPromise?.catch((error) => {
+                if (error.name === 'AbortError') {
+                    v.muted = true;
+                    v.play().catch(() => {});
                 }
-
-                if (!isMounted) return; // Check if component is still mounted
-
-                const targetTime = sourceTime !== undefined ? sourceTime : Math.max(0, localMs / 1000);
-                const now = performance.now();
-                
-                // More conservative seeking - only seek if really necessary
-                const timeDiff = Math.abs(v.currentTime - targetTime);
-                const shouldSeek = timeDiff > 0.15 && // Larger threshold
-                                  now - lastUpdateRef.current > 100 && // Less frequent updates
-                                  now - lastSeekTimeRef.current > 200 && // Prevent rapid seeking
-                                  v.readyState >= 2 && 
-                                  !v.seeking;
-
-                if (shouldSeek && isMounted) {
-                    v.currentTime = targetTime;
-                    lastUpdateRef.current = now;
-                    lastSeekTimeRef.current = now;
-                }
-
-                // Handle playback state changes
-                if (isMounted && isPlaying && v.paused) {
-                    v.volume = clip.volume || 1;
-                    v.muted = false;
-                    v.playbackRate = clip.speed || 1;
-                    
-                    const playPromise = v.play();
-                    playPromise?.catch((error) => {
-                        if (isMounted && error.name === 'AbortError') {
-                            v.muted = true;
-                            v.play().catch(() => {});
-                        }
-                    });
-                } else if (isMounted && !isPlaying && !v.paused) {
-                    v.pause();
-                }
-            } catch (error) {
-                console.error('Error in video setup:', error);
-            }
-        };
-
-        // Use requestAnimationFrame to ensure DOM is ready
-        const frameId = requestAnimationFrame(() => {
-            setupVideo();
-        });
-
-        return () => {
-            isMounted = false;
-            cancelAnimationFrame(frameId);
-        };
-    }, [sourceTime, localMs, clip.type, clip.volume, clip.speed, isPlaying, hasPreloadedElement, preloadedMedia]);
+            });
+        } else if (!isPlaying && !v.paused) {
+            v.pause();
+        }
+    }, [sourceTime, localMs, clip.type, clip.volume, clip.speed, isPlaying]);
 
     // Remove individual audio handling - this will be handled by AudioContext
     // Audio clips will be managed by the centralized AudioProvider
 
-    // Memoize render content with preloading optimizations - add error boundary
+    // Memoize render content
     const renderContent = useMemo(() => {
-        try {
-            const style = {
-                position: 'absolute' as const,
-                left: '50%',
-                top: '50%',
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover' as const,
-                transform: `translate(-50%, -50%) scale(${mediaScale})`,
-                userSelect: 'none' as const,
-            }
+        const style = {
+            position: 'absolute' as const,
+            left: '50%',
+            top: '50%',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover' as const,
+            transform: `translate(-50%, -50%) scale(${mediaScale})`,
+            userSelect: 'none' as const,
+        }
 
-            switch (clip.type) {
-                case 'video':
-                    return (
-                        <video
-                            ref={videoRef}
-                            src={!hasPreloadedElement ? mediaUrl! : undefined} // Only set src if not using preloaded
-                            style={style}
-                            preload={hasPreloadedElement ? "none" : "metadata"}
-                            playsInline
-                            muted={false}
-                            onClick={handleClick}
-                            draggable={false}
-                            onError={(e) => {
-                                console.error('Video error:', e);
-                                // Fallback to regular URL if preloaded fails
-                                if (hasPreloadedElement && videoRef.current) {
-                                    videoRef.current.src = mediaUrl!;
-                                }
-                            }}
-                        />
-                    )
-                case 'audio':
-                    // Audio clips are now handled by AudioContext
-                    return (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                left: '50%',
-                                top: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                background: 'rgba(34, 197, 94, 0.8)',
-                                borderRadius: '8px',
-                                padding: '20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minWidth: '120px',
-                                minHeight: '60px'
-                            }}
-                            onClick={handleClick}
-                        >
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                            </svg>
-                        </div>
-                    )
-                case 'image':
-                    // 🚀 For images, we can directly use the preloaded element if available
-                    const imageElement = hasPreloadedElement && preloadedMedia?.element instanceof HTMLImageElement 
-                        ? preloadedMedia.element 
-                        : undefined;
+        switch (clip.type) {
+            case 'video':
+                return (
+                    <video
+                        ref={videoRef}
+                        src={mediaUrl!}
+                        style={style}
+                        preload="metadata" // Changed from "auto" for better performance
+                        playsInline
+                        muted={false}
+                        onClick={handleClick}
+                        draggable={false}
+                    />
+                )
+            case 'audio':
+                // Audio clips are now handled by AudioContext
+                return (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            background: 'rgba(34, 197, 94, 0.8)',
+                            borderRadius: '8px',
+                            padding: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '120px',
+                            minHeight: '60px'
+                        }}
+                        onClick={handleClick}
+                    >
+                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                        </svg>
+                    </div>
+                )
+            case 'image':
+                return (
+                    <img
+                        src={mediaUrl!}
+                        style={style}
+                        onClick={handleClick}
+                        draggable={false}
+                        loading="lazy" // Add lazy loading
+                    />
+                )
+            case 'text':
+            case 'caption':
+                // Text rendering logic - unchanged for now
+                const placement = clip.properties?.placement || 'middle'
+                let textPosition = {}
+                switch (placement) {
+                    case 'top':
+                        textPosition = { top: '15%', transform: 'translateY(0%)' }
+                        break
+                    case 'bottom':
+                        textPosition = { bottom: '15%', transform: 'translateY(0%)' }
+                        break
+                    case 'middle':
+                    default:
+                        textPosition = { top: '50%', transform: 'translateY(-50%)' }
+                        break
+                }
+
+                const renderCaptionText = () => {
+                    const text = clip.properties?.text || (clip.type === 'caption' ? 'Caption Clip' : 'Text Clip')
                     
-                    return (
-                        <img
-                            src={mediaUrl!}
-                            style={style}
-                            onClick={handleClick}
-                            draggable={false}
-                            loading={imageElement ? "eager" : "lazy"}
-                            onLoad={() => {
-                                if (imageElement) {
-                                    console.log('🚀 Using preloaded image for instant display:', clip.id)
-                                }
-                            }}
-                            onError={(e) => {
-                                console.error('Image error:', e);
-                            }}
-                        />
-                    )
-                case 'text':
-                case 'caption':
-                    // Text rendering logic - unchanged for now
-                    const placement = clip.properties?.placement || 'middle'
-                    let textPosition = {}
-                    switch (placement) {
-                        case 'top':
-                            textPosition = { top: '15%', transform: 'translateY(0%)' }
-                            break
-                        case 'bottom':
-                            textPosition = { bottom: '15%', transform: 'translateY(0%)' }
-                            break
-                        case 'middle':
-                        default:
-                            textPosition = { top: '50%', transform: 'translateY(-50%)' }
-                            break
+                    if (clip.type === 'caption' && text.includes('<span color=')) {
+                        const parts = text.split(/(<span color="[^"]*">.*?<\/span>)/g)
+                        return parts.map((part: string, index: number) => {
+                            const spanMatch = part.match(/<span color="([^"]*)">(.*?)<\/span>/)
+                            if (spanMatch) {
+                                const [, color, highlightedText] = spanMatch
+                                return (
+                                    <span key={index} style={{ color, fontWeight: 'bold' }}>
+                                        {highlightedText}
+                                    </span>
+                                )
+                            }
+                            return part
+                        })
                     }
+                    return text
+                }
 
-                    const renderCaptionText = () => {
-                        const text = clip.properties?.text || (clip.type === 'caption' ? 'Caption Clip' : 'Text Clip')
-                        
-                        if (clip.type === 'caption' && text.includes('<span color=')) {
-                            const parts = text.split(/(<span color="[^"]*">.*?<\/span>)/g)
-                            return parts.map((part: string, index: number) => {
-                                const spanMatch = part.match(/<span color="([^"]*)">(.*?)<\/span>/)
-                                if (spanMatch) {
-                                    const [, color, highlightedText] = spanMatch
-                                    return (
-                                        <span key={index} style={{ color, fontWeight: 'bold' }}>
-                                            {highlightedText}
-                                        </span>
-                                    )
-                                }
-                                return part
-                            })
-                        }
-                        return text
-                    }
-
-                    return (
+                return (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            ...textPosition,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1000,
+                            width: '100%',
+                            height: '100%',
+                        }}
+                        onClick={handleClick}
+                    >
                         <div
                             style={{
-                                position: 'absolute',
-                                left: 0,
-                                right: 0,
-                                ...textPosition,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 1000,
+                                ...clip.properties?.style,
+                                textAlign: 'center',
+                                lineHeight: '1.4',
+                                padding: '0.5rem',
                                 width: '100%',
                                 height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                overflow: 'hidden',
+                                fontSize: clip.properties?.style?.fontSize || 
+                                    `${Math.max(16, Math.min(32, crop.width / 12))}px`,
                             }}
-                            onClick={handleClick}
                         >
-                            <div
-                                style={{
-                                    ...clip.properties?.style,
-                                    textAlign: 'center',
-                                    lineHeight: '1.4',
-                                    padding: '0.5rem',
-                                    width: '100%',
-                                    height: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    whiteSpace: 'pre-wrap',
-                                    wordBreak: 'break-word',
-                                    overflow: 'hidden',
-                                    fontSize: clip.properties?.style?.fontSize || 
-                                        `${Math.max(16, Math.min(32, crop.width / 12))}px`,
-                                }}
-                            >
-                                {renderCaptionText()}
-                            </div>
+                            {renderCaptionText()}
                         </div>
-                    )
-                default:
-                    return null
-            }
-        } catch (error) {
-            console.error('Error in renderContent:', error);
-            return null;
+                    </div>
+                )
+            default:
+                return null
         }
-    }, [clip.type, clip.properties, mediaUrl, mediaScale, crop.width, handleClick, hasPreloadedElement, preloadedMedia])
+    }, [clip.type, clip.properties, mediaUrl, mediaScale, crop.width, handleClick])
 
     // --- Crop area resizing ---
     const handleResizeStart = (e: React.MouseEvent, type: 'nw' | 'ne' | 'sw' | 'se') => {
@@ -577,22 +471,6 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime, prelo
             });
         }
     }, [clip.type, clip.properties?.placement]);
-
-    // Debug logging for preloaded media
-    useEffect(() => {
-        if (clip.type === 'video' || clip.type === 'audio') {
-            console.log(`🔍 Media analysis for clip ${clip.id}:`, {
-                type: clip.type,
-                hasPreloadedMedia: !!preloadedMedia,
-                preloadedIsReady: preloadedMedia?.isReady,
-                hasElement: !!preloadedMedia?.element,
-                srcMatches: preloadedMedia?.element?.src === mediaUrl,
-                mediaUrl,
-                preloadedSrc: preloadedMedia?.element?.src,
-                hasPreloadedElement
-            })
-        }
-    }, [clip.id, clip.type, preloadedMedia, mediaUrl, hasPreloadedElement])
 
     // --- Main render ---
     return (
