@@ -334,30 +334,18 @@ export class VideoExporter {
             let inputIndex = 0
             let inputMaps: string[] = []
 
-            // Process media clips
+            // Process media clips with simplified approach
             if (validMediaClips.length > 0) {
                 for (let i = 0; i < validMediaClips.length; i++) {
                     const clip = validMediaClips[i]
                     const filename = `input_${i}.${this.getFileExtension(this.assetUrls.get(clip.assetId!) || 'mp4')}`
                     filterInputs.push(`-i`, filename)
 
-                    // Calculate relative start and end times
-                    const startTime = clip.timelineStartMs / 1000
-                    const endTime = clip.timelineEndMs / 1000
-                    const duration = endTime - startTime
-
-                    // Scale and crop first, then trim and adjust timestamps
-                    let vf = `scale=-2:1920,crop=1080:1920`
-                    let trim = `,trim=start=${startTime}:end=${endTime},setpts=PTS-STARTPTS`
-
-                    // Add timestamp offset for concatenation
-                    if (i > 0) {
-                        const previousClip = validMediaClips[i - 1]
-                        const offset = previousClip.timelineEndMs / 1000
-                        trim += `,setpts=PTS+${offset}/TB`
-                    }
-
-                    filterChains.push(`[${inputIndex}:v]${vf}${trim}[v${inputIndex}]`)
+                    // For now, use simple scaling and crop without complex timing
+                    // Just scale and crop each input, let concat handle the timing
+                    let vf = `scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black`
+                    
+                    filterChains.push(`[${inputIndex}:v]${vf}[v${inputIndex}]`)
                     inputMaps.push(`[v${inputIndex}]`)
                     inputIndex++
                 }
@@ -371,15 +359,15 @@ export class VideoExporter {
                 inputMaps.push('[0:v]')
             }
 
-            // Compose filter_complex - only handle video concatenation
+            // Compose filter_complex - simplified concatenation
             let filterComplex = ''
             if (inputMaps.length > 0) {
                 if (inputMaps.length > 1) {
-                    // Multiple videos - concatenate them
+                    // Multiple videos - simple concatenation
                     filterComplex = `${filterChains.join(';')};${inputMaps.join('')}concat=n=${inputMaps.length}:v=1:a=0[outv]`
                 } else {
                     // Single video - just pass it through
-                    filterComplex = `${filterChains.join(';')};${inputMaps[0]}copy[outv]`
+                    filterComplex = `${filterChains.join('')}[outv]`
                 }
             }
 
@@ -388,49 +376,37 @@ export class VideoExporter {
             console.log('[VideoExporter] inputMaps:', inputMaps)
             console.log('[VideoExporter] filterComplex:', filterComplex)
 
-            // Build FFmpeg command
-            const ffmpegArgs = [
+            // Build FFmpeg command with fallback options
+            let ffmpegArgs = [
                 ...filterInputs,
                 '-filter_complex', filterComplex,
                 '-map', '[outv]',
                 '-preset', 'ultrafast',
                 '-crf', this.exportType === 'studio' ? '18' : this.exportType === 'social' ? '23' : '28',
-                '-c:v', 'h264_nvenc', // Try NVIDIA GPU acceleration first
+                '-c:v', 'libx264', // Use software encoding for better compatibility
                 '-pix_fmt', 'yuv420p',
                 '-movflags', '+faststart',
-                '-threads', '0', // Use all available CPU threads
-                '-tune', 'fastdecode', // Optimize for fast decoding
+                '-threads', '0',
                 '-y',
                 'output.mp4'
             ]
 
             // Add quick export settings if enabled
             if (this.quickExport) {
-                // Reduce resolution for faster processing
-                filterComplex = filterComplex.replace('scale=-2:1920', 'scale=-2:960')
-                // Use lower quality settings
-                ffmpegArgs[ffmpegArgs.indexOf('-crf') + 1] = '35' // Higher CRF = lower quality but faster
-                ffmpegArgs[ffmpegArgs.indexOf('-preset') + 1] = 'ultrafast'
-                // Reduce frame rate for faster processing
-                ffmpegArgs.splice(ffmpegArgs.indexOf('-pix_fmt'), 0, '-r', '24')
-            }
-
-            // If NVIDIA encoder fails, try other hardware encoders
-            try {
-                await ffmpeg.exec(ffmpegArgs)
-            } catch (error) {
-                console.log('[VideoExporter] NVIDIA encoder failed, trying alternative encoders...')
-                // Try Intel QuickSync
-                ffmpegArgs[ffmpegArgs.indexOf('-c:v') + 1] = 'h264_qsv'
-                try {
-                    await ffmpeg.exec(ffmpegArgs)
-                } catch (error) {
-                    console.log('[VideoExporter] Intel encoder failed, falling back to CPU...')
-                    // Fall back to CPU encoding with optimized settings
-                    ffmpegArgs[ffmpegArgs.indexOf('-c:v') + 1] = 'libx264'
-                    ffmpegArgs[ffmpegArgs.indexOf('-preset') + 1] = 'veryfast'
-                    await ffmpeg.exec(ffmpegArgs)
-                }
+                // Use even simpler settings for quick export
+                ffmpegArgs = [
+                    ...filterInputs,
+                    '-filter_complex', filterComplex,
+                    '-map', '[outv]',
+                    '-preset', 'ultrafast',
+                    '-crf', '35',
+                    '-c:v', 'libx264',
+                    '-pix_fmt', 'yuv420p',
+                    '-r', '24', // Lower frame rate
+                    '-s', '540x960', // Lower resolution  
+                    '-y',
+                    'output.mp4'
+                ]
             }
 
             // List files before running FFmpeg
@@ -453,6 +429,8 @@ export class VideoExporter {
 
             try {
                 console.log('[VideoExporter] Executing FFmpeg command...')
+                console.log('[VideoExporter] Command:', ffmpegArgs.join(' '))
+                
                 // Add progress logging
                 ffmpeg.on('progress', ({ progress, time }) => {
                     console.log('[VideoExporter] FFmpeg progress:', progress, 'time:', time)
@@ -460,6 +438,13 @@ export class VideoExporter {
                         // Convert progress to a percentage (0-100)
                         const progressPercentage = Math.min(Math.round(progress * 100), 100)
                         this.onProgress(progressPercentage)
+                    }
+                })
+
+                // Add log handling to capture FFmpeg output
+                ffmpeg.on('log', ({ type, message }) => {
+                    if (type === 'stderr') {
+                        console.log('[VideoExporter] FFmpeg stderr:', message)
                     }
                 })
 
@@ -479,6 +464,11 @@ export class VideoExporter {
                 const outputExists = await this.verifyFFmpegFile(ffmpeg, 'output.mp4')
                 if (!outputExists) {
                     console.error('[VideoExporter] Output file not found in FFmpeg FS')
+                    
+                    // List files again for debugging
+                    const debugFiles = await ffmpeg.listDir('/')
+                    console.error('[VideoExporter] Available files:', debugFiles.map(f => f.name))
+                    
                     throw new Error('Output file was not created by FFmpeg')
                 }
             } catch (error) {
@@ -487,12 +477,38 @@ export class VideoExporter {
                 try {
                     const files = await ffmpeg.listDir('/')
                     console.log('[VideoExporter] Files in FFmpeg FS after error:', files)
+                    
+                    // Try to read FFmpeg logs if available
+                    try {
+                        const logFiles = files.filter(f => f.name.includes('log') || f.name.includes('err'))
+                        for (const logFile of logFiles) {
+                            try {
+                                const logContent = await ffmpeg.readFile(logFile.name)
+                                console.log(`[VideoExporter] Log file ${logFile.name}:`, 
+                                    typeof logContent === 'string' ? logContent : new TextDecoder().decode(logContent as Uint8Array))
+                            } catch (e) {
+                                console.warn(`[VideoExporter] Could not read log file ${logFile.name}:`, e)
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[VideoExporter] Could not read log files:', e)
+                    }
                 } catch (listError) {
                     console.error('[VideoExporter] Failed to list FFmpeg files after error:', listError)
                 }
+                
                 console.error('[VideoExporter] ffmpegArgs on error:', ffmpegArgs)
                 console.error('[VideoExporter] filterComplex string on error:', filterComplex)
-                throw new Error(`FFmpeg execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                
+                // Provide more specific error message
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+                if (errorMessage.includes('Invalid argument') || errorMessage.includes('filter')) {
+                    throw new Error(`FFmpeg filter error: Invalid video filter configuration. This might be due to incompatible video formats or timing issues.`)
+                } else if (errorMessage.includes('No such file')) {
+                    throw new Error(`FFmpeg input error: Could not find input files. Check if assets were loaded correctly.`)
+                } else {
+                    throw new Error(`FFmpeg execution failed: ${errorMessage}`)
+                }
             }
 
             // Download output
