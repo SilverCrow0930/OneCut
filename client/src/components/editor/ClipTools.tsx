@@ -34,7 +34,11 @@ const ClipTools = () => {
     const selectedClips = clips.filter(clip => selectedClipIds.includes(clip.id))
     const hasSelectedClip = !!selectedClip
     const hasMultipleSelection = selectedClipIds.length > 1
-    const hasAnySelection = hasSelectedClip || hasMultipleSelection
+    const hasAnySelection = hasSelectedClip || selectedClipIds.length > 0
+
+    // Get the actual selected clips (handles both single and multi-selection)
+    const actualSelectedClips = hasSelectedClip ? [selectedClip] : selectedClips
+    const primarySelectedClip = hasSelectedClip ? selectedClip : (selectedClips.length === 1 ? selectedClips[0] : null)
 
     // Check if selected clips can have speed adjustments (video/audio only)
     const canAdjustSpeed = selectedClips.some(clip => 
@@ -43,13 +47,13 @@ const ClipTools = () => {
 
     // Update slider speed when selection changes
     useEffect(() => {
-        console.log('🎯 Selection changed - hasSelectedClip:', hasSelectedClip, 'hasMultipleSelection:', hasMultipleSelection, 'selectedClip:', selectedClip?.id, 'selectedClipIds:', selectedClipIds)
+        console.log('🎯 Selection changed - hasSelectedClip:', hasSelectedClip, 'hasMultipleSelection:', hasMultipleSelection, 'selectedClip:', selectedClip?.id, 'selectedClipIds:', selectedClipIds, 'primarySelectedClip:', primarySelectedClip?.id)
         
-        if (hasSelectedClip && !hasMultipleSelection && (selectedClip.type === 'video' || selectedClip.type === 'audio')) {
-            const currentSpeed = selectedClip.speed || 1
-            console.log('🎛️ Updating slider speed from selection:', currentSpeed, 'for clip:', selectedClip.id)
+        if (primarySelectedClip && (primarySelectedClip.type === 'video' || primarySelectedClip.type === 'audio')) {
+            const currentSpeed = primarySelectedClip.speed || 1
+            console.log('🎛️ Updating slider speed from primary selection:', currentSpeed, 'for clip:', primarySelectedClip.id)
             setSliderSpeed(currentSpeed)
-        } else if (hasMultipleSelection) {
+        } else if (selectedClips.length > 1) {
             // For multiple selection, show the speed of the first media clip or default to 1
             const firstMediaClip = selectedClips.find(clip => clip.type === 'video' || clip.type === 'audio')
             const currentSpeed = firstMediaClip?.speed || 1
@@ -59,10 +63,10 @@ const ClipTools = () => {
             console.log('🎛️ Resetting slider speed to 1 (no media clips selected)')
             setSliderSpeed(1) // Default speed for non-media clips
         }
-    }, [selectedClip, selectedClips, hasSelectedClip, hasMultipleSelection])
+    }, [selectedClip, selectedClips, hasSelectedClip, hasMultipleSelection, primarySelectedClip])
 
     const handleSpeedChange = (newSpeed: number) => {
-        const clipsToUpdate = hasMultipleSelection ? selectedClips : (selectedClip ? [selectedClip] : [])
+        const clipsToUpdate = actualSelectedClips
         
         if (clipsToUpdate.length === 0) return
 
@@ -122,9 +126,9 @@ const ClipTools = () => {
             
             // Debug: Check if the speed was actually applied after a short delay
             setTimeout(() => {
-                const updatedClips = hasMultipleSelection ? 
-                    clips.filter(c => selectedClipIds.includes(c.id)) : 
-                    (selectedClip ? [clips.find(c => c.id === selectedClip.id)] : [])
+                const updatedClips = actualSelectedClips.map(clip => 
+                    clips.find(c => c.id === clip.id)
+                ).filter(Boolean)
                 
                 updatedClips.forEach(clip => {
                     if (clip && (clip.type === 'video' || clip.type === 'audio')) {
