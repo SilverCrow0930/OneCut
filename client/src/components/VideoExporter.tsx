@@ -5,11 +5,43 @@ import { Track, Clip } from '@/types/editor'
 interface VideoExporterProps {
     clips: Clip[]
     tracks: Track[]
-    exportType: 'studio' | 'social' | 'web'
+    exportType: '480p' | '720p' | '1080p'
     onError: (error: string) => void
     accessToken?: string | null
     quickExport?: boolean
     onProgress?: (progress: number) => void
+    optimizationLevel?: 'auto' | 'speed' | 'quality' | 'balanced'
+    allowProgressiveQuality?: boolean
+}
+
+// Device capability detection
+interface DeviceCapabilities {
+    hasWebGL: boolean
+    hasWebGPU: boolean
+    hasSharedArrayBuffer: boolean
+    isHighEndDevice: boolean
+    memoryAvailable: number
+    coreCount: number
+}
+
+function detectDeviceCapabilities(): DeviceCapabilities {
+    const hasWebGL = !!document.createElement('canvas').getContext('webgl')
+    const hasWebGPU = !!(navigator as any).gpu
+    const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined'
+    
+    // Estimate device performance based on available APIs and hardware
+    const memory = (navigator as any).deviceMemory || 4 // Default to 4GB if not available
+    const cores = navigator.hardwareConcurrency || 4
+    const isHighEndDevice = memory >= 8 && cores >= 8 && hasWebGL
+    
+    return {
+        hasWebGL,
+        hasWebGPU,
+        hasSharedArrayBuffer,
+        isHighEndDevice,
+        memoryAvailable: memory,
+        coreCount: cores
+    }
 }
 
 async function fetchAssetUrls(assetIds: string[], accessToken?: string | null): Promise<Map<string, string>> {
@@ -63,15 +95,17 @@ async function fetchAssetUrls(assetIds: string[], accessToken?: string | null): 
 export class VideoExporter {
     private clips: Clip[]
     private tracks: Track[]
-    private exportType: 'studio' | 'social' | 'web'
+    private exportType: '480p' | '720p' | '1080p'
     private onError: (error: string) => void
     private ffmpeg: FFmpeg | null = null
     private assetUrls: Map<string, string>
     private accessToken?: string | null
     private onProgress: ((progress: number) => void) | undefined
     private quickExport?: boolean
+    private optimizationLevel?: 'auto' | 'speed' | 'quality' | 'balanced'
+    private allowProgressiveQuality?: boolean
 
-    constructor({ clips, tracks, exportType, onError, accessToken, onProgress, quickExport }: VideoExporterProps) {
+    constructor({ clips, tracks, exportType, onError, accessToken, onProgress, quickExport, optimizationLevel, allowProgressiveQuality }: VideoExporterProps) {
         this.clips = clips
         this.tracks = tracks
         this.exportType = exportType
@@ -80,6 +114,8 @@ export class VideoExporter {
         this.accessToken = accessToken
         this.onProgress = onProgress
         this.quickExport = quickExport
+        this.optimizationLevel = optimizationLevel
+        this.allowProgressiveQuality = allowProgressiveQuality
     }
 
     private async initializeFFmpeg() {
@@ -92,7 +128,9 @@ export class VideoExporter {
                 throw new Error('SharedArrayBuffer is not available. This browser may not support video export. Please try Chrome or Firefox with appropriate security headers.')
             }
             
+            console.log('[VideoExporter] Loading FFmpeg.wasm for browser environment...')
             await this.ffmpeg.load()
+            console.log('[VideoExporter] FFmpeg.wasm loaded successfully')
             return this.ffmpeg
         } catch (error) {
             console.error('FFmpeg initialization error:', error)
@@ -195,6 +233,134 @@ export class VideoExporter {
         } catch (error) {
             console.error(`Error verifying file ${filename}:`, error)
             return false
+        }
+    }
+
+    // New optimized processing methods
+    private selectOptimalProcessingStrategy(capabilities: DeviceCapabilities): 'webgl-fast' | 'ffmpeg-optimized' | 'ffmpeg-standard' | 'fallback' {
+        // Auto-select best strategy based on capabilities and optimization level
+        const level = this.optimizationLevel || 'auto'
+        
+        if (level === 'speed' && capabilities.hasWebGL && capabilities.isHighEndDevice) {
+            return 'webgl-fast'
+        }
+        
+        if (level === 'quality') {
+            return capabilities.hasSharedArrayBuffer ? 'ffmpeg-standard' : 'fallback'
+        }
+        
+        if (level === 'balanced' || level === 'auto') {
+            if (capabilities.hasWebGL && capabilities.memoryAvailable >= 6) {
+                return 'webgl-fast'
+            } else if (capabilities.hasSharedArrayBuffer) {
+                return 'ffmpeg-optimized'
+            } else {
+                return 'fallback'
+            }
+        }
+        
+        // Default fallback
+        return capabilities.hasSharedArrayBuffer ? 'ffmpeg-standard' : 'fallback'
+    }
+
+    private async processWithOptimizations(): Promise<void> {
+        const capabilities = detectDeviceCapabilities()
+        const strategy = this.selectOptimalProcessingStrategy(capabilities)
+        
+        console.log('[VideoExporter] Device capabilities:', capabilities)
+        console.log('[VideoExporter] Selected strategy:', strategy)
+        
+        // Progressive quality: Start with preview if enabled
+        if (this.allowProgressiveQuality && strategy !== 'fallback') {
+            try {
+                await this.generatePreviewQuality(strategy)
+                // Continue with full quality processing
+            } catch (error) {
+                console.warn('[VideoExporter] Preview generation failed, continuing with full quality:', error)
+            }
+        }
+        
+        // Execute the selected strategy
+        switch (strategy) {
+            case 'webgl-fast':
+                return await this.processWithWebGL()
+            case 'ffmpeg-optimized':
+                return await this.processWithOptimizedFFmpeg()
+            case 'ffmpeg-standard':
+                return await this.processVideo() // Use existing method
+            case 'fallback':
+                return await this.processFallbackExport()
+            default:
+                return await this.processVideo() // Safe fallback
+        }
+    }
+
+    private async generatePreviewQuality(strategy: string): Promise<void> {
+        console.log('[VideoExporter] Generating preview quality...')
+        
+        if (this.onProgress) {
+            this.onProgress(25) // Preview progress
+        }
+        
+        // For now, we'll skip actual preview generation but this is where
+        // you'd create a low-quality version for immediate user feedback
+        // This could use WebGL to create a 480p preview very quickly
+        
+        console.log('[VideoExporter] Preview quality ready (placeholder)')
+    }
+
+    private async processWithWebGL(): Promise<void> {
+        console.log('[VideoExporter] Processing with WebGL acceleration...')
+        
+        try {
+            // WebGL can process video frames much faster than FFmpeg
+            // This would be implemented with WebGL shaders for basic operations
+            // For now, fall back to optimized FFmpeg but mark for future implementation
+            console.log('[VideoExporter] WebGL processing not fully implemented yet, using optimized FFmpeg')
+            return await this.processWithOptimizedFFmpeg()
+        } catch (error) {
+            console.warn('[VideoExporter] WebGL processing failed, falling back to FFmpeg:', error)
+            return await this.processWithOptimizedFFmpeg()
+        }
+    }
+
+    private async processWithOptimizedFFmpeg(): Promise<void> {
+        console.log('[VideoExporter] Processing with optimized FFmpeg settings...')
+        
+        // This uses the existing FFmpeg processing but with better optimization
+        const originalQuickExport = this.quickExport
+        
+        try {
+            // Temporarily enable quick export for better performance
+            this.quickExport = true
+            
+            // Use existing processVideo method but with optimizations
+            await this.processVideo()
+        } finally {
+            // Restore original setting
+            this.quickExport = originalQuickExport
+        }
+    }
+
+    // Smart entry point - chooses optimal processing method
+    async processVideoOptimized(): Promise<void> {
+        try {
+            console.log('[VideoExporter] Starting optimized video processing...')
+            
+            // If optimization is explicitly disabled, use original method
+            if (this.optimizationLevel === undefined) {
+                console.log('[VideoExporter] No optimization level set, using original processVideo')
+                return await this.processVideo()
+            }
+            
+            // Use the new optimized processing pipeline
+            return await this.processWithOptimizations()
+            
+        } catch (error) {
+            console.warn('[VideoExporter] Optimized processing failed, falling back to standard processing:', error)
+            
+            // Always fall back to the original method if optimizations fail
+            return await this.processVideo()
         }
     }
 
@@ -334,27 +500,28 @@ export class VideoExporter {
             let inputIndex = 0
             let inputMaps: string[] = []
 
-            // Process media clips with simplified approach
+            // Process media clips with optimized approach  
             if (validMediaClips.length > 0) {
                 for (let i = 0; i < validMediaClips.length; i++) {
                     const clip = validMediaClips[i]
                     const filename = `input_${i}.${this.getFileExtension(this.assetUrls.get(clip.assetId!) || 'mp4')}`
                     filterInputs.push(`-i`, filename)
 
-                    // For now, use simple scaling and crop without complex timing
-                    // Just scale and crop each input, let concat handle the timing
-                    let vf = `scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black`
+                    // Scale to match the selected resolution
+                    const targetResolution = this.exportType === '480p' ? '480:854' : this.exportType === '720p' ? '720:1280' : '1080:1920'
+                    let vf = `scale=${targetResolution}:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=${targetResolution}:(ow-iw)/2:(oh-ih)/2:black`
                     
                     filterChains.push(`[${inputIndex}:v]${vf}[v${inputIndex}]`)
                     inputMaps.push(`[v${inputIndex}]`)
                     inputIndex++
                 }
             } else {
-                // Create blank background
+                // Create blank background with selected resolution
+                const backgroundSize = this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920'
                 filterInputs.push(
                     '-f', 'lavfi',
                     '-t', `${totalDurationSec}`,
-                    '-i', 'color=c=black:s=1080x1920:r=30'
+                    '-i', `color=c=black:s=${backgroundSize}:r=30`
                 )
                 inputMaps.push('[0:v]')
             }
@@ -376,34 +543,43 @@ export class VideoExporter {
             console.log('[VideoExporter] inputMaps:', inputMaps)
             console.log('[VideoExporter] filterComplex:', filterComplex)
 
-            // Build FFmpeg command with fallback options
+            // Build optimized FFmpeg command for browser (software encoding only)
             let ffmpegArgs = [
                 ...filterInputs,
                 '-filter_complex', filterComplex,
+                '-filter_threads', '0', // Enable multi-threading for filters
                 '-map', '[outv]',
-                '-preset', 'ultrafast',
-                '-crf', this.exportType === 'studio' ? '18' : this.exportType === 'social' ? '23' : '28',
-                '-c:v', 'libx264', // Use software encoding for better compatibility
+                '-c:v', 'libx264', // Only software encoding works in browsers
+                '-preset', 'faster', // Good speed/quality balance for web
+                '-crf', this.exportType === '480p' ? '28' : this.exportType === '720p' ? '25' : '23', // Higher CRF for lower res
                 '-pix_fmt', 'yuv420p',
+                '-r', '30', // Ensure 30 FPS output
+                '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920', // Match resolution
                 '-movflags', '+faststart',
-                '-threads', '0',
+                '-threads', '0', // Use all available threads in WASM
+                '-tune', 'zerolatency', // Optimize for web streaming
+                '-x264-params', 'ref=2:bframes=1:me=hex:subme=2:analyse=none:trellis=0:no-cabac:aq-mode=0', // Web-optimized x264 settings
                 '-y',
                 'output.mp4'
             ]
 
-            // Add quick export settings if enabled
+            // Quick export mode - prioritize speed over quality
             if (this.quickExport) {
-                // Use even simpler settings for quick export
                 ffmpegArgs = [
                     ...filterInputs,
                     '-filter_complex', filterComplex,
+                    '-filter_threads', '0',
                     '-map', '[outv]',
-                    '-preset', 'ultrafast',
-                    '-crf', '35',
                     '-c:v', 'libx264',
+                    '-preset', 'ultrafast', // Maximum speed
+                    '-crf', '30', // Lower quality for speed
                     '-pix_fmt', 'yuv420p',
-                    '-r', '24', // Lower frame rate
-                    '-s', '540x960', // Lower resolution  
+                    '-r', '30', // Keep 30 FPS
+                    '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920', // Match resolution
+                    '-movflags', '+faststart',
+                    '-threads', '0',
+                    '-tune', 'zerolatency',
+                    '-x264-params', 'ref=1:bframes=0:me=dia:subme=1:analyse=none:no-cabac:no-deblock', // Ultra fast web settings
                     '-y',
                     'output.mp4'
                 ]
@@ -428,28 +604,34 @@ export class VideoExporter {
             }
 
             try {
-                console.log('[VideoExporter] Executing FFmpeg command...')
+                console.log('[VideoExporter] Executing FFmpeg command in browser environment...')
                 console.log('[VideoExporter] Command:', ffmpegArgs.join(' '))
                 
-                // Add progress logging
+                // Add progress logging optimized for web
                 ffmpeg.on('progress', ({ progress, time }) => {
-                    console.log('[VideoExporter] FFmpeg progress:', progress, 'time:', time)
+                    const timeSeconds = time / 1000000; // Convert microseconds to seconds
+                    console.log(`[VideoExporter] Progress: ${(progress * 100).toFixed(1)}% | Time: ${timeSeconds.toFixed(1)}s`)
                     if (this.onProgress) {
-                        // Convert progress to a percentage (0-100)
                         const progressPercentage = Math.min(Math.round(progress * 100), 100)
                         this.onProgress(progressPercentage)
                     }
                 })
 
-                // Add log handling to capture FFmpeg output
+                // Add log handling for browser debugging
                 ffmpeg.on('log', ({ type, message }) => {
                     if (type === 'stderr') {
-                        console.log('[VideoExporter] FFmpeg stderr:', message)
+                        // Only log important messages to avoid console spam
+                        if (message.includes('frame=') && message.includes('fps=')) {
+                            console.log('[VideoExporter] Processing:', message.trim())
+                        } else if (message.includes('error') || message.includes('Error') || message.includes('failed')) {
+                            console.error('[VideoExporter] FFmpeg Error:', message)
+                        }
                     }
                 })
-
+                
+                console.log('[VideoExporter] Starting browser-optimized encoding...')
                 await ffmpeg.exec(ffmpegArgs)
-                console.log('[VideoExporter] FFmpeg command completed successfully')
+                console.log('[VideoExporter] Browser encoding completed successfully')
 
                 // Set progress to 100% when complete
                 if (this.onProgress) {
@@ -565,7 +747,7 @@ export class VideoExporter {
                 
                 // Try click
                 try {
-                    a.click()
+                a.click()
                 } catch (clickError) {
                     console.warn('[VideoExporter] Click method failed, trying alternative:', clickError)
                     // Alternative method for some browsers
@@ -579,8 +761,8 @@ export class VideoExporter {
                 
                 // Clean up
                 setTimeout(() => {
-                    document.body.removeChild(a)
-                    URL.revokeObjectURL(url)
+                document.body.removeChild(a)
+                URL.revokeObjectURL(url)
                 }, 100)
                 
                 console.log('[VideoExporter] Download initiated successfully - check your browser\'s download folder')

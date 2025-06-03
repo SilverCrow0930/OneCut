@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 const ShareButton = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-    const [selectedExportType, setSelectedExportType] = useState('studio')
+    const [selectedExportType, setSelectedExportType] = useState('1080p')
     const [isExporting, setIsExporting] = useState(false)
     const [exportProgress, setExportProgress] = useState(0)
     const [exportError, setExportError] = useState<string | null>(null)
@@ -37,9 +37,9 @@ const ShareButton = () => {
     }, [assetIds, assetUrls])
 
     const exportTypeOptions = [
-        { id: 'studio', label: 'Studio', description: 'Maximum quality for professional use' },
-        { id: 'social', label: 'Social', description: 'Optimized for social media platforms (IG Reels, TikTok, etc.)' },
-        { id: 'web', label: 'Web', description: 'Balanced quality for web streaming' }
+        { id: '480p', label: '480P', description: 'Fast export, smaller file size' },
+        { id: '720p', label: '720P', description: 'Good quality, balanced file size' },
+        { id: '1080p', label: '1080P', description: 'High quality, larger file size' }
     ]
 
     useEffect(() => {
@@ -69,7 +69,7 @@ const ShareButton = () => {
             const exporter = new VideoExporter({
                 clips,
                 tracks,
-                exportType: selectedExportType as 'studio' | 'social' | 'web',
+                exportType: selectedExportType as '480p' | '720p' | '1080p',
                 onError: (error) => {
                     console.error('VideoExporter error:', error)
                     setExportError(error)
@@ -79,10 +79,12 @@ const ShareButton = () => {
                 quickExport,
                 onProgress: (progress) => {
                     setExportProgress(Math.min(progress, 100))
-                }
+                },
+                optimizationLevel: quickExport ? 'speed' : 'balanced',
+                allowProgressiveQuality: true
             })
 
-            await exporter.processVideo()
+            await exporter.processVideoOptimized()
             
             // Only set to false if no error occurred
             if (!exportError) {
