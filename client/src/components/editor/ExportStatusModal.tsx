@@ -46,13 +46,13 @@ const ExportStatusModal = ({
             }
         } else {
             // Browser-side export messages (legacy)
-            if (progress === 0) return 'Preparing export...'
-            if (progress < 20) return 'Loading assets...'
-            if (progress < 40) return 'Processing video...'
-            if (progress < 60) return 'Applying effects...'
-            if (progress < 80) return 'Encoding video...'
-            if (progress < 100) return 'Finalizing export...'
-            return 'Export complete!'
+        if (progress === 0) return 'Preparing export...'
+        if (progress < 20) return 'Loading assets...'
+        if (progress < 40) return 'Processing video...'
+        if (progress < 60) return 'Applying effects...'
+        if (progress < 80) return 'Encoding video...'
+        if (progress < 100) return 'Finalizing export...'
+        return 'Export complete!'
         }
     }
 
@@ -105,12 +105,12 @@ const ExportStatusModal = ({
                         )}
                     </div>
                     {canClose && (
-                        <button
-                            onClick={onClose}
+                    <button
+                        onClick={onClose}
                             className="text-gray-500 hover:text-gray-700 transition-colors"
-                        >
+                    >
                             <X size={24} />
-                        </button>
+                    </button>
                     )}
                 </div>
 
@@ -166,7 +166,7 @@ const ExportStatusModal = ({
                     </div>
                 )}
 
-                {error && (
+                    {error && (
                     <div className="text-center py-2">
                         <p className="text-sm text-red-600 mb-2">
                             {error}
@@ -184,8 +184,8 @@ const ExportStatusModal = ({
                         >
                             Cancel Export
                         </button>
-                    </div>
-                )}
+                        </div>
+                    )}
 
                 {/* Server-side benefits info */}
                 {serverSide && !error && status !== 'completed' && (
@@ -193,7 +193,7 @@ const ExportStatusModal = ({
                         <p className="text-xs text-blue-700">
                             <strong>Server Processing:</strong> Faster encoding, higher quality, and no browser limitations.
                         </p>
-                    </div>
+                </div>
                 )}
             </div>
         </div>

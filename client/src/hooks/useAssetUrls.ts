@@ -76,16 +76,16 @@ export function useAssetUrls(assetIds: string[]) {
             // Fetch only the regular asset IDs that aren't cached or are expired
             if (idsToFetch.length > 0) {
                 console.log(`[useAssetUrls] Fetching ${idsToFetch.length} regular asset URLs:`, idsToFetch)
-                
-                try {
-                    await Promise.all(
+
+            try {
+                await Promise.all(
                         idsToFetch.map(async (id) => {
-                            try {
-                                const response = await fetch(apiPath(`assets/${id}/url`), {
-                                    headers: {
-                                        'Authorization': `Bearer ${session?.access_token}`
-                                    }
-                                })
+                        try {
+                            const response = await fetch(apiPath(`assets/${id}/url`), {
+                                headers: {
+                                    'Authorization': `Bearer ${session?.access_token}`
+                                }
+                            })
                                 
                                 if (!response.ok) {
                                     // Log error only once per asset
@@ -103,7 +103,7 @@ export function useAssetUrls(assetIds: string[]) {
                                     return
                                 }
                                 
-                                const data = await response.json()
+                            const data = await response.json()
                                 const url = data.url || null
                                 
                                 // Cache successful result
@@ -116,7 +116,7 @@ export function useAssetUrls(assetIds: string[]) {
                                 
                                 console.log(`[useAssetUrls] Successfully fetched URL for asset: ${id}`)
                                 
-                            } catch (error) {
+                        } catch (error) {
                                 // Log error only once per asset
                                 if (!assetUrlCache.has(id) || !assetUrlCache.get(id)?.error) {
                                     console.error(`[useAssetUrls] Network error for asset ${id}:`, error)
@@ -128,13 +128,13 @@ export function useAssetUrls(assetIds: string[]) {
                                     timestamp: now, 
                                     error: true 
                                 })
-                                newUrls.set(id, null)
-                            }
-                        })
-                    )
+                            newUrls.set(id, null)
+                        }
+                    })
+                )
                     
-                    setUrls(newUrls)
-                } catch (error) {
+                setUrls(newUrls)
+            } catch (error) {
                     console.error('[useAssetUrls] Batch fetch error:', error)
                 }
             }
