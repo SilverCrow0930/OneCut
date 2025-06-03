@@ -11,16 +11,24 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     const left = clip.timelineStartMs * timeScale
     const width = (clip.timelineEndMs - clip.timelineStartMs) * timeScale
 
+    const isCaption = clip.type === 'caption'
+
     return (
         <div
-            className="absolute top-0 bottom-0 bg-blue-100/50 border border-blue-200 rounded-md overflow-hidden"
+            className={`absolute top-0 bottom-0 border rounded-md overflow-hidden ${
+                isCaption 
+                    ? 'bg-orange-100/50 border-orange-200' 
+                    : 'bg-blue-100/50 border-blue-200'
+            }`}
             style={{
                 left,
                 width,
             }}
         >
-            <div className="p-2 text-xs text-blue-900 truncate">
-                {clip.properties?.text || 'Text Clip'}
+            <div className={`p-2 text-xs truncate ${
+                isCaption ? 'text-orange-900' : 'text-blue-900'
+            }`}>
+                {clip.properties?.text || (isCaption ? 'Caption' : 'Text Clip')}
             </div>
         </div>
     )

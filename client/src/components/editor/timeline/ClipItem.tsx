@@ -40,7 +40,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
     const isVideo = asset?.mime_type.startsWith('video/')
     const isImage = asset?.mime_type.startsWith('image/')
     const isAudio = asset?.mime_type.startsWith('audio/')
-    const isText = clip.type === 'text'
+    const isText = clip.type === 'text' || clip.type === 'caption'
 
     // Get the source duration
     const assetDuration = asset?.duration ?? 0

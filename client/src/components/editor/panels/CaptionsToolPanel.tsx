@@ -15,188 +15,134 @@ interface Caption {
     text: string
 }
 
-// Trending font styles for short videos - Content Creator Edition
+// Caption styles based on the provided specifications
 export const captionStyles = [
     {
-        name: 'Impact Bold',
+        name: 'Fira Sans Condensed',
         style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
+            fontFamily: 'Fira Sans Condensed, Arial, sans-serif',
             fontSize: 22,
-            fontWeight: 900,
+            fontWeight: 900, // Heavy
             color: '#ffffff',
             backgroundColor: 'transparent',
             padding: '4px 8px',
             borderRadius: '0px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '3px #000000',
-            textShadow: '4px 4px 8px rgba(0, 0, 0, 0.8)',
+            WebkitTextStroke: '2px #000000', // Medium stroke thickness
+            textShadow: '3px 3px 6px rgba(0, 0, 0, 0.7)', // Medium shadow
             textTransform: 'uppercase' as const,
         },
     },
     {
-        name: 'YouTube Thumbnail',
+        name: 'Komika-axis',
         style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
-            fontSize: 24,
-            fontWeight: 900,
-            color: '#ffff00',
+            fontFamily: 'Komika Axis, Comic Sans MS, Arial, sans-serif',
+            fontSize: 22,
+            fontWeight: 900, // Heavy
+            color: '#ffffff',
             backgroundColor: 'transparent',
-            padding: '6px 12px',
+            padding: '4px 8px',
             borderRadius: '0px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000',
-            textShadow: '3px 3px 6px rgba(0, 0, 0, 0.9)',
+            WebkitTextStroke: '2px #000000', // Medium stroke thickness
+            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.6)', // Small shadow
             textTransform: 'uppercase' as const,
         },
     },
     {
-        name: 'Creator Orange',
+        name: 'Circular',
         style: {
-            fontFamily: 'Arial Black, Impact, sans-serif',
-            fontSize: 21,
-            fontWeight: 900,
-            color: '#ff6600',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            textAlign: 'center' as const,
-            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.9)',
-            textTransform: 'uppercase' as const,
-        },
-    },
-    {
-        name: 'Beast Style',
-        style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
+            fontFamily: 'Circular, Helvetica, Arial, sans-serif',
             fontSize: 20,
-            fontWeight: 900,
+            fontWeight: 500, // Medium
             color: '#ffffff',
             backgroundColor: 'transparent',
             padding: '4px 8px',
             borderRadius: '0px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '2px #333333',
-            textShadow: '0 0 10px #ffffff, 2px 2px 8px rgba(0, 0, 0, 0.8)',
-            textTransform: 'uppercase' as const,
+            WebkitTextStroke: '2px #000000', // Medium stroke thickness
+            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.6)', // Small shadow
+            textTransform: 'none' as const, // No uppercase
         },
     },
     {
-        name: 'Viral Yellow',
+        name: 'Poppins',
         style: {
-            fontFamily: 'Arial Black, Impact, sans-serif',
-            fontSize: 22,
-            fontWeight: 900,
-            color: '#000000',
-            backgroundColor: '#ffff00',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            textAlign: 'center' as const,
-            textShadow: '1px 1px 2px rgba(255, 255, 255, 0.5)',
-            textTransform: 'uppercase' as const,
-        },
-    },
-    {
-        name: 'Influencer White',
-        style: {
-            fontFamily: 'Helvetica, Arial, sans-serif',
-            fontSize: 19,
-            fontWeight: 800,
-            color: '#ffffff',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            padding: '8px 16px',
-            borderRadius: '12px',
-            textAlign: 'center' as const,
-            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-        },
-    },
-    {
-        name: 'Bold Outline',
-        style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
+            fontFamily: 'Poppins, Arial, sans-serif',
             fontSize: 21,
-            fontWeight: 900,
+            fontWeight: 700, // Bold
             color: '#ffffff',
             backgroundColor: 'transparent',
             padding: '4px 8px',
             borderRadius: '0px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '4px #000000',
-            textShadow: '4px 4px 8px rgba(0, 0, 0, 0.9)',
-            textTransform: 'uppercase' as const,
+            WebkitTextStroke: '1px #000000', // Small stroke thickness
+            textShadow: 'none', // None shadow
+            textTransform: 'none' as const, // NO uppercase
         },
     },
     {
-        name: 'Content King',
+        name: 'Roboto',
         style: {
-            fontFamily: 'Arial Black, Impact, sans-serif',
-            fontSize: 20,
-            fontWeight: 900,
-            color: '#ff0000',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            textAlign: 'center' as const,
-            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.7)',
-            textTransform: 'uppercase' as const,
-        },
-    },
-    {
-        name: 'Trending Purple',
-        style: {
-            fontFamily: 'Helvetica, Arial, sans-serif',
-            fontSize: 19,
-            fontWeight: 700,
-            color: '#ffffff',
-            backgroundColor: '#8b00ff',
-            padding: '8px 16px',
-            borderRadius: '10px',
-            textAlign: 'center' as const,
-            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-        },
-    },
-    {
-        name: 'Social Star',
-        style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
+            fontFamily: 'Roboto, Arial, sans-serif',
             fontSize: 22,
-            fontWeight: 900,
-            color: '#00ff88',
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-            padding: '6px 12px',
-            borderRadius: '4px',
+            fontWeight: 900, // Heavy
+            color: '#ffffff',
+            backgroundColor: 'transparent',
+            padding: '4px 8px',
+            borderRadius: '0px',
             textAlign: 'center' as const,
-            textShadow: '0 0 8px #00ff88, 2px 2px 6px rgba(0, 0, 0, 0.9)',
+            WebkitTextStroke: '2px #000000', // Medium stroke thickness
+            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.6)', // Small shadow
             textTransform: 'uppercase' as const,
         },
     },
     {
-        name: 'Clean Modern',
+        name: 'Montserrat Bold Upper',
         style: {
-            fontFamily: 'SF Pro Display, Helvetica, Arial, sans-serif',
-            fontSize: 18,
-            fontWeight: 600,
-            color: '#333333',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            padding: '8px 16px',
-            borderRadius: '20px',
-            textAlign: 'center' as const,
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-        },
-    },
-    {
-        name: 'Fire Orange',
-        style: {
-            fontFamily: 'Arial Black, Impact, sans-serif',
+            fontFamily: 'Montserrat, Arial, sans-serif',
             fontSize: 21,
-            fontWeight: 900,
-            color: '#ff4500',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            padding: '8px 16px',
-            borderRadius: '6px',
+            fontWeight: 700, // Bold
+            color: '#ffffff',
+            backgroundColor: 'transparent',
+            padding: '4px 8px',
+            borderRadius: '0px',
             textAlign: 'center' as const,
-            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.9)',
+            WebkitTextStroke: 'none', // None stroke
+            textShadow: 'none', // None shadow
             textTransform: 'uppercase' as const,
-            border: '2px solid #ff4500',
+        },
+    },
+    {
+        name: 'Montserrat Bold',
+        style: {
+            fontFamily: 'Montserrat, Arial, sans-serif',
+            fontSize: 21,
+            fontWeight: 700, // Bold
+            color: '#ffffff',
+            backgroundColor: 'transparent',
+            padding: '4px 8px',
+            borderRadius: '0px',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '2px #000000', // Medium stroke thickness
+            textShadow: 'none', // None shadow
+            textTransform: 'none' as const, // No uppercase
+        },
+    },
+    {
+        name: 'Bold Slav',
+        style: {
+            fontFamily: 'Impact, Arial Black, sans-serif', // Using Impact as Bold Slav alternative
+            fontSize: 21,
+            fontWeight: 700, // Bold
+            color: '#ffffff',
+            backgroundColor: 'transparent',
+            padding: '4px 8px',
+            borderRadius: '0px',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '1px #000000', // Small stroke thickness
+            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.6)', // Small shadow
+            textTransform: 'none' as const, // No uppercase
         },
     },
 ]
@@ -227,7 +173,7 @@ const CaptionsToolPanel = () => {
     const [editingCaptionId, setEditingCaptionId] = useState<number | null>(null)
     const [editText, setEditText] = useState('')
     
-    const { clips, tracks, executeCommand } = useEditor()
+    const { clips, tracks, executeCommand, updateCaptionTrackPlacement } = useEditor()
     const { session } = useAuth()
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
@@ -392,23 +338,23 @@ const CaptionsToolPanel = () => {
         if (captions.length === 0 || !projectId) return
 
         try {
-            // Create a new text track at the top
+            // Create a new caption track at the top
             const newTrack = {
                 id: uuid(),
                 projectId: projectId,
                 index: 0, // Insert at the beginning
-                type: 'text' as TrackType,
+                type: 'caption' as TrackType,
                 createdAt: new Date().toISOString(),
             }
 
             // Get selected style
             const selectedStyle = captionStyles[selectedStyleIdx].style
 
-            // Create text clips for each caption with custom styling
-            const textClips = captions.map(caption => ({
+            // Create caption clips for each caption with custom styling
+            const captionClips = captions.map(caption => ({
                 id: uuid(),
                 trackId: newTrack.id,
-                type: 'text' as const,
+                type: 'caption' as const,
                 sourceStartMs: 0,
                 sourceEndMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
                 timelineStartMs: srtTimeToMs(caption.startTime),
@@ -422,14 +368,15 @@ const CaptionsToolPanel = () => {
                         ...selectedStyle,
                     },
                     placement: selectedPlacement, // Store placement for the editor
+                    isCaptionClip: true, // Mark as caption clip
                 },
                 createdAt: new Date().toISOString(),
             }))
 
             // Create commands to:
             // 1. Shift all existing tracks down
-            // 2. Add the new track
-            // 3. Add all text clips
+            // 2. Add the new caption track
+            // 3. Add all caption clips
             const commands = [
                 // First shift all existing tracks down
                 ...tracks.map(track => ({
@@ -442,13 +389,13 @@ const CaptionsToolPanel = () => {
                         }
                     }
                 })),
-                // Then add the new track
+                // Then add the new caption track
                 {
                     type: 'ADD_TRACK' as const,
                     payload: { track: newTrack }
                 },
-                // Finally add all text clips
-                ...textClips.map(clip => ({
+                // Finally add all caption clips
+                ...captionClips.map(clip => ({
                     type: 'ADD_CLIP' as const,
                     payload: { clip }
                 }))

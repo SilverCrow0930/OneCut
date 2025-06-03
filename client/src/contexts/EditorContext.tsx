@@ -37,6 +37,7 @@ interface EditorContextType {
 
     // history & commands
     executeCommand: (cmd: Command) => void
+    updateCaptionTrackPlacement: (trackId: string, newPlacement: string) => void
 
     // undo/redo
     undo: () => void
@@ -173,6 +174,36 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             fetchTimeline()
         }
     }, [session?.access_token, projectId])
+
+    // Function to update all captions in a track to the same placement
+    const updateCaptionTrackPlacement = (trackId: string, newPlacement: string) => {
+        const captionClipsInTrack = clips.filter(clip => 
+            clip.trackId === trackId && 
+            clip.type === 'caption' &&
+            clip.properties?.placement !== newPlacement
+        )
+
+        if (captionClipsInTrack.length === 0) return
+
+        const commands = captionClipsInTrack.map(clip => ({
+            type: 'UPDATE_CLIP' as const,
+            payload: {
+                before: clip,
+                after: {
+                    ...clip,
+                    properties: {
+                        ...clip.properties,
+                        placement: newPlacement
+                    }
+                }
+            }
+        }))
+
+        executeCommand({
+            type: 'BATCH',
+            payload: { commands }
+        })
+    }
 
     // 3) Command helpers
     const executeCommand = (cmd: Command) => {
@@ -379,7 +410,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             tracks, clips, loadingTimeline, timelineError,
 
             // history & commands
-            executeCommand, undo, redo,
+            executeCommand, 
+            updateCaptionTrackPlacement,
+            undo, redo,
             canUndo: past.length > 0, canRedo: future.length > 0,
 
             // save state

@@ -424,7 +424,8 @@ export default function TrackRow({
                         <div className={`
                             absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg z-30
                             ${track.type === 'video' ? 'bg-blue-500' : 
-                              track.type === 'audio' ? 'bg-green-500' : 'bg-purple-500'}
+                              track.type === 'audio' ? 'bg-green-500' : 
+                              track.type === 'caption' ? 'bg-orange-500' : 'bg-purple-500'}
                         `} />
                     )}
 

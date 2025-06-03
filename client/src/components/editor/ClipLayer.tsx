@@ -221,6 +221,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                     />
                 )
             case 'text':
+            case 'caption':
                 // Get placement from properties, default to middle
                 const placement = clip.properties?.placement || 'middle'
                 
@@ -273,7 +274,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                                 wordBreak: 'break-word',
                             }}
                         >
-                            {clip.properties?.text || 'Text Clip'}
+                            {clip.properties?.text || (clip.type === 'caption' ? 'Caption Clip' : 'Text Clip')}
                         </div>
                     </div>
                 )
