@@ -100,8 +100,12 @@ class ProfessionalVideoExporter {
         // Step 4: Execute with progress tracking
         return new Promise((resolve, reject) => {
             ffmpegCommand
-                .on('end', resolve)
-                .on('error', reject)
+                .on('end', () => {
+                    resolve()
+                })
+                .on('error', (err: any, _stdout: string | null, _stderr: string | null) => {
+                    reject(err)
+                })
                 .run()
         })
     }
