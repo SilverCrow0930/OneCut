@@ -141,21 +141,54 @@ const validateExportRequest = [
 // Asset URL fetching
 async function fetchAssetUrl(assetId: string, accessToken?: string): Promise<string> {
     try {
+        console.log(`[Debug] Fetching asset URL for assetId: ${assetId}`)
+        
+        // Test GCS connectivity
+        try {
+            const bucket = storage.bucket(bucketName)
+            console.log(`[Debug] Testing GCS bucket access: ${bucketName}`)
+            const [bucketExists] = await bucket.exists()
+            console.log(`[Debug] Bucket exists: ${bucketExists}`)
+        } catch (bucketError) {
+            console.error(`[Debug] GCS bucket access error:`, bucketError)
+        }
+        
         // First, fetch the asset from the database to get the object_key
         const { data: asset, error } = await supabase
             .from('assets')
-            .select('object_key')
+            .select('object_key, name, mime_type, user_id')
             .eq('id', assetId)
             .single()
 
         if (error || !asset) {
-            console.error(`Asset ${assetId} not found in database:`, error)
+            console.error(`[Debug] Asset ${assetId} not found in database:`, error)
             throw new Error(`Asset ${assetId} not found in database`)
         }
+
+        console.log(`[Debug] Found asset in database:`, {
+            assetId,
+            object_key: asset.object_key,
+            name: asset.name,
+            mime_type: asset.mime_type,
+            user_id: asset.user_id
+        })
 
         // Generate signed URL using the object_key
         const bucket = storage.bucket(bucketName)
         const file = bucket.file(asset.object_key)
+        
+        // Check if file exists in Google Cloud Storage
+        try {
+            const [exists] = await file.exists()
+            console.log(`[Debug] File exists in GCS: ${exists} for object_key: ${asset.object_key}`)
+            
+            if (!exists) {
+                throw new Error(`File not found in Google Cloud Storage: ${asset.object_key}`)
+            }
+        } catch (existsError) {
+            console.error(`[Debug] Error checking file existence:`, existsError)
+            throw new Error(`Failed to verify file existence in storage: ${asset.object_key}`)
+        }
         
         // Generate signed URL valid for 1 hour
         const [url] = await file.getSignedUrl({
@@ -163,28 +196,40 @@ async function fetchAssetUrl(assetId: string, accessToken?: string): Promise<str
             expires: Date.now() + 60 * 60 * 1000 // 1 hour
         })
         
+        console.log(`[Debug] Generated signed URL for ${assetId}: ${url.substring(0, 100)}...`)
+        
         return url
     } catch (error) {
-        console.error(`Failed to get URL for asset ${assetId}:`, error)
-        throw new Error(`Asset ${assetId} not found`)
+        console.error(`[Debug] Failed to get URL for asset ${assetId}:`, error)
+        throw new Error(`Asset ${assetId} not found: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
 }
 
 // Download asset to temp file
 async function downloadAsset(url: string, filename: string): Promise<string> {
     try {
+        console.log(`[Debug] Attempting to download asset from URL: ${url.substring(0, 100)}...`)
+        console.log(`[Debug] Target filename: ${filename}`)
+        
         const response = await fetch(url)
+        console.log(`[Debug] Download response status: ${response.status} ${response.statusText}`)
+        console.log(`[Debug] Download response headers:`, Object.fromEntries(response.headers.entries()))
+        
         if (!response.ok) {
             throw new Error(`Failed to download asset: ${response.status} ${response.statusText}`)
         }
         
         const buffer = await response.arrayBuffer()
+        console.log(`[Debug] Downloaded ${buffer.byteLength} bytes`)
+        
         const filePath = path.join(TEMP_DIR, filename)
         await fs.writeFile(filePath, Buffer.from(buffer))
         
+        console.log(`[Debug] Saved asset to: ${filePath}`)
+        
         return filePath
     } catch (error) {
-        console.error('Download error:', error)
+        console.error('[Debug] Download error details:', error)
         throw error
     }
 }
@@ -217,6 +262,19 @@ async function processVideoExport(
         )
 
         console.log(`[Export ${jobId}] Found ${validMediaClips.length} media clips, total duration: ${totalDurationSec}s`)
+        
+        // Log all clips for debugging
+        console.log(`[Debug] All clips being processed:`)
+        validMediaClips.forEach((clip, index) => {
+            console.log(`[Debug] Clip ${index}:`, {
+                id: clip.id,
+                type: clip.type,
+                assetId: clip.assetId,
+                trackId: clip.trackId,
+                hasExternalAsset: !!clip.properties?.externalAsset,
+                externalAssetUrl: clip.properties?.externalAsset?.url
+            })
+        })
 
         // Download assets
         const downloadedAssets = new Map<string, string>()
@@ -399,6 +457,30 @@ async function processVideoExport(
 }
 
 // Routes
+
+// Debug route - test asset fetching
+router.get('/debug/asset/:assetId', async (req: Request, res: Response) => {
+    try {
+        const { assetId } = req.params
+        console.log(`[Debug] Testing asset fetch for: ${assetId}`)
+        
+        const accessToken = req.headers.authorization?.replace('Bearer ', '')
+        const url = await fetchAssetUrl(assetId, accessToken)
+        
+        res.json({
+            success: true,
+            assetId,
+            url: url.substring(0, 100) + '...',
+            message: 'Asset URL generated successfully'
+        })
+    } catch (error) {
+        console.error(`[Debug] Asset test failed:`, error)
+        res.status(404).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        })
+    }
+})
 
 // Start export job
 router.post('/start', validateExportRequest, async (req: Request, res: Response) => {
