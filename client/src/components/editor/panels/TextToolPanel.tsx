@@ -84,7 +84,14 @@ export default function TextToolPanel() {
         setStyleError(null)
 
         try {
-            const response = await fetch(apiPath('ai/generate-text-style'), {
+            const url = apiPath('ai/generate-text-style')
+            console.log('=== AI STYLE GENERATION DEBUG ===')
+            console.log('API URL:', url)
+            console.log('Access token available:', !!session?.access_token)
+            console.log('Prompt:', stylePrompt.trim())
+            console.log('Sample text:', text || 'Sample Text')
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -96,15 +103,25 @@ export default function TextToolPanel() {
                 })
             })
 
+            console.log('Response status:', response.status)
+            console.log('Response ok:', response.ok)
+
             if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.error || 'Failed to generate style')
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+                console.error('Response error data:', errorData)
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
             }
 
             const result = await response.json()
+            console.log('Success result:', result)
             setAiGeneratedStyle(result.style)
         } catch (error: any) {
             console.error('AI style generation failed:', error)
+            console.error('Error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            })
             setStyleError(error.message || 'Failed to generate style')
         } finally {
             setIsGeneratingStyle(false)
