@@ -6,6 +6,7 @@ import { AssetsProvider } from '@/contexts/AssetsContext'
 import { PlaybackProvider } from '@/contexts/PlaybackContext'
 import { ZoomProvider } from '@/contexts/ZoomContext'
 import { AutoCutProvider } from '@/contexts/AutocutContext'
+import { AudioProvider } from '@/contexts/AudioContext'
 
 interface LayoutProps {
     children: ReactNode
@@ -16,11 +17,13 @@ export default function ProjectLayout({ children }: LayoutProps) {
         <AutoCutProvider>
             <EditorProvider>
                 <AssetsProvider>
-                    <PlaybackProvider>
-                        <ZoomProvider>
-                            {children}
-                        </ZoomProvider>
-                    </PlaybackProvider>
+                    <AudioProvider>
+                        <PlaybackProvider>
+                            <ZoomProvider>
+                                {children}
+                            </ZoomProvider>
+                        </PlaybackProvider>
+                    </AudioProvider>
                 </AssetsProvider>
             </EditorProvider>
         </AutoCutProvider>
