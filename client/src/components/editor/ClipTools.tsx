@@ -262,7 +262,7 @@ const ClipTools = () => {
 
     return (
         <div className={`
-            flex items-center gap-5
+            flex items-center gap-4
             backdrop-blur-sm
             px-4 py-1 rounded-xl
             text-black
@@ -305,7 +305,10 @@ const ClipTools = () => {
                         `Adjust speed of ${selectedClips.filter(c => c.type === 'video' || c.type === 'audio').length} media clips` : 
                         "Adjust playback speed"
                     }
-                    onClick={() => setShowSpeedSlider(!showSpeedSlider)}
+                    onClick={() => {
+                        console.log('Speed button clicked', { canAdjustSpeed, hasAnySelection, showSpeedSlider })
+                        setShowSpeedSlider(!showSpeedSlider)
+                    }}
                     disabled={!canAdjustSpeed || !hasAnySelection}
                 >
                     <Gauge size={26} />
@@ -325,7 +328,7 @@ const ClipTools = () => {
                                 step="0.25"
                                 value={sliderSpeed}
                                 onChange={handleSliderChange}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                                 style={{
                                     background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%, #e5e7eb ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%, #e5e7eb 100%)`
                                 }}
@@ -352,47 +355,48 @@ const ClipTools = () => {
                 <Trash2 size={26} />
             </button>
 
-            <style jsx>{`
-                .slider::-webkit-slider-thumb {
-                    appearance: none;
-                    height: 18px;
-                    width: 18px;
-                    border-radius: 50%;
-                    background: #3b82f6;
-                    cursor: pointer;
-                    border: 2px solid #ffffff;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                }
+            {/* Custom slider styles */}
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                    input[type="range"]::-webkit-slider-thumb {
+                        appearance: none;
+                        height: 18px;
+                        width: 18px;
+                        border-radius: 50%;
+                        background: #3b82f6;
+                        cursor: pointer;
+                        border: 2px solid #ffffff;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                    }
 
-                .slider::-moz-range-thumb {
-                    height: 18px;
-                    width: 18px;
-                    border-radius: 50%;
-                    background: #3b82f6;
-                    cursor: pointer;
-                    border: 2px solid #ffffff;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                }
+                    input[type="range"]::-moz-range-thumb {
+                        height: 18px;
+                        width: 18px;
+                        border-radius: 50%;
+                        background: #3b82f6;
+                        cursor: pointer;
+                        border: 2px solid #ffffff;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                        border: none;
+                    }
 
-                .slider::-webkit-slider-track {
-                    height: 8px;
-                    border-radius: 4px;
-                }
+                    input[type="range"]::-webkit-slider-track {
+                        height: 8px;
+                        border-radius: 4px;
+                    }
 
-                .slider::-moz-range-track {
-                    height: 8px;
-                    border-radius: 4px;
-                    background: transparent;
-                }
+                    input[type="range"]::-moz-range-track {
+                        height: 8px;
+                        border-radius: 4px;
+                        background: transparent;
+                        border: none;
+                    }
 
-                .slider:focus {
-                    outline: none;
-                }
-
-                .slider:focus::-webkit-slider-thumb {
-                    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-                }
-            `}</style>
+                    input[type="range"]:focus::-webkit-slider-thumb {
+                        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+                    }
+                `
+            }} />
         </div>
     )
 }
