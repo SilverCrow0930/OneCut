@@ -43,12 +43,17 @@ const ClipTools = () => {
     // Update slider speed when selection changes
     useEffect(() => {
         if (hasSelectedClip && !hasMultipleSelection && (selectedClip.type === 'video' || selectedClip.type === 'audio')) {
-            setSliderSpeed(selectedClip.speed || 1)
+            const currentSpeed = selectedClip.speed || 1
+            console.log('🎛️ Updating slider speed from selection:', currentSpeed, 'for clip:', selectedClip.id)
+            setSliderSpeed(currentSpeed)
         } else if (hasMultipleSelection) {
             // For multiple selection, show the speed of the first media clip or default to 1
             const firstMediaClip = selectedClips.find(clip => clip.type === 'video' || clip.type === 'audio')
-            setSliderSpeed(firstMediaClip?.speed || 1)
+            const currentSpeed = firstMediaClip?.speed || 1
+            console.log('🎛️ Updating slider speed from multi-selection:', currentSpeed, 'from clip:', firstMediaClip?.id)
+            setSliderSpeed(currentSpeed)
         } else {
+            console.log('🎛️ Resetting slider speed to 1 (no media clips selected)')
             setSliderSpeed(1) // Default speed for non-media clips
         }
     }, [selectedClip, selectedClips, hasSelectedClip, hasMultipleSelection])
@@ -94,6 +99,19 @@ const ClipTools = () => {
                 type: 'BATCH',
                 payload: { commands }
             })
+            
+            // Debug: Check if the speed was actually applied after a short delay
+            setTimeout(() => {
+                const updatedClips = hasMultipleSelection ? 
+                    clips.filter(c => selectedClipIds.includes(c.id)) : 
+                    (selectedClip ? [clips.find(c => c.id === selectedClip.id)] : [])
+                
+                updatedClips.forEach(clip => {
+                    if (clip && (clip.type === 'video' || clip.type === 'audio')) {
+                        console.log('🎛️ Speed check after update - Clip:', clip.id, 'Speed:', clip.speed || 1, 'Expected:', newSpeed)
+                    }
+                })
+            }, 100)
         }
     }
 
@@ -335,26 +353,20 @@ const ClipTools = () => {
                             <div
                                 className="absolute w-full h-2 rounded-full"
                                 style={{
-                                    background: `linear-gradient(to right, #4B5563 ${((Math.log10(sliderSpeed) - Math.log10(0.1)) / (Math.log10(10) - Math.log10(0.1))) * 100}%, #9CA3AF ${((Math.log10(sliderSpeed) - Math.log10(0.1)) / (Math.log10(10) - Math.log10(0.1))) * 100}%)`
+                                    background: `linear-gradient(to right, #4B5563 ${((sliderSpeed - 0.1) / (10 - 0.1)) * 100}%, #9CA3AF ${((sliderSpeed - 0.1) / (10 - 0.1)) * 100}%)`
                                 }}
                             ></div>
                             <input
                                 type="range"
-                                min="0"
-                                max="1"
-                                step="0.01"
-                                value={(Math.log10(sliderSpeed) - Math.log10(0.1)) / (Math.log10(10) - Math.log10(0.1))}
+                                min="0.1"
+                                max="10"
+                                step="0.1"
+                                value={sliderSpeed}
                                 onChange={(e) => {
-                                    const sliderVal = parseFloat(e.target.value)
-                                    const logMin = Math.log10(0.1)
-                                    const logMax = Math.log10(10)
-                                    const logSpeed = logMin + sliderVal * (logMax - logMin)
-                                    const newSpeed = Math.pow(10, logSpeed)
-                                    
-                                    // Round to reasonable precision
-                                    const roundedSpeed = Math.round(newSpeed * 10) / 10
-                                    setSliderSpeed(roundedSpeed)
-                                    handleSpeedChange(roundedSpeed)
+                                    const newSpeed = parseFloat(e.target.value)
+                                    console.log('🎛️ Slider changed to:', newSpeed)
+                                    setSliderSpeed(newSpeed)
+                                    handleSpeedChange(newSpeed)
                                 }}
                                 className="w-full h-2 bg-transparent appearance-none cursor-pointer relative z-10
                                     [&::-webkit-slider-thumb]:appearance-none 
