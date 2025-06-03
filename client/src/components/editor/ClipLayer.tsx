@@ -249,6 +249,32 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                         break
                 }
 
+                // Render highlighted text for captions
+                const renderCaptionText = () => {
+                    const text = clip.properties?.text || (clip.type === 'caption' ? 'Caption Clip' : 'Text Clip')
+                    
+                    // Check if this is highlighted caption text
+                    if (clip.type === 'caption' && text.includes('<span color=')) {
+                        // Parse highlighted text
+                        const parts = text.split(/(<span color="[^"]*">.*?<\/span>)/g)
+                        
+                        return parts.map((part, index) => {
+                            const spanMatch = part.match(/<span color="([^"]*)">(.*?)<\/span>/)
+                            if (spanMatch) {
+                                const [, color, highlightedText] = spanMatch
+                                return (
+                                    <span key={index} style={{ color, fontWeight: 'bold' }}>
+                                        {highlightedText}
+                                    </span>
+                                )
+                            }
+                            return part
+                        })
+                    }
+                    
+                    return text
+                }
+
                 return (
                     <div
                         style={{
@@ -274,7 +300,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                                 wordBreak: 'break-word',
                             }}
                         >
-                            {clip.properties?.text || (clip.type === 'caption' ? 'Caption Clip' : 'Text Clip')}
+                            {renderCaptionText()}
                         </div>
                     </div>
                 )

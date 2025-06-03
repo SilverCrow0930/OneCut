@@ -8,313 +8,185 @@ import { apiPath } from '@/lib/config'
 import { v4 as uuid } from 'uuid'
 import { TrackType } from '@/types/editor'
 
-// Add CSS animations for trending short video effects
-const captionAnimations = `
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-@keyframes neonGlow {
-    0% { 
-        text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff88;
-        filter: brightness(1);
-    }
-    100% { 
-        text-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88, 0 0 80px #00ff88;
-        filter: brightness(1.2);
-    }
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-    20%, 40%, 60%, 80% { transform: translateX(2px); }
-}
-
-@keyframes wiggle {
-    0%, 7% { transform: rotateZ(0); }
-    15% { transform: rotateZ(-15deg); }
-    20% { transform: rotateZ(10deg); }
-    25% { transform: rotateZ(-10deg); }
-    30% { transform: rotateZ(6deg); }
-    35% { transform: rotateZ(-4deg); }
-    40%, 100% { transform: rotateZ(0); }
-}
-
-@keyframes colorShift {
-    0% { filter: hue-rotate(0deg); }
-    50% { filter: hue-rotate(180deg); }
-    100% { filter: hue-rotate(360deg); }
-}
-
-@keyframes zoomPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-@keyframes slideIn {
-    0% { transform: translateX(-20px); opacity: 0.7; }
-    50% { transform: translateX(0); opacity: 1; }
-    100% { transform: translateX(20px); opacity: 0.7; }
-}
-
-@keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-@keyframes glowPulse {
-    0% { 
-        text-shadow: 0 0 20px #ffffff, 4px 4px 8px #000000, 8px 8px 16px rgba(255,255,255,0.5);
-    }
-    100% { 
-        text-shadow: 0 0 40px #ffffff, 4px 4px 8px #000000, 8px 8px 16px rgba(255,255,255,0.8);
-    }
-}
-
-@keyframes bounceIn {
-    0% { transform: scale(0.3); opacity: 0; }
-    50% { transform: scale(1.1); opacity: 0.8; }
-    70% { transform: scale(0.9); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes flashEffect {
-    0%, 50%, 100% { opacity: 1; }
-    25%, 75% { opacity: 0.7; transform: scale(1.05); }
-}
-`
-
 interface Caption {
     id: number
     startTime: string
     endTime: string
     text: string
+    highlightedHtml?: string // Store the HTML with highlights
+}
+
+// Highlight colors for short video captions
+export const highlightColors = {
+    red: '#FF2323',    // Action words, emotions, urgent terms
+    green: '#66FF00',  // Positive words, success, growth
+    cyan: '#00FFFF'    // Numbers, facts, key information
 }
 
 // Trending short video font styles - Exact match to popular social platforms
 export const captionStyles = [
     {
-        name: 'TikTok Bold',
+        name: 'Rubik Heavy',
         style: {
             fontFamily: 'Rubik, Arial Black, sans-serif',
             fontSize: 24,
             fontWeight: 900,
             color: '#ffffff',
-            backgroundColor: 'transparent',
-            padding: '6px 12px',
-            borderRadius: '8px',
             textAlign: 'center' as const,
             WebkitTextStroke: '3px #000000',
-            textShadow: '4px 4px 0px #ff0040, 8px 8px 0px rgba(0,0,0,0.3)',
+            textShadow: '4px 4px 0px rgba(0, 0, 0, 0.8)',
             textTransform: 'uppercase' as const,
             letterSpacing: '1px',
-            animation: 'bounce 2s infinite',
         },
     },
     {
-        name: 'Instagram Reels',
+        name: 'Fira Sans Condensed',
         style: {
             fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
-            fontSize: 22,
-            fontWeight: 900,
-            color: '#000000',
-            backgroundColor: '#ffff00',
-            padding: '8px 16px',
-            borderRadius: '12px',
-            textAlign: 'center' as const,
-            textShadow: '2px 2px 0px #ffffff',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.5px',
-            border: '3px solid #000000',
-            animation: 'pulse 1.5s infinite',
-        },
-    },
-    {
-        name: 'Viral Neon',
-        style: {
-            fontFamily: 'Montserrat, Arial, sans-serif',
-            fontSize: 20,
-            fontWeight: 800,
-            color: '#00ff88',
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            textAlign: 'center' as const,
-            textShadow: '0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff88',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-            border: '2px solid #00ff88',
-            animation: 'neonGlow 3s infinite alternate',
-        },
-    },
-    {
-        name: 'YouTube Shorts',
-        style: {
-            fontFamily: 'Rubik, Arial Black, sans-serif',
             fontSize: 26,
             fontWeight: 900,
-            color: '#ff0000',
-            backgroundColor: '#ffffff',
-            padding: '10px 20px',
-            borderRadius: '16px',
-            textAlign: 'center' as const,
-            textShadow: '3px 3px 0px #000000',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-            border: '4px solid #ff0000',
-            animation: 'shake 0.8s infinite',
-        },
-    },
-    {
-        name: 'Komika Fun',
-        style: {
-            fontFamily: 'Komika, Comic Sans MS, cursive',
-            fontSize: 22,
-            fontWeight: 800,
             color: '#ffffff',
-            backgroundColor: '#ff6600',
-            padding: '8px 16px',
-            borderRadius: '20px',
-            textAlign: 'center' as const,
-            textShadow: '4px 4px 0px #000000, 8px 8px 0px rgba(255,102,0,0.5)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.5px',
-            animation: 'wiggle 2s infinite',
-        },
-    },
-    {
-        name: 'Trending Pop',
-        style: {
-            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
-            fontSize: 24,
-            fontWeight: 900,
-            color: '#ffffff',
-            backgroundColor: 'transparent',
-            padding: '6px 12px',
-            borderRadius: '0px',
             textAlign: 'center' as const,
             WebkitTextStroke: '2px #000000',
-            textShadow: '4px 4px 0px #00ffff, -4px -4px 0px #ff00ff',
+            textShadow: '3px 3px 6px rgba(0, 0, 0, 0.9)',
             textTransform: 'uppercase' as const,
-            letterSpacing: '2px',
-            animation: 'colorShift 2s infinite',
+            letterSpacing: '0.5px',
         },
     },
     {
         name: 'Montserrat Heavy',
         style: {
             fontFamily: 'Montserrat, Arial, sans-serif',
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: 900,
-            color: '#000000',
-            backgroundColor: '#00ff00',
-            padding: '8px 16px',
-            borderRadius: '8px',
+            color: '#ffffff',
             textAlign: 'center' as const,
-            textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+            WebkitTextStroke: '2px #000000',
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
             textTransform: 'uppercase' as const,
             letterSpacing: '1px',
-            border: '3px solid #000000',
-            animation: 'zoomPulse 1.5s infinite',
         },
     },
     {
-        name: 'Stroke Master',
+        name: 'Komika Medium',
+        style: {
+            fontFamily: 'Komika, Comic Sans MS, cursive',
+            fontSize: 24,
+            fontWeight: 700,
+            color: '#ffffff',
+            textAlign: 'center' as const,
+            textShadow: '3px 3px 0px #000000, 6px 6px 12px rgba(0, 0, 0, 0.5)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.5px',
+        },
+    },
+    {
+        name: 'Bold Stroke',
+        style: {
+            fontFamily: 'Rubik, Arial Black, sans-serif',
+            fontSize: 25,
+            fontWeight: 900,
+            color: '#ffffff',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '4px #000000',
+            textShadow: '0px 0px 0px transparent',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1.5px',
+        },
+    },
+    {
+        name: 'Shadow Heavy',
+        style: {
+            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
+            fontSize: 23,
+            fontWeight: 900,
+            color: '#ffffff',
+            textAlign: 'center' as const,
+            textShadow: '4px 4px 0px #000000, 8px 8px 16px rgba(0, 0, 0, 0.6)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+        },
+    },
+    {
+        name: 'Outline Style',
+        style: {
+            fontFamily: 'Montserrat, Arial, sans-serif',
+            fontSize: 24,
+            fontWeight: 800,
+            color: '#000000',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '3px #ffffff',
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+        },
+    },
+    {
+        name: 'Double Shadow',
         style: {
             fontFamily: 'Rubik, Arial Black, sans-serif',
             fontSize: 22,
             fontWeight: 900,
-            color: '#ffff00',
-            backgroundColor: 'transparent',
-            padding: '4px 8px',
-            borderRadius: '0px',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '4px #000000',
-            textShadow: '6px 6px 0px #ff0000, 12px 12px 0px rgba(0,0,0,0.3)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1.5px',
-            animation: 'slideIn 3s infinite',
-        },
-    },
-    {
-        name: 'Triple Color',
-        style: {
-            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
-            fontSize: 24,
-            fontWeight: 900,
             color: '#ffffff',
-            background: 'linear-gradient(45deg, #ff0000, #00ff00, #00ffff)',
-            padding: '10px 20px',
-            borderRadius: '12px',
             textAlign: 'center' as const,
-            textShadow: '3px 3px 0px #000000',
+            textShadow: '2px 2px 0px #ff0000, 4px 4px 0px #000000, 6px 6px 12px rgba(0, 0, 0, 0.5)',
             textTransform: 'uppercase' as const,
             letterSpacing: '1px',
-            animation: 'gradientShift 4s infinite',
         },
     },
     {
-        name: 'Shadow Blast',
+        name: 'Clean Modern',
         style: {
-            fontFamily: 'Montserrat, Arial, sans-serif',
-            fontSize: 21,
-            fontWeight: 900,
-            color: '#ffffff',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            padding: '8px 16px',
-            borderRadius: '10px',
-            textAlign: 'center' as const,
-            textShadow: '0 0 20px #ffffff, 4px 4px 8px #000000, 8px 8px 16px rgba(255,255,255,0.5)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-            animation: 'glowPulse 2s infinite alternate',
-        },
-    },
-    {
-        name: 'Emoji Vibe',
-        style: {
-            fontFamily: 'Rubik, Arial Black, sans-serif',
-            fontSize: 20,
-            fontWeight: 800,
-            color: '#000000',
-            backgroundColor: '#ffff00',
-            padding: '8px 16px',
-            borderRadius: '25px',
-            textAlign: 'center' as const,
-            textShadow: '2px 2px 0px #ffffff',
-            textTransform: 'lowercase' as const,
-            letterSpacing: '0.5px',
-            border: '3px solid #ff6600',
-            animation: 'bounceIn 2s infinite',
-        },
-    },
-    {
-        name: 'Viral Flash',
-        style: {
-            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
+            fontFamily: 'Fira Sans Condensed, Arial, sans-serif',
             fontSize: 25,
+            fontWeight: 800,
+            color: '#ffffff',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '1px #000000',
+            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.8px',
+        },
+    },
+    {
+        name: 'Bold Impact',
+        style: {
+            fontFamily: 'Montserrat, Impact, sans-serif',
+            fontSize: 26,
             fontWeight: 900,
             color: '#ffffff',
-            backgroundColor: 'transparent',
-            padding: '6px 12px',
-            borderRadius: '4px',
             textAlign: 'center' as const,
             WebkitTextStroke: '3px #000000',
-            textShadow: '0 0 15px #ff00ff, 4px 4px 0px #00ffff, 8px 8px 0px #ffff00',
+            textShadow: '5px 5px 0px rgba(0, 0, 0, 0.8)',
             textTransform: 'uppercase' as const,
-            letterSpacing: '2px',
-            animation: 'flashEffect 1s infinite',
+            letterSpacing: '1.2px',
+        },
+    },
+    {
+        name: 'Soft Shadow',
+        style: {
+            fontFamily: 'Komika, Arial, sans-serif',
+            fontSize: 23,
+            fontWeight: 700,
+            color: '#ffffff',
+            textAlign: 'center' as const,
+            textShadow: '2px 2px 8px rgba(0, 0, 0, 0.8), 4px 4px 16px rgba(0, 0, 0, 0.4)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.5px',
+        },
+    },
+    {
+        name: 'Thick Outline',
+        style: {
+            fontFamily: 'Rubik, Arial Black, sans-serif',
+            fontSize: 24,
+            fontWeight: 900,
+            color: '#ffff00',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '5px #000000',
+            textShadow: '0px 0px 0px transparent',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1.5px',
         },
     },
 ]
@@ -350,28 +222,6 @@ const CaptionsToolPanel = () => {
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
 
-    // Inject CSS animations
-    useEffect(() => {
-        const styleId = 'caption-animations'
-        let styleElement = document.getElementById(styleId) as HTMLStyleElement
-        
-        if (!styleElement) {
-            styleElement = document.createElement('style')
-            styleElement.id = styleId
-            document.head.appendChild(styleElement)
-        }
-        
-        styleElement.textContent = captionAnimations
-        
-        return () => {
-            // Cleanup when component unmounts
-            const existingStyle = document.getElementById(styleId)
-            if (existingStyle) {
-                existingStyle.remove()
-            }
-        }
-    }, [])
-
     // Get video/audio clips that can be transcribed
     const transcribableClips = clips.filter(clip => 
         (clip.type === 'video' || clip.type === 'audio') && clip.assetId
@@ -405,8 +255,8 @@ const CaptionsToolPanel = () => {
         }
     }, [transcribableClips])
 
-    // Parse SRT format to caption objects
-    const parseSRT = (srtText: string): Caption[] => {
+    // Parse enhanced SRT format with word highlights
+    const parseEnhancedSRT = (srtText: string): Caption[] => {
         const srtBlocks = srtText.trim().split('\n\n')
         const parsedCaptions: Caption[] = []
 
@@ -419,11 +269,15 @@ const CaptionsToolPanel = () => {
                 // Parse time format: 00:00:01,000 --> 00:00:03,500
                 const timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/)
                 if (timeMatch) {
+                    // Extract plain text for editing (remove HTML tags)
+                    const plainText = textLines.replace(/<span[^>]*>(.*?)<\/span>/g, '$1')
+                    
                     parsedCaptions.push({
                         id: index + 1,
                         startTime: timeMatch[1],
                         endTime: timeMatch[2],
-                        text: textLines
+                        text: plainText,
+                        highlightedHtml: textLines // Store original with highlights
                     })
                 }
             }
@@ -478,8 +332,8 @@ const CaptionsToolPanel = () => {
             const result = await response.json()
             console.log('✅ Transcription completed:', result)
 
-            // Parse the SRT format transcription
-            const parsedCaptions = parseSRT(result.transcription)
+            // Parse the enhanced SRT format transcription
+            const parsedCaptions = parseEnhancedSRT(result.transcription)
             setCaptions(parsedCaptions)
 
             if (parsedCaptions.length === 0) {
@@ -557,7 +411,7 @@ const CaptionsToolPanel = () => {
                 volume: 1,
                 speed: 1,
                 properties: {
-                    text: caption.text,
+                    text: caption.highlightedHtml || caption.text, // Use highlighted HTML if available
                     style: {
                         ...selectedStyle,
                     },
@@ -642,6 +496,27 @@ const CaptionsToolPanel = () => {
     }
 
     const progressContent = getProgressContent()
+
+    // Render highlighted text as React elements
+    const renderHighlightedText = (htmlText: string) => {
+        if (!htmlText) return null
+        
+        // Split text by span tags and render appropriately
+        const parts = htmlText.split(/(<span[^>]*>.*?<\/span>)/g)
+        
+        return parts.map((part, index) => {
+            const spanMatch = part.match(/<span color="([^"]*)">(.*?)<\/span>/)
+            if (spanMatch) {
+                const [, color, text] = spanMatch
+                return (
+                    <span key={index} style={{ color, fontWeight: 'bold' }}>
+                        {text}
+                    </span>
+                )
+            }
+            return part
+        })
+    }
 
     return (
         <div className="flex flex-col w-full gap-6 p-4">
@@ -774,6 +649,28 @@ const CaptionsToolPanel = () => {
                         </button>
                     </div>
 
+                    {/* AI Highlighting Info */}
+                    <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Sparkles size={16} className="text-blue-500" />
+                            <span className="text-sm font-medium text-blue-700">AI Smart Highlighting Active</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs">
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: highlightColors.red}}></div>
+                                <span className="text-gray-600">Actions & Emotions</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: highlightColors.green}}></div>
+                                <span className="text-gray-600">Success & Growth</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: highlightColors.cyan}}></div>
+                                <span className="text-gray-600">Numbers & Facts</span>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Editable Captions List */}
                     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                         <div className="max-h-80 overflow-y-auto">
@@ -823,7 +720,7 @@ const CaptionsToolPanel = () => {
                                         />
                                     ) : (
                                         <p className="text-sm text-gray-800 leading-relaxed cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleStartEdit(caption)}>
-                                            {caption.text}
+                                            {renderHighlightedText(caption.highlightedHtml || caption.text)}
                                         </p>
                                     )}
                                 </div>
