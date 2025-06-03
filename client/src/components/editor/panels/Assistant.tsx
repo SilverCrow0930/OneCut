@@ -10,6 +10,7 @@ import { usePlayback } from '@/contexts/PlaybackContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { addAssetToTrack } from '@/lib/editor/utils'
 import { v4 as uuid } from 'uuid'
+import { Clip } from '@/types/editor'
 
 interface ChatMessage {
     id: number;
@@ -22,6 +23,32 @@ interface VideoAction {
     type: 'ADD_CLIP' | 'REMOVE_CLIP' | 'UPDATE_CLIP' | 'SPLIT_CLIP' | 'TRIM_CLIP' | 'ADD_TRANSITION' | 'ADJUST_SPEED' | 'AUTO_CUT' | 'SUGGESTION';
     description: string;
     data?: any;
+}
+
+interface TimelineGap {
+    trackId: string;
+    startMs: number;
+    endMs: number;
+    duration: number;
+}
+
+interface TimelineOverlap {
+    clip1: Clip;
+    clip2: Clip;
+    overlapMs: number;
+}
+
+interface TimelineAnalysis {
+    totalDuration: number;
+    trackCount: number;
+    clipCount: number;
+    videoClips: number;
+    audioClips: number;
+    textClips: number;
+    gaps: TimelineGap[];
+    overlaps: TimelineOverlap[];
+    speedIssues: Clip[];
+    volumeIssues: Clip[];
 }
 
 const Assistant = () => {
@@ -51,8 +78,8 @@ const Assistant = () => {
     const { assets } = useAssets()
 
     // Video Agent Intelligence Functions
-    const analyzeTimeline = () => {
-        const analysis = {
+    const analyzeTimeline = (): TimelineAnalysis => {
+        const analysis: TimelineAnalysis = {
             totalDuration: Math.max(...clips.map(c => c.timelineEndMs), 0),
             trackCount: tracks.length,
             clipCount: clips.length,
@@ -67,8 +94,8 @@ const Assistant = () => {
         return analysis
     }
 
-    const findGaps = () => {
-        const gaps = []
+    const findGaps = (): TimelineGap[] => {
+        const gaps: TimelineGap[] = []
         tracks.forEach(track => {
             const trackClips = clips.filter(c => c.trackId === track.id).sort((a, b) => a.timelineStartMs - b.timelineStartMs)
             for (let i = 0; i < trackClips.length - 1; i++) {
@@ -87,8 +114,8 @@ const Assistant = () => {
         return gaps
     }
 
-    const findOverlaps = () => {
-        const overlaps = []
+    const findOverlaps = (): TimelineOverlap[] => {
+        const overlaps: TimelineOverlap[] = []
         tracks.forEach(track => {
             const trackClips = clips.filter(c => c.trackId === track.id).sort((a, b) => a.timelineStartMs - b.timelineStartMs)
             for (let i = 0; i < trackClips.length - 1; i++) {
@@ -106,11 +133,11 @@ const Assistant = () => {
         return overlaps
     }
 
-    const findSpeedIssues = () => {
+    const findSpeedIssues = (): Clip[] => {
         return clips.filter(c => c.speed > 3 || c.speed < 0.5)
     }
 
-    const findVolumeIssues = () => {
+    const findVolumeIssues = (): Clip[] => {
         return clips.filter(c => (c.type === 'audio' || c.type === 'video') && (c.volume > 1.5 || c.volume < 0.1))
     }
 
