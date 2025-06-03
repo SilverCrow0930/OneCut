@@ -7,25 +7,26 @@ import { v4 as uuid } from 'uuid'
 const ClipTools = () => {
     const { executeCommand, selectedClipId, selectedClipIds, clips, tracks } = useEditor()
     const { currentTime } = usePlayback()
-    const [showSpeedMenu, setShowSpeedMenu] = useState(false)
-    const speedMenuRef = useRef<HTMLDivElement>(null)
+    const [showSpeedSlider, setShowSpeedSlider] = useState(false)
+    const [sliderSpeed, setSliderSpeed] = useState(1)
+    const speedSliderRef = useRef<HTMLDivElement>(null)
 
-    // Close speed menu when clicking outside
+    // Close speed slider when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (speedMenuRef.current && !speedMenuRef.current.contains(event.target as Node)) {
-                setShowSpeedMenu(false)
+            if (speedSliderRef.current && !speedSliderRef.current.contains(event.target as Node)) {
+                setShowSpeedSlider(false)
             }
         }
 
-        if (showSpeedMenu) {
+        if (showSpeedSlider) {
             document.addEventListener('mousedown', handleClickOutside)
         }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside)
         }
-    }, [showSpeedMenu])
+    }, [showSpeedSlider])
 
     // Find the selected clip(s)
     const selectedClip = clips.find(clip => clip.id === selectedClipId)
@@ -39,7 +40,16 @@ const ClipTools = () => {
         clip.type === 'video' || clip.type === 'audio'
     ) || (selectedClip && (selectedClip.type === 'video' || selectedClip.type === 'audio'))
 
-    const speedOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3]
+    // Update slider speed when selection changes
+    useEffect(() => {
+        if (hasSelectedClip && !hasMultipleSelection && (selectedClip.type === 'video' || selectedClip.type === 'audio')) {
+            setSliderSpeed(selectedClip.speed || 1)
+        } else if (hasMultipleSelection) {
+            // For multiple selection, show the speed of the first media clip or default to 1
+            const firstMediaClip = selectedClips.find(clip => clip.type === 'video' || clip.type === 'audio')
+            setSliderSpeed(firstMediaClip?.speed || 1)
+        }
+    }, [selectedClip, selectedClips, hasSelectedClip, hasMultipleSelection])
 
     const handleSpeedChange = (newSpeed: number) => {
         const clipsToUpdate = hasMultipleSelection ? selectedClips : (selectedClip ? [selectedClip] : [])
@@ -50,7 +60,6 @@ const ClipTools = () => {
             .filter(clip => clip.type === 'video' || clip.type === 'audio') // Only update video/audio clips
             .map(clip => {
                 // Calculate new timeline duration based on speed change
-                const currentDuration = clip.timelineEndMs - clip.timelineStartMs
                 const currentSourceDuration = clip.sourceEndMs - clip.sourceStartMs
                 const newTimelineDuration = Math.round(currentSourceDuration / newSpeed)
                 
@@ -75,8 +84,12 @@ const ClipTools = () => {
                 payload: { commands }
             })
         }
+    }
 
-        setShowSpeedMenu(false)
+    const handleSliderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const newSpeed = parseFloat(event.target.value)
+        setSliderSpeed(newSpeed)
+        handleSpeedChange(newSpeed)
     }
 
     const handleDelete = () => {
@@ -249,7 +262,7 @@ const ClipTools = () => {
 
     return (
         <div className={`
-            flex items-center gap-3
+            flex items-center gap-5
             backdrop-blur-sm
             px-4 py-1 rounded-xl
             text-black
@@ -279,7 +292,7 @@ const ClipTools = () => {
             </button>
 
             {/* Speed Control */}
-            <div className="relative" ref={speedMenuRef}>
+            <div className="relative" ref={speedSliderRef}>
                 <button
                     className={`
                         p-1 rounded-lg transition-all duration-200
@@ -292,28 +305,37 @@ const ClipTools = () => {
                         `Adjust speed of ${selectedClips.filter(c => c.type === 'video' || c.type === 'audio').length} media clips` : 
                         "Adjust playback speed"
                     }
-                    onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                    onClick={() => setShowSpeedSlider(!showSpeedSlider)}
                     disabled={!canAdjustSpeed || !hasAnySelection}
                 >
                     <Gauge size={26} />
                 </button>
 
-                {/* Speed Menu */}
-                {showSpeedMenu && canAdjustSpeed && hasAnySelection && (
-                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 min-w-[120px]">
-                        <div className="px-3 py-1 text-xs font-medium text-gray-500 border-b border-gray-100">
-                            Speed
+                {/* Speed Slider */}
+                {showSpeedSlider && canAdjustSpeed && hasAnySelection && (
+                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]">
+                        <div className="text-xs font-semibold text-gray-700 mb-3 text-center">
+                            Speed: {sliderSpeed}x
                         </div>
-                        {speedOptions.map(speed => (
-                            <button
-                                key={speed}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between"
-                                onClick={() => handleSpeedChange(speed)}
-                            >
-                                <span>{speed}x</span>
-                                {speed === 1 && <span className="text-xs text-gray-400">Normal</span>}
-                            </button>
-                        ))}
+                        <div className="relative">
+                            <input
+                                type="range"
+                                min="0.25"
+                                max="3"
+                                step="0.25"
+                                value={sliderSpeed}
+                                onChange={handleSliderChange}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                style={{
+                                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%, #e5e7eb ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%, #e5e7eb 100%)`
+                                }}
+                            />
+                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>0.25x</span>
+                                <span>1x</span>
+                                <span>3x</span>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
@@ -329,6 +351,48 @@ const ClipTools = () => {
             >
                 <Trash2 size={26} />
             </button>
+
+            <style jsx>{`
+                .slider::-webkit-slider-thumb {
+                    appearance: none;
+                    height: 18px;
+                    width: 18px;
+                    border-radius: 50%;
+                    background: #3b82f6;
+                    cursor: pointer;
+                    border: 2px solid #ffffff;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                }
+
+                .slider::-moz-range-thumb {
+                    height: 18px;
+                    width: 18px;
+                    border-radius: 50%;
+                    background: #3b82f6;
+                    cursor: pointer;
+                    border: 2px solid #ffffff;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                }
+
+                .slider::-webkit-slider-track {
+                    height: 8px;
+                    border-radius: 4px;
+                }
+
+                .slider::-moz-range-track {
+                    height: 8px;
+                    border-radius: 4px;
+                    background: transparent;
+                }
+
+                .slider:focus {
+                    outline: none;
+                }
+
+                .slider:focus::-webkit-slider-thumb {
+                    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+                }
+            `}</style>
         </div>
     )
 }
