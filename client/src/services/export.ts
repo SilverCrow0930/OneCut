@@ -265,25 +265,118 @@ class ExportService {
      */
     async downloadFile(url: string, filename: string): Promise<void> {
         try {
-            // Create a temporary link element
+            // Prefer streaming download to capture progress
+            const response = await fetch(url)
+
+            if (!response.ok || !response.body) {
+                // Fallback to simple anchor download
+                const link = document.createElement('a')
+                link.href = url
+                link.download = filename
+                link.style.display = 'none'
+                document.body.appendChild(link)
+                link.click()
+                setTimeout(() => document.body.removeChild(link), 100)
+                return
+            }
+
+            const contentLength = Number(response.headers.get('Content-Length')) || 0
+            const reader = response.body.getReader()
+            const chunks: Uint8Array[] = []
+            let received = 0
+
+            while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                if (value) {
+                    chunks.push(value)
+                    received += value.length
+                    // Emit global custom event for progress updates (optional)
+                    const total = contentLength || undefined
+                    window.dispatchEvent(new CustomEvent('export-download-progress', {
+                        detail: {
+                            received,
+                            total
+                        }
+                    }))
+                }
+            }
+
+            const blob = new Blob(chunks, { type: 'video/mp4' })
+            const blobUrl = URL.createObjectURL(blob)
+
             const link = document.createElement('a')
-            link.href = url
+            link.href = blobUrl
             link.download = filename
             link.style.display = 'none'
-
-            // Add to DOM and trigger download
             document.body.appendChild(link)
             link.click()
-
-            // Clean up
             setTimeout(() => {
                 document.body.removeChild(link)
+                URL.revokeObjectURL(blobUrl)
             }, 100)
 
         } catch (error) {
             console.error('Download error:', error)
             throw new Error('Failed to download file')
         }
+    }
+
+    /**
+     * Streaming download with progress callback
+     */
+    async downloadFileWithProgress(url: string, filename: string, onProgress?: (percent: number) => void): Promise<void> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const response = await fetch(url)
+                if (!response.ok || !response.body) {
+                    // Fallback to simple download
+                    await this.downloadFile(url, filename)
+                    onProgress?.(100)
+                    resolve()
+                    return
+                }
+
+                const contentLength = Number(response.headers.get('Content-Length')) || 0
+                const reader = response.body.getReader()
+                const chunks: Uint8Array[] = []
+                let received = 0
+
+                while (true) {
+                    const { done, value } = await reader.read()
+                    if (done) break
+                    if (value) {
+                        chunks.push(value)
+                        received += value.length
+                        if (contentLength) {
+                            const percent = Math.min(Math.round((received / contentLength) * 100), 100)
+                            onProgress?.(percent)
+                        }
+                    }
+                }
+
+                const blob = new Blob(chunks, { type: 'video/mp4' })
+                const blobUrl = URL.createObjectURL(blob)
+
+                const link = document.createElement('a')
+                link.href = blobUrl
+                link.download = filename
+                link.style.display = 'none'
+                document.body.appendChild(link)
+                link.click()
+
+                setTimeout(() => {
+                    document.body.removeChild(link)
+                    URL.revokeObjectURL(blobUrl)
+                }, 100)
+
+                onProgress?.(100)
+                resolve()
+
+            } catch (error) {
+                reject(error)
+            }
+        })
     }
 }
 

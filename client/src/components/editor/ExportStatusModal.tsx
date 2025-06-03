@@ -35,6 +35,8 @@ const ExportStatusModal = ({
                     if (progress < 95) return 'Encoding video...'
                     if (progress < 100) return 'Uploading to cloud...'
                     return 'Finalizing export...'
+                case 'downloading':
+                    return 'Downloading video...'
                 case 'completed':
                     return 'Export complete!'
                 case 'failed':
@@ -58,6 +60,7 @@ const ExportStatusModal = ({
 
     const getStatusIcon = () => {
         if (error || status === 'failed') return <AlertCircle className="w-5 h-5 text-red-500" />
+        if (status === 'downloading') return <Download className="w-5 h-5 text-blue-500 animate-pulse" />
         if (progress === 100 || status === 'completed') return <CheckCircle className="w-5 h-5 text-green-500" />
         if (status === 'cancelled') return <StopCircle className="w-5 h-5 text-orange-500" />
         return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
@@ -129,7 +132,7 @@ const ExportStatusModal = ({
                     </div>
                 )}
 
-                {!error && status !== 'completed' && status !== 'cancelled' && progress > 0 && (
+                {!error && status !== 'completed' && status !== 'cancelled' && status !== 'failed' && progress > 0 && (
                     <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
                         <div
                             className="bg-blue-500 h-3 rounded-full transition-all duration-300"
@@ -138,13 +141,13 @@ const ExportStatusModal = ({
                     </div>
                 )}
 
-                {!error && status !== 'completed' && status !== 'cancelled' && progress > 0 && (
+                {!error && status !== 'completed' && status !== 'cancelled' && status !== 'failed' && progress > 0 && (
                     <p className="text-sm text-gray-600 mb-4">
                         {progress.toFixed(0)}% complete
                     </p>
                 )}
 
-                {(progress === 100 || status === 'completed') && !error && (
+                {(status === 'completed') && !error && (
                     <div className="text-center py-4">
                         <p className="text-sm text-green-600 mb-2">
                             Your video has been exported successfully!

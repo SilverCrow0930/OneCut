@@ -39,6 +39,7 @@ const ShareButton = () => {
     const [selectedExportType, setSelectedExportType] = useState('1080p')
     const [isExporting, setIsExporting] = useState(false)
     const [exportProgress, setExportProgress] = useState(0)
+    const [exportStatus, setExportStatus] = useState<string>('queued')
     const [exportError, setExportError] = useState<string | null>(null)
     const [quickExport, setQuickExport] = useState(false)
     const [useServerExport, setUseServerExport] = useState(true) // Default to server export
@@ -103,24 +104,31 @@ const ShareButton = () => {
                     
                     if (status.success && status.job) {
                         setExportProgress(status.job.progress)
+                        setExportStatus(status.job.status)
                         
                         if (status.job.status === 'completed') {
+                            // Begin downloading
+                            if (status.job.downloadUrl) {
+                                // Update status to downloading
+                                setExportProgress(100)
+                                setExportStatus('downloading')
+                                // Use streaming download with progress
+                                await exportService.downloadFileWithProgress(
+                                    status.job.downloadUrl,
+                                    `video-export-${selectedExportType}-${Date.now()}.mp4`,
+                                    (percent) => {
+                                        // Map download progress 0-100 to 100-200 for UI or reuse 0-100
+                                        const dlProgress = Math.min(percent, 100)
+                                        setExportProgress(dlProgress)
+                                    }
+                                )
+                                setExportStatus('completed')
+                            }
                             setIsExporting(false)
                             setCurrentJobId(null)
-                            
-                            // Trigger download if URL is available
-                            if (status.job.downloadUrl) {
-                                const a = document.createElement('a')
-                                a.href = status.job.downloadUrl
-                                a.download = `video-export-${selectedExportType}-${Date.now()}.mp4`
-                                a.style.display = 'none'
-                                document.body.appendChild(a)
-                                a.click()
-                                document.body.removeChild(a)
-                            }
-                            
                         } else if (status.job.status === 'failed') {
                             setExportError(status.job.error || 'Export failed')
+                            setExportStatus('failed')
                             setIsExporting(false)
                             setCurrentJobId(null)
                         }
@@ -144,6 +152,7 @@ const ShareButton = () => {
         setIsExporting(true)
         setExportProgress(0)
         setExportError(null)
+        setExportStatus('queued')
 
         try {
             if (useServerExport) {
@@ -162,6 +171,7 @@ const ShareButton = () => {
                 if (result.success && result.jobId) {
                     setCurrentJobId(result.jobId)
                     setExportProgress(5)
+                    setExportStatus('processing')
                 } else {
                     throw new Error(result.error || 'Failed to start export')
                 }
@@ -355,8 +365,10 @@ const ShareButton = () => {
             <ExportStatusModal
                 isOpen={isExporting}
                 progress={exportProgress}
+                status={exportStatus}
                 onClose={handleCloseExport}
                 error={exportError}
+                serverSide={useServerExport}
             />
         </div>
     )

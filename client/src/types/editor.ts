@@ -97,3 +97,28 @@ export type HistoryState = {
 }
 
 export type SaveState = 'saved' | 'saving' | 'unsaved' | 'error'
+
+export interface TimelineClip {
+    id: string
+    type: 'video' | 'image' | 'audio' | 'text' | 'caption'
+    assetId?: string
+    trackId: string
+    timelineStartMs: number
+    timelineEndMs: number
+    sourceStartMs: number
+    sourceEndMs: number
+    assetDurationMs: number
+    volume: number
+    speed: number
+    properties?: {
+        externalAsset?: {
+            url: string
+            platform: string
+        }
+        text?: string
+        style?: any
+        placement?: 'top' | 'middle' | 'bottom'
+        [key: string]: any
+    }
+    createdAt: string
+}

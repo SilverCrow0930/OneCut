@@ -1,7 +1,6 @@
 import express from 'express'
 import { body, validationResult } from 'express-validator'
 import ffmpeg from 'fluent-ffmpeg'
-import { Storage } from '@google-cloud/storage'
 import { v4 as uuid } from 'uuid'
 import fs from 'fs/promises'
 import path from 'path'
@@ -35,7 +34,6 @@ const __dirname = path.dirname(__filename)
 const TEMP_DIR = path.join(__dirname, '../../temp')
 const EXPORTS_DIR = path.join(TEMP_DIR, 'exports')
 
-// Ensure directories exist
 async function ensureDirectories() {
     try {
         await fs.mkdir(TEMP_DIR, { recursive: true })
@@ -47,7 +45,31 @@ async function ensureDirectories() {
 
 ensureDirectories()
 
-// Export job tracking
+// Professional Timeline Interfaces
+interface TimelineElement {
+    id: string
+    type: 'video' | 'audio' | 'image' | 'gif' | 'text' | 'caption'
+    trackId: string
+    timelineStartMs: number
+    timelineEndMs: number
+    sourceStartMs?: number
+    sourceEndMs?: number
+    assetId?: string
+    speed?: number
+    volume?: number
+    opacity?: number
+    text?: string
+    fontSize?: number
+    fontColor?: string
+    position?: { x: number, y: number }
+    transitionIn?: { type: string, duration: number }
+    transitionOut?: { type: string, duration: number }
+    properties?: {
+        externalAsset?: { url: string, platform: string }
+        [key: string]: any
+    }
+}
+
 interface ExportJob {
     id: string
     status: 'queued' | 'processing' | 'completed' | 'failed'
@@ -77,11 +99,13 @@ interface TimelineClip {
     sourceStartMs: number
     sourceEndMs: number
     speed?: number
+    volume?: number
     properties?: {
-        externalAsset?: {
-            url: string
-            platform: string
-        }
+        externalAsset?: { url: string, platform: string }
+        text?: string
+        fontSize?: number
+        fontColor?: string
+        position?: { x: number, y: number }
         [key: string]: any
     }
 }
@@ -93,141 +117,394 @@ interface TimelineTrack {
     name: string
 }
 
-// In-memory job storage (in production, use Redis or database)
 const exportJobs = new Map<string, ExportJob>()
 
-// Cleanup old exports every hour
-cron.schedule('0 * * * *', () => {
-    cleanupOldExports()
-})
+// Cleanup old exports
+cron.schedule('0 * * * *', () => cleanupOldExports())
 
 async function cleanupOldExports() {
     try {
-        const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago
-        
+        const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000)
         for (const [jobId, job] of exportJobs.entries()) {
             if (job.createdAt < cutoffTime) {
-                // Delete the file if it exists
                 if (job.outputPath) {
-                    try {
-                        await fs.unlink(job.outputPath)
-                    } catch (error) {
-                        console.error('Failed to delete export file:', error)
-                    }
+                    try { await fs.unlink(job.outputPath) } catch {}
                 }
-                
-                // Remove from tracking
                 exportJobs.delete(jobId)
-                console.log(`Cleaned up old export: ${jobId}`)
             }
         }
     } catch (error) {
-        console.error('Error during export cleanup:', error)
+        console.error('Cleanup error:', error)
     }
 }
 
-// Validation middleware
 const validateExportRequest = [
-    body('clips').isArray().withMessage('Clips must be an array'),
-    body('tracks').isArray().withMessage('Tracks must be an array'),
-    body('exportSettings.resolution').isIn(['480p', '720p', '1080p']).withMessage('Invalid resolution'),
-    body('exportSettings.quality').isIn(['low', 'medium', 'high']).withMessage('Invalid quality'),
-    body('exportSettings.fps').isInt({ min: 24, max: 60 }).withMessage('FPS must be between 24 and 60')
+    body('clips').isArray(),
+    body('tracks').isArray(),
+    body('exportSettings.resolution').isIn(['480p', '720p', '1080p']),
+    body('exportSettings.quality').isIn(['low', 'medium', 'high']),
+    body('exportSettings.fps').isInt({ min: 24, max: 60 })
 ]
 
-// Asset URL fetching
-async function fetchAssetUrl(assetId: string, accessToken?: string): Promise<string> {
-    try {
-        console.log(`[Debug] Fetching asset URL for assetId: ${assetId}`)
-        
-        // First, fetch the asset from the database to get the object_key
-        const { data: asset, error } = await supabase
-            .from('assets')
-            .select('object_key, name, mime_type, user_id')
-            .eq('id', assetId)
-            .single()
+async function fetchAssetUrl(assetId: string): Promise<string> {
+    const { data: asset, error } = await supabase
+        .from('assets')
+        .select('object_key')
+        .eq('id', assetId)
+        .single()
 
-        if (error || !asset) {
-            console.error(`[Debug] Asset ${assetId} not found in database:`, error)
-            throw new Error(`Asset ${assetId} not found in database`)
-        }
-
-        console.log(`[Debug] Found asset in database:`, {
-            assetId,
-            object_key: asset.object_key,
-            name: asset.name,
-            mime_type: asset.mime_type,
-            user_id: asset.user_id
-        })
-
-        // Generate signed URL using the object_key
-        const file = bucket.file(asset.object_key)
-        
-        // Check if file exists in Google Cloud Storage
-        try {
-            const [exists] = await file.exists()
-            console.log(`[Debug] File exists in GCS: ${exists} for object_key: ${asset.object_key}`)
-            
-            if (!exists) {
-                throw new Error(`File not found in Google Cloud Storage: ${asset.object_key}`)
-            }
-        } catch (existsError) {
-            console.error(`[Debug] Error checking file existence:`, existsError)
-            throw new Error(`Failed to verify file existence in storage: ${asset.object_key}`)
-        }
-        
-        // Generate signed URL valid for 1 hour
-        const [url] = await file.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 60 * 60 * 1000 // 1 hour
-        })
-        
-        console.log(`[Debug] Generated signed URL for ${assetId}: ${url.substring(0, 100)}...`)
-        
-        return url
-    } catch (error) {
-        console.error(`[Debug] Failed to get URL for asset ${assetId}:`, error)
-        throw new Error(`Asset ${assetId} not found: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    if (error || !asset) {
+        throw new Error(`Asset ${assetId} not found`)
     }
+
+    const [url] = await bucket.file(asset.object_key).getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 60 * 60 * 1000
+    })
+    
+    return url
 }
 
-// Download asset to temp file
 async function downloadAsset(url: string, filename: string): Promise<string> {
-    try {
-        console.log(`[Debug] Attempting to download asset from URL: ${url.substring(0, 100)}...`)
-        console.log(`[Debug] Target filename: ${filename}`)
+    const response = await fetch(url)
+    if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`)
+    }
+    
+    const buffer = await response.arrayBuffer()
+    const filePath = path.join(TEMP_DIR, filename)
+    await fs.writeFile(filePath, Buffer.from(buffer))
+    return filePath
+}
+
+function convertToTimelineElements(clips: TimelineClip[]): TimelineElement[] {
+    return clips.map(clip => ({
+        id: clip.id,
+        type: clip.type as any,
+        trackId: clip.trackId,
+        timelineStartMs: clip.timelineStartMs,
+        timelineEndMs: clip.timelineEndMs,
+        sourceStartMs: clip.sourceStartMs,
+        sourceEndMs: clip.sourceEndMs,
+        assetId: clip.assetId,
+        speed: clip.speed,
+        volume: clip.volume,
+        text: clip.properties?.text,
+        fontSize: clip.properties?.fontSize,
+        fontColor: clip.properties?.fontColor,
+        position: clip.properties?.position,
+        properties: clip.properties
+    }))
+}
+
+class ProfessionalVideoExporter {
+    private elements: TimelineElement[]
+    private tracks: TimelineTrack[]
+    private totalDurationMs: number
+    private outputSettings: { width: number, height: number, fps: number }
+    private downloadedAssets: Map<string, string>
+    private jobId: string
+
+    constructor(elements: TimelineElement[], tracks: TimelineTrack[], outputSettings: any, downloadedAssets: Map<string, string>, jobId: string) {
+        this.elements = elements.sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+        this.tracks = tracks.sort((a, b) => a.index - b.index)
+        this.totalDurationMs = Math.max(...elements.map(e => e.timelineEndMs), 2000)
+        this.outputSettings = outputSettings
+        this.downloadedAssets = downloadedAssets
+        this.jobId = jobId
+    }
+
+    async exportVideo(outputPath: string): Promise<void> {
+        const ffmpegCommand = ffmpeg()
         
-        const response = await fetch(url)
-        console.log(`[Debug] Download response status: ${response.status} ${response.statusText}`)
-        console.log(`[Debug] Download response headers:`, Object.fromEntries(response.headers.entries()))
+        console.log(`[Export ${this.jobId}] Professional export: ${this.elements.length} elements, ${this.tracks.length} tracks`)
         
-        if (!response.ok) {
-            throw new Error(`Failed to download asset: ${response.status} ${response.statusText}`)
+        await this.addInputAssets(ffmpegCommand)
+        const filterGraph = await this.buildFilterGraph()
+        
+        console.log(`[Export ${this.jobId}] Filter: ${filterGraph}`)
+        
+        ffmpegCommand
+            .complexFilter(filterGraph)
+            .outputOptions([
+                '-map', '[final_video]',
+                '-map', '[final_audio]',
+                '-c:v', 'libx264',
+                '-c:a', 'aac',
+                '-preset', 'medium',
+                '-crf', '23',
+                '-pix_fmt', 'yuv420p',
+                '-movflags', '+faststart'
+            ])
+            .output(outputPath)
+        
+        return new Promise((resolve, reject) => {
+            ffmpegCommand
+                .on('end', () => {
+                    resolve()
+                })
+                .on('error', (err: any, _stdout: string | null, _stderr: string | null) => {
+                    reject(err)
+                })
+                .run()
+        })
+    }
+
+    private async addInputAssets(command: ffmpeg.FfmpegCommand): Promise<void> {
+        const mediaElements = this.elements.filter(e => 
+            ['video', 'audio', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId)
+        )
+
+        const uniqueAssets = [...new Set(mediaElements.map(e => this.downloadedAssets.get(e.assetId!)!))]
+        uniqueAssets.forEach(assetPath => command.input(assetPath))
+
+        // Black background
+        command.input(`color=c=black:s=${this.outputSettings.width}x${this.outputSettings.height}:r=${this.outputSettings.fps}`)
+               .inputFormat('lavfi')
+               .duration(this.totalDurationMs / 1000)
+    }
+
+    private async buildFilterGraph(): Promise<string> {
+        const filters: string[] = []
+        const inputMapping = this.createInputMapping()
+        
+        const videoTracks = this.processVideoTracks(filters, inputMapping)
+        const audioTracks = this.processAudioTracks(filters, inputMapping)
+        const textOverlays = this.processTextOverlays(filters)
+        
+        this.compositeVideoLayers(filters, videoTracks, textOverlays)
+        this.mixAudioTracks(filters, audioTracks)
+        
+        return filters.join(';')
+    }
+
+    private processVideoTracks(filters: string[], inputMapping: Map<string, number>): string[] {
+        const videoOutputs: string[] = []
+        const videoTracks = this.tracks.filter(t => t.type === 'video')
+        
+        videoTracks.forEach((track, trackIndex) => {
+            const trackElements = this.elements
+                .filter(e => e.trackId === track.id && ['video', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
+                .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+
+            if (trackElements.length === 0) return
+
+            const trackSegments: string[] = []
+
+            trackElements.forEach((element, elementIndex) => {
+                const assetPath = this.downloadedAssets.get(element.assetId!)
+                const inputIndex = inputMapping.get(assetPath!)
+                if (inputIndex === undefined) return
+
+                const segmentLabel = `t${trackIndex}s${elementIndex}`
+                const elementFilter = this.buildElementFilter(element, inputIndex, segmentLabel)
+                filters.push(elementFilter)
+                
+                // Precise timeline positioning
+                const timelineStartSec = element.timelineStartMs / 1000
+                const timelineEndSec = element.timelineEndMs / 1000
+                const totalDurationSec = this.totalDurationMs / 1000
+                
+                const timedLabel = `${segmentLabel}_timed`
+                filters.push(`[${segmentLabel}]tpad=start_duration=${timelineStartSec}:stop_duration=${totalDurationSec - timelineEndSec}[${timedLabel}]`)
+                
+                trackSegments.push(`[${timedLabel}]`)
+            })
+
+            // Handle overlaps with overlay filter
+            if (trackSegments.length > 1) {
+                let currentOutput = trackSegments[0]
+                for (let i = 1; i < trackSegments.length; i++) {
+                    const overlayLabel = i === trackSegments.length - 1 ? `track${trackIndex}` : `track${trackIndex}_o${i}`
+                    filters.push(`${currentOutput}${trackSegments[i]}overlay[${overlayLabel}]`)
+                    currentOutput = `[${overlayLabel}]`
+                }
+                videoOutputs.push(currentOutput)
+            } else if (trackSegments.length === 1) {
+                videoOutputs.push(trackSegments[0])
+            }
+        })
+
+        return videoOutputs
+    }
+
+    private buildElementFilter(element: TimelineElement, inputIndex: number, outputLabel: string): string {
+        let filter = `[${inputIndex}:v]`
+        
+        // Source trimming
+        if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
+            const startSec = element.sourceStartMs / 1000
+            const durationSec = (element.sourceEndMs - element.sourceStartMs) / 1000
+            filter += `trim=start=${startSec}:duration=${durationSec},`
         }
         
-        const buffer = await response.arrayBuffer()
-        console.log(`[Debug] Downloaded ${buffer.byteLength} bytes`)
+        // Speed adjustment
+        if (element.speed && element.speed !== 1) {
+            filter += `setpts=${1/element.speed}*PTS,`
+        }
         
-        const filePath = path.join(TEMP_DIR, filename)
-        await fs.writeFile(filePath, Buffer.from(buffer))
+        // Image duration control
+        if (element.type === 'image') {
+            const durationSec = (element.timelineEndMs - element.timelineStartMs) / 1000
+            filter += `loop=loop=-1:size=1:start=0,setpts=N/(${this.outputSettings.fps}*TB),trim=duration=${durationSec},`
+        }
         
-        console.log(`[Debug] Saved asset to: ${filePath}`)
+        // Scaling
+        filter += `scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=decrease,`
+        filter += `pad=${this.outputSettings.width}:${this.outputSettings.height}:(ow-iw)/2:(oh-ih)/2:black`
         
-        return filePath
-    } catch (error) {
-        console.error('[Debug] Download error details:', error)
-        throw error
+        // Opacity
+        if (element.opacity && element.opacity !== 1) {
+            filter += `,colorchannelmixer=aa=${element.opacity}`
+        }
+        
+        // Transitions
+        if (element.transitionIn) {
+            filter += `,fade=t=in:st=0:d=${element.transitionIn.duration}`
+        }
+        
+        if (element.transitionOut) {
+            const elementDuration = (element.timelineEndMs - element.timelineStartMs) / 1000
+            const transitionStart = elementDuration - element.transitionOut.duration
+            filter += `,fade=t=out:st=${transitionStart}:d=${element.transitionOut.duration}`
+        }
+        
+        return `${filter}[${outputLabel}]`
+    }
+
+    private processAudioTracks(filters: string[], inputMapping: Map<string, number>): string[] {
+        const audioOutputs: string[] = []
+        const audioTracks = this.tracks.filter(t => t.type === 'audio')
+        
+        audioTracks.forEach((track, trackIndex) => {
+            const audioElements = this.elements
+                .filter(e => e.trackId === track.id && ['video', 'audio'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
+
+            if (audioElements.length === 0) return
+
+            const trackSegments: string[] = []
+
+            audioElements.forEach((element, elementIndex) => {
+                const assetPath = this.downloadedAssets.get(element.assetId!)
+                const inputIndex = inputMapping.get(assetPath!)
+                if (inputIndex === undefined) return
+
+                const segmentLabel = `a${trackIndex}s${elementIndex}`
+                let audioFilter = `[${inputIndex}:a]`
+                
+                // Source trimming
+                if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
+                    const startSec = element.sourceStartMs / 1000
+                    const durationSec = (element.sourceEndMs - element.sourceStartMs) / 1000
+                    audioFilter += `atrim=start=${startSec}:duration=${durationSec},`
+                }
+                
+                // Speed adjustment
+                if (element.speed && element.speed !== 1) {
+                    audioFilter += `atempo=${element.speed},`
+                }
+                
+                // Volume adjustment
+                if (element.volume && element.volume !== 1) {
+                    audioFilter += `volume=${element.volume},`
+                }
+                
+                // Timeline positioning
+                const timelineStartMs = element.timelineStartMs
+                if (timelineStartMs > 0) {
+                    audioFilter += `adelay=${timelineStartMs}|${timelineStartMs},`
+                }
+                
+                const totalDurationSec = this.totalDurationMs / 1000
+                audioFilter += `apad=pad_dur=${totalDurationSec}`
+                
+                filters.push(`${audioFilter}[${segmentLabel}]`)
+                trackSegments.push(`[${segmentLabel}]`)
+            })
+
+            if (trackSegments.length > 1) {
+                const trackOutput = `audio_track${trackIndex}`
+                filters.push(`${trackSegments.join('')}amix=inputs=${trackSegments.length}[${trackOutput}]`)
+                audioOutputs.push(`[${trackOutput}]`)
+            } else if (trackSegments.length === 1) {
+                audioOutputs.push(trackSegments[0])
+            }
+        })
+
+        return audioOutputs
+    }
+
+    private processTextOverlays(filters: string[]): string[] {
+        const textElements = this.elements.filter(e => e.type === 'text' || e.type === 'caption')
+        
+        return textElements.map((element, index) => {
+            const startSec = element.timelineStartMs / 1000
+            const endSec = element.timelineEndMs / 1000
+            const text = element.text || 'Sample Text'
+            const fontSize = element.fontSize || 24
+            const fontColor = element.fontColor || 'white'
+            const x = element.position?.x || 'center'
+            const y = element.position?.y || 'center'
+            
+            return `drawtext=text='${text.replace(/'/g, "\\'")}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}:enable='between(t,${startSec},${endSec})'`
+        })
+    }
+
+    private compositeVideoLayers(filters: string[], videoTracks: string[], textOverlays: string[]): void {
+        const backgroundIndex = this.downloadedAssets.size
+        let currentOutput = `[${backgroundIndex}:v]`
+        
+        // Overlay video tracks
+        videoTracks.forEach((track, index) => {
+            const overlayOutput = index === videoTracks.length - 1 && textOverlays.length === 0 ? 'video_final' : `overlay_${index}`
+            filters.push(`${currentOutput}${track}overlay[${overlayOutput}]`)
+            currentOutput = `[${overlayOutput}]`
+        })
+        
+        // Apply text overlays
+        textOverlays.forEach((textFilter, index) => {
+            const textOutput = index === textOverlays.length - 1 ? 'final_video' : `text_${index}`
+            filters.push(`${currentOutput}${textFilter}[${textOutput}]`)
+            currentOutput = `[${textOutput}]`
+        })
+        
+        // Handle edge cases
+        if (textOverlays.length === 0 && videoTracks.length > 0) {
+            filters[filters.length - 1] = filters[filters.length - 1].replace(/\[video_final\]$/, '[final_video]')
+        } else if (videoTracks.length === 0 && textOverlays.length === 0) {
+            filters.push(`${currentOutput}copy[final_video]`)
+        }
+    }
+
+    private mixAudioTracks(filters: string[], audioTracks: string[]): void {
+        if (audioTracks.length === 0) {
+            filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${this.totalDurationMs/1000}[final_audio]`)
+        } else if (audioTracks.length === 1) {
+            const lastFilter = filters.find(f => f.includes(audioTracks[0]))!
+            const filterIndex = filters.indexOf(lastFilter)
+            filters[filterIndex] = lastFilter.replace(audioTracks[0], '[final_audio]')
+        } else {
+            filters.push(`${audioTracks.join('')}amix=inputs=${audioTracks.length}[final_audio]`)
+        }
+    }
+
+    private createInputMapping(): Map<string, number> {
+        const mapping = new Map<string, number>()
+        const uniqueAssets = [...new Set(
+            this.elements
+                .filter(e => e.assetId && this.downloadedAssets.has(e.assetId))
+                .map(e => this.downloadedAssets.get(e.assetId!)!)
+        )]
+        
+        uniqueAssets.forEach((assetPath, index) => {
+            mapping.set(assetPath, index)
+        })
+        
+        return mapping
     }
 }
 
-// Process video export
-async function processVideoExport(
-    jobId: string,
-    clips: TimelineClip[],
-    tracks: TimelineTrack[],
-    exportSettings: ExportSettings,
-    accessToken?: string
-): Promise<void> {
+async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: TimelineTrack[], exportSettings: ExportSettings, accessToken?: string): Promise<void> {
     const job = exportJobs.get(jobId)
     if (!job) return
 
@@ -235,75 +512,43 @@ async function processVideoExport(
         job.status = 'processing'
         job.progress = 5
 
-        console.log(`[Export ${jobId}] Starting video export processing...`)
+        console.log(`[Export ${jobId}] Professional export starting...`)
 
-        // Calculate total timeline duration
-        const allTimelineEnds = clips.map(c => c.timelineEndMs)
-        const totalDurationMs = allTimelineEnds.length > 0 ? Math.max(...allTimelineEnds, 2000) : 2000
-        const totalDurationSec = Math.ceil(totalDurationMs / 1000)
+        const elements = convertToTimelineElements(clips)
+        const totalDurationMs = Math.max(...elements.map(e => e.timelineEndMs), 2000)
 
-        // Get valid media clips
-        const validMediaClips = clips.filter(clip => 
-            (clip.type === 'video' || clip.type === 'image' || clip.type === 'audio') && clip.assetId
+        const validElements = elements.filter(e => 
+            ['video', 'image', 'audio'].includes(e.type) && e.assetId
         )
-
-        console.log(`[Export ${jobId}] Found ${validMediaClips.length} media clips, total duration: ${totalDurationSec}s`)
-        
-        // Log all clips for debugging
-        console.log(`[Debug] All clips being processed:`)
-        validMediaClips.forEach((clip, index) => {
-            console.log(`[Debug] Clip ${index}:`, {
-                id: clip.id,
-                type: clip.type,
-                assetId: clip.assetId,
-                trackId: clip.trackId,
-                hasExternalAsset: !!clip.properties?.externalAsset,
-                externalAssetUrl: clip.properties?.externalAsset?.url
-            })
-        })
 
         // Download assets
         const downloadedAssets = new Map<string, string>()
-        let downloadProgress = 0
-
-        for (let i = 0; i < validMediaClips.length; i++) {
-            const clip = validMediaClips[i]
-            if (!clip.assetId) continue
+        for (let i = 0; i < validElements.length; i++) {
+            const element = validElements[i]
+            if (!element.assetId) continue
 
             try {
                 let assetUrl: string
-
-                // Handle external assets
-                if (clip.assetId.startsWith('external_')) {
-                    const externalAsset = clip.properties?.externalAsset
-                    if (!externalAsset || !externalAsset.url) {
-                        throw new Error(`External asset ${clip.assetId} missing URL`)
-                    }
-                    assetUrl = externalAsset.url
+                if (element.assetId.startsWith('external_')) {
+                    assetUrl = element.properties?.externalAsset?.url || ''
+                    if (!assetUrl) throw new Error(`External asset missing URL`)
                 } else {
-                    // Fetch regular asset URL
-                    assetUrl = await fetchAssetUrl(clip.assetId, accessToken)
+                    assetUrl = await fetchAssetUrl(element.assetId)
                 }
 
-                // Download asset
                 const ext = path.extname(assetUrl.split('?')[0]) || '.mp4'
-                const filename = `${jobId}_input_${i}${ext}`
+                const filename = `${jobId}_${i}${ext}`
                 const filePath = await downloadAsset(assetUrl, filename)
                 
-                downloadedAssets.set(clip.assetId, filePath)
-                downloadProgress = Math.round(((i + 1) / validMediaClips.length) * 30) // 5-35% for downloads
-                job.progress = 5 + downloadProgress
-
-                console.log(`[Export ${jobId}] Downloaded asset ${i + 1}/${validMediaClips.length}: ${clip.assetId}`)
+                downloadedAssets.set(element.assetId, filePath)
+                job.progress = 5 + Math.round(((i + 1) / validElements.length) * 30)
             } catch (error) {
-                console.error(`[Export ${jobId}] Failed to download asset ${clip.assetId}:`, error)
-                throw new Error(`Failed to download asset ${clip.assetId}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                throw new Error(`Asset ${element.assetId}: ${error}`)
             }
         }
 
         job.progress = 35
 
-        // Resolution settings
         const resolutionMap = {
             '480p': { width: 480, height: 854 },
             '720p': { width: 720, height: 1280 },
@@ -313,161 +558,39 @@ async function processVideoExport(
         const { width, height } = resolutionMap[exportSettings.resolution]
         const outputPath = path.join(EXPORTS_DIR, `${jobId}.mp4`)
 
-        // Quality settings
-        const crfMap = {
-            low: 30,
-            medium: 25,
-            high: 20
-        }
+        const exporter = new ProfessionalVideoExporter(
+            elements, tracks, { width, height, fps: exportSettings.fps }, downloadedAssets, jobId
+        )
 
-        const presetMap = {
-            low: 'ultrafast',
-            medium: 'medium',
-            high: 'slow'
-        }
+        await exporter.exportVideo(outputPath)
 
-        console.log(`[Export ${jobId}] Starting FFmpeg processing...`)
-
-        // Create FFmpeg command
-        const ffmpegCommand = ffmpeg()
-
-        // Add inputs
-        if (validMediaClips.length > 0) {
-            validMediaClips.forEach((clip, index) => {
-                if (clip.assetId && downloadedAssets.has(clip.assetId)) {
-                    ffmpegCommand.input(downloadedAssets.get(clip.assetId)!)
-                }
-            })
-        } else {
-            // Create blank video if no clips
-            ffmpegCommand.input(`color=c=black:s=${width}x${height}:r=${exportSettings.fps}`)
-                       .inputFormat('lavfi')
-                       .duration(totalDurationSec)
-        }
-
-        // Configure output
-        ffmpegCommand
-            .output(outputPath)
-            .videoCodec('libx264')
-            .audioCodec('aac')
-            .size(`${width}x${height}`)
-            .fps(exportSettings.fps)
-            .videoBitrate('1000k')
-            .audioBitrate('128k')
-            .outputOptions([
-                `-crf ${crfMap[exportSettings.quality]}`,
-                `-preset ${exportSettings.quickExport ? 'ultrafast' : presetMap[exportSettings.quality]}`,
-                '-pix_fmt yuv420p',
-                '-movflags +faststart'
-            ])
-
-        // Process with progress tracking
-        await new Promise<void>((resolve, reject) => {
-            ffmpegCommand
-                .on('start', (commandLine) => {
-                    console.log(`[Export ${jobId}] FFmpeg command: ${commandLine}`)
-                })
-                .on('progress', (progress) => {
-                    const percent = Math.min(Math.round(progress.percent || 0), 95)
-                    job.progress = Math.max(35 + Math.round(percent * 0.6), job.progress) // 35-95%
-                    console.log(`[Export ${jobId}] Processing: ${percent}%`)
-                })
-                .on('end', () => {
-                    console.log(`[Export ${jobId}] FFmpeg processing completed`)
-                    resolve()
-                })
-                .on('error', (error) => {
-                    console.error(`[Export ${jobId}] FFmpeg error:`, error)
-                    reject(error)
-                })
-                .run()
-        })
-
-        // Upload to Google Cloud Storage
+        // Upload
         job.progress = 95
-        console.log(`[Export ${jobId}] Uploading to cloud storage...`)
-
         const cloudFileName = `exports/${jobId}.mp4`
-        const file = bucket.file(cloudFileName)
+        await bucket.upload(outputPath, { destination: cloudFileName })
 
-        await bucket.upload(outputPath, {
-            destination: cloudFileName,
-            metadata: {
-                contentType: 'video/mp4',
-                metadata: {
-                    exportSettings: JSON.stringify(exportSettings),
-                    createdAt: new Date().toISOString()
-                }
-            }
-        })
-
-        // Generate signed download URL (valid for 24 hours)
-        const [downloadUrl] = await file.getSignedUrl({
+        const [downloadUrl] = await bucket.file(cloudFileName).getSignedUrl({
             action: 'read',
             expires: Date.now() + 24 * 60 * 60 * 1000
         })
 
-        // Update job status
         job.status = 'completed'
         job.progress = 100
-        job.outputPath = outputPath
         job.downloadUrl = downloadUrl
         job.completedAt = new Date()
 
-        console.log(`[Export ${jobId}] Export completed successfully`)
-
-        // Cleanup downloaded assets
+        // Cleanup
         for (const filePath of downloadedAssets.values()) {
-            try {
-                await fs.unlink(filePath)
-            } catch (error) {
-                console.warn(`Failed to cleanup temp file ${filePath}:`, error)
-            }
+            try { await fs.unlink(filePath) } catch {}
         }
 
     } catch (error) {
-        console.error(`[Export ${jobId}] Export failed:`, error)
         job.status = 'failed'
         job.error = error instanceof Error ? error.message : 'Unknown error'
-
-        // Cleanup on failure
-        if (job.outputPath) {
-            try {
-                await fs.unlink(job.outputPath)
-            } catch (cleanupError) {
-                console.warn('Failed to cleanup output file:', cleanupError)
-            }
-        }
     }
 }
 
 // Routes
-
-// Debug route - test asset fetching
-router.get('/debug/asset/:assetId', async (req: Request, res: Response) => {
-    try {
-        const { assetId } = req.params
-        console.log(`[Debug] Testing asset fetch for: ${assetId}`)
-        
-        const accessToken = req.headers.authorization?.replace('Bearer ', '')
-        const url = await fetchAssetUrl(assetId, accessToken)
-        
-        res.json({
-            success: true,
-            assetId,
-            url: url.substring(0, 100) + '...',
-            message: 'Asset URL generated successfully'
-        })
-    } catch (error) {
-        console.error(`[Debug] Asset test failed:`, error)
-        res.status(404).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
-        })
-    }
-})
-
-// Start export job
 router.post('/start', validateExportRequest, async (req: Request, res: Response) => {
     try {
         const errors = validationResult(req)
@@ -478,7 +601,6 @@ router.post('/start', validateExportRequest, async (req: Request, res: Response)
         const { clips, tracks, exportSettings } = req.body
         const accessToken = req.headers.authorization?.replace('Bearer ', '')
 
-        // Create job
         const jobId = uuid()
         const job: ExportJob = {
             id: jobId,
@@ -489,129 +611,39 @@ router.post('/start', validateExportRequest, async (req: Request, res: Response)
         }
 
         exportJobs.set(jobId, job)
-
-        // Start processing in background
         processVideoExport(jobId, clips, tracks, exportSettings, accessToken)
-            .catch(error => {
-                console.error(`Background export failed for job ${jobId}:`, error)
-            })
 
-        res.json({
-            success: true,
-            jobId,
-            message: 'Export job started'
-        })
-
+        res.json({ success: true, jobId, message: 'Professional export started' })
     } catch (error) {
-        console.error('Export start error:', error)
-        res.status(500).json({
-            success: false,
-            error: 'Failed to start export job'
-        })
+        res.status(500).json({ success: false, error: 'Export failed to start' })
     }
 })
 
-// Check export status
 router.get('/status/:jobId', (req, res) => {
-    try {
-        const { jobId } = req.params
-        const job = exportJobs.get(jobId)
-
-        if (!job) {
-            return res.status(404).json({
-                success: false,
-                error: 'Export job not found'
-            })
+    const job = exportJobs.get(req.params.jobId)
+    if (!job) return res.status(404).json({ success: false, error: 'Job not found' })
+    
+    res.json({
+        success: true,
+        job: {
+            id: job.id,
+            status: job.status,
+            progress: job.progress,
+            error: job.error,
+            downloadUrl: job.downloadUrl,
+            createdAt: job.createdAt,
+            completedAt: job.completedAt
         }
-
-        res.json({
-            success: true,
-            job: {
-                id: job.id,
-                status: job.status,
-                progress: job.progress,
-                error: job.error,
-                downloadUrl: job.downloadUrl,
-                createdAt: job.createdAt,
-                completedAt: job.completedAt
-            }
-        })
-
-    } catch (error) {
-        console.error('Status check error:', error)
-        res.status(500).json({
-            success: false,
-            error: 'Failed to check export status'
-        })
-    }
+    })
 })
 
-// Cancel export job
 router.delete('/cancel/:jobId', (req, res) => {
-    try {
-        const { jobId } = req.params
-        const job = exportJobs.get(jobId)
-
-        if (!job) {
-            return res.status(404).json({
-                success: false,
-                error: 'Export job not found'
-            })
-        }
-
-        if (job.status === 'completed') {
-            return res.status(400).json({
-                success: false,
-                error: 'Cannot cancel completed job'
-            })
-        }
-
-        // Mark as failed to stop processing
-        job.status = 'failed'
-        job.error = 'Cancelled by user'
-
-        res.json({
-            success: true,
-            message: 'Export job cancelled'
-        })
-
-    } catch (error) {
-        console.error('Export cancel error:', error)
-        res.status(500).json({
-            success: false,
-            error: 'Failed to cancel export job'
-        })
-    }
-})
-
-// List user's export jobs
-router.get('/jobs', (req, res) => {
-    try {
-        const jobs = Array.from(exportJobs.values())
-            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-            .slice(0, 10) // Return last 10 jobs
-
-        res.json({
-            success: true,
-            jobs: jobs.map(job => ({
-                id: job.id,
-                status: job.status,
-                progress: job.progress,
-                error: job.error,
-                downloadUrl: job.downloadUrl,
-                createdAt: job.createdAt,
-                completedAt: job.completedAt,
-                exportSettings: job.exportSettings
-            }))
-        })
-
-    } catch (error) {
-        console.error('Jobs list error:', error)
-        res.status(500).json({
-            success: false,
-            error: 'Failed to list export jobs'
-        })
-    }
+    const job = exportJobs.get(req.params.jobId)
+    if (!job) return res.status(404).json({ success: false, error: 'Job not found' })
+    
+    job.status = 'failed'
+    job.error = 'Cancelled by user'
+    res.json({ success: true, message: 'Job cancelled' })
 })
 
 export default router 
