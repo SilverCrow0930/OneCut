@@ -215,12 +215,16 @@ const ShareButton = () => {
                     {/* Browser Compatibility Warning */}
                     {typeof SharedArrayBuffer === 'undefined' && (
                         <div className="px-6 py-4 border-b border-gray-200">
-                            <div className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                                <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                                 <div>
-                                    <h4 className="text-sm font-semibold text-amber-800">Browser Limitation</h4>
-                                    <p className="text-xs text-amber-700 mt-1">
-                                        Video processing requires SharedArrayBuffer support. Your browser will download project assets instead.
+                                    <h4 className="text-sm font-semibold text-blue-800">Export Mode: Asset Download</h4>
+                                    <p className="text-xs text-blue-700 mt-1">
+                                        Browser video processing is not available. The system will download your project assets instead for use with desktop video editors.
+                                    </p>
+                                    <p className="text-xs text-blue-600 mt-1">
+                                        ✓ All project data and assets will be preserved<br/>
+                                        ✓ Compatible with any video editing software
                                     </p>
                                 </div>
                             </div>
