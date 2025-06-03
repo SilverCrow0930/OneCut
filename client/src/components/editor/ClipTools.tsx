@@ -48,6 +48,8 @@ const ClipTools = () => {
             // For multiple selection, show the speed of the first media clip or default to 1
             const firstMediaClip = selectedClips.find(clip => clip.type === 'video' || clip.type === 'audio')
             setSliderSpeed(firstMediaClip?.speed || 1)
+        } else {
+            setSliderSpeed(1) // Default speed for non-media clips
         }
     }, [selectedClip, selectedClips, hasSelectedClip, hasMultipleSelection])
 
@@ -56,9 +58,13 @@ const ClipTools = () => {
         
         if (clipsToUpdate.length === 0) return
 
+        console.log('Applying speed change:', { newSpeed, clipsToUpdate: clipsToUpdate.length })
+
         const commands = clipsToUpdate
             .filter(clip => clip.type === 'video' || clip.type === 'audio') // Only update video/audio clips
             .map(clip => {
+                console.log('Updating clip:', clip.id, 'from speed:', clip.speed || 1, 'to:', newSpeed)
+                
                 // Calculate new timeline duration based on speed change
                 const currentSourceDuration = clip.sourceEndMs - clip.sourceStartMs
                 const newTimelineDuration = Math.round(currentSourceDuration / newSpeed)
@@ -77,6 +83,8 @@ const ClipTools = () => {
                     }
                 }
             })
+
+        console.log('Generated commands:', commands.length)
 
         if (commands.length > 0) {
             executeCommand({
@@ -306,7 +314,7 @@ const ClipTools = () => {
                         "Adjust playback speed"
                     }
                     onClick={() => {
-                        console.log('Speed button clicked', { canAdjustSpeed, hasAnySelection, showSpeedSlider })
+                        console.log('Speed button clicked', { canAdjustSpeed, hasAnySelection, showSpeedSlider, selectedClip: selectedClip?.type, selectedClips: selectedClips.map(c => c.type) })
                         setShowSpeedSlider(!showSpeedSlider)
                     }}
                     disabled={!canAdjustSpeed || !hasAnySelection}
@@ -317,23 +325,34 @@ const ClipTools = () => {
                 {/* Speed Slider */}
                 {showSpeedSlider && (
                     <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]">
-                        <div className="text-xs font-semibold text-gray-700 mb-3 text-center">
-                            Speed: {sliderSpeed}x
+                        <div className="text-sm font-semibold text-gray-700 mb-3 text-center">
+                            {sliderSpeed.toFixed(1)}x speed
                         </div>
                         <div className="relative">
                             <div
                                 className="absolute w-full h-2 rounded-full"
                                 style={{
-                                    background: `linear-gradient(to right, #4B5563 ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%, #9CA3AF ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%)`
+                                    background: `linear-gradient(to right, #4B5563 ${((Math.log10(sliderSpeed) - Math.log10(0.1)) / (Math.log10(10) - Math.log10(0.1))) * 100}%, #9CA3AF ${((Math.log10(sliderSpeed) - Math.log10(0.1)) / (Math.log10(10) - Math.log10(0.1))) * 100}%)`
                                 }}
                             ></div>
                             <input
                                 type="range"
-                                min="0.25"
-                                max="3"
-                                step="0.25"
-                                value={sliderSpeed}
-                                onChange={handleSliderChange}
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={(Math.log10(sliderSpeed) - Math.log10(0.1)) / (Math.log10(10) - Math.log10(0.1))}
+                                onChange={(e) => {
+                                    const sliderVal = parseFloat(e.target.value)
+                                    const logMin = Math.log10(0.1)
+                                    const logMax = Math.log10(10)
+                                    const logSpeed = logMin + sliderVal * (logMax - logMin)
+                                    const newSpeed = Math.pow(10, logSpeed)
+                                    
+                                    // Round to reasonable precision
+                                    const roundedSpeed = Math.round(newSpeed * 10) / 10
+                                    setSliderSpeed(roundedSpeed)
+                                    handleSpeedChange(roundedSpeed)
+                                }}
                                 className="w-full h-2 bg-transparent appearance-none cursor-pointer relative z-10
                                     [&::-webkit-slider-thumb]:appearance-none 
                                     [&::-webkit-slider-thumb]:w-4 
@@ -351,11 +370,9 @@ const ClipTools = () => {
                                     [&::-moz-range-thumb]:shadow-2xl 
                                     [&::-moz-range-thumb]:cursor-pointer"
                             />
-                            <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                <span>0.25x</span>
-                                <span>1x</span>
-                                <span>3x</span>
-                            </div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2 text-center">
+                            0.1x - 10x
                         </div>
                     </div>
                 )}
