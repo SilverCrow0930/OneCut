@@ -229,41 +229,6 @@ const ShareButton = () => {
         setCurrentJobId(null)
     }
 
-    const handleProjectExport = () => {
-        if (!project) {
-            setExportError('No project data available')
-            return
-        }
-
-        try {
-            const projectData = {
-                project,
-                clips,
-                tracks,
-                exportedAt: new Date().toISOString(),
-                version: '1.0'
-            }
-
-            const blob = new Blob([JSON.stringify(projectData, null, 2)], { 
-                type: 'application/json' 
-            })
-            const url = URL.createObjectURL(blob)
-            
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${project.name || 'lemona-project'}-${Date.now()}.json`
-            a.style.display = 'none'
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            
-            URL.revokeObjectURL(url)
-        } catch (error) {
-            console.error('Project export error:', error)
-            setExportError('Failed to export project data')
-        }
-    }
-
     return (
         <div className="relative" ref={buttonRef}>
             <button
@@ -315,31 +280,6 @@ const ShareButton = () => {
                             </div>
                         </div>
                     )}
-
-                    {/* Export Mode Toggle */}
-                    <div className="px-6 py-4 border-b border-gray-200">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Export Mode</h4>
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <span className="text-sm font-medium text-gray-700">Server Export</span>
-                                <p className="text-xs text-gray-500">Process on server (recommended)</p>
-                            </div>
-                            <button
-                                onClick={() => setUseServerExport(!useServerExport)}
-                                className={`
-                                    w-12 h-6 rounded-full transition-colors duration-200
-                                    ${useServerExport ? 'bg-blue-500' : 'bg-gray-300'}
-                                    relative
-                                `}
-                            >
-                                <div className={`
-                                    w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200
-                                    absolute top-0.5
-                                    ${useServerExport ? 'translate-x-6' : 'translate-x-0.5'}
-                                `} />
-                            </button>
-                        </div>
-                    </div>
 
                     {/* Video Export Type Selection */}
                     <div className="px-6 py-4">
@@ -408,30 +348,6 @@ const ShareButton = () => {
                         >
                             {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Export' : 'Export Video'}
                         </button>
-                    </div>
-
-                    {/* Project Data Export */}
-                    <div className="px-6 py-4 border-t border-gray-200">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Project Data</h4>
-                        <button
-                            onClick={handleProjectExport}
-                            disabled={!project}
-                            className="
-                                w-full px-4 py-3
-                                bg-green-500 hover:bg-green-600
-                                text-white font-semibold rounded-xl
-                                transition-colors duration-200
-                                shadow-md
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                                flex items-center justify-center gap-2
-                            "
-                        >
-                            <Download size={18} />
-                            Export Project JSON
-                        </button>
-                        <p className="text-xs text-gray-500 mt-2 text-center">
-                            Download project data for backup or sharing
-                        </p>
                     </div>
                 </div>
             )}
