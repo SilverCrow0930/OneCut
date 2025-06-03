@@ -529,16 +529,17 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     flex items-center justify-center rounded-lg
                     overflow-hidden
                     ${isResizing ? 'cursor-ew-resize' : 'cursor-move'}
-                    ${isPrimarySelection ? 'ring-2 ring-blue-400 shadow-2xl scale-[1.02] z-20' : 
-                      isInMultiSelection && isMultiSelectionActive ? 'ring-2 ring-purple-400 shadow-xl scale-[1.01] z-20' :
+                    ${isPrimarySelection ? 'ring-2 ring-blue-500 ring-offset-1 z-20' : 
+                      isInMultiSelection && isMultiSelectionActive ? 'ring-2 ring-purple-500 ring-offset-1 z-20' :
                       'shadow-md hover:shadow-lg z-10'}
                     ${isDragging ? 'opacity-0' : ''}
                     ${isVideo ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 
                       isAudio ? 'bg-gradient-to-r from-green-500 to-green-600' : 
                       isImage ? 'bg-gradient-to-r from-purple-500 to-purple-600' :
                       'bg-gradient-to-r from-gray-500 to-gray-600'}
-                    border border-white/20
-                    ${isInMultiSelection && isMultiSelectionActive ? 'border-purple-400/60' : ''}
+                    ${isPrimarySelection ? 'border-2 border-blue-500' : 
+                      isInMultiSelection && isMultiSelectionActive ? 'border-2 border-purple-500' : 
+                      'border border-white/20'}
                 `}
                 style={{
                     left,

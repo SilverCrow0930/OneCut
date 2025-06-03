@@ -61,13 +61,20 @@ const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({ children, disabled 
                 bottom: elementRect.bottom - containerRect.top
             }
             
-            // Check for intersection
-            const intersects = !(
-                relativeElementRect.right < selectionBox.left ||
-                relativeElementRect.left > selectionBox.left + selectionBox.width ||
-                relativeElementRect.bottom < selectionBox.top ||
-                relativeElementRect.top > selectionBox.top + selectionBox.height
-            )
+            // Check for intersection using overlap logic
+            const horizontalOverlap = Math.max(0, Math.min(relativeElementRect.right, selectionBox.left + selectionBox.width) - Math.max(relativeElementRect.left, selectionBox.left))
+            const verticalOverlap = Math.max(0, Math.min(relativeElementRect.bottom, selectionBox.top + selectionBox.height) - Math.max(relativeElementRect.top, selectionBox.top))
+            
+            const intersects = horizontalOverlap > 0 && verticalOverlap > 0
+            
+            console.log('🔍 Intersection check:', {
+                clipId: element.getAttribute('data-clip-id'),
+                elementRect: relativeElementRect,
+                selectionBox,
+                horizontalOverlap,
+                verticalOverlap,
+                intersects
+            })
             
             return intersects
         }, [])
@@ -82,13 +89,32 @@ const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({ children, disabled 
             // Find all clip elements in both player and timeline
             const clipElements = containerRef.current.querySelectorAll('[data-clip-layer], [data-timeline-clip]')
             
+            console.log('🔍 Marquee selection debug:', {
+                selectionBox,
+                foundElements: clipElements.length,
+                elementTypes: Array.from(clipElements).map(el => ({
+                    id: el.getAttribute('data-clip-id'),
+                    hasDataClipLayer: el.hasAttribute('data-clip-layer'),
+                    hasDataTimelineClip: el.hasAttribute('data-timeline-clip'),
+                    tagName: el.tagName,
+                    rect: el.getBoundingClientRect()
+                }))
+            })
+            
             clipElements.forEach((element) => {
                 const clipId = element.getAttribute('data-clip-id')
                 if (clipId && isElementInSelection(element as HTMLElement, selectionBox)) {
                     selectedIds.push(clipId)
+                    console.log('✅ Selected clip:', clipId)
+                } else if (clipId) {
+                    console.log('❌ Clip not in selection:', clipId, {
+                        elementRect: element.getBoundingClientRect(),
+                        selectionBox
+                    })
                 }
             })
             
+            console.log('🎯 Final selected IDs:', selectedIds)
             return [...new Set(selectedIds)] // Remove duplicates
         }, [getSelectionBox, isElementInSelection])
 
@@ -97,7 +123,15 @@ const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({ children, disabled 
             
             // Don't start selection if clicking on a clip or UI element
             const target = e.target as HTMLElement
-            if (target.closest('[data-clip-layer], [data-timeline-clip], button, input, textarea, select, [role="button"]')) {
+            const clickedElement = target.closest('[data-clip-layer], [data-timeline-clip], button, input, textarea, select, [role="button"]')
+            
+            console.log('🖱️ Mouse down debug:', {
+                target: target.tagName,
+                clickedElement: clickedElement?.tagName,
+                willStartSelection: !clickedElement
+            })
+            
+            if (clickedElement) {
                 return
             }
             
@@ -112,6 +146,8 @@ const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({ children, disabled 
             
             const startX = e.clientX - rect.left
             const startY = e.clientY - rect.top
+            
+            console.log('🚀 Starting marquee selection at:', { startX, startY })
             
             startPosRef.current = { x: startX, y: startY }
             setIsSelecting(true)
@@ -143,6 +179,7 @@ const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({ children, disabled 
             
             // Update selection in real-time
             const selectedIds = getSelectedClips()
+            console.log('📝 Updating selection in real-time:', selectedIds)
             setSelectedClipIds(selectedIds)
         }, [isSelecting, getSelectedClips, setSelectedClipIds])
 
@@ -192,7 +229,7 @@ const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({ children, disabled 
                 {children}
                 
                 {/* Selection overlay */}
-                {isSelecting && selectionBox && selectionBox.width > 2 && selectionBox.height > 2 && (
+                {isSelecting && selectionBox && (
                     <div
                         className="absolute pointer-events-none z-50 border-2 border-blue-500 bg-blue-500/10 rounded-sm"
                         style={{
@@ -202,6 +239,19 @@ const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({ children, disabled 
                             height: selectionBox.height,
                         }}
                     />
+                )}
+                
+                {/* Debug info */}
+                {isSelecting && selectionBox && (
+                    <div 
+                        className="absolute pointer-events-none z-50 bg-black text-white text-xs p-2 rounded"
+                        style={{ 
+                            left: selectionBox.left + selectionBox.width + 5, 
+                            top: selectionBox.top 
+                        }}
+                    >
+                        {selectionBox.width.toFixed(0)}x{selectionBox.height.toFixed(0)}
+                    </div>
                 )}
             </div>
         )

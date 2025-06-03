@@ -184,6 +184,7 @@ const CaptionsToolPanel = () => {
     const [error, setError] = useState<string | null>(null)
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [progressStage, setProgressStage] = useState<'upload' | 'processing' | 'generating' | null>(null)
+    const [progressPercent, setProgressPercent] = useState(0)
     
     // Workflow states: 'initial' | 'generating' | 'editing' | 'styling'
     const [workflowPhase, setWorkflowPhase] = useState<'initial' | 'generating' | 'editing' | 'styling'>('initial')
@@ -312,13 +313,32 @@ const CaptionsToolPanel = () => {
         setSuccessMessage(null)
         setCaptions([])
         setProgressStage('upload')
+        setProgressPercent(0)
+
+        // Start smooth progress animation
+        let currentProgress = 0
+        const progressInterval = setInterval(() => {
+            setProgressPercent(prev => {
+                // Smooth progress curve - starts fast, slows down towards the end
+                const increment = Math.max(0.3, (85 - prev) * 0.015) // Exponential decay
+                const newProgress = Math.min(85, prev + increment)
+                currentProgress = newProgress
+                
+                // Update stage based on progress
+                if (newProgress < 25) {
+                    setProgressStage('upload')
+                } else if (newProgress < 60) {
+                    setProgressStage('processing')
+                } else {
+                    setProgressStage('generating')
+                }
+                
+                return newProgress
+            })
+        }, 150) // Update every 150ms for smooth animation
 
         try {
             console.log('🎤 Starting one-click transcription for track:', selectedTrackId)
-            
-            // Simulate progress stages
-            setTimeout(() => setProgressStage('processing'), 1000)
-            setTimeout(() => setProgressStage('generating'), 3000)
             
             const response = await fetch(apiPath('transcription/generate'), {
                 method: 'POST',
@@ -330,6 +350,13 @@ const CaptionsToolPanel = () => {
                     trackId: selectedTrackId
                 })
             })
+
+            // Clear the progress interval once API call completes
+            clearInterval(progressInterval)
+            
+            // Complete the progress to 100%
+            setProgressPercent(100)
+            setProgressStage('generating')
 
             if (!response.ok) {
                 const errorData = await response.json()
@@ -357,9 +384,11 @@ const CaptionsToolPanel = () => {
             console.error('❌ Transcription failed:', error)
             setError(error.message || 'Failed to generate captions')
             setWorkflowPhase('initial')
+            clearInterval(progressInterval)
         } finally {
             setIsGenerating(false)
             setProgressStage(null)
+            setTimeout(() => setProgressPercent(0), 500) // Reset progress after a delay
         }
     }
 
@@ -493,13 +522,13 @@ const CaptionsToolPanel = () => {
     const getProgressContent = () => {
         switch (progressStage) {
             case 'upload':
-                return { text: '📤 Uploading to AI...', percent: 20 }
+                return { text: '📤 Uploading to AI...', percent: progressPercent }
             case 'processing':
-                return { text: '🎯 Analyzing audio...', percent: 60 }
+                return { text: '🎯 Analyzing audio...', percent: progressPercent }
             case 'generating':
-                return { text: '✨ Generating captions...', percent: 90 }
+                return { text: '✨ Generating captions...', percent: progressPercent }
             default:
-                return { text: '🧠 Processing...', percent: 50 }
+                return { text: '🧠 Processing...', percent: progressPercent || 50 }
         }
     }
 
