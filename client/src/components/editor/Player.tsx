@@ -4,6 +4,7 @@ import { useEditor } from '@/contexts/EditorContext'
 import { useClipPreloader, cleanupAllPreloadedMedia } from '@/hooks/useClipPreloader'
 import { ClipLayer } from './ClipLayer'
 import { PreloadIndicator } from './PreloadIndicator'
+import { ErrorBoundary } from './ErrorBoundary'
 import type { Clip } from '@/types/editor'
 
 export function Player() {
@@ -88,12 +89,20 @@ export function Player() {
                 
                 {/* Render active clips in order with their source times */}
                 {clipsWithSourceTime.map(clip => (
-                    <ClipLayer
-                        key={clip.id}
-                        clip={clip}
-                        sourceTime={clip.sourceTime}
-                        preloadedMedia={getPreloadedMedia(clip.id)} // Pass preloaded media
-                    />
+                    <ErrorBoundary 
+                        key={`error-boundary-${clip.id}`}
+                        onError={(error, errorInfo) => {
+                            console.error(`Error in clip ${clip.id}:`, error, errorInfo)
+                            // Could send to error tracking service here
+                        }}
+                    >
+                        <ClipLayer
+                            key={clip.id}
+                            clip={clip}
+                            sourceTime={clip.sourceTime}
+                            preloadedMedia={getPreloadedMedia(clip.id)}
+                        />
+                    </ErrorBoundary>
                 ))}
             </div>
         </div>

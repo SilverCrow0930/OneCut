@@ -362,24 +362,6 @@ const VoiceoverToolPanel = () => {
                                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                                      transition-all duration-200 placeholder:text-gray-400 resize-none"
                         />
-                        <div className="absolute top-2 right-2 flex gap-2">
-                            <button
-                                onClick={enhanceScript}
-                                disabled={!script.trim()}
-                                className="p-2 text-gray-400 hover:text-blue-600 disabled:opacity-50"
-                                title="Enhance with AI"
-                            >
-                                <Wand2 size={16} />
-                            </button>
-                            <button
-                                onClick={() => navigator.clipboard.writeText(script)}
-                                disabled={!script.trim()}
-                                className="p-2 text-gray-400 hover:text-blue-600 disabled:opacity-50"
-                                title="Copy script"
-                            >
-                                <Copy size={16} />
-                            </button>
-                        </div>
                     </div>
                     
                     <div className="flex justify-between text-xs text-gray-500">

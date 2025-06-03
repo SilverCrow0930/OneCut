@@ -65,10 +65,12 @@ export function useClipPreloader(
 
     // Create preload elements for upcoming clips
     useEffect(() => {
+        let isEffectActive = true; // Track if this effect is still active
+
         const preloadClips = async () => {
             for (const clip of clipsToPreload) {
-                if (!clip.assetId || preloadedMediaMap.has(clip.id)) {
-                    continue // Skip if already preloading or no asset
+                if (!isEffectActive || !clip.assetId || preloadedMediaMap.has(clip.id)) {
+                    continue // Skip if effect is no longer active, already preloading, or no asset
                 }
 
                 try {
@@ -83,7 +85,7 @@ export function useClipPreloader(
                         url = await getAssetUrl(clip.assetId)
                     }
 
-                    if (!url) continue
+                    if (!isEffectActive || !url) continue // Check again after async operation
 
                     let element: HTMLVideoElement | HTMLImageElement | HTMLAudioElement
 
@@ -115,6 +117,8 @@ export function useClipPreloader(
                             continue
                     }
 
+                    if (!isEffectActive) continue; // Final check before creating preloaded media
+
                     // Store the preloaded media
                     const preloadedMedia: PreloadedMedia = {
                         clipId: clip.id,
@@ -128,13 +132,17 @@ export function useClipPreloader(
 
                     // Set up load event listeners
                     const onLoad = () => {
-                        preloadedMedia.isReady = true
-                        console.log(`🚀 Preloaded ${clip.type} clip:`, clip.id, `(${Math.round((clip.timelineStartMs - currentTimeMs) / 1000)}s ahead)`)
+                        if (isEffectActive && preloadedMediaMap.has(clip.id)) {
+                            preloadedMedia.isReady = true
+                            console.log(`🚀 Preloaded ${clip.type} clip:`, clip.id, `(${Math.round((clip.timelineStartMs - currentTimeMs) / 1000)}s ahead)`)
+                        }
                     }
 
                     const onError = (error: any) => {
                         console.warn(`⚠️ Failed to preload clip ${clip.id}:`, error)
-                        preloadedMediaMap.delete(clip.id)
+                        if (preloadedMediaMap.has(clip.id)) {
+                            preloadedMediaMap.delete(clip.id)
+                        }
                     }
 
                     if (element instanceof HTMLImageElement) {
@@ -155,6 +163,10 @@ export function useClipPreloader(
         }
 
         preloadClips()
+
+        return () => {
+            isEffectActive = false; // Mark this effect as inactive
+        }
     }, [clipsToPreload, currentTimeMs])
 
     // Cleanup old preloaded items periodically
