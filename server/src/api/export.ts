@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url'
 import cron from 'node-cron'
 import { Request, Response } from 'express'
 import { supabase } from '../config/supabaseClient.js'
+import { bucket } from '../integrations/googleStorage.js'
 
 // Configure FFmpeg path
 const isProduction = process.env.NODE_ENV === 'production'
@@ -25,10 +26,6 @@ try {
 }
 
 const router = express.Router()
-
-// Initialize Google Cloud Storage
-const storage = new Storage()
-const bucketName = process.env.GCLOUD_STORAGE_BUCKET || 'lemona-app-assets'
 
 // Get current directory for ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -143,16 +140,6 @@ async function fetchAssetUrl(assetId: string, accessToken?: string): Promise<str
     try {
         console.log(`[Debug] Fetching asset URL for assetId: ${assetId}`)
         
-        // Test GCS connectivity
-        try {
-            const bucket = storage.bucket(bucketName)
-            console.log(`[Debug] Testing GCS bucket access: ${bucketName}`)
-            const [bucketExists] = await bucket.exists()
-            console.log(`[Debug] Bucket exists: ${bucketExists}`)
-        } catch (bucketError) {
-            console.error(`[Debug] GCS bucket access error:`, bucketError)
-        }
-        
         // First, fetch the asset from the database to get the object_key
         const { data: asset, error } = await supabase
             .from('assets')
@@ -174,7 +161,6 @@ async function fetchAssetUrl(assetId: string, accessToken?: string): Promise<str
         })
 
         // Generate signed URL using the object_key
-        const bucket = storage.bucket(bucketName)
         const file = bucket.file(asset.object_key)
         
         // Check if file exists in Google Cloud Storage
@@ -401,7 +387,6 @@ async function processVideoExport(
         job.progress = 95
         console.log(`[Export ${jobId}] Uploading to cloud storage...`)
 
-        const bucket = storage.bucket(bucketName)
         const cloudFileName = `exports/${jobId}.mp4`
         const file = bucket.file(cloudFileName)
 
