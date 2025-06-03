@@ -10,6 +10,7 @@ import { addAssetToTrack } from '@/lib/editor/utils'
 interface AssetThumbnailProps {
     asset: {
         id: string
+        name?: string
         mime_type: string
         duration: number | null  // in milliseconds
     }

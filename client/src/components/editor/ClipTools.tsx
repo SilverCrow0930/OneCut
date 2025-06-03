@@ -1,5 +1,5 @@
-import React from 'react'
-import { SquareSplitHorizontal, Trash2 } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { SquareSplitHorizontal, Trash2, Gauge } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { v4 as uuid } from 'uuid'
@@ -7,6 +7,25 @@ import { v4 as uuid } from 'uuid'
 const ClipTools = () => {
     const { executeCommand, selectedClipId, selectedClipIds, clips, tracks } = useEditor()
     const { currentTime } = usePlayback()
+    const [showSpeedMenu, setShowSpeedMenu] = useState(false)
+    const speedMenuRef = useRef<HTMLDivElement>(null)
+
+    // Close speed menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (speedMenuRef.current && !speedMenuRef.current.contains(event.target as Node)) {
+                setShowSpeedMenu(false)
+            }
+        }
+
+        if (showSpeedMenu) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [showSpeedMenu])
 
     // Find the selected clip(s)
     const selectedClip = clips.find(clip => clip.id === selectedClipId)
@@ -14,6 +33,51 @@ const ClipTools = () => {
     const hasSelectedClip = !!selectedClip
     const hasMultipleSelection = selectedClipIds.length > 1
     const hasAnySelection = hasSelectedClip || hasMultipleSelection
+
+    // Check if selected clips can have speed adjustments (video/audio only)
+    const canAdjustSpeed = selectedClips.some(clip => 
+        clip.type === 'video' || clip.type === 'audio'
+    ) || (selectedClip && (selectedClip.type === 'video' || selectedClip.type === 'audio'))
+
+    const speedOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3]
+
+    const handleSpeedChange = (newSpeed: number) => {
+        const clipsToUpdate = hasMultipleSelection ? selectedClips : (selectedClip ? [selectedClip] : [])
+        
+        if (clipsToUpdate.length === 0) return
+
+        const commands = clipsToUpdate
+            .filter(clip => clip.type === 'video' || clip.type === 'audio') // Only update video/audio clips
+            .map(clip => {
+                // Calculate new timeline duration based on speed change
+                const currentDuration = clip.timelineEndMs - clip.timelineStartMs
+                const currentSourceDuration = clip.sourceEndMs - clip.sourceStartMs
+                const newTimelineDuration = Math.round(currentSourceDuration / newSpeed)
+                
+                const updatedClip = {
+                    ...clip,
+                    speed: newSpeed,
+                    timelineEndMs: clip.timelineStartMs + newTimelineDuration
+                }
+
+                return {
+                    type: 'UPDATE_CLIP' as const,
+                    payload: {
+                        before: clip,
+                        after: updatedClip
+                    }
+                }
+            })
+
+        if (commands.length > 0) {
+            executeCommand({
+                type: 'BATCH',
+                payload: { commands }
+            })
+        }
+
+        setShowSpeedMenu(false)
+    }
 
     const handleDelete = () => {
         // Handle multiple clip deletion
@@ -190,6 +254,7 @@ const ClipTools = () => {
             px-4 py-1 rounded-xl
             text-black
             transition-all duration-200
+            relative
         `}>
             {/* Selection info */}
             {hasMultipleSelection && (
@@ -212,6 +277,47 @@ const ClipTools = () => {
             >
                 <SquareSplitHorizontal size={26} />
             </button>
+
+            {/* Speed Control */}
+            <div className="relative" ref={speedMenuRef}>
+                <button
+                    className={`
+                        p-1 rounded-lg transition-all duration-200
+                        ${canAdjustSpeed && hasAnySelection ? 
+                            'hover:bg-gray-300' : 
+                            'opacity-40 cursor-not-allowed'
+                        }
+                    `}
+                    title={hasMultipleSelection ? 
+                        `Adjust speed of ${selectedClips.filter(c => c.type === 'video' || c.type === 'audio').length} media clips` : 
+                        "Adjust playback speed"
+                    }
+                    onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                    disabled={!canAdjustSpeed || !hasAnySelection}
+                >
+                    <Gauge size={26} />
+                </button>
+
+                {/* Speed Menu */}
+                {showSpeedMenu && canAdjustSpeed && hasAnySelection && (
+                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 min-w-[120px]">
+                        <div className="px-3 py-1 text-xs font-medium text-gray-500 border-b border-gray-100">
+                            Speed
+                        </div>
+                        {speedOptions.map(speed => (
+                            <button
+                                key={speed}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between"
+                                onClick={() => handleSpeedChange(speed)}
+                            >
+                                <span>{speed}x</span>
+                                {speed === 1 && <span className="text-xs text-gray-400">Normal</span>}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             <button
                 className={`
                     p-1 rounded-lg transition-all duration-200

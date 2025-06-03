@@ -412,46 +412,27 @@ const VoiceoverToolPanel = () => {
                             {getTabVoices().map(voice => (
                                 <div
                                     key={voice.id}
-                                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
                                         selectedVoice?.id === voice.id
                                             ? 'border-blue-500 bg-blue-50 shadow-md'
                                             : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                                     }`}
                                     onClick={() => handleVoiceSelect(voice)}
                                 >
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <div className="font-semibold text-gray-900">{voice.name}</div>
-                                            </div>
-                                            {voice.description && (
-                                                <div className="text-sm text-gray-600 mt-1">{voice.description}</div>
-                                            )}
-                                            <div className="flex gap-1 mt-2">
-                                                <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                                                    {voice.category}
-                                                </span>
-                                                {Object.entries(voice.labels).slice(0, 2).map(([key, value]) => (
-                                                    <span key={key} className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full">
-                                                        {value}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-1 ml-2">
-                                            {voice.previewUrl && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        playVoicePreview(voice)
-                                                    }}
-                                                    className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Play preview"
-                                                >
-                                                    <Play size={16} />
-                                                </button>
-                                            )}
-                                        </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="font-semibold text-gray-900">{voice.name}</div>
+                                        {voice.previewUrl && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    playVoicePreview(voice)
+                                                }}
+                                                className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
+                                                title="Play preview"
+                                            >
+                                                <Play size={16} />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}

@@ -1,5 +1,5 @@
 import React from 'react'
-import { useAssets } from '@/contexts/AssetsContext'
+import { useAssets, Asset } from '@/contexts/AssetsContext'
 import AssetUploader from '@/components/editor/upload/AssetUploader'
 import AssetThumbnail from '../upload/AssetThumbnail'
 import { Upload, Loader2 } from 'lucide-react'
@@ -11,7 +11,12 @@ interface UploadToolPanelProps {
 }
 
 const UploadToolPanel: React.FC<UploadToolPanelProps> = ({ highlightedAssetId, uploadingAssetId }) => {
-    const { assets, loading, error, refresh } = useAssets()
+    const { assets, loading, error, addAsset } = useAssets()
+
+    // Handle successful uploads by adding assets to state instead of full refresh
+    const handleUploadSuccess = (newAssets: Asset[]) => {
+        newAssets.forEach(asset => addAsset(asset))
+    }
 
     return (
         <div className="flex flex-col h-full bg-white rounded-lg">
@@ -22,7 +27,7 @@ const UploadToolPanel: React.FC<UploadToolPanelProps> = ({ highlightedAssetId, u
                 />
                 <div className="mt-4">
                     <AssetUploader
-                        onUpload={refresh}
+                        onUploadSuccess={handleUploadSuccess}
                     />
                 </div>
             </div>
@@ -44,7 +49,7 @@ const UploadToolPanel: React.FC<UploadToolPanelProps> = ({ highlightedAssetId, u
                             {
                                 assets.map((asset, index) => (
                                     <AssetThumbnail
-                                        key={index}
+                                        key={asset.id}
                                         asset={asset}
                                         highlight={highlightedAssetId === asset.id}
                                         uploading={uploadingAssetId === asset.id}

@@ -26,6 +26,8 @@ const AssetsContext = createContext<{
     error: string | null
     refresh: () => void
     deleteAsset: (id: string) => Promise<void>
+    addAsset: (asset: Asset) => void
+    updateAsset: (id: string, updates: Partial<Asset>) => void
 } | undefined>(undefined)
 
 export function useAssets() {
@@ -66,8 +68,26 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
         }
     }, [session?.access_token])
 
+    // Optimistic asset addition
+    const addAsset = useCallback((asset: Asset) => {
+        setAssets(prev => [asset, ...prev])
+    }, [])
+
+    // Optimistic asset update
+    const updateAsset = useCallback((id: string, updates: Partial<Asset>) => {
+        setAssets(prev => prev.map(asset => 
+            asset.id === id ? { ...asset, ...updates } : asset
+        ))
+    }, [])
+
+    // Optimistic asset deletion
     const deleteAsset = useCallback(async (id: string) => {
         if (!session?.access_token) return
+        
+        // Optimistically remove from UI immediately
+        const originalAssets = assets
+        setAssets(prev => prev.filter(asset => asset.id !== id))
+        
         try {
             const response = await fetch(apiPath(`assets/${id}`), {
                 method: 'DELETE',
@@ -79,20 +99,29 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
             if (!response.ok) {
                 throw new Error(await response.text())
             }
-            // Refresh the assets list after deletion
-            await refresh()
+            // Success - deletion already reflected in UI
         }
         catch (err: any) {
+            // Rollback on error
+            setAssets(originalAssets)
             setError(err.message)
         }
-    }, [session, refresh])
+    }, [session, assets])
 
     useEffect(() => {
         refresh()
     }, [refresh])
 
     return (
-        <AssetsContext.Provider value={{ assets, loading, error, refresh, deleteAsset }}>
+        <AssetsContext.Provider value={{ 
+            assets, 
+            loading, 
+            error, 
+            refresh, 
+            deleteAsset, 
+            addAsset, 
+            updateAsset 
+        }}>
             {children}
         </AssetsContext.Provider>
     )

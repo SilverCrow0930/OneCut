@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { Upload } from 'lucide-react'
+import { Asset } from '@/contexts/AssetsContext'
 
 interface UploadProgress {
     fileName: string;
@@ -9,7 +10,11 @@ interface UploadProgress {
     error?: string;
 }
 
-export default function AssetUploader({ onUpload }: { onUpload: () => void }) {
+interface AssetUploaderProps {
+    onUploadSuccess?: (assets: Asset[]) => void
+}
+
+export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
     const { session } = useAuth()
     const inputRef = useRef<HTMLInputElement>(null)
     const [uploading, setUploading] = useState(false)
@@ -31,7 +36,7 @@ export default function AssetUploader({ onUpload }: { onUpload: () => void }) {
         }
     }, [uploadProgress])
 
-    const uploadFile = async (file: File): Promise<void> => {
+    const uploadFile = async (file: File): Promise<any> => {
         if (!session?.access_token) {
             throw new Error('Not signed in')
         }
@@ -76,10 +81,14 @@ export default function AssetUploader({ onUpload }: { onUpload: () => void }) {
                 throw new Error(`Upload failed ${response.status}: ${text}`)
             }
 
+            const uploadedAsset = await response.json()
+
             // Update progress to 100%
             setUploadProgress(prev =>
                 prev.map(p => p.fileName === file.name ? { ...p, progress: 100 } : p)
             )
+
+            return uploadedAsset
         } catch (err: any) {
             console.error('Asset upload error:', err)
             setUploadProgress(prev =>
@@ -98,8 +107,10 @@ export default function AssetUploader({ onUpload }: { onUpload: () => void }) {
         setShowProgress(true)
 
         try {
-            await Promise.all(files.map(file => uploadFile(file)))
-            onUpload()
+            const uploadedAssets = await Promise.all(files.map(file => uploadFile(file)))
+            if (onUploadSuccess) {
+                onUploadSuccess(uploadedAssets)
+            }
         } catch (err) {
             console.error('Batch upload error:', err)
         } finally {
