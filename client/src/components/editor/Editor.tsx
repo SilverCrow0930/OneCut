@@ -286,7 +286,10 @@ const Editor = () => {
                 <div className="w-80 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60">
                     <ToolPanel />
                 </div>
-                <div className="flex-1 bg-white/60 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60">
+                <div 
+                    className="bg-white/60 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60"
+                    style={{ width: `calc(100% - 80px - 320px - ${assistantWidth}px - 1rem)` }}
+                >
                     <EditorContent />
                 </div>
                 <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60" style={{ width: assistantWidth }}>
