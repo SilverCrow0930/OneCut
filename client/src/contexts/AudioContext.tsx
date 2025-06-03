@@ -14,6 +14,8 @@ interface AudioContextType {
     unregisterTrack: (id: string) => void
     updatePlayback: (currentTime: number, isPlaying: boolean) => void
     setTrackVolume: (id: string, volume: number) => void
+    registerAudioClip: (clipId: string, url: string, startTime: number, endTime: number, volume: number, speed: number) => void
+    updateTrackSpeed: (id: string, speed: number) => void
 }
 
 const AudioContext = createContext<AudioContextType | null>(null)
@@ -63,6 +65,29 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
             const audio = activeAudio.get(id)
             if (audio) {
                 audio.volume = volume
+            }
+        }
+    }
+
+    const registerAudioClip = (clipId: string, url: string, startTime: number, endTime: number, volume: number, speed: number) => {
+        const track: AudioTrack = {
+            id: clipId,
+            url,
+            volume,
+            speed,
+            startTime,
+            endTime
+        }
+        registerTrack(track)
+    }
+
+    const updateTrackSpeed = (id: string, speed: number) => {
+        const track = tracksRef.current.get(id)
+        if (track) {
+            track.speed = speed
+            const audio = activeAudio.get(id)
+            if (audio) {
+                audio.playbackRate = speed
             }
         }
     }
@@ -148,7 +173,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
             registerTrack,
             unregisterTrack,
             updatePlayback,
-            setTrackVolume
+            setTrackVolume,
+            registerAudioClip,
+            updateTrackSpeed
         }}>
             {children}
         </AudioContext.Provider>

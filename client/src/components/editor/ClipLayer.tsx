@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { useEditor } from '@/contexts/EditorContext'
+import { useAudio } from '@/contexts/AudioContext'
 import type { Clip } from '@/types/editor'
 import ClipMenu from './ClipMenu'
 
@@ -13,6 +14,7 @@ interface ClipLayerProps {
 export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const { currentTime, isPlaying } = usePlayback()
     const { selectedClipId, selectedClipIds, setSelectedClipId, setSelectedClipIds } = useEditor()
+    const { registerAudioClip, updateTrackSpeed, unregisterTrack } = useAudio()
     const localMs = currentTime * 1000 - clip.timelineStartMs
     const durationMs = clip.timelineEndMs - clip.timelineStartMs
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -134,11 +136,16 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
             lastSeekTimeRef.current = now;
         }
 
+        // Set playback rate immediately when available
+        if (v.playbackRate !== (clip.speed || 1)) {
+            console.log('Setting video playback rate for clip:', clip.id, 'to:', clip.speed || 1)
+            v.playbackRate = clip.speed || 1;
+        }
+
         // Handle playback state changes
         if (isPlaying && v.paused) {
             v.volume = clip.volume || 1;
             v.muted = false;
-            v.playbackRate = clip.speed || 1;
             
             const playPromise = v.play();
             playPromise?.catch((error) => {
@@ -152,8 +159,26 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         }
     }, [sourceTime, localMs, clip.type, clip.volume, clip.speed, isPlaying]);
 
-    // Remove individual audio handling - this will be handled by AudioContext
-    // Audio clips will be managed by the centralized AudioProvider
+    // Register audio clip with AudioContext
+    useEffect(() => {
+        if (clip.type === 'audio' && url) {
+            console.log('Registering audio clip:', clip.id, 'with speed:', clip.speed || 1)
+            registerAudioClip(clip.id, url, clip.timelineStartMs, clip.timelineEndMs, clip.volume || 1, clip.speed || 1)
+            
+            return () => {
+                console.log('Unregistering audio clip:', clip.id)
+                unregisterTrack(clip.id)
+            }
+        }
+    }, [clip.id, clip.type, url, clip.timelineStartMs, clip.timelineEndMs, clip.volume, registerAudioClip, unregisterTrack])
+
+    // Update audio speed when clip speed changes
+    useEffect(() => {
+        if (clip.type === 'audio') {
+            console.log('Updating audio speed for clip:', clip.id, 'to:', clip.speed || 1)
+            updateTrackSpeed(clip.id, clip.speed || 1)
+        }
+    }, [clip.speed, clip.id, clip.type, updateTrackSpeed])
 
     // Memoize render content
     const renderContent = useMemo(() => {
