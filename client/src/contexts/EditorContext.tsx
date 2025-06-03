@@ -7,6 +7,7 @@ import React, {
     useEffect,
     ReactNode,
     useReducer,
+    useCallback,
 } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
@@ -136,6 +137,16 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
     const [selectedClipIds, setSelectedClipIds] = useState<string[]>([])
     const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
+
+    // Safety wrapper for setSelectedClipIds to handle edge cases
+    const safeSetSelectedClipIds = useCallback((ids: string[]) => {
+        setSelectedClipIds(ids || [])
+    }, [])
+
+    // Safety wrapper for setSelectedClipId to handle edge cases  
+    const safeSetSelectedClipId = useCallback((id: string | null) => {
+        setSelectedClipId(id)
+    }, [])
 
     const fetchTimeline = async () => {
         if (!session?.access_token) return
@@ -423,9 +434,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
             // selection
             selectedClipId,
-            setSelectedClipId,
-            selectedClipIds,
-            setSelectedClipIds,
+            setSelectedClipId: safeSetSelectedClipId,
+            selectedClipIds: selectedClipIds || [],
+            setSelectedClipIds: safeSetSelectedClipIds,
             selectedTrackId,
             setSelectedTrackId,
         }}>
