@@ -5,10 +5,9 @@ interface ChatTextFieldProps {
     onSend: (message: string, useIdeation: boolean) => void;
     message: string;
     setMessage: (msg: string) => void;
-    placeholder?: string;
 }
 
-const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessage, placeholder = "Plan, search, ask anything" }) => {
+const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessage }) => {
 
     // Textarea Ref
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -75,7 +74,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                     <textarea
                         ref={textareaRef}
                         className="focus:outline-none text-sm overflow-auto resize-none mt-[2px] w-full"
-                        placeholder={placeholder}
+                        placeholder="Plan, search, ask anything"
                         rows={2}
                         value={message}
                         onChange={handleChange}
