@@ -22,11 +22,25 @@ const {
 const app = express()
 
 // Configure CORS based on environment
+const productionOrigins = [
+    'https://lemona.studio', 
+    'https://www.lemona.studio', 
+    'https://lemona-app.onrender.com'
+]
+
+const allowedOrigins = NODE_ENV === 'production'
+    ? [...productionOrigins, ...(ALLOWED_ORIGINS?.split(',').filter(Boolean) || [])]
+    : ['http://localhost:3000']
+
+console.log('[CORS] Environment:', NODE_ENV)
+console.log('[CORS] Allowed origins:', allowedOrigins)
+
 const corsOptions = {
-    origin: NODE_ENV === 'production'
-        ? ['https://lemona.studio', 'https://www.lemona.studio', 'https://lemona-app.onrender.com', ...(ALLOWED_ORIGINS?.split(',') || [])]
-        : ['http://localhost:3000'],
-    credentials: true
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range']
 }
 app.use(cors(corsOptions))
 app.use(helmet())

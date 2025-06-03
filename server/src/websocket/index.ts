@@ -10,11 +10,23 @@ const googleSearchRetrievalTool = {
 };
 
 export const setupWebSocket = (server: any) => {
+    // Use same CORS origins as main server
+    const productionOrigins = [
+        'https://lemona.studio', 
+        'https://www.lemona.studio', 
+        'https://lemona-app.onrender.com'
+    ]
+    
+    const allowedOrigins = process.env.NODE_ENV === 'production' 
+        ? [...productionOrigins, ...(process.env.ALLOWED_ORIGINS?.split(',').filter(Boolean) || [])]
+        : ['http://localhost:3000']
+    
+    console.log('[WebSocket] Environment:', process.env.NODE_ENV)
+    console.log('[WebSocket] Allowed origins:', allowedOrigins)
+    
     const io = new Server(server, {
         cors: {
-            origin: process.env.NODE_ENV === 'production' 
-                ? ['https://lemona.studio', 'https://www.lemona.studio', 'https://lemona-app.onrender.com', ...(process.env.ALLOWED_ORIGINS?.split(',') || [])]
-                : ['http://localhost:3000'],
+            origin: allowedOrigins,
             methods: ["GET", "POST"],
             credentials: true
         },
