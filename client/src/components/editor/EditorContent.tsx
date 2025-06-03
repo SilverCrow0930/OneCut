@@ -1,5 +1,5 @@
 import React from 'react'
-import Player from './Player'
+import { Player } from './Player'
 import PlaybackControls from './PlaybackControls'
 import ClipTools from './ClipTools'
 import ZoomSlider from './ZoomSlider'
