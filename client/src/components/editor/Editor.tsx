@@ -34,13 +34,80 @@ const Editor = () => {
         selectedClipId,
         executeCommand,
         clips,
-        tracks
+        tracks,
+        selectedClipIds,
+        setSelectedClipIds
     } = useEditor()
 
     const [assistantWidth, setAssistantWidth] = useState(384)
 
     const handleAssistantResize = (deltaX: number) => {
         setAssistantWidth(prev => Math.max(200, Math.min(800, prev - deltaX)))
+    }
+
+    // Function to delete multiple selected clips (same logic as in ClipTools.tsx)
+    const handleDeleteMultipleSelectedClips = () => {
+        const selectedClips = clips.filter(clip => selectedClipIds.includes(clip.id))
+        if (selectedClips.length === 0) return
+
+        const commands: any[] = []
+        const tracksToCheck = new Set<string>()
+        
+        // Collect tracks that might become empty
+        selectedClips.forEach(clip => {
+            tracksToCheck.add(clip.trackId)
+            commands.push({
+                type: 'REMOVE_CLIP',
+                payload: { clip }
+            })
+        })
+        
+        // Check which tracks become empty and remove them
+        tracksToCheck.forEach(trackId => {
+            const track = tracks.find(t => t.id === trackId)
+            if (!track) return
+            
+            const remainingClipsInTrack = clips.filter(c => 
+                c.trackId === trackId && !selectedClipIds.includes(c.id)
+            )
+            
+            if (remainingClipsInTrack.length === 0) {
+                commands.push({
+                    type: 'REMOVE_TRACK',
+                    payload: { track, affectedClips: [] }
+                })
+            }
+        })
+        
+        // Reindex remaining tracks
+        const remainingTracks = tracks.filter(t => !Array.from(tracksToCheck).some(trackId => {
+            const track = tracks.find(tr => tr.id === trackId)
+            if (!track) return false
+            const remainingClipsInTrack = clips.filter(c => 
+                c.trackId === trackId && !selectedClipIds.includes(c.id)
+            )
+            return remainingClipsInTrack.length === 0
+        }))
+        
+        const reindexedTracks = remainingTracks.map((t, index) => ({ ...t, index }))
+        reindexedTracks.forEach(track => {
+            const originalTrack = tracks.find(t => t.id === track.id)
+            if (originalTrack && originalTrack.index !== track.index) {
+                commands.push({
+                    type: 'UPDATE_TRACK',
+                    payload: { before: originalTrack, after: track }
+                })
+            }
+        })
+        
+        executeCommand({
+            type: 'BATCH',
+            payload: { commands }
+        })
+
+        // Clear selection after deletion
+        setSelectedClipIds([])
+        setSelectedClipId(null)
     }
 
     // Function to delete selected clip (same logic as in ClipTools.tsx)
@@ -119,9 +186,17 @@ const Editor = () => {
             }
 
             // Handle Backspace or Delete key
-            if ((e.key === 'Backspace' || e.key === 'Delete') && selectedClipId) {
+            if (e.key === 'Backspace' || e.key === 'Delete') {
                 e.preventDefault()
-                handleDeleteSelectedClip()
+                
+                // Handle multiple selection deletion
+                if (selectedClipIds && selectedClipIds.length > 0) {
+                    handleDeleteMultipleSelectedClips()
+                }
+                // Handle single selection deletion (fallback)
+                else if (selectedClipId) {
+                    handleDeleteSelectedClip()
+                }
             }
         }
 
@@ -129,7 +204,7 @@ const Editor = () => {
         return () => {
             document.removeEventListener('keydown', handleKeyDown)
         }
-    }, [selectedClipId, clips, tracks, executeCommand, setSelectedClipId])
+    }, [selectedClipId, selectedClipIds, clips, tracks, executeCommand, setSelectedClipId, setSelectedClipIds])
 
     // Deselect clip on global click (outside any clip)
     useEffect(() => {

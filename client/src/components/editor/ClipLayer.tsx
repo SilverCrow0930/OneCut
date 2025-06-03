@@ -22,11 +22,11 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
 
     // Crop area state
     const [crop, setCrop] = useState({
-        width: clip.type === 'text' ? 240 : 320,
-        height: clip.type === 'text' ? 100 : 180,
+        width: clip.type === 'text' || clip.type === 'caption' ? 300 : 320,
+        height: clip.type === 'text' || clip.type === 'caption' ? 80 : 180,
         left: 0,
         top: 0
-    }) // default 16:9, smaller for text
+    }) // Smaller default size for text/captions
 
     // Pan/zoom state for media inside crop
     const [mediaPos, setMediaPos] = useState({ x: 0, y: 0 })
@@ -113,41 +113,69 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                 let newHeight = resizeStart.height
                 let newLeft = resizeStart.left
                 let newTop = resizeStart.top
-                // Always keep aspect ratio
-                switch (resizeType) {
-                    case 'nw': {
-                        // Dragging top-left corner
-                        const delta = Math.min(dx, dy / aspectRatio)
-                        newWidth = Math.max(40, resizeStart.width - delta)
-                        newHeight = newWidth / aspectRatio
-                        newLeft = resizeStart.left + (resizeStart.width - newWidth)
-                        newTop = resizeStart.top + (resizeStart.height - newHeight)
-                        break
+                
+                // For text and caption clips, allow free resizing without aspect ratio constraints
+                if (clip.type === 'text' || clip.type === 'caption') {
+                    switch (resizeType) {
+                        case 'nw': {
+                            newWidth = Math.max(100, resizeStart.width - dx)
+                            newHeight = Math.max(40, resizeStart.height - dy)
+                            newLeft = resizeStart.left + (resizeStart.width - newWidth)
+                            newTop = resizeStart.top + (resizeStart.height - newHeight)
+                            break
+                        }
+                        case 'ne': {
+                            newWidth = Math.max(100, resizeStart.width + dx)
+                            newHeight = Math.max(40, resizeStart.height - dy)
+                            newTop = resizeStart.top + (resizeStart.height - newHeight)
+                            break
+                        }
+                        case 'sw': {
+                            newWidth = Math.max(100, resizeStart.width - dx)
+                            newHeight = Math.max(40, resizeStart.height + dy)
+                            newLeft = resizeStart.left + (resizeStart.width - newWidth)
+                            break
+                        }
+                        case 'se': {
+                            newWidth = Math.max(100, resizeStart.width + dx)
+                            newHeight = Math.max(40, resizeStart.height + dy)
+                            break
+                        }
                     }
-                    case 'ne': {
-                        // Dragging top-right corner
-                        const delta = Math.min(-dx, dy / aspectRatio)
-                        newWidth = Math.max(40, resizeStart.width - delta)
-                        newHeight = newWidth / aspectRatio
-                        newTop = resizeStart.top + (resizeStart.height - newHeight)
-                        break
-                    }
-                    case 'sw': {
-                        // Dragging bottom-left corner
-                        const delta = Math.min(dx, -dy / aspectRatio)
-                        newWidth = Math.max(40, resizeStart.width - delta)
-                        newHeight = newWidth / aspectRatio
-                        newLeft = resizeStart.left + (resizeStart.width - newWidth)
-                        break
-                    }
-                    case 'se': {
-                        // Dragging bottom-right corner
-                        const delta = Math.max(dx, dy / aspectRatio)
-                        newWidth = Math.max(40, resizeStart.width + delta)
-                        newHeight = newWidth / aspectRatio
-                        break
+                } else {
+                    // For video/image clips, maintain aspect ratio
+                    switch (resizeType) {
+                        case 'nw': {
+                            const delta = Math.min(dx, dy / aspectRatio)
+                            newWidth = Math.max(40, resizeStart.width - delta)
+                            newHeight = newWidth / aspectRatio
+                            newLeft = resizeStart.left + (resizeStart.width - newWidth)
+                            newTop = resizeStart.top + (resizeStart.height - newHeight)
+                            break
+                        }
+                        case 'ne': {
+                            const delta = Math.min(-dx, dy / aspectRatio)
+                            newWidth = Math.max(40, resizeStart.width - delta)
+                            newHeight = newWidth / aspectRatio
+                            newTop = resizeStart.top + (resizeStart.height - newHeight)
+                            break
+                        }
+                        case 'sw': {
+                            const delta = Math.min(dx, -dy / aspectRatio)
+                            newWidth = Math.max(40, resizeStart.width - delta)
+                            newHeight = newWidth / aspectRatio
+                            newLeft = resizeStart.left + (resizeStart.width - newWidth)
+                            break
+                        }
+                        case 'se': {
+                            const delta = Math.max(dx, dy / aspectRatio)
+                            newWidth = Math.max(40, resizeStart.width + delta)
+                            newHeight = newWidth / aspectRatio
+                            break
+                        }
                     }
                 }
+                
                 newCrop.width = newWidth
                 newCrop.height = newHeight
                 newCrop.left = newLeft
@@ -172,7 +200,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             document.removeEventListener('mousemove', handleMouseMove)
             document.removeEventListener('mouseup', handleMouseUp)
         }
-    }, [isResizing, isDraggingCrop, resizeType, resizeStart, dragStart, crop, aspectRatio])
+    }, [isResizing, isDraggingCrop, resizeType, resizeStart, dragStart, crop, aspectRatio, clip.type])
 
     // --- Crop area dragging ---
     const handleCropMouseDown = (e: React.MouseEvent) => {
@@ -312,6 +340,8 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             zIndex: 1000,
+                            width: '100%',
+                            height: '100%',
                         }}
                         onClick={handleClick}
                     >
@@ -320,10 +350,18 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                                 ...clip.properties?.style,
                                 textAlign: 'center',
                                 lineHeight: '1.4',
-                                padding: '0.5rem 1rem',
-                                maxWidth: '80%',
+                                padding: '0.5rem',
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
+                                overflow: 'hidden',
+                                // Only apply responsive font size if no custom font size is set
+                                fontSize: clip.properties?.style?.fontSize || 
+                                    `${Math.max(16, Math.min(32, crop.width / 12))}px`,
                             }}
                         >
                             {renderCaptionText()}
@@ -405,17 +443,47 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
         if (player) {
             const rect = (player as HTMLElement).getBoundingClientRect();
             setCrop(crop => {
-                // Always fill the entire player area for vertical format
-                return {
-                    ...crop,
-                    width: rect.width,    // Fill player width
-                    height: rect.height,  // Fill player height
-                    left: 0,              // Start at left edge
-                    top: 0                // Start at top edge
-                };
+                if (clip.type === 'text' || clip.type === 'caption') {
+                    // For text/caption clips, start with a reasonable size positioned according to placement
+                    const textWidth = Math.min(400, rect.width * 0.8)  // Max 400px or 80% of player width
+                    const textHeight = 80  // Fixed height for text
+                    const placement = clip.properties?.placement || 'middle'
+                    
+                    let topPosition = (rect.height - textHeight) / 2  // Default to center
+                    
+                    switch (placement) {
+                        case 'top':
+                            topPosition = rect.height * 0.1  // 10% from top
+                            break
+                        case 'bottom':
+                            topPosition = rect.height * 0.9 - textHeight  // 10% from bottom
+                            break
+                        case 'middle':
+                        default:
+                            topPosition = (rect.height - textHeight) / 2  // Center
+                            break
+                    }
+                    
+                    return {
+                        ...crop,
+                        width: textWidth,
+                        height: textHeight,
+                        left: (rect.width - textWidth) / 2,   // Center horizontally
+                        top: Math.max(0, Math.min(rect.height - textHeight, topPosition))  // Respect placement but keep in bounds
+                    };
+                } else {
+                    // For video/image clips, fill the entire player area
+                    return {
+                        ...crop,
+                        width: rect.width,    // Fill player width
+                        height: rect.height,  // Fill player height
+                        left: 0,              // Start at left edge
+                        top: 0                // Start at top edge
+                    };
+                }
             });
         }
-    }, []);
+    }, [clip.type, clip.properties?.placement]);
 
     // --- Main render ---
     return (

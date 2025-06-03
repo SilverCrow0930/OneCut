@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Wand2, Download, Copy, RotateCcw, Mic, CheckCircle, AlertCircle, Loader2, Sparkles, Plus, AlignCenter, ArrowUp, ArrowDown, Edit2, Check } from 'lucide-react'
+import { Wand2, Download, Copy, RotateCcw, Mic, CheckCircle, AlertCircle, Loader2, Sparkles, Plus, AlignCenter, ArrowUp, ArrowDown, Edit2, Check, Palette, Type, Sliders } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -26,141 +26,29 @@ export const highlightColors = [
     '#DA70D6', // Bright Orchid
 ]
 
-// Trending short video font styles - Optimized for maximum impact and readability
+// Simplified caption styles - all white text with black outlines for maximum readability
 export const captionStyles = [
     {
-        name: 'Classic Impact',
+        name: 'Classic Bold',
         style: {
-            fontFamily: 'Impact, "Arial Black", "Franklin Gothic Bold", sans-serif',
+            fontFamily: 'Impact, "Arial Black", sans-serif',
             fontSize: 32,
             fontWeight: 900,
-            color: '#FFFF00',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '3px #000000',
-            textShadow: '4px 4px 0px rgba(0, 0, 0, 0.8)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-        },
-    },
-    {
-        name: 'Bold Knockout',
-        style: {
-            fontFamily: 'Impact, "Arial Black", sans-serif',
-            fontSize: 30,
-            fontWeight: 900,
             color: '#FFFFFF',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '4px #000000',
-            textShadow: 'none',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1.5px',
-        },
-    },
-    {
-        name: 'Neon Pop',
-        style: {
-            fontFamily: 'Impact, "Trebuchet MS", sans-serif',
-            fontSize: 28,
-            fontWeight: 900,
-            color: '#00FF41',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '3px #000000',
-            textShadow: '0px 0px 10px #00FF41, 3px 3px 0px #000000',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-        },
-    },
-    {
-        name: 'Heavy Shadow',
-        style: {
-            fontFamily: 'Impact, "Arial Black", sans-serif',
-            fontSize: 29,
-            fontWeight: 900,
-            color: '#FFFFFF',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000',
-            textShadow: '5px 5px 0px #000000, 10px 10px 20px rgba(0, 0, 0, 0.5)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-        },
-    },
-    {
-        name: 'Bright Pink',
-        style: {
-            fontFamily: 'Impact, "Franklin Gothic Bold", sans-serif',
-            fontSize: 31,
-            fontWeight: 900,
-            color: '#FF3366',
             textAlign: 'center' as const,
             WebkitTextStroke: '3px #000000',
             textShadow: '3px 3px 0px rgba(0, 0, 0, 0.8)',
             textTransform: 'uppercase' as const,
-            letterSpacing: '0.8px',
-        },
-    },
-    {
-        name: 'Electric Blue',
-        style: {
-            fontFamily: 'Impact, "Arial Black", sans-serif',
-            fontSize: 30,
-            fontWeight: 900,
-            color: '#00D4FF',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '3px #000000',
-            textShadow: '0px 0px 8px #00D4FF, 2px 2px 0px #000000',
-            textTransform: 'uppercase' as const,
             letterSpacing: '1px',
         },
     },
     {
-        name: 'Fire Orange',
-        style: {
-            fontFamily: 'Impact, "Trebuchet MS", sans-serif',
-            fontSize: 32,
-            fontWeight: 900,
-            color: '#FF8C00',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '3px #000000',
-            textShadow: '4px 4px 0px rgba(0, 0, 0, 0.9)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1.2px',
-        },
-    },
-    {
-        name: 'Clean White',
+        name: 'Heavy Impact',
         style: {
             fontFamily: 'Impact, "Arial Black", sans-serif',
-            fontSize: 30,
+            fontSize: 34,
             fontWeight: 900,
             color: '#FFFFFF',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '3px #000000',
-            textShadow: '3px 3px 6px rgba(0, 0, 0, 0.8)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-        },
-    },
-    {
-        name: 'Purple Power',
-        style: {
-            fontFamily: 'Impact, "Franklin Gothic Bold", sans-serif',
-            fontSize: 29,
-            fontWeight: 900,
-            color: '#DA70D6',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '3px #000000',
-            textShadow: '0px 0px 6px #DA70D6, 3px 3px 0px #000000',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-        },
-    },
-    {
-        name: 'Classic Yellow',
-        style: {
-            fontFamily: 'Impact, "Arial Black", sans-serif',
-            fontSize: 33,
-            fontWeight: 900,
-            color: '#FFFF00',
             textAlign: 'center' as const,
             WebkitTextStroke: '4px #000000',
             textShadow: '4px 4px 0px rgba(0, 0, 0, 0.9)',
@@ -168,6 +56,57 @@ export const captionStyles = [
             letterSpacing: '1.5px',
         },
     },
+    {
+        name: 'Clean Modern',
+        style: {
+            fontFamily: 'Impact, "Trebuchet MS", sans-serif',
+            fontSize: 30,
+            fontWeight: 900,
+            color: '#FFFFFF',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '3px #000000',
+            textShadow: '2px 2px 0px rgba(0, 0, 0, 0.8)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+        },
+    },
+    {
+        name: 'Thick Outline',
+        style: {
+            fontFamily: 'Impact, "Franklin Gothic Bold", sans-serif',
+            fontSize: 31,
+            fontWeight: 900,
+            color: '#FFFFFF',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '5px #000000',
+            textShadow: 'none',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1.2px',
+        },
+    },
+]
+
+// Font options for custom styling
+export const fontOptions = [
+    { name: 'Impact', value: 'Impact, "Arial Black", sans-serif' },
+    { name: 'Arial Black', value: '"Arial Black", Arial, sans-serif' },
+    { name: 'Bebas Neue', value: '"Bebas Neue", Impact, sans-serif' },
+    { name: 'Oswald', value: 'Oswald, Impact, sans-serif' },
+    { name: 'Roboto Condensed', value: '"Roboto Condensed", Arial, sans-serif' },
+    { name: 'Montserrat', value: 'Montserrat, Arial, sans-serif' },
+]
+
+// Color presets for creators
+export const colorPresets = [
+    { name: 'White', value: '#FFFFFF' },
+    { name: 'Yellow', value: '#FFFF00' },
+    { name: 'Red', value: '#FF3333' },
+    { name: 'Blue', value: '#3399FF' },
+    { name: 'Green', value: '#33FF33' },
+    { name: 'Orange', value: '#FF8800' },
+    { name: 'Pink', value: '#FF3399' },
+    { name: 'Purple', value: '#9933FF' },
+    { name: 'Cyan', value: '#00FFFF' },
 ]
 
 // Caption placement options
@@ -184,7 +123,7 @@ const CaptionsToolPanel = () => {
     const [error, setError] = useState<string | null>(null)
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [progressStage, setProgressStage] = useState<'upload' | 'processing' | 'generating' | null>(null)
-    const [progressPercent, setProgressPercent] = useState(0)
+    const [smoothProgress, setSmoothProgress] = useState(0)
     
     // Workflow states: 'initial' | 'generating' | 'editing' | 'styling'
     const [workflowPhase, setWorkflowPhase] = useState<'initial' | 'generating' | 'editing' | 'styling'>('initial')
@@ -192,6 +131,20 @@ const CaptionsToolPanel = () => {
     // Caption customization states
     const [selectedStyleIdx, setSelectedStyleIdx] = useState(0)
     const [selectedPlacement, setSelectedPlacement] = useState('bottom')
+    const [useCustomStyle, setUseCustomStyle] = useState(false)
+    
+    // Custom style states
+    const [customStyle, setCustomStyle] = useState({
+        fontFamily: 'Impact, "Arial Black", sans-serif',
+        fontSize: 32,
+        fontWeight: 900,
+        color: '#FFFFFF',
+        textAlign: 'center' as const,
+        WebkitTextStroke: '3px #000000',
+        textShadow: '3px 3px 0px rgba(0, 0, 0, 0.8)',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '1px',
+    })
     
     // Editing states
     const [editingCaptionId, setEditingCaptionId] = useState<number | null>(null)
@@ -301,6 +254,22 @@ const CaptionsToolPanel = () => {
         return (hours * 3600 + minutes * 60 + seconds) * 1000 + Number(ms)
     }
 
+    // Smooth progress animation
+    const startSmoothProgress = () => {
+        setSmoothProgress(0)
+        let progress = 0
+        const interval = setInterval(() => {
+            progress += Math.random() * 3 + 1 // Random increment between 1-4%
+            if (progress >= 95) {
+                progress = 95 // Cap at 95% until completion
+                clearInterval(interval)
+            }
+            setSmoothProgress(progress)
+        }, 200) // Update every 200ms for smooth animation
+        
+        return interval
+    }
+
     const handleOneClickGenerate = async () => {
         if (!selectedTrackId || !session?.access_token) {
             setError('Please add a video or audio clip to your timeline first')
@@ -312,30 +281,10 @@ const CaptionsToolPanel = () => {
         setError(null)
         setSuccessMessage(null)
         setCaptions([])
-        setProgressStage('upload')
-        setProgressPercent(0)
+        setProgressStage('generating')
 
         // Start smooth progress animation
-        let currentProgress = 0
-        const progressInterval = setInterval(() => {
-            setProgressPercent(prev => {
-                // Smooth progress curve - starts fast, slows down towards the end
-                const increment = Math.max(0.3, (85 - prev) * 0.015) // Exponential decay
-                const newProgress = Math.min(85, prev + increment)
-                currentProgress = newProgress
-                
-                // Update stage based on progress
-                if (newProgress < 25) {
-                    setProgressStage('upload')
-                } else if (newProgress < 60) {
-                    setProgressStage('processing')
-                } else {
-                    setProgressStage('generating')
-                }
-                
-                return newProgress
-            })
-        }, 150) // Update every 150ms for smooth animation
+        const progressInterval = startSmoothProgress()
 
         try {
             console.log('🎤 Starting one-click transcription for track:', selectedTrackId)
@@ -351,13 +300,6 @@ const CaptionsToolPanel = () => {
                 })
             })
 
-            // Clear the progress interval once API call completes
-            clearInterval(progressInterval)
-            
-            // Complete the progress to 100%
-            setProgressPercent(100)
-            setProgressStage('generating')
-
             if (!response.ok) {
                 const errorData = await response.json()
                 throw new Error(errorData.error || `Transcription failed: ${response.status}`)
@@ -365,6 +307,10 @@ const CaptionsToolPanel = () => {
 
             const result = await response.json()
             console.log('✅ Transcription completed:', result)
+
+            // Complete the progress bar
+            clearInterval(progressInterval)
+            setSmoothProgress(100)
 
             // Parse the enhanced SRT format transcription
             const parsedCaptions = parseEnhancedSRT(result.transcription)
@@ -382,13 +328,13 @@ const CaptionsToolPanel = () => {
 
         } catch (error: any) {
             console.error('❌ Transcription failed:', error)
+            clearInterval(progressInterval)
             setError(error.message || 'Failed to generate captions')
             setWorkflowPhase('initial')
-            clearInterval(progressInterval)
         } finally {
             setIsGenerating(false)
             setProgressStage(null)
-            setTimeout(() => setProgressPercent(0), 500) // Reset progress after a delay
+            setSmoothProgress(0)
         }
     }
 
@@ -431,8 +377,8 @@ const CaptionsToolPanel = () => {
                 createdAt: new Date().toISOString(),
             }
 
-            // Get selected style
-            const selectedStyle = captionStyles[selectedStyleIdx].style
+            // Get selected style (custom or preset)
+            const selectedStyle = useCustomStyle ? customStyle : captionStyles[selectedStyleIdx].style
 
             // Create caption clips for each caption with custom styling
             const captionClips = captions.map(caption => ({
@@ -521,14 +467,10 @@ const CaptionsToolPanel = () => {
     // Progress indicator content
     const getProgressContent = () => {
         switch (progressStage) {
-            case 'upload':
-                return { text: '📤 Uploading to AI...', percent: progressPercent }
-            case 'processing':
-                return { text: '🎯 Analyzing audio...', percent: progressPercent }
             case 'generating':
-                return { text: '✨ Generating captions...', percent: progressPercent }
+                return { text: '✨ Generating captions...', percent: Math.round(smoothProgress) }
             default:
-                return { text: '🧠 Processing...', percent: progressPercent || 50 }
+                return { text: '🧠 Processing...', percent: Math.round(smoothProgress) }
         }
     }
 
@@ -554,6 +496,112 @@ const CaptionsToolPanel = () => {
             return part
         })
     }
+
+    // Custom Style Editor Component
+    const CustomStyleEditor = () => (
+        <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
+            <div className="flex items-center gap-2 mb-3">
+                <Sliders size={16} className="text-blue-600" />
+                <h6 className="font-semibold text-gray-700">Custom Style</h6>
+            </div>
+
+            {/* Font Family */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Font</label>
+                <select
+                    value={customStyle.fontFamily}
+                    onChange={(e) => setCustomStyle(prev => ({ ...prev, fontFamily: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                    {fontOptions.map(font => (
+                        <option key={font.value} value={font.value}>{font.name}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Font Size */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Size: {customStyle.fontSize}px</label>
+                <input
+                    type="range"
+                    min="16"
+                    max="48"
+                    value={customStyle.fontSize}
+                    onChange={(e) => setCustomStyle(prev => ({ ...prev, fontSize: Number(e.target.value) }))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+            </div>
+
+            {/* Text Color */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Text Color</label>
+                <div className="grid grid-cols-3 gap-2">
+                    {colorPresets.map(color => (
+                        <button
+                            key={color.value}
+                            onClick={() => setCustomStyle(prev => ({ ...prev, color: color.value }))}
+                            className={`p-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                                customStyle.color === color.value 
+                                    ? 'ring-2 ring-blue-500 scale-105' 
+                                    : 'hover:scale-105'
+                            }`}
+                            style={{ backgroundColor: color.value, color: color.value === '#FFFFFF' ? '#000000' : '#FFFFFF' }}
+                        >
+                            {color.name}
+                        </button>
+                    ))}
+                </div>
+                <input
+                    type="color"
+                    value={customStyle.color}
+                    onChange={(e) => setCustomStyle(prev => ({ ...prev, color: e.target.value }))}
+                    className="w-full h-8 border border-gray-300 rounded cursor-pointer"
+                />
+            </div>
+
+            {/* Outline Width */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Outline: {customStyle.WebkitTextStroke.split(' ')[0]}</label>
+                <input
+                    type="range"
+                    min="0"
+                    max="8"
+                    step="0.5"
+                    value={parseFloat(customStyle.WebkitTextStroke.split(' ')[0])}
+                    onChange={(e) => setCustomStyle(prev => ({ ...prev, WebkitTextStroke: `${e.target.value}px #000000` }))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+            </div>
+
+            {/* Letter Spacing */}
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Spacing: {customStyle.letterSpacing}</label>
+                <input
+                    type="range"
+                    min="0"
+                    max="3"
+                    step="0.1"
+                    value={parseFloat(customStyle.letterSpacing.replace('px', ''))}
+                    onChange={(e) => setCustomStyle(prev => ({ ...prev, letterSpacing: `${e.target.value}px` }))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+            </div>
+
+            {/* Preview */}
+            <div className="p-4 bg-black rounded-lg">
+                <div
+                    className="text-center"
+                    style={{
+                        ...customStyle,
+                        fontSize: customStyle.fontSize / 2, // Scale down for preview
+                        WebkitTextStroke: customStyle.WebkitTextStroke.replace(/(\d+)/, (match) => (parseFloat(match) / 2).toString()),
+                    }}
+                >
+                    SAMPLE TEXT
+                </div>
+            </div>
+        </div>
+    )
 
     return (
         <div className="flex flex-col w-full gap-6 p-4">
@@ -809,34 +857,61 @@ const CaptionsToolPanel = () => {
                         </button>
                     </div>
 
-                    {/* Style Selection */}
-                    <div className="space-y-3">
-                        <h5 className="text-base font-semibold text-gray-700">Font Style</h5>
-                        <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                            {captionStyles.map((style, i) => (
-                                <button
-                                    key={style.name}
-                                    type="button"
-                                    className={`
-                                        border rounded-lg p-3 flex items-center justify-center transition-all duration-200 h-16 text-xs font-bold
-                                        ${selectedStyleIdx === i ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' : 'hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'}
-                                    `}
-                                    style={{
-                                        backgroundColor: '#000000', // Black background to show outline properly
-                                        ...style.style,
-                                        fontSize: 14, // Readable size for preview
-                                        padding: '8px 12px',
-                                        WebkitTextStroke: style.style.WebkitTextStroke ? '2px #000000' : undefined,
-                                        textShadow: style.style.textShadow ? '2px 2px 4px rgba(0, 0, 0, 0.8)' : undefined,
-                                    }}
-                                    onClick={() => setSelectedStyleIdx(i)}
-                                    title={style.name}
-                                >
-                                    SAMPLE
-                                </button>
-                            ))}
-                        </div>
+                    {/* Style Selection Toggle */}
+                    <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                        <button
+                            onClick={() => setUseCustomStyle(false)}
+                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-all duration-200 ${
+                                !useCustomStyle ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                        >
+                            <Type size={16} />
+                            <span className="text-sm font-medium">Presets</span>
+                        </button>
+                        <button
+                            onClick={() => setUseCustomStyle(true)}
+                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-all duration-200 ${
+                                useCustomStyle ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                        >
+                            <Palette size={16} />
+                            <span className="text-sm font-medium">Custom</span>
+                        </button>
                     </div>
+
+                    {/* Preset Styles */}
+                    {!useCustomStyle && (
+                        <div className="space-y-3">
+                            <h5 className="text-base font-semibold text-gray-700">Preset Styles</h5>
+                            <div className="grid grid-cols-2 gap-3">
+                                {captionStyles.map((style, i) => (
+                                    <button
+                                        key={style.name}
+                                        type="button"
+                                        className={`
+                                            border rounded-lg p-3 flex items-center justify-center transition-all duration-200 h-16 text-xs font-bold
+                                            ${selectedStyleIdx === i ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' : 'hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'}
+                                        `}
+                                        style={{
+                                            backgroundColor: '#000000', // Black background to show outline properly
+                                            ...style.style,
+                                            fontSize: 14, // Readable size for preview
+                                            padding: '8px 12px',
+                                            WebkitTextStroke: '2px #000000',
+                                            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+                                        }}
+                                        onClick={() => setSelectedStyleIdx(i)}
+                                        title={style.name}
+                                    >
+                                        {style.name.toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Custom Style Editor */}
+                    {useCustomStyle && <CustomStyleEditor />}
 
                     {/* Placement Selection */}
                     <div className="space-y-3">
