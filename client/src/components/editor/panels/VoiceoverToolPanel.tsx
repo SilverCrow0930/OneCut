@@ -5,9 +5,9 @@ import { useParams } from 'next/navigation'
 import { v4 as uuid } from 'uuid'
 import { TrackType } from '@/types/editor'
 import { 
-    Mic, RefreshCw, Play, Plus, Volume2, Settings, Search, Heart, Clock, 
-    Zap, FileText, Sliders, Save, Download, Wand2, User, Globe,
-    Star, Filter, ChevronDown, ChevronUp, Sparkles, RotateCcw, Copy
+    Mic, RefreshCw, Play, Plus, Volume2, Settings, Heart, Clock, 
+    FileText, Save, Wand2, Globe,
+    ChevronDown, ChevronUp, Sparkles, Copy
 } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { apiPath } from '@/lib/config'
@@ -82,9 +82,6 @@ const VoiceoverToolPanel = () => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     
     // UI State
-    const [searchQuery, setSearchQuery] = useState('')
-    const [selectedCategory, setSelectedCategory] = useState<string>('all')
-    const [selectedGender, setSelectedGender] = useState<string>('all')
     const [showAdvanced, setShowAdvanced] = useState(false)
     const [showTemplates, setShowTemplates] = useState(false)
     const [activeTab, setActiveTab] = useState<'discover' | 'favorites' | 'recent'>('discover')
@@ -115,27 +112,6 @@ const VoiceoverToolPanel = () => {
         loadUserPreferences()
     }, [])
 
-    // Filtered voices based on search and filters
-    const filteredVoices = useMemo(() => {
-        return voices.filter(voice => {
-            const matchesSearch = voice.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                voice.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                Object.values(voice.labels).some(label => 
-                                    label.toLowerCase().includes(searchQuery.toLowerCase())
-                                )
-            
-            const matchesCategory = selectedCategory === 'all' || voice.category === selectedCategory
-            
-            const matchesGender = selectedGender === 'all' || 
-                                voice.labels.gender?.toLowerCase() === selectedGender ||
-                                Object.values(voice.labels).some(label => 
-                                    label.toLowerCase().includes(selectedGender)
-                                )
-            
-            return matchesSearch && matchesCategory && matchesGender
-        })
-    }, [voices, searchQuery, selectedCategory, selectedGender])
-
     // Get voices for different tabs
     const getTabVoices = () => {
         switch (activeTab) {
@@ -144,7 +120,7 @@ const VoiceoverToolPanel = () => {
             case 'recent':
                 return recentVoices.map(id => voices.find(v => v.id === id)).filter(Boolean) as Voice[]
             default:
-                return filteredVoices
+                return voices
         }
     }
 
@@ -155,29 +131,46 @@ const VoiceoverToolPanel = () => {
         setError(null)
 
         try {
+            console.log('🔍 Loading voices from API...')
+            console.log('API URL:', apiPath('voiceover/voices'))
+            
             const response = await fetch(apiPath('voiceover/voices'), {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`
                 }
             })
 
+            console.log('📡 Response status:', response.status)
+            console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()))
+
             if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.error || 'Failed to load voices')
+                const errorText = await response.text()
+                console.error('❌ API Error Response:', errorText)
+                throw new Error(`API Error (${response.status}): ${errorText}`)
             }
 
-            const data = await response.json()
-            setVoices(data.voices)
+            const responseText = await response.text()
+            console.log('📄 Raw response:', responseText.substring(0, 200) + '...')
+
+            const data = JSON.parse(responseText)
+            console.log('✅ Parsed data:', data)
+            
+            setVoices(data.voices || [])
             
             // Select first high-quality voice by default
-            if (data.voices.length > 0) {
+            if (data.voices && data.voices.length > 0) {
                 const defaultVoice = data.voices.find((v: Voice) => v.category === 'premade') || data.voices[0]
                 setSelectedVoice(defaultVoice)
                 setVoiceSettings(prev => ({ ...prev, ...defaultVoice.settings }))
+                console.log('🎯 Selected default voice:', defaultVoice.name)
             }
         } catch (error: any) {
-            console.error('Failed to load voices:', error)
-            setError(error.message || 'Failed to load voices')
+            console.error('❌ Failed to load voices:', error)
+            if (error.message.includes('<!DOCTYPE')) {
+                setError('API endpoint not found. Please check if the server is running and voiceover routes are registered.')
+            } else {
+                setError(error.message || 'Failed to load voices')
+            }
         } finally {
             setIsLoadingVoices(false)
         }
@@ -371,11 +364,6 @@ const VoiceoverToolPanel = () => {
         executeCommand({ type: 'BATCH', payload: { commands } })
     }
 
-    const getVoiceCategories = () => {
-        const categories = [...new Set(voices.map(voice => voice.category))]
-        return categories.sort()
-    }
-
     const getWordCount = () => script.trim().split(/\s+/).filter(word => word.length > 0).length
     const getEstimatedDuration = () => Math.max(1, Math.ceil(getWordCount() * 0.6 / voiceSettings.speed))
 
@@ -478,7 +466,7 @@ const VoiceoverToolPanel = () => {
                     {/* Voice Tabs */}
                     <div className="flex border-b border-gray-200">
                         {[
-                            { key: 'discover', label: 'Discover', icon: Globe },
+                            { key: 'discover', label: 'All Voices', icon: Globe },
                             { key: 'favorites', label: 'Favorites', icon: Heart },
                             { key: 'recent', label: 'Recent', icon: Clock }
                         ].map(tab => (
@@ -501,47 +489,6 @@ const VoiceoverToolPanel = () => {
                             </button>
                         ))}
                     </div>
-
-                    {/* Search and Filters */}
-                    {activeTab === 'discover' && (
-                        <div className="space-y-3">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                                <input
-                                    type="text"
-                                    placeholder="Search voices by name, style, or language..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-                            
-                            <div className="flex gap-2">
-                                <select
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="all">All Categories</option>
-                                    {getVoiceCategories().map(category => (
-                                        <option key={category} value={category}>
-                                            {category.charAt(0).toUpperCase() + category.slice(1)}
-                                        </option>
-                                    ))}
-                                </select>
-                                
-                                <select
-                                    value={selectedGender}
-                                    onChange={(e) => setSelectedGender(e.target.value)}
-                                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="all">All Voices</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                </select>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Voice Grid */}
                     {isLoadingVoices ? (
@@ -621,8 +568,16 @@ const VoiceoverToolPanel = () => {
                                     <p>
                                         {activeTab === 'favorites' && 'No favorite voices yet'} 
                                         {activeTab === 'recent' && 'No recent voices yet'}
-                                        {activeTab === 'discover' && 'No voices found'}
+                                        {activeTab === 'discover' && 'No voices available'}
                                     </p>
+                                    {activeTab === 'discover' && (
+                                        <button
+                                            onClick={loadVoices}
+                                            className="mt-2 text-blue-600 hover:text-blue-700 text-sm"
+                                        >
+                                            Try again
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -734,6 +689,9 @@ const VoiceoverToolPanel = () => {
                 {error && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                         <p className="text-sm text-red-600">{error}</p>
+                        <div className="mt-2 text-xs text-gray-500">
+                            <strong>Debug info:</strong> Check browser console for detailed logs
+                        </div>
                     </div>
                 )}
 
