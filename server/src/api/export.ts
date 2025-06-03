@@ -8,6 +8,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import cron from 'node-cron'
 import { Request, Response } from 'express'
+import { supabase } from '../config/supabaseClient.js'
 
 // Configure FFmpeg path
 const isProduction = process.env.NODE_ENV === 'production'
@@ -140,8 +141,21 @@ const validateExportRequest = [
 // Asset URL fetching
 async function fetchAssetUrl(assetId: string, accessToken?: string): Promise<string> {
     try {
+        // First, fetch the asset from the database to get the object_key
+        const { data: asset, error } = await supabase
+            .from('assets')
+            .select('object_key')
+            .eq('id', assetId)
+            .single()
+
+        if (error || !asset) {
+            console.error(`Asset ${assetId} not found in database:`, error)
+            throw new Error(`Asset ${assetId} not found in database`)
+        }
+
+        // Generate signed URL using the object_key
         const bucket = storage.bucket(bucketName)
-        const file = bucket.file(`assets/${assetId}`)
+        const file = bucket.file(asset.object_key)
         
         // Generate signed URL valid for 1 hour
         const [url] = await file.getSignedUrl({
