@@ -474,6 +474,10 @@ export class VideoExporter {
                 const filesAfterInputs = await ffmpeg.listDir('/')
                 console.log('[VideoExporter] Files in FFmpeg FS after writing inputs:', filesAfterInputs)
                 for (const file of filesAfterInputs) {
+                    // Skip directory entries like "." and ".."
+                    if (file.name === '.' || file.name === '..' || file.isDir) {
+                        continue
+                    }
                     try {
                         const data = await ffmpeg.readFile(file.name)
                         let size = 0
@@ -657,7 +661,11 @@ export class VideoExporter {
                     
                     // Try to read FFmpeg logs if available
                     try {
-                        const logFiles = files.filter(f => f.name.includes('log') || f.name.includes('err'))
+                        const logFiles = files.filter(f => 
+                            !f.isDir && // Only include files, not directories
+                            f.name !== '.' && f.name !== '..' && // Skip directory references
+                            (f.name.includes('log') || f.name.includes('err'))
+                        )
                         for (const logFile of logFiles) {
                             try {
                                 const logContent = await ffmpeg.readFile(logFile.name)
