@@ -5,9 +5,9 @@ import { useParams } from 'next/navigation'
 import { v4 as uuid } from 'uuid'
 import { TrackType } from '@/types/editor'
 import { 
-    Mic, RefreshCw, Play, Plus, Volume2, Settings, Heart, Clock, 
-    FileText, Save, Wand2, Globe,
-    ChevronDown, ChevronUp, Sparkles, Copy
+    Mic, RefreshCw, Play, Volume2, Clock, 
+    FileText, Wand2, Globe,
+    Sparkles, Copy
 } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { apiPath } from '@/lib/config'
@@ -34,14 +34,6 @@ interface VoiceSettings {
     use_speaker_boost: boolean
     speed: number
     pitch: number
-}
-
-interface VoiceProfile {
-    id: string
-    name: string
-    voiceId: string
-    settings: VoiceSettings
-    createdAt: string
 }
 
 const SCRIPT_TEMPLATES = [
@@ -82,16 +74,13 @@ const VoiceoverToolPanel = () => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     
     // UI State
-    const [showAdvanced, setShowAdvanced] = useState(false)
     const [showTemplates, setShowTemplates] = useState(false)
-    const [activeTab, setActiveTab] = useState<'discover' | 'favorites' | 'recent'>('discover')
+    const [activeTab, setActiveTab] = useState<'all' | 'recent'>('all')
     
     // Voice management
-    const [favoriteVoices, setFavoriteVoices] = useState<string[]>([])
     const [recentVoices, setRecentVoices] = useState<string[]>([])
-    const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>([])
     
-    // Voice settings with advanced controls
+    // Voice settings
     const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
         stability: 0.5,
         similarity_boost: 0.5,
@@ -115,8 +104,6 @@ const VoiceoverToolPanel = () => {
     // Get voices for different tabs
     const getTabVoices = () => {
         switch (activeTab) {
-            case 'favorites':
-                return voices.filter(voice => favoriteVoices.includes(voice.id))
             case 'recent':
                 return recentVoices.map(id => voices.find(v => v.id === id)).filter(Boolean) as Voice[]
             default:
@@ -182,9 +169,7 @@ const VoiceoverToolPanel = () => {
         if (saved) {
             try {
                 const prefs = JSON.parse(saved)
-                setFavoriteVoices(prefs.favorites || [])
                 setRecentVoices(prefs.recent || [])
-                setVoiceProfiles(prefs.profiles || [])
             } catch (e) {
                 console.error('Failed to load preferences:', e)
             }
@@ -193,9 +178,7 @@ const VoiceoverToolPanel = () => {
 
     const saveUserPreferences = () => {
         const prefs = {
-            favorites: favoriteVoices,
-            recent: recentVoices,
-            profiles: voiceProfiles
+            recent: recentVoices
         }
         localStorage.setItem('voiceover-preferences', JSON.stringify(prefs))
     }
@@ -207,14 +190,6 @@ const VoiceoverToolPanel = () => {
         // Add to recent voices
         const newRecent = [voice.id, ...recentVoices.filter(id => id !== voice.id)].slice(0, 8)
         setRecentVoices(newRecent)
-        saveUserPreferences()
-    }
-
-    const toggleFavorite = (voiceId: string) => {
-        const newFavorites = favoriteVoices.includes(voiceId)
-            ? favoriteVoices.filter(id => id !== voiceId)
-            : [...favoriteVoices, voiceId]
-        setFavoriteVoices(newFavorites)
         saveUserPreferences()
     }
 
@@ -238,36 +213,6 @@ const VoiceoverToolPanel = () => {
         // TODO: Implement AI script enhancement
         setSuccessMessage('🧠 AI script enhancement coming soon!')
         setTimeout(() => setSuccessMessage(null), 3000)
-    }
-
-    const saveVoiceProfile = () => {
-        if (!selectedVoice) return
-        
-        const profileName = prompt('Enter a name for this voice profile:')
-        if (!profileName) return
-        
-        const newProfile: VoiceProfile = {
-            id: uuid(),
-            name: profileName,
-            voiceId: selectedVoice.id,
-            settings: voiceSettings,
-            createdAt: new Date().toISOString()
-        }
-        
-        setVoiceProfiles(prev => [...prev, newProfile])
-        saveUserPreferences()
-        setSuccessMessage(`✅ Voice profile "${profileName}" saved!`)
-        setTimeout(() => setSuccessMessage(null), 3000)
-    }
-
-    const loadVoiceProfile = (profile: VoiceProfile) => {
-        const voice = voices.find(v => v.id === profile.voiceId)
-        if (voice) {
-            setSelectedVoice(voice)
-            setVoiceSettings(profile.settings)
-            setSuccessMessage(`🎯 Loaded profile "${profile.name}"`)
-            setTimeout(() => setSuccessMessage(null), 2000)
-        }
     }
 
     const generateVoiceover = async () => {
@@ -364,12 +309,9 @@ const VoiceoverToolPanel = () => {
         executeCommand({ type: 'BATCH', payload: { commands } })
     }
 
-    const getWordCount = () => script.trim().split(/\s+/).filter(word => word.length > 0).length
-    const getEstimatedDuration = () => Math.max(1, Math.ceil(getWordCount() * 0.6 / voiceSettings.speed))
-
     return (
         <div className="flex flex-col gap-6 p-4 bg-white rounded-lg min-h-full">
-            <PanelHeader icon={Mic} title="AI Voiceover Studio" />
+            <PanelHeader icon={Mic} title="AI Voiceover" />
             
             <div className="space-y-6 flex-1">
                 {/* Script Section */}
@@ -417,7 +359,7 @@ const VoiceoverToolPanel = () => {
                             placeholder="Enter your script here... Use templates above or write your own content."
                             maxLength={5000}
                             className="w-full h-32 p-4 border border-gray-200 rounded-lg 
-                                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                                      transition-all duration-200 placeholder:text-gray-400 resize-none"
                         />
                         <div className="absolute top-2 right-2 flex gap-2">
@@ -441,8 +383,7 @@ const VoiceoverToolPanel = () => {
                     </div>
                     
                     <div className="flex justify-between text-xs text-gray-500">
-                        <span>{script.length}/5000 characters • {getWordCount()} words</span>
-                        <span>~{getEstimatedDuration()}s estimated</span>
+                        <span>{script.length}/5000 characters</span>
                     </div>
                 </div>
 
@@ -450,24 +391,12 @@ const VoiceoverToolPanel = () => {
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <label className="block text-base font-medium text-gray-700">Voice Selection</label>
-                        <div className="flex gap-2">
-                            {selectedVoice && (
-                                <button
-                                    onClick={saveVoiceProfile}
-                                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600"
-                                    title="Save voice profile"
-                                >
-                                    <Save size={14} />
-                                </button>
-                            )}
-                        </div>
                     </div>
 
                     {/* Voice Tabs */}
                     <div className="flex border-b border-gray-200">
                         {[
-                            { key: 'discover', label: 'All Voices', icon: Globe },
-                            { key: 'favorites', label: 'Favorites', icon: Heart },
+                            { key: 'all', label: 'All', icon: Globe },
                             { key: 'recent', label: 'Recent', icon: Clock }
                         ].map(tab => (
                             <button
@@ -481,9 +410,9 @@ const VoiceoverToolPanel = () => {
                             >
                                 <tab.icon size={16} />
                                 {tab.label}
-                                {tab.key === 'favorites' && favoriteVoices.length > 0 && (
-                                    <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">
-                                        {favoriteVoices.length}
+                                {tab.key === 'recent' && recentVoices.length > 0 && (
+                                    <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">
+                                        {recentVoices.length}
                                     </span>
                                 )}
                             </button>
@@ -512,9 +441,6 @@ const VoiceoverToolPanel = () => {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2">
                                                 <div className="font-semibold text-gray-900">{voice.name}</div>
-                                                {favoriteVoices.includes(voice.id) && (
-                                                    <Heart size={14} className="text-red-500 fill-current" />
-                                                )}
                                             </div>
                                             {voice.description && (
                                                 <div className="text-sm text-gray-600 mt-1">{voice.description}</div>
@@ -531,20 +457,6 @@ const VoiceoverToolPanel = () => {
                                             </div>
                                         </div>
                                         <div className="flex gap-1 ml-2">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    toggleFavorite(voice.id)
-                                                }}
-                                                className={`p-2 rounded-lg transition-colors ${
-                                                    favoriteVoices.includes(voice.id)
-                                                        ? 'text-red-500 bg-red-50 hover:bg-red-100'
-                                                        : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
-                                                }`}
-                                                title="Toggle favorite"
-                                            >
-                                                <Heart size={16} className={favoriteVoices.includes(voice.id) ? 'fill-current' : ''} />
-                                            </button>
                                             {voice.previewUrl && (
                                                 <button
                                                     onClick={(e) => {
@@ -566,124 +478,22 @@ const VoiceoverToolPanel = () => {
                                 <div className="text-center p-8 text-gray-500">
                                     <Volume2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                                     <p>
-                                        {activeTab === 'favorites' && 'No favorite voices yet'} 
-                                        {activeTab === 'recent' && 'No recent voices yet'}
-                                        {activeTab === 'discover' && 'No voices available'}
+                                        {activeTab === 'recent' && 'No recent voices yet'} 
+                                        {activeTab === 'all' && 'No voices available'}
                                     </p>
-                                    {activeTab === 'discover' && (
-                                        <button
+                                    {activeTab === 'all' && (
+                    <button
                                             onClick={loadVoices}
                                             className="mt-2 text-blue-600 hover:text-blue-700 text-sm"
                                         >
                                             Try again
-                                        </button>
+                    </button>
                                     )}
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
-
-                {/* Voice Profiles */}
-                {voiceProfiles.length > 0 && (
-                    <div className="space-y-3">
-                        <h6 className="text-sm font-semibold text-gray-700">Saved Voice Profiles</h6>
-                        <div className="grid gap-2">
-                            {voiceProfiles.slice(0, 3).map(profile => (
-                                <button
-                                    key={profile.id}
-                                    onClick={() => loadVoiceProfile(profile)}
-                                    className="p-3 text-left bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                                >
-                                    <div className="font-medium text-gray-900">{profile.name}</div>
-                                    <div className="text-xs text-gray-500">
-                                        {voices.find(v => v.id === profile.voiceId)?.name || 'Voice not found'}
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Advanced Settings */}
-                {selectedVoice && (
-                    <div className="space-y-3">
-                        <button
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
-                        >
-                            <Settings size={16} />
-                            Advanced Settings
-                            {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </button>
-                        
-                        {showAdvanced && (
-                            <div className="p-4 bg-gray-50 rounded-lg space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Stability: {voiceSettings.stability.toFixed(2)}
-                                        </label>
-                                        <input
-                                            type="range" min="0" max="1" step="0.01"
-                                            value={voiceSettings.stability}
-                                            onChange={(e) => setVoiceSettings(prev => ({ ...prev, stability: parseFloat(e.target.value) }))}
-                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                                        />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Clarity: {voiceSettings.similarity_boost.toFixed(2)}
-                                        </label>
-                                        <input
-                                            type="range" min="0" max="1" step="0.01"
-                                            value={voiceSettings.similarity_boost}
-                                            onChange={(e) => setVoiceSettings(prev => ({ ...prev, similarity_boost: parseFloat(e.target.value) }))}
-                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                                        />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Style: {voiceSettings.style.toFixed(2)}
-                                        </label>
-                                        <input
-                                            type="range" min="0" max="1" step="0.01"
-                                            value={voiceSettings.style}
-                                            onChange={(e) => setVoiceSettings(prev => ({ ...prev, style: parseFloat(e.target.value) }))}
-                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                                        />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-700">
-                                            Speed: {voiceSettings.speed.toFixed(1)}x
-                                        </label>
-                                        <input
-                                            type="range" min="0.5" max="2.0" step="0.1"
-                                            value={voiceSettings.speed}
-                                            onChange={(e) => setVoiceSettings(prev => ({ ...prev, speed: parseFloat(e.target.value) }))}
-                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                                        />
-                                    </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox" id="speaker-boost"
-                                        checked={voiceSettings.use_speaker_boost}
-                                        onChange={(e) => setVoiceSettings(prev => ({ ...prev, use_speaker_boost: e.target.checked }))}
-                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    />
-                                    <label htmlFor="speaker-boost" className="text-sm font-medium text-gray-700">
-                                        Enhanced Voice Clarity
-                                    </label>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
 
                 {/* Messages */}
                 {error && (
@@ -703,14 +513,7 @@ const VoiceoverToolPanel = () => {
             </div>
 
             {/* Generate Button */}
-            <div className="pt-4 border-t border-gray-200 bg-white space-y-3">
-                {selectedVoice && (
-                    <div className="flex items-center justify-between text-sm text-gray-600">
-                        <span>Using: <strong>{selectedVoice.name}</strong></span>
-                        <span>{getWordCount()} words → ~{getEstimatedDuration()}s</span>
-                    </div>
-                )}
-                
+            <div className="pt-4 border-t border-gray-200 bg-white">
                 <button
                     onClick={generateVoiceover}
                     disabled={!script.trim() || !selectedVoice || isGenerating}

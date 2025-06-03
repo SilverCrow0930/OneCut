@@ -1,34 +1,68 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { useEditor } from '@/contexts/EditorContext'
 import type { Clip } from '@/types/editor'
 import ClipMenu from './ClipMenu'
 
+interface PreloadedMedia {
+    clipId: string
+    element: HTMLVideoElement | HTMLImageElement | HTMLAudioElement
+    url: string
+    isReady: boolean
+    lastUsed: number
+}
+
 interface ClipLayerProps {
     clip: Clip
     sourceTime?: number
+    preloadedMedia?: PreloadedMedia | null
 }
 
-export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
+export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime, preloadedMedia }: ClipLayerProps) {
     const { currentTime, isPlaying } = usePlayback()
     const { selectedClipId, selectedClipIds, setSelectedClipId, setSelectedClipIds } = useEditor()
     const localMs = currentTime * 1000 - clip.timelineStartMs
     const durationMs = clip.timelineEndMs - clip.timelineStartMs
     const videoRef = useRef<HTMLVideoElement>(null)
     const lastUpdateRef = useRef<number>(0)
-    const targetTimeRef = useRef<number>(0)
-    const updateIntervalRef = useRef<number>(0)
+    const lastSeekTimeRef = useRef<number>(0)
 
-    // Crop area state
-    const [crop, setCrop] = useState({
+    // Memoize selection state calculations
+    const selectionState = useMemo(() => ({
+        isSelected: selectedClipId === clip.id,
+        isInMultiSelection: selectedClipIds.includes(clip.id),
+        isMultiSelectionActive: selectedClipIds.length > 1
+    }), [selectedClipId, selectedClipIds, clip.id])
+
+    const { isSelected, isInMultiSelection, isMultiSelectionActive } = selectionState
+    const isPrimarySelection = isSelected && !isMultiSelectionActive
+
+    // Early return if clip is not in view
+    if (localMs < 0 || localMs > durationMs) {
+        return null
+    }
+
+    const { url } = useAssetUrl(clip.assetId)
+    const externalAsset = clip.properties?.externalAsset
+    
+    // 🚀 Use preloaded media URL if available, otherwise fall back to regular URL
+    const mediaUrl = preloadedMedia?.url || externalAsset?.url || url
+
+    // 🚀 Check if we have a ready preloaded element
+    const hasPreloadedElement = preloadedMedia?.isReady && 
+                               preloadedMedia.element && 
+                               preloadedMedia.element.src === mediaUrl
+
+    // Memoize crop state initialization
+    const [crop, setCrop] = useState(() => ({
         width: clip.type === 'text' || clip.type === 'caption' ? 300 : 320,
         height: clip.type === 'text' || clip.type === 'caption' ? 80 : 180,
         left: 0,
         top: 0
-    }) // Smaller default size for text/captions
+    }))
 
-    // Pan/zoom state for media inside crop
+    // Other state with better defaults
     const [mediaPos, setMediaPos] = useState({ x: 0, y: 0 })
     const [mediaScale, setMediaScale] = useState(1)
     const [isPanning, setIsPanning] = useState(false)
@@ -37,57 +71,278 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const [isResizing, setIsResizing] = useState(false)
     const [resizeType, setResizeType] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null)
     const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, left: 0, top: 0 })
-
-    // Drag state for moving the crop area
     const [isDraggingCrop, setIsDraggingCrop] = useState(false)
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 })
-
-    const isSelected = selectedClipId === clip.id
-    const isInMultiSelection = selectedClipIds.includes(clip.id)
-    const isMultiSelectionActive = selectedClipIds.length > 1
-    const isPrimarySelection = isSelected && !isMultiSelectionActive
-    console.log('Clip selection state:', { clipId: clip.id, selectedClipId, isSelected, isInMultiSelection, isMultiSelectionActive })
-
-    // Only render if the playhead is inside this clip's window
-    if (localMs < 0 || localMs > durationMs) {
-        return null
-    }
-
-    const { url } = useAssetUrl(clip.assetId)
-
-    // Check if this is an external asset
-    const externalAsset = clip.properties?.externalAsset
-    const mediaUrl = externalAsset?.url || url
-
-    console.log('ClipLayer render:', { 
-        clipId: clip.id, 
-        assetId: clip.assetId, 
-        isExternal: !!externalAsset,
-        mediaUrl,
-        externalAsset 
-    })
-
-    // Get asset aspect ratio
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
+
+    // Memoize click handler
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (isPanning || isResizing || isDraggingCrop) return
+
+        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+            // Multi-selection mode
+            let newSelection: string[]
+            if (selectedClipIds.includes(clip.id)) {
+                newSelection = selectedClipIds.filter(id => id !== clip.id)
+            } else {
+                newSelection = [...selectedClipIds, clip.id]
+            }
+            setSelectedClipIds(newSelection)
+            
+            if (newSelection.includes(clip.id)) {
+                setSelectedClipId(clip.id)
+            } else if (newSelection.length > 0) {
+                setSelectedClipId(newSelection[newSelection.length - 1])
+            } else {
+                setSelectedClipId(null)
+            }
+        } else {
+            if (selectedClipIds.length > 1) {
+                setSelectedClipIds([])
+            }
+            setSelectedClipId(clip.id)
+        }
+    }, [clip.id, selectedClipIds, setSelectedClipIds, setSelectedClipId, isPanning, isResizing, isDraggingCrop])
+
+    // Get aspect ratio only when needed
     useEffect(() => {
         if (clip.type === 'video' && mediaUrl) {
             const media = document.createElement('video')
             media.src = mediaUrl
-            media.addEventListener('loadedmetadata', () => {
+            const handler = () => {
                 if (media.videoWidth && media.videoHeight) {
                     setAspectRatio(media.videoWidth / media.videoHeight)
                 }
-            })
+                media.removeEventListener('loadedmetadata', handler)
+            }
+            media.addEventListener('loadedmetadata', handler)
         } else if (clip.type === 'image' && mediaUrl) {
             const media = document.createElement('img')
             media.src = mediaUrl
-            media.addEventListener('load', () => {
+            const handler = () => {
                 if (media.naturalWidth && media.naturalHeight) {
                     setAspectRatio(media.naturalWidth / media.naturalHeight)
                 }
-            })
+                media.removeEventListener('load', handler)
+            }
+            media.addEventListener('load', handler)
         }
     }, [mediaUrl, clip.type])
+
+    // Optimized video playback effect with preloading support
+    useEffect(() => {
+        const v = videoRef.current;
+        if (!v || clip.type !== 'video') return;
+
+        // 🚀 If we have a preloaded video element, try to use it
+        if (hasPreloadedElement && preloadedMedia?.element instanceof HTMLVideoElement) {
+            const preloadedVideo = preloadedMedia.element
+            
+            // Copy properties from preloaded element to our ref
+            if (preloadedVideo.src && preloadedVideo.src !== v.src) {
+                v.src = preloadedVideo.src
+                console.log('🚀 Using preloaded video for instant playback:', clip.id)
+            }
+            
+            // If the preloaded video already has metadata loaded, we can skip some loading time
+            if (preloadedVideo.readyState >= 2 && v.readyState < 2) {
+                // Preloaded video is ready, sync our element
+                v.currentTime = preloadedVideo.currentTime
+            }
+        }
+
+        const targetTime = sourceTime !== undefined ? sourceTime : Math.max(0, localMs / 1000);
+        const now = performance.now();
+        
+        // More conservative seeking - only seek if really necessary
+        const timeDiff = Math.abs(v.currentTime - targetTime);
+        const shouldSeek = timeDiff > 0.15 && // Larger threshold
+                          now - lastUpdateRef.current > 100 && // Less frequent updates
+                          now - lastSeekTimeRef.current > 200 && // Prevent rapid seeking
+                          v.readyState >= 2 && 
+                          !v.seeking;
+
+        if (shouldSeek) {
+            v.currentTime = targetTime;
+            lastUpdateRef.current = now;
+            lastSeekTimeRef.current = now;
+        }
+
+        // Handle playback state changes
+        if (isPlaying && v.paused) {
+            v.volume = clip.volume || 1;
+            v.muted = false;
+            v.playbackRate = clip.speed || 1;
+            
+            const playPromise = v.play();
+            playPromise?.catch((error) => {
+                if (error.name === 'AbortError') {
+                    v.muted = true;
+                    v.play().catch(() => {});
+                }
+            });
+        } else if (!isPlaying && !v.paused) {
+            v.pause();
+        }
+    }, [sourceTime, localMs, clip.type, clip.volume, clip.speed, isPlaying, hasPreloadedElement, preloadedMedia]);
+
+    // Remove individual audio handling - this will be handled by AudioContext
+    // Audio clips will be managed by the centralized AudioProvider
+
+    // Memoize render content with preloading optimizations
+    const renderContent = useMemo(() => {
+        const style = {
+            position: 'absolute' as const,
+            left: '50%',
+            top: '50%',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover' as const,
+            transform: `translate(-50%, -50%) scale(${mediaScale})`,
+            userSelect: 'none' as const,
+        }
+
+        switch (clip.type) {
+            case 'video':
+                return (
+                    <video
+                        ref={videoRef}
+                        src={mediaUrl!}
+                        style={style}
+                        preload={hasPreloadedElement ? "none" : "metadata"} // Skip preload if we already have it
+                        playsInline
+                        muted={false}
+                        onClick={handleClick}
+                        draggable={false}
+                    />
+                )
+            case 'audio':
+                // Audio clips are now handled by AudioContext
+                return (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            background: 'rgba(34, 197, 94, 0.8)',
+                            borderRadius: '8px',
+                            padding: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '120px',
+                            minHeight: '60px'
+                        }}
+                        onClick={handleClick}
+                    >
+                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                        </svg>
+                    </div>
+                )
+            case 'image':
+                // 🚀 For images, we can directly use the preloaded element if available
+                const imageElement = hasPreloadedElement && preloadedMedia?.element instanceof HTMLImageElement 
+                    ? preloadedMedia.element 
+                    : undefined;
+                
+                return (
+                    <img
+                        src={mediaUrl!}
+                        style={style}
+                        onClick={handleClick}
+                        draggable={false}
+                        loading={imageElement ? "eager" : "lazy"} // Load eagerly if preloaded
+                        onLoad={() => {
+                            if (imageElement) {
+                                console.log('🚀 Using preloaded image for instant display:', clip.id)
+                            }
+                        }}
+                    />
+                )
+            case 'text':
+            case 'caption':
+                // Text rendering logic - unchanged for now
+                const placement = clip.properties?.placement || 'middle'
+                let textPosition = {}
+                switch (placement) {
+                    case 'top':
+                        textPosition = { top: '15%', transform: 'translateY(0%)' }
+                        break
+                    case 'bottom':
+                        textPosition = { bottom: '15%', transform: 'translateY(0%)' }
+                        break
+                    case 'middle':
+                    default:
+                        textPosition = { top: '50%', transform: 'translateY(-50%)' }
+                        break
+                }
+
+                const renderCaptionText = () => {
+                    const text = clip.properties?.text || (clip.type === 'caption' ? 'Caption Clip' : 'Text Clip')
+                    
+                    if (clip.type === 'caption' && text.includes('<span color=')) {
+                        const parts = text.split(/(<span color="[^"]*">.*?<\/span>)/g)
+                        return parts.map((part: string, index: number) => {
+                            const spanMatch = part.match(/<span color="([^"]*)">(.*?)<\/span>/)
+                            if (spanMatch) {
+                                const [, color, highlightedText] = spanMatch
+                                return (
+                                    <span key={index} style={{ color, fontWeight: 'bold' }}>
+                                        {highlightedText}
+                                    </span>
+                                )
+                            }
+                            return part
+                        })
+                    }
+                    return text
+                }
+
+                return (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            ...textPosition,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1000,
+                            width: '100%',
+                            height: '100%',
+                        }}
+                        onClick={handleClick}
+                    >
+                        <div
+                            style={{
+                                ...clip.properties?.style,
+                                textAlign: 'center',
+                                lineHeight: '1.4',
+                                padding: '0.5rem',
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                overflow: 'hidden',
+                                fontSize: clip.properties?.style?.fontSize || 
+                                    `${Math.max(16, Math.min(32, crop.width / 12))}px`,
+                            }}
+                        >
+                            {renderCaptionText()}
+                        </div>
+                    </div>
+                )
+            default:
+                return null
+        }
+    }, [clip.type, clip.properties, mediaUrl, mediaScale, crop.width, handleClick, hasPreloadedElement, preloadedMedia])
 
     // --- Crop area resizing ---
     const handleResizeStart = (e: React.MouseEvent, type: 'nw' | 'ne' | 'sw' | 'se') => {
@@ -103,6 +358,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             top: crop.top
         })
     }
+    
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (isResizing) {
@@ -204,236 +460,10 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
 
     // --- Crop area dragging ---
     const handleCropMouseDown = (e: React.MouseEvent) => {
-        e.stopPropagation()
+        if (isResizing) return
         setIsDraggingCrop(true)
         setDragStart({ x: e.clientX, y: e.clientY, left: crop.left, top: crop.top })
     }
-
-    // --- Selection ---
-    const handleClick = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        
-        // Handle multi-selection with Ctrl/Cmd key
-        if (e.ctrlKey || e.metaKey) {
-            const isCurrentlySelected = selectedClipIds.includes(clip.id)
-            if (isCurrentlySelected) {
-                // Remove from selection
-                const newSelection = selectedClipIds.filter(id => id !== clip.id)
-                setSelectedClipIds(newSelection)
-                if (newSelection.length === 1) {
-                    setSelectedClipId(newSelection[0])
-                } else {
-                    setSelectedClipId(null)
-                }
-            } else {
-                // Add to selection
-                const newSelection = [...selectedClipIds, clip.id]
-                setSelectedClipIds(newSelection)
-                setSelectedClipId(clip.id) // Set as primary selection
-            }
-        } else {
-            // Normal single selection
-            setSelectedClipIds([clip.id])
-            setSelectedClipId(clip.id)
-        }
-    }
-
-    // --- Render media inside crop ---
-    const renderContent = () => {
-        const style = {
-            position: 'absolute' as const,
-            left: '50%',
-            top: '50%',
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover' as const,
-            transform: `translate(-50%, -50%) scale(${mediaScale})`,
-            userSelect: 'none' as const,
-        }
-
-        switch (clip.type) {
-            case 'video':
-                return (
-                    <video
-                        ref={videoRef}
-                        src={mediaUrl!}
-                        style={style}
-                        preload="auto"
-                        playsInline
-                        muted={false}
-                        onClick={handleClick}
-                        draggable={false}
-                    />
-                )
-            case 'image':
-                return (
-                    <img
-                        src={mediaUrl!}
-                        style={style}
-                        onClick={handleClick}
-                        draggable={false}
-                    />
-                )
-            case 'text':
-            case 'caption':
-                // Get placement from properties, default to middle
-                const placement = clip.properties?.placement || 'middle'
-                
-                // Calculate position based on placement
-                let textPosition = {}
-                switch (placement) {
-                    case 'top':
-                        textPosition = {
-                            top: '15%',
-                            transform: 'translateY(0%)',
-                        }
-                        break
-                    case 'bottom':
-                        textPosition = {
-                            bottom: '15%',
-                            transform: 'translateY(0%)',
-                        }
-                        break
-                    case 'middle':
-                    default:
-                        textPosition = {
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                        }
-                        break
-                }
-
-                // Render highlighted text for captions
-                const renderCaptionText = () => {
-                    const text = clip.properties?.text || (clip.type === 'caption' ? 'Caption Clip' : 'Text Clip')
-                    
-                    // Check if this is highlighted caption text
-                    if (clip.type === 'caption' && text.includes('<span color=')) {
-                        // Parse highlighted text
-                        const parts = text.split(/(<span color="[^"]*">.*?<\/span>)/g)
-                        
-                        return parts.map((part: string, index: number) => {
-                            const spanMatch = part.match(/<span color="([^"]*)">(.*?)<\/span>/)
-                            if (spanMatch) {
-                                const [, color, highlightedText] = spanMatch
-                                return (
-                                    <span key={index} style={{ color, fontWeight: 'bold' }}>
-                                        {highlightedText}
-                                    </span>
-                                )
-                            }
-                            return part
-                        })
-                    }
-                    
-                    return text
-                }
-
-                return (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            left: 0,
-                            right: 0,
-                            ...textPosition,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 1000,
-                            width: '100%',
-                            height: '100%',
-                        }}
-                        onClick={handleClick}
-                    >
-                        <div
-                            style={{
-                                ...clip.properties?.style,
-                                textAlign: 'center',
-                                lineHeight: '1.4',
-                                padding: '0.5rem',
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                overflow: 'hidden',
-                                // Only apply responsive font size if no custom font size is set
-                                fontSize: clip.properties?.style?.fontSize || 
-                                    `${Math.max(16, Math.min(32, crop.width / 12))}px`,
-                            }}
-                        >
-                            {renderCaptionText()}
-                        </div>
-                    </div>
-                )
-            default:
-                return null
-        }
-    }
-
-    useEffect(() => {
-        const v = videoRef.current;
-        if (!v || clip.type !== 'video') return;
-
-        let playPromise: Promise<void> | undefined;
-
-        // Calculate target time
-        const targetTime = sourceTime !== undefined
-            ? sourceTime
-            : Math.max(0, localMs / 1000);
-
-        // Check if we need to seek (only seek if time difference is significant)
-        const timeDiff = Math.abs(v.currentTime - targetTime);
-        const now = performance.now();
-        
-        // Only seek if:
-        // 1. Time difference is > 0.05 seconds (smaller threshold for better audio sync)
-        // 2. Enough time has passed since last update (prevent too frequent seeks)
-        // 3. Video is ready and not currently seeking
-        if (timeDiff > 0.05 && now - lastUpdateRef.current > 80 && v.readyState >= 2 && !v.seeking) {
-            v.currentTime = targetTime;
-            lastUpdateRef.current = now;
-            targetTimeRef.current = targetTime;
-        }
-
-        // Handle playback state
-        if (isPlaying) {
-            // Ensure audio is enabled for better sync
-            v.volume = 1;
-            v.muted = false;
-            
-            // Set playback rate to ensure smooth audio
-            v.playbackRate = 1;
-            
-            // Only call play() if video is paused to avoid interrupting playback
-            if (v.paused) {
-                playPromise = v.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch((error) => {
-                        // Handle autoplay restrictions
-                        if (error.name === 'AbortError' && document.contains(v)) {
-                            v.muted = true;
-                            v.play().catch(() => { }); // Ignore subsequent errors
-                        }
-                    });
-                }
-            }
-        } else {
-            // Only pause if currently playing to avoid unnecessary state changes
-            if (!v.paused) {
-                v.pause();
-            }
-        }
-
-        // Cleanup function
-        return () => {
-            if (playPromise) {
-                playPromise.catch(() => { }); // Prevent unhandled promise rejection
-            }
-        };
-    }, [sourceTime, localMs, clip.type, isPlaying]);
 
     // Center crop area in player on first render
     useEffect(() => {
@@ -523,7 +553,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                     style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}
                     onMouseDown={handleCropMouseDown}
                 >
-                    {renderContent()}
+                    {renderContent}
                 </div>
                 {isPrimarySelection && (
                     <>
@@ -557,4 +587,4 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             </div>
         </div>
     )
-}
+})
