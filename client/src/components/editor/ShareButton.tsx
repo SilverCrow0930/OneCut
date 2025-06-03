@@ -7,6 +7,32 @@ import ExportStatusModal from './ExportStatusModal'
 import { VideoExporter } from '../VideoExporter'
 import { useAuth } from '@/contexts/AuthContext'
 import { exportService } from '@/services/export'
+import type { Clip, Track } from '@/types/editor'
+
+// Type conversion functions
+const convertClipsForExport = (clips: Clip[]) => {
+    return clips.map(clip => ({
+        id: clip.id,
+        type: clip.type === 'caption' ? 'text' : clip.type as 'video' | 'image' | 'audio' | 'text',
+        assetId: clip.assetId,
+        trackId: clip.trackId,
+        timelineStartMs: clip.timelineStartMs,
+        timelineEndMs: clip.timelineEndMs,
+        sourceStartMs: clip.sourceStartMs,
+        sourceEndMs: clip.sourceEndMs,
+        speed: clip.speed,
+        properties: clip.properties
+    }))
+}
+
+const convertTracksForExport = (tracks: Track[]) => {
+    return tracks.map(track => ({
+        id: track.id,
+        index: track.index,
+        type: track.type === 'caption' ? 'text' : track.type as 'video' | 'audio' | 'image' | 'text',
+        name: `Track ${track.index + 1}` // Generate a name since Track doesn't have one
+    }))
+}
 
 const ShareButton = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -122,12 +148,16 @@ const ShareButton = () => {
         try {
             if (useServerExport) {
                 // Use server-side export
-                const result = await exportService.startExport(clips, tracks, {
-                    resolution: selectedExportType as '480p' | '720p' | '1080p',
-                    fps: 30,
-                    quality: quickExport ? 'low' : 'medium',
-                    quickExport
-                })
+                const result = await exportService.startExport(
+                    convertClipsForExport(clips), 
+                    convertTracksForExport(tracks), 
+                    {
+                        resolution: selectedExportType as '480p' | '720p' | '1080p',
+                        fps: 30,
+                        quality: quickExport ? 'low' : 'medium',
+                        quickExport
+                    }
+                )
 
                 if (result.success && result.jobId) {
                     setCurrentJobId(result.jobId)
