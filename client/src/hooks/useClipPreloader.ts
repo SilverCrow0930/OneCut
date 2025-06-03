@@ -19,16 +19,32 @@ interface UseClipPreloaderOptions {
 const preloadedMediaMap = new Map<string, PreloadedMedia>()
 let cleanupInterval: NodeJS.Timeout | null = null
 
-// Helper function to get asset URL
+// Helper function to get asset URL with better error handling
 async function getAssetUrl(assetId: string): Promise<string | null> {
     try {
+        // Validate asset ID format
+        if (!assetId || assetId.length < 10) {
+            console.warn('Invalid asset ID format:', assetId)
+            return null
+        }
+
+        console.log('🔍 Fetching asset URL for:', assetId)
         const response = await fetch(`/api/v1/assets/${assetId}/url`)
-        if (!response.ok) return null
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.warn(`📭 Asset not found (404): ${assetId}`)
+                return null
+            }
+            console.warn(`⚠️ Asset URL fetch failed (${response.status}): ${assetId}`)
+            return null
+        }
         
         const data = await response.json()
+        console.log('✅ Asset URL fetched successfully:', assetId, '→', data.url ? 'URL received' : 'No URL in response')
         return data.url || null
     } catch (error) {
-        console.warn('Failed to fetch asset URL:', error)
+        console.warn('❌ Failed to fetch asset URL:', assetId, error)
         return null
     }
 }
@@ -48,19 +64,49 @@ export function useClipPreloader(
 
     const lastCleanupRef = useRef<number>(0)
 
-    // Identify clips that should be preloaded
+    // Identify clips that should be preloaded with better validation
     const clipsToPreload = useMemo(() => {
-        return clips.filter(clip => {
+        const candidateClips = clips.filter(clip => {
+            // Basic validation
+            if (!clip || !clip.id) {
+                return false
+            }
+
+            // Only preload media clips (including stickers which are image type)
+            if (!['video', 'image', 'audio'].includes(clip.type)) {
+                return false
+            }
+
+            // For external assets (like stickers), we need the external asset URL
+            // For regular assets, we need an assetId
+            const hasExternalAsset = clip.properties?.externalAsset?.url
+            const hasRegularAsset = clip.assetId
+
+            if (!hasExternalAsset && !hasRegularAsset) {
+                return false
+            }
+
+            // Check timeline positioning
             const timeUntilClip = clip.timelineStartMs - currentTimeMs
             const clipHasPassed = clip.timelineEndMs < currentTimeMs
-            
+
             // Preload clips that will start within the window and haven't passed yet
-            return timeUntilClip > 0 && 
-                   timeUntilClip <= preloadWindowMs && 
-                   !clipHasPassed &&
-                   (clip.type === 'video' || clip.type === 'image' || clip.type === 'audio') &&
-                   clip.assetId // Only preload clips with assets
-        }).slice(0, maxPreloadedItems) // Limit total items
+            const shouldPreload = timeUntilClip > 0 && 
+                                timeUntilClip <= preloadWindowMs && 
+                                !clipHasPassed
+
+            if (shouldPreload) {
+                const assetType = hasExternalAsset ? 'external' : 'regular'
+                console.log(`📋 Clip queued for preload: ${clip.id} (${clip.type}, ${assetType}) - starts in ${Math.round(timeUntilClip / 1000)}s`)
+            }
+
+            return shouldPreload
+        })
+
+        // Sort by timeline start time (earliest first) and limit total items
+        return candidateClips
+            .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+            .slice(0, maxPreloadedItems)
     }, [clips, currentTimeMs, preloadWindowMs, maxPreloadedItems])
 
     // Create preload elements for upcoming clips
@@ -69,8 +115,8 @@ export function useClipPreloader(
 
         const preloadClips = async () => {
             for (const clip of clipsToPreload) {
-                if (!isEffectActive || !clip.assetId || preloadedMediaMap.has(clip.id)) {
-                    continue // Skip if effect is no longer active, already preloading, or no asset
+                if (!isEffectActive || preloadedMediaMap.has(clip.id)) {
+                    continue // Skip if effect is no longer active or already preloading
                 }
 
                 try {
@@ -80,9 +126,17 @@ export function useClipPreloader(
 
                     if (externalAsset?.url) {
                         url = externalAsset.url
-                    } else {
-                        // Get the asset URL from the API
+                        console.log(`📍 Using external asset URL for clip ${clip.id} (${externalAsset.isExternal ? 'sticker/external' : 'external'})`)
+                    } else if (clip.assetId) {
+                        // Get the asset URL from the API with error handling
                         url = await getAssetUrl(clip.assetId)
+                        if (!url) {
+                            console.warn(`⚠️ Skipping clip ${clip.id} - no valid asset URL available`)
+                            continue
+                        }
+                    } else {
+                        console.warn(`⚠️ Skipping clip ${clip.id} - no asset ID or external asset URL`)
+                        continue
                     }
 
                     if (!isEffectActive || !url) continue // Check again after async operation
@@ -139,7 +193,7 @@ export function useClipPreloader(
                     }
 
                     const onError = (error: any) => {
-                        console.warn(`⚠️ Failed to preload clip ${clip.id}:`, error)
+                        console.warn(`⚠️ Failed to preload clip ${clip.id} (${clip.type}):`, error?.message || error)
                         if (preloadedMediaMap.has(clip.id)) {
                             preloadedMediaMap.delete(clip.id)
                         }
@@ -157,7 +211,12 @@ export function useClipPreloader(
                     element.src = url
 
                 } catch (error) {
-                    console.warn(`Failed to preload clip ${clip.id}:`, error)
+                    const errorMessage = error instanceof Error ? error.message : String(error)
+                    console.warn(`❌ Failed to preload clip ${clip.id} (${clip.type}):`, {
+                        error: errorMessage,
+                        assetId: clip.assetId,
+                        hasExternalAsset: !!clip.properties?.externalAsset
+                    })
                 }
             }
         }

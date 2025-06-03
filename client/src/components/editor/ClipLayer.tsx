@@ -139,19 +139,48 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime, prelo
 
         const setupVideo = async () => {
             try {
-                // 🚀 If we have a preloaded video element, try to use it
                 if (hasPreloadedElement && preloadedMedia?.element instanceof HTMLVideoElement) {
                     const preloadedVideo = preloadedMedia.element
+                    console.log(`📺 Using preloaded video element for clip ${clip.id}`)
                     
-                    // Only update src if it's different and component is still mounted
-                    if (isMounted && preloadedVideo.src && preloadedVideo.src !== v.src) {
-                        v.src = preloadedVideo.src
-                        console.log('🚀 Using preloaded video for instant playback:', clip.id)
-                        
-                        // Wait for the video to be ready before proceeding
-                        if (preloadedVideo.readyState >= 2) {
-                            v.currentTime = preloadedVideo.currentTime
-                        }
+                    // Use the preloaded video element directly
+                    v.src = preloadedVideo.src
+                    console.log('🚀 Using preloaded video for instant playback:', clip.id)
+                    
+                    // Sync properties
+                    preloadedVideo.currentTime = (sourceTime || 0) / 1000
+                    preloadedVideo.volume = clip.volume || 1
+                    preloadedVideo.playbackRate = clip.speed || 1
+                    preloadedVideo.muted = false
+
+                    if (isPlaying && !preloadedVideo.paused) {
+                        // Already playing, just ensure sync
+                    } else if (isPlaying) {
+                        preloadedVideo.play().catch(console.warn)
+                    } else {
+                        preloadedVideo.pause()
+                    }
+                } else {
+                    console.log(`📺 Creating new video element for clip ${clip.id}:`, {
+                        hasPreloadedElement,
+                        mediaUrl,
+                        reason: !hasPreloadedElement ? 'no preloaded element' : 
+                               !preloadedMedia?.element ? 'no element in preload' :
+                               !(preloadedMedia.element instanceof HTMLVideoElement) ? 'not video element' : 'unknown'
+                    })
+                    
+                    // Create new video element as fallback
+                    v.src = mediaUrl || ''
+                    v.currentTime = (sourceTime || 0) / 1000
+                    v.volume = clip.volume || 1
+                    v.playbackRate = clip.speed || 1
+                    v.preload = 'metadata'
+                    v.playsInline = true
+                    v.crossOrigin = 'anonymous'
+                    v.muted = false
+
+                    if (isPlaying) {
+                        v.play().catch(console.warn)
                     }
                 }
 
@@ -548,6 +577,22 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime, prelo
             });
         }
     }, [clip.type, clip.properties?.placement]);
+
+    // Debug logging for preloaded media
+    useEffect(() => {
+        if (clip.type === 'video' || clip.type === 'audio') {
+            console.log(`🔍 Media analysis for clip ${clip.id}:`, {
+                type: clip.type,
+                hasPreloadedMedia: !!preloadedMedia,
+                preloadedIsReady: preloadedMedia?.isReady,
+                hasElement: !!preloadedMedia?.element,
+                srcMatches: preloadedMedia?.element?.src === mediaUrl,
+                mediaUrl,
+                preloadedSrc: preloadedMedia?.element?.src,
+                hasPreloadedElement
+            })
+        }
+    }, [clip.id, clip.type, preloadedMedia, mediaUrl, hasPreloadedElement])
 
     // --- Main render ---
     return (
