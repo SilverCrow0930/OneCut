@@ -102,22 +102,52 @@ export function useAssetUrl(assetId?: string) {
 
         const fetchUrl = async () => {
             try {
+                // Check cache first
+                const cachedUrl = await getFromCache(assetId)
+                if (cachedUrl) {
+                    setUrl(cachedUrl)
+                    setLoading(false)
+                    return
+                }
+
                 const response = await fetch(apiPath(`assets/${assetId}/url`), {
                     headers: {
                         'Authorization': `Bearer ${session?.access_token}`
                     }
                 })
-                if (!response.ok) throw new Error('Failed to fetch asset URL')
+                
+                if (!response.ok) {
+                    // Don't spam console with the same error
+                    const cached = memoryCache.get(assetId)
+                    if (!cached || (Date.now() - cached.timestamp) > 30000) { // Log once per 30 seconds
+                        console.error(`[useAssetUrl] Asset ${assetId} not found (${response.status})`)
+                    }
+                    setUrl(null)
+                    setLoading(false)
+                    return
+                }
+                
                 const data = await response.json()
-                setUrl(data.url)
+                const assetUrl = data.url
+                
+                if (assetUrl) {
+                    await saveToCache(assetId, assetUrl)
+                }
+                
+                setUrl(assetUrl)
             } catch (error) {
-                console.error('Error fetching asset URL:', error)
+                // Don't spam console with the same error
+                const cached = memoryCache.get(assetId)
+                if (!cached || (Date.now() - cached.timestamp) > 30000) { // Log once per 30 seconds
+                    console.error(`[useAssetUrl] Error fetching asset URL for ${assetId}:`, error)
+                }
                 setUrl(null)
             } finally {
                 setLoading(false)
             }
         }
 
+        setLoading(true)
         fetchUrl()
     }, [assetId, session?.access_token])
 

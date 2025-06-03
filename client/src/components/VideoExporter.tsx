@@ -102,32 +102,63 @@ export class VideoExporter {
 
     private async loadAssetUrls() {
         try {
-            const assetIds = this.clips
-                .filter(clip => (clip.type === 'video' || clip.type === 'image' || clip.type === 'audio') && clip.assetId)
-                .map(clip => clip.assetId!)
+            // Separate external and regular assets
+            const allAssets = this.clips.filter(clip => 
+                (clip.type === 'video' || clip.type === 'image' || clip.type === 'audio') && clip.assetId
+            )
+            
+            const externalAssets = allAssets.filter(clip => clip.assetId!.startsWith('external_'))
+            const regularAssets = allAssets.filter(clip => !clip.assetId!.startsWith('external_'))
+            
+            console.log('[VideoExporter] Found assets:', {
+                total: allAssets.length,
+                external: externalAssets.length,
+                regular: regularAssets.length
+            })
 
-            if (assetIds.length === 0) {
-                throw new Error('No valid assets found in clips')
+            this.assetUrls = new Map()
+
+            // Handle external assets - get URLs from clip properties
+            externalAssets.forEach(clip => {
+                const externalAsset = clip.properties?.externalAsset
+                if (externalAsset && externalAsset.url) {
+                    this.assetUrls.set(clip.assetId!, externalAsset.url)
+                    console.log(`[VideoExporter] Using embedded URL for external asset: ${clip.assetId}`)
+                } else {
+                    console.error(`[VideoExporter] External asset ${clip.assetId} missing URL in properties:`, clip.properties)
+                }
+            })
+
+            // Handle regular assets - fetch URLs from API
+            if (regularAssets.length > 0) {
+                const regularAssetIds = regularAssets.map(clip => clip.assetId!)
+                console.log('[VideoExporter] Loading regular asset URLs for IDs:', regularAssetIds)
+                
+                const regularAssetUrls = await fetchAssetUrls(regularAssetIds, this.accessToken)
+                
+                // Merge regular asset URLs with external asset URLs
+                regularAssetUrls.forEach((url, id) => {
+                    this.assetUrls.set(id, url)
+                })
             }
 
-            console.log('[VideoExporter] Loading asset URLs for IDs:', assetIds)
-            this.assetUrls = await fetchAssetUrls(assetIds, this.accessToken)
-
             if (this.assetUrls.size === 0) {
-                throw new Error('Failed to fetch any asset URLs. Check if assets exist on the server.')
+                throw new Error('No asset URLs available. Check if assets exist and external assets have valid URLs.')
             }
 
             // Log successful and failed asset loads
             const successfulAssets = Array.from(this.assetUrls.keys())
-            const failedAssets = assetIds.filter(id => !this.assetUrls.has(id))
+            const allAssetIds = allAssets.map(clip => clip.assetId!)
+            const failedAssets = allAssetIds.filter(id => !this.assetUrls.has(id))
             
             if (successfulAssets.length > 0) {
                 console.log('[VideoExporter] Successfully loaded asset URLs:', successfulAssets)
             }
             if (failedAssets.length > 0) {
                 console.error('[VideoExporter] Failed to load asset URLs:', failedAssets)
-                throw new Error(`Failed to load ${failedAssets.length} asset(s): ${failedAssets.join(', ')}. These assets may not exist on the server.`)
+                throw new Error(`Failed to load ${failedAssets.length} asset(s): ${failedAssets.join(', ')}. These assets may not exist or have invalid URLs.`)
             }
+            
         } catch (error) {
             console.error('[VideoExporter] Asset loading error:', error)
             throw new Error(`Failed to load asset URLs: ${error instanceof Error ? error.message : 'Unknown error'}`)

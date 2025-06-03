@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { Share, Download, AlertCircle } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
@@ -19,11 +19,22 @@ const ShareButton = () => {
     const { assets } = useAssets()
     const { session } = useAuth()
 
-    // Get all unique asset IDs from clips
-    const assetIds = clips
-        .filter(clip => clip.assetId)
-        .map(clip => clip.assetId!)
+    // Memoize asset IDs to prevent unnecessary re-renders and requests
+    const assetIds = useMemo(() => {
+        return clips
+            .filter(clip => clip.assetId)
+            .map(clip => clip.assetId!)
+    }, [clips])
+    
     const { urls: assetUrls, loading: loadingUrls } = useAssetUrls(assetIds)
+
+    // Check for missing assets and warn user
+    const missingAssets = useMemo(() => {
+        return assetIds.filter(id => {
+            const url = assetUrls.get(id)
+            return url === null // null means failed to fetch
+        })
+    }, [assetIds, assetUrls])
 
     const exportTypeOptions = [
         { id: 'studio', label: 'Studio', description: 'Maximum quality for professional use' },
@@ -81,6 +92,30 @@ const ShareButton = () => {
             console.error('Export error:', error)
             setExportError(error instanceof Error ? error.message : 'Export failed')
             setIsExporting(false)
+        }
+    }
+
+    const handleCleanupMissingAssets = () => {
+        const missingAssetIds = assetIds.filter(id => 
+            !id.startsWith('external_') && assetUrls.get(id) === null
+        )
+        
+        if (missingAssetIds.length === 0) return
+        
+        const confirmMessage = `This will remove ${missingAssetIds.length} clips with missing uploaded assets from your project. External assets (Pexels, Giphy) will not be affected. This action cannot be undone. Continue?`
+        
+        if (window.confirm(confirmMessage)) {
+            // Remove clips that reference missing regular assets (not external ones)
+            const clipsToRemove = clips.filter(clip => 
+                clip.assetId && missingAssetIds.includes(clip.assetId)
+            )
+            
+            // Execute remove commands for each clip
+            // Note: This would need to be connected to your editor's command system
+            console.log('Would remove clips with missing regular assets:', clipsToRemove.map(c => c.id))
+            
+            // For now, just alert the user
+            alert(`Found ${clipsToRemove.length} clips with missing uploaded assets to remove. External assets are preserved. This feature needs to be connected to the editor's command system.`)
         }
     }
 
@@ -150,6 +185,30 @@ const ShareButton = () => {
                     <div className="px-6 py-2 border-b border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-900">Export Options</h3>
                     </div>
+
+                    {/* Missing Assets Warning */}
+                    {assetIds.filter(id => !id.startsWith('external_') && assetUrls.get(id) === null).length > 0 && (
+                        <div className="px-6 py-4 border-b border-gray-200">
+                            <div className="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <h4 className="text-sm font-semibold text-red-800">Missing Assets</h4>
+                                    <p className="text-xs text-red-700 mt-1">
+                                        Some uploaded assets in your project could not be found. Export may fail or be incomplete.
+                                    </p>
+                                    <p className="text-xs text-red-600 mt-1 font-mono">
+                                        Missing: {assetIds.filter(id => !id.startsWith('external_') && assetUrls.get(id) === null).length} asset(s)
+                                    </p>
+                                    <button
+                                        onClick={handleCleanupMissingAssets}
+                                        className="mt-2 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition-colors"
+                                    >
+                                        Remove Missing Assets
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Browser Compatibility Warning */}
                     {typeof SharedArrayBuffer === 'undefined' && (
