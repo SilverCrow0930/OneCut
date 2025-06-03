@@ -367,10 +367,15 @@ export class VideoExporter {
                     // Scale to match the selected resolution
                     const targetResolution = this.exportType === '480p' ? '480:854' : this.exportType === '720p' ? '720:1280' : '1080:1920'
                     console.log(`[VideoExporter] Using resolution: ${this.exportType} -> ${targetResolution}`)
+                    
+                    // For single video, output directly to [outv]. For multiple videos, use intermediate labels
+                    const outputLabel = validMediaClips.length === 1 ? 'outv' : `v${inputIndex}`
                     let vf = `scale=${targetResolution}:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=${targetResolution}:(ow-iw)/2:(oh-ih)/2:black`
                     
-                    filterChains.push(`[${inputIndex}:v]${vf}[v${inputIndex}]`)
-                    inputMaps.push(`[v${inputIndex}]`)
+                    filterChains.push(`[${inputIndex}:v]${vf}[${outputLabel}]`)
+                    if (validMediaClips.length > 1) {
+                        inputMaps.push(`[v${inputIndex}]`)
+                    }
                     inputIndex++
                 }
             } else {
@@ -382,19 +387,22 @@ export class VideoExporter {
                     '-t', `${totalDurationSec}`,
                     '-i', `color=c=black:s=${backgroundSize}:r=30`
                 )
-                inputMaps.push('[0:v]')
+                // For blank background, no filter needed, just map directly
+                filterChains = []
+                inputMaps = []
             }
 
             // Compose filter_complex - simplified concatenation
             let filterComplex = ''
-            if (inputMaps.length > 0) {
-                if (inputMaps.length > 1) {
-                    // Multiple videos - simple concatenation
-                    filterComplex = `${filterChains.join(';')};${inputMaps.join('')}concat=n=${inputMaps.length}:v=1:a=0[outv]`
-                } else {
-                    // Single video - just pass it through
-                    filterComplex = `${filterChains.join('')}[outv]`
-                }
+            if (validMediaClips.length === 1) {
+                // Single video - filter chain already outputs to [outv]
+                filterComplex = filterChains.join('')
+            } else if (validMediaClips.length > 1) {
+                // Multiple videos - concatenate them
+                filterComplex = `${filterChains.join(';')};${inputMaps.join('')}concat=n=${inputMaps.length}:v=1:a=0[outv]`
+            } else {
+                // No clips, just use the blank background directly
+                filterComplex = ''
             }
 
             console.log('[VideoExporter] filterInputs:', filterInputs)
@@ -404,30 +412,17 @@ export class VideoExporter {
             console.log(`[VideoExporter] Export settings: type=${this.exportType}, quickExport=${this.quickExport}`)
 
             // Build optimized FFmpeg command for browser (software encoding only)
-            let ffmpegArgs = [
-                ...filterInputs,
-                '-filter_complex', filterComplex,
-                '-map', '[outv]',
-                '-c:v', 'libx264', // Only software encoding works in browsers
-                '-preset', 'medium', // More conservative preset for browser compatibility
-                '-crf', this.exportType === '480p' ? '28' : this.exportType === '720p' ? '25' : '23',
-                '-pix_fmt', 'yuv420p',
-                '-r', '30',
-                '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920',
-                '-movflags', '+faststart',
-                '-y',
-                'output.mp4'
-            ]
-
-            // Quick export mode - use ultrafast preset but keep it simple
-            if (this.quickExport) {
+            let ffmpegArgs = []
+            
+            if (filterComplex) {
+                // Use filter complex for video processing
                 ffmpegArgs = [
                     ...filterInputs,
                     '-filter_complex', filterComplex,
                     '-map', '[outv]',
                     '-c:v', 'libx264',
-                    '-preset', 'ultrafast',
-                    '-crf', '30',
+                    '-preset', 'medium',
+                    '-crf', this.exportType === '480p' ? '28' : this.exportType === '720p' ? '25' : '23',
                     '-pix_fmt', 'yuv420p',
                     '-r', '30',
                     '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920',
@@ -435,6 +430,53 @@ export class VideoExporter {
                     '-y',
                     'output.mp4'
                 ]
+            } else {
+                // Direct mapping for blank background (no filter needed)
+                ffmpegArgs = [
+                    ...filterInputs,
+                    '-c:v', 'libx264',
+                    '-preset', 'medium', 
+                    '-crf', this.exportType === '480p' ? '28' : this.exportType === '720p' ? '25' : '23',
+                    '-pix_fmt', 'yuv420p',
+                    '-r', '30',
+                    '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920',
+                    '-movflags', '+faststart',
+                    '-y',
+                    'output.mp4'
+                ]
+            }
+
+            // Quick export mode - use ultrafast preset but keep it simple
+            if (this.quickExport) {
+                if (filterComplex) {
+                    ffmpegArgs = [
+                        ...filterInputs,
+                        '-filter_complex', filterComplex,
+                        '-map', '[outv]',
+                        '-c:v', 'libx264',
+                        '-preset', 'ultrafast',
+                        '-crf', '30',
+                        '-pix_fmt', 'yuv420p',
+                        '-r', '30',
+                        '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920',
+                        '-movflags', '+faststart',
+                        '-y',
+                        'output.mp4'
+                    ]
+                } else {
+                    ffmpegArgs = [
+                        ...filterInputs,
+                        '-c:v', 'libx264',
+                        '-preset', 'ultrafast',
+                        '-crf', '30',
+                        '-pix_fmt', 'yuv420p',
+                        '-r', '30',
+                        '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920',
+                        '-movflags', '+faststart',
+                        '-y',
+                        'output.mp4'
+                    ]
+                }
             }
 
             // List files before running FFmpeg

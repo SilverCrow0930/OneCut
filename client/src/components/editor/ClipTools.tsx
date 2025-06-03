@@ -15,7 +15,6 @@ const ClipTools = () => {
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (speedSliderRef.current && !speedSliderRef.current.contains(event.target as Node)) {
-                console.log('🎛️ Clicked outside speed slider, closing it')
                 setShowSpeedSlider(false)
             }
         }
@@ -47,20 +46,15 @@ const ClipTools = () => {
 
     // Update slider speed when selection changes
     useEffect(() => {
-        console.log('🎯 Selection changed - hasSelectedClip:', hasSelectedClip, 'hasMultipleSelection:', hasMultipleSelection, 'selectedClip:', selectedClip?.id, 'selectedClipIds:', selectedClipIds, 'primarySelectedClip:', primarySelectedClip?.id)
-        
         if (primarySelectedClip && (primarySelectedClip.type === 'video' || primarySelectedClip.type === 'audio')) {
             const currentSpeed = primarySelectedClip.speed || 1
-            console.log('🎛️ Updating slider speed from primary selection:', currentSpeed, 'for clip:', primarySelectedClip.id)
             setSliderSpeed(currentSpeed)
         } else if (selectedClips.length > 1) {
             // For multiple selection, show the speed of the first media clip or default to 1
             const firstMediaClip = selectedClips.find(clip => clip.type === 'video' || clip.type === 'audio')
             const currentSpeed = firstMediaClip?.speed || 1
-            console.log('🎛️ Updating slider speed from multi-selection:', currentSpeed, 'from clip:', firstMediaClip?.id)
             setSliderSpeed(currentSpeed)
         } else {
-            console.log('🎛️ Resetting slider speed to 1 (no media clips selected)')
             setSliderSpeed(1) // Default speed for non-media clips
         }
     }, [selectedClip, selectedClips, hasSelectedClip, hasMultipleSelection, primarySelectedClip])
@@ -70,16 +64,9 @@ const ClipTools = () => {
         
         if (clipsToUpdate.length === 0) return
 
-        console.log('🎛️ Speed change requested:', { 
-            newSpeed, 
-            clipsToUpdate: clipsToUpdate.map(c => ({ id: c.id, type: c.type, currentSpeed: c.speed || 1 }))
-        })
-
         const commands = clipsToUpdate
             .filter(clip => clip.type === 'video' || clip.type === 'audio') // Only update video/audio clips
             .map(clip => {
-                console.log('🎛️ Creating speed command for clip:', clip.id, 'from speed:', clip.speed || 1, 'to:', newSpeed)
-                
                 // Calculate new timeline duration based on speed change
                 const currentSourceDuration = clip.sourceEndMs - clip.sourceStartMs
                 const newTimelineDuration = Math.round(currentSourceDuration / newSpeed)
@@ -99,13 +86,10 @@ const ClipTools = () => {
                 }
             })
 
-        console.log('🎛️ Executing commands:', commands.length)
-
         if (commands.length > 0) {
             // Store current selection before executing commands
             const currentSelectedClipId = selectedClipId
             const currentSelectedClipIds = [...selectedClipIds]
-            console.log('🎯 Storing selection before speed change:', { currentSelectedClipId, currentSelectedClipIds })
             
             executeCommand({
                 type: 'BATCH',
@@ -115,27 +99,12 @@ const ClipTools = () => {
             // Restore selection after command execution if it was lost
             setTimeout(() => {
                 if (!selectedClipId && currentSelectedClipId) {
-                    console.log('🎯 Restoring lost selection:', currentSelectedClipId)
                     setSelectedClipId(currentSelectedClipId)
                 }
                 if (selectedClipIds.length === 0 && currentSelectedClipIds.length > 0) {
-                    console.log('🎯 Restoring lost multi-selection:', currentSelectedClipIds)
                     setSelectedClipIds(currentSelectedClipIds)
                 }
             }, 50)
-            
-            // Debug: Check if the speed was actually applied after a short delay
-            setTimeout(() => {
-                const updatedClips = actualSelectedClips.map(clip => 
-                    clips.find(c => c.id === clip.id)
-                ).filter(Boolean)
-                
-                updatedClips.forEach(clip => {
-                    if (clip && (clip.type === 'video' || clip.type === 'audio')) {
-                        console.log('🎛️ Speed check after update - Clip:', clip.id, 'Speed:', clip.speed || 1, 'Expected:', newSpeed)
-                    }
-                })
-            }, 100)
         }
     }
 
@@ -359,7 +328,6 @@ const ClipTools = () => {
                         "Adjust playback speed"
                     }
                     onClick={() => {
-                        console.log('Speed button clicked', { canAdjustSpeed, hasAnySelection, showSpeedSlider, selectedClip: selectedClip?.type, selectedClips: selectedClips.map(c => c.type) })
                         setShowSpeedSlider(!showSpeedSlider)
                     }}
                     disabled={!canAdjustSpeed || !hasAnySelection}
@@ -397,7 +365,6 @@ const ClipTools = () => {
                                 onChange={(e) => {
                                     e.stopPropagation()
                                     const newSpeed = parseFloat(e.target.value)
-                                    console.log('🎛️ Slider changed to:', newSpeed)
                                     setSliderSpeed(newSpeed)
                                     handleSpeedChange(newSpeed)
                                 }}
