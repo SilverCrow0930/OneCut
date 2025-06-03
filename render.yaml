@@ -4,6 +4,8 @@ services:
     env: node
     buildCommand: cd server && npm install && npm run build
     startCommand: cd server && npm start
+    packages:
+      - ffmpeg
     envVars:
       - key: NODE_ENV
         value: production
@@ -11,6 +13,12 @@ services:
         value: 8080
       - key: ALLOWED_ORIGINS
         value: https://lemona.studio,https://lemona-app.onrender.com
+      - key: FFMPEG_PATH
+        value: ffmpeg
+      - key: FFPROBE_PATH
+        value: ffprobe
+      - key: GCLOUD_STORAGE_BUCKET
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_KEY

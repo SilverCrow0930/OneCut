@@ -87,7 +87,7 @@ async function fetchAssetUrls(assetIds: string[], accessToken?: string | null): 
     if (errors.length > 0) {
         console.error('[VideoExporter] Asset loading errors:', errors)
         throw new Error(`Failed to fetch asset URLs:\n${errors.join('\n')}`)
-    }
+        }
     
     return urls
 }
@@ -159,7 +159,7 @@ export class VideoExporter {
                     console.log(`[VideoExporter] Using embedded URL for external asset: ${clip.assetId}`)
                 } else {
                     console.error(`[VideoExporter] External asset ${clip.assetId} missing URL in properties:`, clip.properties)
-                }
+            }
             })
 
             // Handle regular assets - fetch URLs from API
@@ -371,10 +371,10 @@ export class VideoExporter {
                     // For single video, output directly to [outv]. For multiple videos, use intermediate labels
                     const outputLabel = validMediaClips.length === 1 ? 'outv' : `v${inputIndex}`
                     let vf = `scale=${targetResolution}:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=${targetResolution}:(ow-iw)/2:(oh-ih)/2:black`
-                    
+
                     filterChains.push(`[${inputIndex}:v]${vf}[${outputLabel}]`)
                     if (validMediaClips.length > 1) {
-                        inputMaps.push(`[v${inputIndex}]`)
+                    inputMaps.push(`[v${inputIndex}]`)
                     }
                     inputIndex++
                 }
@@ -398,9 +398,9 @@ export class VideoExporter {
                 // Single video - filter chain already outputs to [outv]
                 filterComplex = filterChains.join('')
             } else if (validMediaClips.length > 1) {
-                // Multiple videos - concatenate them
-                filterComplex = `${filterChains.join(';')};${inputMaps.join('')}concat=n=${inputMaps.length}:v=1:a=0[outv]`
-            } else {
+                    // Multiple videos - concatenate them
+                    filterComplex = `${filterChains.join(';')};${inputMaps.join('')}concat=n=${inputMaps.length}:v=1:a=0[outv]`
+                } else {
                 // No clips, just use the blank background directly
                 filterComplex = ''
             }
@@ -413,13 +413,13 @@ export class VideoExporter {
 
             // Build optimized FFmpeg command for browser (software encoding only)
             let ffmpegArgs = []
-            
+
             if (filterComplex) {
                 // Use filter complex for video processing
                 ffmpegArgs = [
-                    ...filterInputs,
-                    '-filter_complex', filterComplex,
-                    '-map', '[outv]',
+                ...filterInputs,
+                '-filter_complex', filterComplex,
+                '-map', '[outv]',
                     '-c:v', 'libx264',
                     '-preset', 'medium',
                     '-crf', this.exportType === '480p' ? '28' : this.exportType === '720p' ? '25' : '23',
@@ -437,13 +437,13 @@ export class VideoExporter {
                     '-c:v', 'libx264',
                     '-preset', 'medium', 
                     '-crf', this.exportType === '480p' ? '28' : this.exportType === '720p' ? '25' : '23',
-                    '-pix_fmt', 'yuv420p',
+                '-pix_fmt', 'yuv420p',
                     '-r', '30',
                     '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920',
-                    '-movflags', '+faststart',
-                    '-y',
-                    'output.mp4'
-                ]
+                '-movflags', '+faststart',
+                '-y',
+                'output.mp4'
+            ]
             }
 
             // Quick export mode - use ultrafast preset but keep it simple

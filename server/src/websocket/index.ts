@@ -12,12 +12,14 @@ const googleSearchRetrievalTool = {
 export const setupWebSocket = (server: any) => {
     const io = new Server(server, {
         cors: {
-            origin: process.env.FRONTEND_URL || "http://localhost:3000",
+            origin: process.env.NODE_ENV === 'production' 
+                ? ['https://lemona.studio', 'https://www.lemona.studio', 'https://lemona-app.onrender.com', ...(process.env.ALLOWED_ORIGINS?.split(',') || [])]
+                : ['http://localhost:3000'],
             methods: ["GET", "POST"],
             credentials: true
         },
         maxHttpBufferSize: 1e8,
-        transports: ['websocket'],
+        transports: ['websocket', 'polling'], // Add polling as fallback
         allowEIO3: true,
         path: '/socket.io/',
         serveClient: false,
