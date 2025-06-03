@@ -32,4 +32,6 @@ services:
       - key: GOOGLE_CLOUD_PROJECT
         sync: false
       - key: GOOGLE_CLOUD_LOCATION
+        sync: false
+      - key: ELEVENLABS_API_KEY
         sync: false 

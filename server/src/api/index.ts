@@ -5,6 +5,7 @@ import assetsRouter from './assets'
 import timelineRouter from './timeline'
 import transcriptionRouter from './transcription'
 import aiRouter from './ai'
+import voiceoverRouter from './voiceover'
 
 const apiRouter = Router()
 
@@ -14,5 +15,6 @@ apiRouter.use('/projects', projectsRouter)
 apiRouter.use('/assets', assetsRouter)
 apiRouter.use('/transcription', transcriptionRouter)
 apiRouter.use('/ai', aiRouter)
+apiRouter.use('/voiceover', voiceoverRouter)
 
 export default apiRouter

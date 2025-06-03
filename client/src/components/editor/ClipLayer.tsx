@@ -503,7 +503,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
             <div
                 className={`relative pointer-events-auto ${
                     isPrimarySelection ? 'ring-2 ring-blue-500' : 
-                    isInMultiSelection && isMultiSelectionActive ? 'ring-2 ring-purple-400' : ''
+                    isInMultiSelection && isMultiSelectionActive ? 'ring-2 ring-purple-500 ring-offset-1' : ''
                 }`}
                 data-clip-layer
                 data-clip-id={clip.id}

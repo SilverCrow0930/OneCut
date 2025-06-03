@@ -240,9 +240,9 @@ export default function TextToolPanel() {
     }
 
     return (
-        <div className="flex flex-col gap-6 p-4 bg-white rounded-lg" data-text-tool-panel>
+        <div className="flex flex-col gap-6 p-4 bg-white rounded-lg min-h-full" data-text-tool-panel>
             <PanelHeader icon={Type} title={selectedClip ? "Edit Text" : "Add Text"} />
-            <div className="space-y-6">
+            <div className="space-y-6 flex-1">
                 <div className="space-y-2">
                     <label htmlFor="text" className="block text-base font-medium text-black/50">
                         Content
@@ -373,7 +373,10 @@ export default function TextToolPanel() {
                         </div>
                     </div>
                 )}
+            </div>
                 
+            {/* Apply Button - Fixed at bottom */}
+            <div className="pt-4 border-t border-gray-200 bg-white">
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
