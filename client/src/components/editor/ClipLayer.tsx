@@ -12,7 +12,7 @@ interface ClipLayerProps {
 
 export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const { currentTime, isPlaying } = usePlayback()
-    const { selectedClipId, setSelectedClipId } = useEditor()
+    const { selectedClipId, selectedClipIds, setSelectedClipId, setSelectedClipIds } = useEditor()
     const localMs = currentTime * 1000 - clip.timelineStartMs
     const durationMs = clip.timelineEndMs - clip.timelineStartMs
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -43,7 +43,10 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 })
 
     const isSelected = selectedClipId === clip.id
-    console.log('Clip selection state:', { clipId: clip.id, selectedClipId, isSelected })
+    const isInMultiSelection = selectedClipIds.includes(clip.id)
+    const isMultiSelectionActive = selectedClipIds.length > 1
+    const isPrimarySelection = isSelected && !isMultiSelectionActive
+    console.log('Clip selection state:', { clipId: clip.id, selectedClipId, isSelected, isInMultiSelection, isMultiSelectionActive })
 
     // Only render if the playhead is inside this clip's window
     if (localMs < 0 || localMs > durationMs) {
@@ -181,7 +184,30 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     // --- Selection ---
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation()
-        setSelectedClipId(clip.id)
+        
+        // Handle multi-selection with Ctrl/Cmd key
+        if (e.ctrlKey || e.metaKey) {
+            const isCurrentlySelected = selectedClipIds.includes(clip.id)
+            if (isCurrentlySelected) {
+                // Remove from selection
+                const newSelection = selectedClipIds.filter(id => id !== clip.id)
+                setSelectedClipIds(newSelection)
+                if (newSelection.length === 1) {
+                    setSelectedClipId(newSelection[0])
+                } else {
+                    setSelectedClipId(null)
+                }
+            } else {
+                // Add to selection
+                const newSelection = [...selectedClipIds, clip.id]
+                setSelectedClipIds(newSelection)
+                setSelectedClipId(clip.id) // Set as primary selection
+            }
+        } else {
+            // Normal single selection
+            setSelectedClipIds([clip.id])
+            setSelectedClipId(clip.id)
+        }
     }
 
     // --- Render media inside crop ---
@@ -258,7 +284,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                         // Parse highlighted text
                         const parts = text.split(/(<span color="[^"]*">.*?<\/span>)/g)
                         
-                        return parts.map((part, index) => {
+                        return parts.map((part: string, index: number) => {
                             const spanMatch = part.match(/<span color="([^"]*)">(.*?)<\/span>/)
                             if (spanMatch) {
                                 const [, color, highlightedText] = spanMatch
@@ -394,7 +420,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     // --- Main render ---
     return (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            {isSelected && (
+            {(isPrimarySelection || (isInMultiSelection && isMultiSelectionActive)) && (
                 <div
                     className="absolute pointer-events-auto"
                     style={{
@@ -407,8 +433,12 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                 </div>
             )}
             <div
-                className={`relative pointer-events-auto ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+                className={`relative pointer-events-auto ${
+                    isPrimarySelection ? 'ring-2 ring-blue-500' : 
+                    isInMultiSelection && isMultiSelectionActive ? 'ring-2 ring-purple-400' : ''
+                }`}
                 data-clip-layer
+                data-clip-id={clip.id}
                 style={{
                     width: crop.width,
                     height: crop.height,
@@ -427,7 +457,7 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                 >
                     {renderContent()}
                 </div>
-                {isSelected && (
+                {isPrimarySelection && (
                     <>
                         {/* Corner Resize handles - exactly in the corners */}
                         {/* NW */}

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS public.tracks (
                              ON DELETE CASCADE,
   "index"      INTEGER     NOT NULL,  -- layer order (0 = bottom)
   type         TEXT        NOT NULL
-                             CHECK (type IN ('video','audio','text')),
+                             CHECK (type IN ('video','audio','text','caption')),
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

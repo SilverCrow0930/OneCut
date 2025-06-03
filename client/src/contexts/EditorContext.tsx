@@ -51,6 +51,8 @@ interface EditorContextType {
     // selection
     selectedClipId: string | null
     setSelectedClipId: (id: string | null) => void
+    selectedClipIds: string[]
+    setSelectedClipIds: (ids: string[]) => void
     selectedTrackId: string | null
     setSelectedTrackId: (id: string | null) => void
 }
@@ -132,6 +134,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
     // selection
     const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
+    const [selectedClipIds, setSelectedClipIds] = useState<string[]>([])
     const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
 
     const fetchTimeline = async () => {
@@ -421,6 +424,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             // selection
             selectedClipId,
             setSelectedClipId,
+            selectedClipIds,
+            setSelectedClipIds,
             selectedTrackId,
             setSelectedTrackId,
         }}>

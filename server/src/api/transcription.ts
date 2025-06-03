@@ -12,7 +12,7 @@ type RequestHandler = (req: Request, res: Response, next: NextFunction) => Promi
 router.post(
     '/generate',
     // Validate request body
-    check('clipId').isUUID().withMessage('Invalid clip ID'),
+    check('trackId').isUUID().withMessage('Invalid track ID'),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             // Handle validation errors
@@ -24,11 +24,11 @@ router.post(
             }
 
             const { user } = req as AuthenticatedRequest
-            const { clipId } = req.body
+            const { trackId } = req.body
 
             console.log('=== TRANSCRIPTION REQUEST ===')
             console.log('User:', user.id)
-            console.log('Clip ID:', clipId)
+            console.log('Track ID:', trackId)
 
             // 1) Find the user's profile
             const { data: profile, error: profileError } = await supabase
@@ -44,46 +44,58 @@ router.post(
                 })
             }
 
-            // 2) Get the clip and verify ownership through project
-            const { data: clip, error: clipError } = await supabase
-                .from('clips')
+            // 2) Get the track and verify ownership through project
+            const { data: track, error: trackError } = await supabase
+                .from('tracks')
                 .select(`
                     *,
-                    tracks!inner(
-                        project_id,
-                        projects!inner(
-                            user_id
-                        )
+                    projects!inner(
+                        user_id
                     )
                 `)
-                .eq('id', clipId)
+                .eq('id', trackId)
                 .single()
 
-            if (clipError || !clip) {
-                console.error('Clip lookup failed:', clipError)
+            if (trackError || !track) {
+                console.error('Track lookup failed:', trackError)
                 return res.status(404).json({
-                    error: 'Clip not found'
+                    error: 'Track not found'
                 })
             }
 
-            // Verify user owns this clip through the project
-            if (clip.tracks.projects.user_id !== profile.id) {
+            // Verify user owns this track through the project
+            if (track.projects.user_id !== profile.id) {
                 return res.status(403).json({
                     error: 'Access denied'
                 })
             }
 
-            // 3) Get the asset associated with this clip
-            if (!clip.asset_id) {
+            // 3) Get all video/audio clips in this track
+            const { data: clips, error: clipsError } = await supabase
+                .from('clips')
+                .select('*')
+                .eq('track_id', trackId)
+                .in('type', ['video', 'audio'])
+                .not('asset_id', 'is', null)
+
+            if (clipsError || !clips || clips.length === 0) {
+                console.error('Clips lookup failed:', clipsError)
                 return res.status(400).json({
-                    error: 'Clip has no associated asset'
+                    error: 'No transcribable clips found in track'
                 })
             }
 
+            // 4) Find the longest clip to use for transcription
+            const longestClip = clips.reduce((longest: any, current: any) => 
+                (current.timeline_end_ms - current.timeline_start_ms) > (longest.timeline_end_ms - longest.timeline_start_ms) 
+                    ? current : longest
+            )
+
+            // 5) Get the asset associated with the longest clip
             const { data: asset, error: assetError } = await supabase
                 .from('assets')
                 .select('*')
-                .eq('id', clip.asset_id)
+                .eq('id', longestClip.asset_id)
                 .eq('user_id', profile.id)
                 .single()
 
@@ -94,7 +106,7 @@ router.post(
                 })
             }
 
-            // 4) Check if asset has audio (video or audio file)
+            // 6) Check if asset has audio (video or audio file)
             const isAudioCapable = asset.mime_type.startsWith('video/') || asset.mime_type.startsWith('audio/')
             if (!isAudioCapable) {
                 return res.status(400).json({
@@ -102,7 +114,7 @@ router.post(
                 })
             }
 
-            // 5) Get signed URL for the asset
+            // 7) Get signed URL for the asset
             const { bucket } = await import('../integrations/googleStorage.js')
             const [signedUrl] = await bucket
                 .file(asset.object_key)
@@ -113,14 +125,15 @@ router.post(
 
             console.log('Generated signed URL for transcription')
 
-            // 6) Generate transcription using Gemini
+            // 8) Generate transcription using Gemini
             console.log('Starting transcription with Gemini...')
             const result = await generateTranscription(signedUrl, asset.mime_type)
 
             console.log('Transcription completed successfully')
 
             return res.json({
-                clipId: clipId,
+                trackId: trackId,
+                clipId: longestClip.id,
                 transcription: result.transcription,
                 assetName: asset.name,
                 duration: asset.duration

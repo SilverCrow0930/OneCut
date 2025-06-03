@@ -15,6 +15,8 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
 
     return (
         <div
+            data-timeline-clip
+            data-clip-id={clip.id}
             className={`absolute top-0 bottom-0 border rounded-md overflow-hidden ${
                 isCaption 
                     ? 'bg-orange-100/50 border-orange-200' 

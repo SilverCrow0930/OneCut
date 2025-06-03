@@ -9,7 +9,7 @@ import { formatTime } from '@/lib/utils'
 import TextClipItem from './TextClipItem'
 
 export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onSelect: (id: string | null) => void, selected: boolean }) {
-    const { executeCommand, clips, tracks } = useEditor()
+    const { executeCommand, clips, tracks, selectedClipIds, setSelectedClipIds, setSelectedClipId } = useEditor()
     const { url } = useAssetUrl(clip.assetId)
     const { assets } = useAssets()
     const { zoomLevel } = useZoom()
@@ -119,7 +119,31 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
     const onClick = (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        onSelect(clip.id)
+        
+        // Handle multi-selection with Ctrl/Cmd key
+        if (e.ctrlKey || e.metaKey) {
+            const isCurrentlySelected = selectedClipIds.includes(clip.id)
+            if (isCurrentlySelected) {
+                // Remove from selection
+                const newSelection = selectedClipIds.filter(id => id !== clip.id)
+                setSelectedClipIds(newSelection)
+                if (newSelection.length === 1) {
+                    setSelectedClipId(newSelection[0])
+                } else {
+                    setSelectedClipId(null)
+                }
+            } else {
+                // Add to selection
+                const newSelection = [...selectedClipIds, clip.id]
+                setSelectedClipIds(newSelection)
+                setSelectedClipId(clip.id) // Set as primary selection
+            }
+        } else {
+            // Normal single selection
+            setSelectedClipIds([clip.id])
+            setSelectedClipId(clip.id)
+            onSelect(clip.id)
+        }
     }
 
     // Limit the number of thumbnails to prevent performance issues
@@ -488,33 +512,39 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         setIsOverlapping(false)
     }
 
+    // Selection state
+    const isInMultiSelection = selectedClipIds.includes(clip.id)
+    const isMultiSelectionActive = selectedClipIds.length > 1
+    const isPrimarySelection = selected && !isMultiSelectionActive
+
     return (
         <>
             <div
                 ref={clipRef}
                 data-clip-layer
+                data-timeline-clip
+                data-clip-id={clip.id}
                 className={`
                     absolute h-full text-white text-xs
                     flex items-center justify-center rounded-lg
                     overflow-hidden
                     ${isResizing ? 'cursor-ew-resize' : 'cursor-move'}
-                    ${selected ? 'ring-2 ring-blue-400 shadow-2xl scale-[1.02] z-20' : 'shadow-md hover:shadow-lg z-10'}
+                    ${isPrimarySelection ? 'ring-2 ring-blue-400 shadow-2xl scale-[1.02] z-20' : 
+                      isInMultiSelection && isMultiSelectionActive ? 'ring-2 ring-purple-400 shadow-xl scale-[1.01] z-20' :
+                      'shadow-md hover:shadow-lg z-10'}
                     ${isDragging ? 'opacity-0' : ''}
                     ${isVideo ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 
                       isAudio ? 'bg-gradient-to-r from-green-500 to-green-600' : 
                       isImage ? 'bg-gradient-to-r from-purple-500 to-purple-600' :
                       'bg-gradient-to-r from-gray-500 to-gray-600'}
                     border border-white/20
+                    ${isInMultiSelection && isMultiSelectionActive ? 'border-purple-400/60' : ''}
                 `}
                 style={{
                     left,
                     width,
                 }}
-                onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    onSelect(clip.id)
-                }}
+                onClick={onClick}
                 onContextMenu={handleContextMenu}
                 draggable={!isResizing}
                 onDragStart={handleDragStart}

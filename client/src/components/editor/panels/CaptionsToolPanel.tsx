@@ -16,22 +16,25 @@ interface Caption {
     highlightedHtml?: string // Store the HTML with highlights
 }
 
-// Highlight colors for short video captions
-export const highlightColors = {
-    red: '#FF2323',    // Action words, emotions, urgent terms
-    green: '#66FF00',  // Positive words, success, growth
-    cyan: '#00FFFF'    // Numbers, facts, key information
-}
+// Highlight colors for short video captions - vibrant colors that pop
+export const highlightColors = [
+    '#FFFF00', // Bright Yellow
+    '#00FF41', // Bright Green  
+    '#FF3366', // Bright Pink
+    '#00D4FF', // Bright Cyan
+    '#FF8C00', // Bright Orange
+    '#DA70D6', // Bright Orchid
+]
 
-// Trending short video font styles - Exact match to popular social platforms
+// Trending short video font styles - Optimized for maximum impact and readability
 export const captionStyles = [
     {
-        name: 'Rubik Heavy',
+        name: 'Classic Impact',
         style: {
-            fontFamily: 'Rubik, Arial Black, sans-serif',
-            fontSize: 24,
+            fontFamily: 'Impact, "Arial Black", "Franklin Gothic Bold", sans-serif',
+            fontSize: 32,
             fontWeight: 900,
-            color: '#ffffff',
+            color: '#FFFF00',
             textAlign: 'center' as const,
             WebkitTextStroke: '3px #000000',
             textShadow: '4px 4px 0px rgba(0, 0, 0, 0.8)',
@@ -40,151 +43,127 @@ export const captionStyles = [
         },
     },
     {
-        name: 'Fira Sans Condensed',
+        name: 'Bold Knockout',
         style: {
-            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
-            fontSize: 26,
+            fontFamily: 'Impact, "Arial Black", sans-serif',
+            fontSize: 30,
             fontWeight: 900,
-            color: '#ffffff',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000',
-            textShadow: '3px 3px 6px rgba(0, 0, 0, 0.9)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.5px',
-        },
-    },
-    {
-        name: 'Montserrat Heavy',
-        style: {
-            fontFamily: 'Montserrat, Arial, sans-serif',
-            fontSize: 22,
-            fontWeight: 900,
-            color: '#ffffff',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000',
-            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-        },
-    },
-    {
-        name: 'Komika Medium',
-        style: {
-            fontFamily: 'Komika, Comic Sans MS, cursive',
-            fontSize: 24,
-            fontWeight: 700,
-            color: '#ffffff',
-            textAlign: 'center' as const,
-            textShadow: '3px 3px 0px #000000, 6px 6px 12px rgba(0, 0, 0, 0.5)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.5px',
-        },
-    },
-    {
-        name: 'Bold Stroke',
-        style: {
-            fontFamily: 'Rubik, Arial Black, sans-serif',
-            fontSize: 25,
-            fontWeight: 900,
-            color: '#ffffff',
+            color: '#FFFFFF',
             textAlign: 'center' as const,
             WebkitTextStroke: '4px #000000',
-            textShadow: '0px 0px 0px transparent',
+            textShadow: 'none',
             textTransform: 'uppercase' as const,
             letterSpacing: '1.5px',
         },
     },
     {
-        name: 'Shadow Heavy',
+        name: 'Neon Pop',
         style: {
-            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
-            fontSize: 23,
+            fontFamily: 'Impact, "Trebuchet MS", sans-serif',
+            fontSize: 28,
             fontWeight: 900,
-            color: '#ffffff',
+            color: '#00FF41',
             textAlign: 'center' as const,
-            textShadow: '4px 4px 0px #000000, 8px 8px 16px rgba(0, 0, 0, 0.6)',
+            WebkitTextStroke: '3px #000000',
+            textShadow: '0px 0px 10px #00FF41, 3px 3px 0px #000000',
             textTransform: 'uppercase' as const,
             letterSpacing: '1px',
         },
     },
     {
-        name: 'Outline Style',
+        name: 'Heavy Shadow',
         style: {
-            fontFamily: 'Montserrat, Arial, sans-serif',
-            fontSize: 24,
-            fontWeight: 800,
-            color: '#000000',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '3px #ffffff',
-            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '1px',
-        },
-    },
-    {
-        name: 'Double Shadow',
-        style: {
-            fontFamily: 'Rubik, Arial Black, sans-serif',
-            fontSize: 22,
+            fontFamily: 'Impact, "Arial Black", sans-serif',
+            fontSize: 29,
             fontWeight: 900,
-            color: '#ffffff',
+            color: '#FFFFFF',
             textAlign: 'center' as const,
-            textShadow: '2px 2px 0px #ff0000, 4px 4px 0px #000000, 6px 6px 12px rgba(0, 0, 0, 0.5)',
+            WebkitTextStroke: '2px #000000',
+            textShadow: '5px 5px 0px #000000, 10px 10px 20px rgba(0, 0, 0, 0.5)',
             textTransform: 'uppercase' as const,
             letterSpacing: '1px',
         },
     },
     {
-        name: 'Clean Modern',
+        name: 'Bright Pink',
         style: {
-            fontFamily: 'Fira Sans Condensed, Arial, sans-serif',
-            fontSize: 25,
-            fontWeight: 800,
-            color: '#ffffff',
+            fontFamily: 'Impact, "Franklin Gothic Bold", sans-serif',
+            fontSize: 31,
+            fontWeight: 900,
+            color: '#FF3366',
             textAlign: 'center' as const,
-            WebkitTextStroke: '1px #000000',
-            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+            WebkitTextStroke: '3px #000000',
+            textShadow: '3px 3px 0px rgba(0, 0, 0, 0.8)',
             textTransform: 'uppercase' as const,
             letterSpacing: '0.8px',
         },
     },
     {
-        name: 'Bold Impact',
+        name: 'Electric Blue',
         style: {
-            fontFamily: 'Montserrat, Impact, sans-serif',
-            fontSize: 26,
+            fontFamily: 'Impact, "Arial Black", sans-serif',
+            fontSize: 30,
             fontWeight: 900,
-            color: '#ffffff',
+            color: '#00D4FF',
             textAlign: 'center' as const,
             WebkitTextStroke: '3px #000000',
-            textShadow: '5px 5px 0px rgba(0, 0, 0, 0.8)',
+            textShadow: '0px 0px 8px #00D4FF, 2px 2px 0px #000000',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+        },
+    },
+    {
+        name: 'Fire Orange',
+        style: {
+            fontFamily: 'Impact, "Trebuchet MS", sans-serif',
+            fontSize: 32,
+            fontWeight: 900,
+            color: '#FF8C00',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '3px #000000',
+            textShadow: '4px 4px 0px rgba(0, 0, 0, 0.9)',
             textTransform: 'uppercase' as const,
             letterSpacing: '1.2px',
         },
     },
     {
-        name: 'Soft Shadow',
+        name: 'Clean White',
         style: {
-            fontFamily: 'Komika, Arial, sans-serif',
-            fontSize: 23,
-            fontWeight: 700,
-            color: '#ffffff',
+            fontFamily: 'Impact, "Arial Black", sans-serif',
+            fontSize: 30,
+            fontWeight: 900,
+            color: '#FFFFFF',
             textAlign: 'center' as const,
-            textShadow: '2px 2px 8px rgba(0, 0, 0, 0.8), 4px 4px 16px rgba(0, 0, 0, 0.4)',
+            WebkitTextStroke: '3px #000000',
+            textShadow: '3px 3px 6px rgba(0, 0, 0, 0.8)',
             textTransform: 'uppercase' as const,
-            letterSpacing: '0.5px',
+            letterSpacing: '1px',
         },
     },
     {
-        name: 'Thick Outline',
+        name: 'Purple Power',
         style: {
-            fontFamily: 'Rubik, Arial Black, sans-serif',
-            fontSize: 24,
+            fontFamily: 'Impact, "Franklin Gothic Bold", sans-serif',
+            fontSize: 29,
             fontWeight: 900,
-            color: '#ffff00',
+            color: '#DA70D6',
             textAlign: 'center' as const,
-            WebkitTextStroke: '5px #000000',
-            textShadow: '0px 0px 0px transparent',
+            WebkitTextStroke: '3px #000000',
+            textShadow: '0px 0px 6px #DA70D6, 3px 3px 0px #000000',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+        },
+    },
+    {
+        name: 'Classic Yellow',
+        style: {
+            fontFamily: 'Impact, "Arial Black", sans-serif',
+            fontSize: 33,
+            fontWeight: 900,
+            color: '#FFFF00',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '4px #000000',
+            textShadow: '4px 4px 0px rgba(0, 0, 0, 0.9)',
             textTransform: 'uppercase' as const,
             letterSpacing: '1.5px',
         },
@@ -201,7 +180,7 @@ export const captionPlacements = [
 const CaptionsToolPanel = () => {
     const [isGenerating, setIsGenerating] = useState(false)
     const [captions, setCaptions] = useState<Caption[]>([])
-    const [autoSelectedClip, setAutoSelectedClip] = useState<string | null>(null)
+    const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [progressStage, setProgressStage] = useState<'upload' | 'processing' | 'generating' | null>(null)
@@ -222,38 +201,63 @@ const CaptionsToolPanel = () => {
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
 
-    // Get video/audio clips that can be transcribed
-    const transcribableClips = clips.filter(clip => 
-        (clip.type === 'video' || clip.type === 'audio') && clip.assetId
-    )
+    // Get tracks that have transcribable clips (video or audio)
+    const transcribableTracks = tracks.filter(track => {
+        const trackClips = clips.filter(clip => clip.trackId === track.id)
+        return trackClips.some(clip => 
+            (clip.type === 'video' || clip.type === 'audio') && clip.assetId
+        )
+    })
 
-    // Auto-select the best clip for transcription (longest video clip first)
+    // Auto-select the first available track
     useEffect(() => {
-        if (transcribableClips.length > 0) {
-            // Find the longest video clip first, or longest audio clip if no video
-            const videoClips = transcribableClips.filter(clip => clip.type === 'video')
-            const audioClips = transcribableClips.filter(clip => clip.type === 'audio')
-            
-            let bestClip = null
-            if (videoClips.length > 0) {
-                // Select longest video clip
-                bestClip = videoClips.reduce((longest, current) => 
-                    (current.timelineEndMs - current.timelineStartMs) > (longest.timelineEndMs - longest.timelineStartMs) 
-                        ? current : longest
-                )
-            } else if (audioClips.length > 0) {
-                // Select longest audio clip
-                bestClip = audioClips.reduce((longest, current) => 
-                    (current.timelineEndMs - current.timelineStartMs) > (longest.timelineEndMs - longest.timelineStartMs) 
-                        ? current : longest
-                )
-            }
-            
-            setAutoSelectedClip(bestClip?.id || null)
-        } else {
-            setAutoSelectedClip(null)
+        if (transcribableTracks.length > 0 && !selectedTrackId) {
+            setSelectedTrackId(transcribableTracks[0].id)
+        } else if (transcribableTracks.length === 0) {
+            setSelectedTrackId(null)
         }
-    }, [transcribableClips])
+    }, [transcribableTracks, selectedTrackId])
+
+    // Smart random highlighting - highlights meaningful words
+    const addRandomHighlights = (text: string): string => {
+        // Words to skip (articles, prepositions, common words)
+        const skipWords = new Set([
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+            'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after',
+            'above', 'below', 'between', 'among', 'this', 'that', 'these', 'those', 'i',
+            'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them',
+            'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+            'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must'
+        ])
+
+        const words = text.split(/(\s+)/)
+        const meaningfulWords = words.filter((word, index) => 
+            index % 2 === 0 && // Only actual words, not spaces
+            word.length > 2 && // Skip very short words
+            !skipWords.has(word.toLowerCase().replace(/[^a-z]/g, '')) // Skip common words
+        )
+
+        // Highlight 1-2 meaningful words randomly
+        const highlightCount = Math.min(meaningfulWords.length, Math.random() > 0.6 ? 2 : 1)
+        if (highlightCount === 0 || meaningfulWords.length === 0) return text
+
+        // Select random words to highlight
+        const wordsToHighlight = new Set()
+        while (wordsToHighlight.size < highlightCount) {
+            const randomWord = meaningfulWords[Math.floor(Math.random() * meaningfulWords.length)]
+            wordsToHighlight.add(randomWord.toLowerCase().replace(/[^a-z]/g, ''))
+        }
+
+        // Apply highlights
+        return words.map(word => {
+            const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '')
+            if (wordsToHighlight.has(cleanWord)) {
+                const color = highlightColors[Math.floor(Math.random() * highlightColors.length)]
+                return `<span color="${color}">${word}</span>`
+            }
+            return word
+        }).join('')
+    }
 
     // Parse enhanced SRT format with word highlights
     const parseEnhancedSRT = (srtText: string): Caption[] => {
@@ -269,15 +273,18 @@ const CaptionsToolPanel = () => {
                 // Parse time format: 00:00:01,000 --> 00:00:03,500
                 const timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/)
                 if (timeMatch) {
-                    // Extract plain text for editing (remove HTML tags)
+                    // Remove any existing highlights from AI transcription
                     const plainText = textLines.replace(/<span[^>]*>(.*?)<\/span>/g, '$1')
+                    
+                    // Add random highlights to meaningful words
+                    const highlightedText = addRandomHighlights(plainText)
                     
                     parsedCaptions.push({
                         id: index + 1,
                         startTime: timeMatch[1],
                         endTime: timeMatch[2],
                         text: plainText,
-                        highlightedHtml: textLines // Store original with highlights
+                        highlightedHtml: highlightedText
                     })
                 }
             }
@@ -294,7 +301,7 @@ const CaptionsToolPanel = () => {
     }
 
     const handleOneClickGenerate = async () => {
-        if (!autoSelectedClip || !session?.access_token) {
+        if (!selectedTrackId || !session?.access_token) {
             setError('Please add a video or audio clip to your timeline first')
             return
         }
@@ -307,7 +314,7 @@ const CaptionsToolPanel = () => {
         setProgressStage('upload')
 
         try {
-            console.log('🎤 Starting one-click transcription for clip:', autoSelectedClip)
+            console.log('🎤 Starting one-click transcription for track:', selectedTrackId)
             
             // Simulate progress stages
             setTimeout(() => setProgressStage('processing'), 1000)
@@ -320,7 +327,7 @@ const CaptionsToolPanel = () => {
                     'Authorization': `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify({
-                    clipId: autoSelectedClip
+                    trackId: selectedTrackId
                 })
             })
 
@@ -477,9 +484,10 @@ const CaptionsToolPanel = () => {
         setEditText('')
     }
 
-    // Get the clip info for display
-    const selectedClip = transcribableClips.find(clip => clip.id === autoSelectedClip)
-    const selectedClipIndex = transcribableClips.findIndex(clip => clip.id === autoSelectedClip)
+    // Get the selected track and its clips for display
+    const selectedTrack = tracks.find(track => track.id === selectedTrackId)
+    const selectedTrackClips = clips.filter(clip => clip.trackId === selectedTrackId && (clip.type === 'video' || clip.type === 'audio'))
+    const selectedClip = selectedTrackClips.length > 0 ? selectedTrackClips[0] : null
 
     // Progress indicator content
     const getProgressContent = () => {
@@ -543,7 +551,7 @@ const CaptionsToolPanel = () => {
 
             {/* Phase 1: Initial Generation */}
             {workflowPhase === 'initial' && (
-                transcribableClips.length === 0 ? (
+                transcribableTracks.length === 0 ? (
                     <div className="text-center py-12">
                         <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-blue-100 flex items-center justify-center">
                             <Mic size={32} className="text-blue-500" />
@@ -555,22 +563,45 @@ const CaptionsToolPanel = () => {
                     </div>
                 ) : (
                     <div className="space-y-5">
-                        {/* Clip Info */}
-                        {selectedClip && (
+                        {/* Track Selection */}
+                        {transcribableTracks.length > 1 && (
+                            <div className="space-y-3">
+                                <label className="text-sm font-medium text-gray-700">Select Track to Caption</label>
+                                <select
+                                    value={selectedTrackId || ''}
+                                    onChange={(e) => setSelectedTrackId(e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    {transcribableTracks.map((track) => {
+                                        const trackClips = clips.filter(clip => clip.trackId === track.id && (clip.type === 'video' || clip.type === 'audio'))
+                                        const clipCount = trackClips.length
+                                        const totalDuration = trackClips.reduce((sum, clip) => sum + (clip.timelineEndMs - clip.timelineStartMs), 0)
+                                        return (
+                                            <option key={track.id} value={track.id}>
+                                                Track {track.index + 1} • {track.type} • {clipCount} clip{clipCount !== 1 ? 's' : ''} • {Math.round(totalDuration / 1000)}s
+                                            </option>
+                                        )
+                                    })}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* Track Info */}
+                        {selectedTrack && selectedClip && (
                             <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-xl">
                                 <div className="flex items-center gap-3 mb-2">
                                     <div className="w-10 h-10 rounded-lg bg-white/80 flex items-center justify-center text-lg">
-                                        {selectedClip.type === 'video' ? '📹' : '🎵'}
+                                        {selectedTrack.type === 'video' ? '📹' : '🎵'}
                                     </div>
                                     <div>
                                         <div className="text-sm font-semibold text-blue-800">
-                                            {selectedClip.type === 'video' ? 'Video' : 'Audio'} Clip {selectedClipIndex + 1}
+                                            Track {selectedTrack.index + 1} • {selectedTrack.type} 
                                         </div>
                                         <div className="text-xs text-blue-600">
-                                            Duration: {Math.round((selectedClip.timelineEndMs - selectedClip.timelineStartMs) / 1000)}s
+                                            {selectedTrackClips.length} clip{selectedTrackClips.length !== 1 ? 's' : ''} • Total duration: {Math.round(selectedTrackClips.reduce((sum, clip) => sum + (clip.timelineEndMs - clip.timelineStartMs), 0) / 1000)}s
                                         </div>
                                     </div>
-                                    {transcribableClips.length === 1 && (
+                                    {transcribableTracks.length === 1 && (
                                         <div className="ml-auto">
                                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
                                                 <Sparkles size={12} />
@@ -579,9 +610,9 @@ const CaptionsToolPanel = () => {
                                         </div>
                                     )}
                                 </div>
-                                {transcribableClips.length > 1 && (
+                                {transcribableTracks.length > 1 && (
                                     <p className="text-xs text-blue-600">
-                                        Auto-selected longest {selectedClip.type} clip
+                                        Selected track for caption generation
                                     </p>
                                 )}
                             </div>
@@ -590,7 +621,7 @@ const CaptionsToolPanel = () => {
                         {/* One-Click Generate Button */}
                         <button 
                             onClick={handleOneClickGenerate}
-                            disabled={!autoSelectedClip}
+                            disabled={!selectedTrackId}
                             className="
                                 relative overflow-hidden
                                 flex items-center justify-center gap-3 w-full px-6 py-5
@@ -649,25 +680,18 @@ const CaptionsToolPanel = () => {
                         </button>
                     </div>
 
-                    {/* AI Highlighting Info */}
+                    {/* Random Highlighting Info */}
                     <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
                             <Sparkles size={16} className="text-blue-500" />
-                            <span className="text-sm font-medium text-blue-700">AI Smart Highlighting Active</span>
+                            <span className="text-sm font-medium text-blue-700">Smart Highlighting Active</span>
                         </div>
                         <div className="flex items-center gap-4 text-xs">
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: highlightColors.red}}></div>
-                                <span className="text-gray-600">Actions & Emotions</span>
+                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: highlightColors[Math.floor(Math.random() * highlightColors.length)]}}></div>
+                                <span className="text-gray-600">Random Highlight</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: highlightColors.green}}></div>
-                                <span className="text-gray-600">Success & Growth</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: highlightColors.cyan}}></div>
-                                <span className="text-gray-600">Numbers & Facts</span>
-                            </div>
+                            <span className="text-gray-500">• 1-2 key words per caption highlighted with vibrant colors</span>
                         </div>
                     </div>
 
@@ -765,20 +789,21 @@ const CaptionsToolPanel = () => {
                                     key={style.name}
                                     type="button"
                                     className={`
-                                        border rounded-lg p-2 flex items-center justify-center transition-all duration-200 h-12 text-xs font-medium
+                                        border rounded-lg p-3 flex items-center justify-center transition-all duration-200 h-16 text-xs font-bold
                                         ${selectedStyleIdx === i ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' : 'hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'}
                                     `}
                                     style={{
+                                        backgroundColor: '#000000', // Black background to show outline properly
                                         ...style.style,
-                                        fontSize: 12, // Smaller for preview
-                                        padding: '4px 8px',
-                                        WebkitTextStroke: style.style.WebkitTextStroke ? '1px #000000' : undefined,
-                                        textShadow: style.style.textShadow ? '1px 1px 2px rgba(0, 0, 0, 0.5)' : undefined,
+                                        fontSize: 14, // Readable size for preview
+                                        padding: '8px 12px',
+                                        WebkitTextStroke: style.style.WebkitTextStroke ? '2px #000000' : undefined,
+                                        textShadow: style.style.textShadow ? '2px 2px 4px rgba(0, 0, 0, 0.8)' : undefined,
                                     }}
                                     onClick={() => setSelectedStyleIdx(i)}
                                     title={style.name}
                                 >
-                                    {style.name}
+                                    SAMPLE
                                 </button>
                             ))}
                         </div>

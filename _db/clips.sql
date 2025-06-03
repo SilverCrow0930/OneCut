@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.clips (
   asset_id          UUID          NULL
                                    REFERENCES public.assets(id),
   type              TEXT          NOT NULL
-                                   CHECK (type IN ('video','image','audio','text')),
+                                   CHECK (type IN ('video','image','audio','text','caption')),
   source_start_ms   INTEGER       NOT NULL,  -- trim start in source (ms)
   source_end_ms     INTEGER       NOT NULL,  -- trim end in source (ms)
   timeline_start_ms INTEGER       NOT NULL,  -- placement start on timeline (ms)
