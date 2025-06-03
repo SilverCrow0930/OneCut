@@ -221,14 +221,40 @@ export function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
                     />
                 )
             case 'text':
+                // Get placement from properties, default to middle
+                const placement = clip.properties?.placement || 'middle'
+                
+                // Calculate position based on placement
+                let textPosition = {}
+                switch (placement) {
+                    case 'top':
+                        textPosition = {
+                            top: '15%',
+                            transform: 'translateY(0%)',
+                        }
+                        break
+                    case 'bottom':
+                        textPosition = {
+                            bottom: '15%',
+                            transform: 'translateY(0%)',
+                        }
+                        break
+                    case 'middle':
+                    default:
+                        textPosition = {
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                        }
+                        break
+                }
+
                 return (
                     <div
                         style={{
                             position: 'absolute',
                             left: 0,
                             right: 0,
-                            top: '50%',
-                            transform: 'translateY(-50%)',
+                            ...textPosition,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

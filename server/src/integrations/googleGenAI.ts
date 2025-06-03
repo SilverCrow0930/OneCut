@@ -60,18 +60,10 @@ const transcriptionSystemInstruction = `
     3. Do NOT translate - keep the transcription in the same language as the speech
     4. Generate timestamped captions in SRT format
     5. Add proper punctuation and capitalization appropriate for the detected language
-    6. Break captions into readable chunks (max 6 words)
+    6. Break captions into readable chunks
+    7. Each chunk should be at most 6 words
     
     Supported languages include: English, Spanish, French, German, Italian, Portuguese, Russian, Chinese (Mandarin), Japanese, Korean, Arabic, Hindi, and many others.
-    
-    Output format should be standard SRT:
-    1
-    00:00:01,000 --> 00:00:03,500
-    First caption text in original language
-    
-    2
-    00:00:03,500 --> 00:00:06,000
-    Second caption text in original language
     
     Be accurate with timing and make captions easy to read in the detected language.
     IMPORTANT: Never translate the content - always transcribe in the original spoken language.
