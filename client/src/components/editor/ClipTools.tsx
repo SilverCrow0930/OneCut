@@ -15,12 +15,21 @@ const ClipTools = () => {
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (speedSliderRef.current && !speedSliderRef.current.contains(event.target as Node)) {
+                console.log('🎛️ Clicking outside speed slider, closing')
                 setShowSpeedSlider(false)
             }
         }
 
         if (showSpeedSlider) {
-            document.addEventListener('mousedown', handleClickOutside)
+            // Use a small delay to avoid immediate closure when opening
+            const timer = setTimeout(() => {
+                document.addEventListener('mousedown', handleClickOutside)
+            }, 100)
+            
+            return () => {
+                clearTimeout(timer)
+                document.removeEventListener('mousedown', handleClickOutside)
+            }
         }
 
         return () => {
@@ -334,10 +343,12 @@ const ClipTools = () => {
                         `Adjust speed of ${selectedClips.filter(c => c.type === 'video' || c.type === 'audio').length} media clips` : 
                         "Adjust playback speed"
                     }
-                    onClick={() => {
-                        console.log('Speed button clicked', { canAdjustSpeed, hasAnySelection, showSpeedSlider, selectedClip: selectedClip?.type, selectedClips: selectedClips.map(c => c.type) })
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        console.log('🎛️ Speed button clicked', { canAdjustSpeed, hasAnySelection, showSpeedSlider, selectedClip: selectedClip?.type, selectedClips: selectedClips.map(c => c.type) })
                         setShowSpeedSlider(!showSpeedSlider)
                     }}
+                    onMouseDown={(e) => e.stopPropagation()}
                     disabled={!canAdjustSpeed || !hasAnySelection}
                 >
                     <Gauge size={26} />
@@ -345,7 +356,11 @@ const ClipTools = () => {
 
                 {/* Speed Slider */}
                 {showSpeedSlider && (
-                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]">
+                    <div 
+                        className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                    >
                         <div className="text-sm font-semibold text-gray-700 mb-3 text-center">
                             {sliderSpeed.toFixed(1)}x speed
                         </div>
@@ -368,6 +383,8 @@ const ClipTools = () => {
                                     setSliderSpeed(newSpeed)
                                     handleSpeedChange(newSpeed)
                                 }}
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
                                 className="w-full h-2 bg-transparent appearance-none cursor-pointer relative z-10
                                     [&::-webkit-slider-thumb]:appearance-none 
                                     [&::-webkit-slider-thumb]:w-4 
