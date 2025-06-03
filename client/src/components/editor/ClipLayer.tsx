@@ -29,11 +29,6 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
     const { isSelected, isInMultiSelection, isMultiSelectionActive } = selectionState
     const isPrimarySelection = isSelected && !isMultiSelectionActive
 
-    // Early return if clip is not in view
-    if (localMs < 0 || localMs > durationMs) {
-        return null
-    }
-
     const { url } = useAssetUrl(clip.assetId)
     const externalAsset = clip.properties?.externalAsset
     const mediaUrl = externalAsset?.url || url
@@ -58,6 +53,9 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
     const [isDraggingCrop, setIsDraggingCrop] = useState(false)
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 })
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
+
+    // Check if clip should be rendered AFTER all hooks are called
+    const isVisible = localMs >= 0 && localMs <= durationMs
 
     // Memoize click handler
     const handleClick = useCallback((e: React.MouseEvent) => {
@@ -473,6 +471,10 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
     }, [clip.type, clip.properties?.placement]);
 
     // --- Main render ---
+    if (!isVisible) {
+        return null
+    }
+
     return (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             {(isPrimarySelection || (isInMultiSelection && isMultiSelectionActive)) && (
