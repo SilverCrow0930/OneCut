@@ -80,6 +80,57 @@ const transcriptionSystemInstruction = `
     IMPORTANT: Provide clean text without any HTML tags or formatting.
 `
 
+const textStyleSystemInstruction = `
+    You are a CSS text styling expert specialized in creating visually appealing text styles for video content.
+    
+    Your task is to:
+    1. Analyze the user's natural language description of their desired text style
+    2. Generate appropriate CSS properties that match their request
+    3. Return ONLY a valid JSON object with CSS properties
+    4. Focus on properties that work well for video text overlays
+    5. Ensure high readability and visual impact
+    
+    Available CSS properties you can use:
+    - fontFamily (use web-safe fonts or common Google Fonts)
+    - fontSize (in pixels, reasonable range 16-48px)
+    - fontWeight (100-900 or keywords like 'bold')
+    - color (hex, rgb, or named colors)
+    - background (colors, gradients, or 'none')
+    - textShadow (for depth and readability)
+    - WebkitTextStroke (for outlines)
+    - textTransform ('none', 'uppercase', 'lowercase', 'capitalize')
+    - letterSpacing (in pixels or em)
+    - padding (for background styles)
+    - borderRadius (for rounded backgrounds)
+    - border (for outlined backgrounds)
+    - textAlign ('left', 'center', 'right')
+    - lineHeight (for multi-line text)
+    - opacity (0-1)
+    - transform (for effects like rotation, but use sparingly)
+    
+    Guidelines:
+    - Ensure text is readable against various backgrounds
+    - Use text shadows or outlines when text might be hard to read
+    - For vibrant styles, use bold fonts and high contrast
+    - For elegant styles, use sophisticated fonts and subtle effects
+    - For modern styles, use clean fonts and minimal effects
+    - For retro styles, use appropriate fonts and nostalgic colors
+    
+    IMPORTANT: Return ONLY valid JSON, no explanations or additional text.
+    
+    Example output for "neon cyberpunk style":
+    {
+        "fontFamily": "Arial, sans-serif",
+        "fontSize": 24,
+        "fontWeight": "bold",
+        "color": "#00FFFF",
+        "background": "none",
+        "textShadow": "0 0 10px #00FFFF, 0 0 20px #00FFFF, 0 0 30px #00FFFF",
+        "textTransform": "uppercase",
+        "letterSpacing": "2px"
+    }
+`
+
 const waitForFileActive = async (fileId: string, delayMs = 5000) => {
     let attempt = 0;
     let lastState: string | undefined = '';
@@ -548,6 +599,84 @@ export const generateTranscription = async (signedUrl: string, mimeType: string)
     }
     catch (error) {
         console.error('=== GOOGLE GENAI TRANSCRIPTION FAILED ===');
+        console.error('Error details:', {
+            error: error instanceof Error ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            } : error,
+            timestamp: new Date().toISOString()
+        });
+        throw error;
+    }
+}
+
+export const generateTextStyle = async (stylePrompt: string, sampleText: string = 'Sample Text') => {
+    console.log('=== GOOGLE GENAI TEXT STYLE GENERATION STARTED ===');
+    console.log('Input parameters:', {
+        stylePrompt,
+        sampleText
+    });
+
+    try {
+        const prompt = `Generate CSS styles for the following text style request: "${stylePrompt}"
+        
+        The text to be styled is: "${sampleText}"
+        
+        Return a JSON object with CSS properties that will create the requested style effect.`;
+
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            config: {
+                systemInstruction: textStyleSystemInstruction,
+                maxOutputTokens: 1024,
+                temperature: 0.7,
+                topP: 0.8,
+                topK: 40,
+            },
+        });
+
+        console.log('Model style generation completed');
+
+        if (!response.candidates?.[0]?.content?.parts?.[0]?.text) {
+            throw new Error('No response from style generation model');
+        }
+
+        const styleOutput = response.candidates[0].content.parts[0].text;
+        
+        console.log('Model style output:', {
+            length: styleOutput.length,
+            preview: styleOutput.substring(0, 200) + '...'
+        });
+
+        // Parse the JSON output
+        let parsedStyle;
+        try {
+            // Extract JSON from the response (in case there's extra text)
+            const jsonMatch = styleOutput.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                parsedStyle = JSON.parse(jsonMatch[0]);
+            } else {
+                // Try parsing the entire response
+                parsedStyle = JSON.parse(styleOutput);
+            }
+        } catch (parseError) {
+            console.error('Failed to parse style JSON:', parseError);
+            throw new Error('AI generated invalid style format');
+        }
+
+        // Validate that we have a valid style object
+        if (!parsedStyle || typeof parsedStyle !== 'object') {
+            throw new Error('AI generated invalid style object');
+        }
+
+        console.log('=== GOOGLE GENAI TEXT STYLE GENERATION COMPLETED ===');
+        return {
+            style: parsedStyle
+        };
+    } catch (error) {
+        console.error('=== GOOGLE GENAI TEXT STYLE GENERATION FAILED ===');
         console.error('Error details:', {
             error: error instanceof Error ? {
                 name: error.name,
