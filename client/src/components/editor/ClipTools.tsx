@@ -315,12 +315,18 @@ const ClipTools = () => {
                 </button>
 
                 {/* Speed Slider */}
-                {showSpeedSlider && canAdjustSpeed && hasAnySelection && (
+                {showSpeedSlider && (
                     <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]">
                         <div className="text-xs font-semibold text-gray-700 mb-3 text-center">
                             Speed: {sliderSpeed}x
                         </div>
                         <div className="relative">
+                            <div
+                                className="absolute w-full h-2 rounded-full"
+                                style={{
+                                    background: `linear-gradient(to right, #4B5563 ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%, #9CA3AF ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%)`
+                                }}
+                            ></div>
                             <input
                                 type="range"
                                 min="0.25"
@@ -328,10 +334,22 @@ const ClipTools = () => {
                                 step="0.25"
                                 value={sliderSpeed}
                                 onChange={handleSliderChange}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                                style={{
-                                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%, #e5e7eb ${((sliderSpeed - 0.25) / (3 - 0.25)) * 100}%, #e5e7eb 100%)`
-                                }}
+                                className="w-full h-2 bg-transparent appearance-none cursor-pointer relative z-10
+                                    [&::-webkit-slider-thumb]:appearance-none 
+                                    [&::-webkit-slider-thumb]:w-4 
+                                    [&::-webkit-slider-thumb]:h-4 
+                                    [&::-webkit-slider-thumb]:rounded-full 
+                                    [&::-webkit-slider-thumb]:bg-white
+                                    [&::-webkit-slider-thumb]:shadow-2xl 
+                                    [&::-webkit-slider-thumb]:cursor-pointer 
+                                    [&::-moz-range-thumb]:w-4 
+                                    [&::-moz-range-thumb]:h-4 
+                                    [&::-moz-range-thumb]:rounded-full 
+                                    [&::-moz-range-thumb]:bg-white 
+                                    [&::-moz-range-thumb]:border 
+                                    [&::-moz-range-thumb]:border-black 
+                                    [&::-moz-range-thumb]:shadow-2xl 
+                                    [&::-moz-range-thumb]:cursor-pointer"
                             />
                             <div className="flex justify-between text-xs text-gray-500 mt-1">
                                 <span>0.25x</span>
@@ -354,49 +372,6 @@ const ClipTools = () => {
             >
                 <Trash2 size={26} />
             </button>
-
-            {/* Custom slider styles */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                    input[type="range"]::-webkit-slider-thumb {
-                        appearance: none;
-                        height: 18px;
-                        width: 18px;
-                        border-radius: 50%;
-                        background: #3b82f6;
-                        cursor: pointer;
-                        border: 2px solid #ffffff;
-                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                    }
-
-                    input[type="range"]::-moz-range-thumb {
-                        height: 18px;
-                        width: 18px;
-                        border-radius: 50%;
-                        background: #3b82f6;
-                        cursor: pointer;
-                        border: 2px solid #ffffff;
-                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                        border: none;
-                    }
-
-                    input[type="range"]::-webkit-slider-track {
-                        height: 8px;
-                        border-radius: 4px;
-                    }
-
-                    input[type="range"]::-moz-range-track {
-                        height: 8px;
-                        border-radius: 4px;
-                        background: transparent;
-                        border: none;
-                    }
-
-                    input[type="range"]:focus::-webkit-slider-thumb {
-                        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-                    }
-                `
-            }} />
         </div>
     )
 }

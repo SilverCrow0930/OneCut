@@ -448,7 +448,7 @@ const VoiceoverToolPanel = () => {
                     <button
                                             onClick={loadVoices}
                                             className="mt-2 text-blue-600 hover:text-blue-700 text-sm"
-                                        >
+                    >
                                             Try again
                     </button>
                                     )}
