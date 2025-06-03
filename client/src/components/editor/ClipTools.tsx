@@ -58,12 +58,15 @@ const ClipTools = () => {
         
         if (clipsToUpdate.length === 0) return
 
-        console.log('Applying speed change:', { newSpeed, clipsToUpdate: clipsToUpdate.length })
+        console.log('🎛️ Speed change requested:', { 
+            newSpeed, 
+            clipsToUpdate: clipsToUpdate.map(c => ({ id: c.id, type: c.type, currentSpeed: c.speed || 1 }))
+        })
 
         const commands = clipsToUpdate
             .filter(clip => clip.type === 'video' || clip.type === 'audio') // Only update video/audio clips
             .map(clip => {
-                console.log('Updating clip:', clip.id, 'from speed:', clip.speed || 1, 'to:', newSpeed)
+                console.log('🎛️ Creating speed command for clip:', clip.id, 'from speed:', clip.speed || 1, 'to:', newSpeed)
                 
                 // Calculate new timeline duration based on speed change
                 const currentSourceDuration = clip.sourceEndMs - clip.sourceStartMs
@@ -84,7 +87,7 @@ const ClipTools = () => {
                 }
             })
 
-        console.log('Generated commands:', commands.length)
+        console.log('🎛️ Executing commands:', commands.length)
 
         if (commands.length > 0) {
             executeCommand({

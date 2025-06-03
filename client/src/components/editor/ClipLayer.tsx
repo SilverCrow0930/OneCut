@@ -31,7 +31,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
     const { isSelected, isInMultiSelection, isMultiSelectionActive } = selectionState
     const isPrimarySelection = isSelected && !isMultiSelectionActive
 
-    const { url } = useAssetUrl(clip.assetId)
+    const { url, loading } = useAssetUrl(clip.assetId)
     const externalAsset = clip.properties?.externalAsset
     const mediaUrl = externalAsset?.url || url
 
@@ -122,6 +122,13 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         const targetTime = sourceTime !== undefined ? sourceTime : Math.max(0, localMs / 1000);
         const now = performance.now();
         
+        // Set playback rate immediately and whenever it changes
+        const targetSpeed = clip.speed || 1;
+        if (Math.abs(v.playbackRate - targetSpeed) > 0.01) {
+            console.log('🎬 Setting video playback rate for clip:', clip.id, 'from:', v.playbackRate, 'to:', targetSpeed)
+            v.playbackRate = targetSpeed;
+        }
+
         // More conservative seeking - only seek if really necessary
         const timeDiff = Math.abs(v.currentTime - targetTime);
         const shouldSeek = timeDiff > 0.15 && // Larger threshold
@@ -134,12 +141,6 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
             v.currentTime = targetTime;
             lastUpdateRef.current = now;
             lastSeekTimeRef.current = now;
-        }
-
-        // Set playback rate immediately when available
-        if (v.playbackRate !== (clip.speed || 1)) {
-            console.log('Setting video playback rate for clip:', clip.id, 'to:', clip.speed || 1)
-            v.playbackRate = clip.speed || 1;
         }
 
         // Handle playback state changes
@@ -159,18 +160,70 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         }
     }, [sourceTime, localMs, clip.type, clip.volume, clip.speed, isPlaying]);
 
+    // Separate effect to handle video element loading and speed setting
+    useEffect(() => {
+        const v = videoRef.current;
+        if (!v || clip.type !== 'video') return;
+
+        const handleLoadedMetadata = () => {
+            const targetSpeed = clip.speed || 1;
+            console.log('🎬 Video metadata loaded, setting speed:', targetSpeed, 'for clip:', clip.id)
+            
+            try {
+                // Check if playbackRate is supported
+                if ('playbackRate' in v) {
+                    v.playbackRate = targetSpeed;
+                    console.log('🎬 Playback rate set successfully:', v.playbackRate);
+                } else {
+                    console.warn('🎬 Playback rate not supported by this browser/video');
+                }
+            } catch (error) {
+                console.error('🎬 Error setting playback rate:', error);
+            }
+        };
+
+        const handleCanPlay = () => {
+            const targetSpeed = clip.speed || 1;
+            if (Math.abs(v.playbackRate - targetSpeed) > 0.01) {
+                console.log('🎬 Video can play, ensuring speed is set:', targetSpeed, 'for clip:', clip.id)
+                try {
+                    v.playbackRate = targetSpeed;
+                    console.log('🎬 Playback rate corrected to:', v.playbackRate);
+                } catch (error) {
+                    console.error('🎬 Error correcting playback rate:', error);
+                }
+            }
+        };
+
+        // Add event listeners
+        v.addEventListener('loadedmetadata', handleLoadedMetadata);
+        v.addEventListener('canplay', handleCanPlay);
+
+        // Set immediately if video is already loaded
+        if (v.readyState >= 1) { // HAVE_METADATA
+            handleLoadedMetadata();
+        }
+
+        return () => {
+            v.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            v.removeEventListener('canplay', handleCanPlay);
+        };
+    }, [clip.speed, clip.id, clip.type])
+
     // Register audio clip with AudioContext
     useEffect(() => {
-        if (clip.type === 'audio' && url) {
-            console.log('Registering audio clip:', clip.id, 'with speed:', clip.speed || 1)
+        if (clip.type === 'audio' && url && !loading) {
+            console.log('Registering audio clip:', clip.id, 'with speed:', clip.speed || 1, 'url:', url)
             registerAudioClip(clip.id, url, clip.timelineStartMs, clip.timelineEndMs, clip.volume || 1, clip.speed || 1)
             
             return () => {
                 console.log('Unregistering audio clip:', clip.id)
                 unregisterTrack(clip.id)
             }
+        } else if (clip.type === 'audio' && loading) {
+            console.log('Audio clip waiting for URL:', clip.id)
         }
-    }, [clip.id, clip.type, url, clip.timelineStartMs, clip.timelineEndMs, clip.volume, registerAudioClip, unregisterTrack])
+    }, [clip.id, clip.type, url, loading, clip.timelineStartMs, clip.timelineEndMs, clip.volume, registerAudioClip, unregisterTrack])
 
     // Update audio speed when clip speed changes
     useEffect(() => {
@@ -205,6 +258,27 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                         muted={false}
                         onClick={handleClick}
                         draggable={false}
+                        onLoadedMetadata={() => {
+                            const v = videoRef.current;
+                            if (v) {
+                                const targetSpeed = clip.speed || 1;
+                                console.log('🎬 Video onLoadedMetadata, setting speed:', targetSpeed, 'current:', v.playbackRate, 'clip:', clip.id);
+                                v.playbackRate = targetSpeed;
+                            }
+                        }}
+                        onPlay={() => {
+                            const v = videoRef.current;
+                            if (v) {
+                                const targetSpeed = clip.speed || 1;
+                                if (Math.abs(v.playbackRate - targetSpeed) > 0.01) {
+                                    console.log('🎬 Video onPlay, correcting speed:', targetSpeed, 'was:', v.playbackRate, 'clip:', clip.id);
+                                    v.playbackRate = targetSpeed;
+                                }
+                            }
+                        }}
+                        onLoadStart={() => {
+                            console.log('🎬 Video element load started for clip:', clip.id, 'expected speed:', clip.speed || 1);
+                        }}
                     />
                 )
             case 'audio':

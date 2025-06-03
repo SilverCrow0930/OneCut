@@ -1,4 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useRef, useEffect } from 'react'
+import { useAudio } from './AudioContext'
 
 interface PlaybackContextType {
     currentTime: number       // seconds
@@ -14,6 +15,7 @@ interface PlaybackContextType {
 const PlaybackContext = createContext<PlaybackContextType | null>(null)
 
 export function PlaybackProvider({ children }: { children: ReactNode }) {
+    const { updatePlayback } = useAudio()
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)  // in milliseconds
     const [isPlaying, setIsPlaying] = useState(false)
@@ -29,12 +31,15 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
             setCurrentTime(0)
             pausedTimeRef.current = 0
             currentTimeRef.current = 0
+            updatePlayback(0, isPlaying)
             return
         }
         const newTime = Math.min(maxTime, Math.max(0, time))
         setCurrentTime(newTime)
         pausedTimeRef.current = newTime
         currentTimeRef.current = newTime
+        // Update audio context with new time
+        updatePlayback(newTime, isPlaying)
     }
 
     // Animation frame loop for playback
@@ -46,6 +51,8 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
             }
             // Store the exact time when pausing
             pausedTimeRef.current = currentTimeRef.current
+            // Update audio context when pausing
+            updatePlayback(currentTimeRef.current, false)
             return
         }
 
@@ -65,9 +72,13 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
                     currentTimeRef.current = 0
                     setCurrentTime(0)
                     startTimeRef.current = timestamp
+                    // Update audio context with reset time
+                    updatePlayback(0, true)
                 } else {
                     currentTimeRef.current = newTime
                     setCurrentTime(newTime)
+                    // Update audio context with current time
+                    updatePlayback(newTime, true)
                 }
             }
 
@@ -81,7 +92,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
                 cancelAnimationFrame(frameRef.current)
             }
         }
-    }, [isPlaying, duration])
+    }, [isPlaying, duration, updatePlayback])
 
     const play = () => {
         // Reset start time when starting playback
