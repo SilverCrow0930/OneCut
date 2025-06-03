@@ -5,7 +5,7 @@ import { usePlayback } from '@/contexts/PlaybackContext'
 import { v4 as uuid } from 'uuid'
 
 const ClipTools = () => {
-    const { executeCommand, selectedClipId, selectedClipIds, clips, tracks } = useEditor()
+    const { executeCommand, selectedClipId, selectedClipIds, clips, tracks, setSelectedClipId, setSelectedClipIds } = useEditor()
     const { currentTime } = usePlayback()
     const [showSpeedSlider, setShowSpeedSlider] = useState(false)
     const [sliderSpeed, setSliderSpeed] = useState(1)
@@ -15,21 +15,13 @@ const ClipTools = () => {
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (speedSliderRef.current && !speedSliderRef.current.contains(event.target as Node)) {
-                console.log('🎛️ Clicking outside speed slider, closing')
+                console.log('🎛️ Clicked outside speed slider, closing it')
                 setShowSpeedSlider(false)
             }
         }
 
         if (showSpeedSlider) {
-            // Use a small delay to avoid immediate closure when opening
-            const timer = setTimeout(() => {
-                document.addEventListener('mousedown', handleClickOutside)
-            }, 100)
-            
-            return () => {
-                clearTimeout(timer)
-                document.removeEventListener('mousedown', handleClickOutside)
-            }
+            document.addEventListener('mousedown', handleClickOutside)
         }
 
         return () => {
@@ -51,6 +43,8 @@ const ClipTools = () => {
 
     // Update slider speed when selection changes
     useEffect(() => {
+        console.log('🎯 Selection changed - hasSelectedClip:', hasSelectedClip, 'hasMultipleSelection:', hasMultipleSelection, 'selectedClip:', selectedClip?.id, 'selectedClipIds:', selectedClipIds)
+        
         if (hasSelectedClip && !hasMultipleSelection && (selectedClip.type === 'video' || selectedClip.type === 'audio')) {
             const currentSpeed = selectedClip.speed || 1
             console.log('🎛️ Updating slider speed from selection:', currentSpeed, 'for clip:', selectedClip.id)
@@ -104,10 +98,27 @@ const ClipTools = () => {
         console.log('🎛️ Executing commands:', commands.length)
 
         if (commands.length > 0) {
+            // Store current selection before executing commands
+            const currentSelectedClipId = selectedClipId
+            const currentSelectedClipIds = [...selectedClipIds]
+            console.log('🎯 Storing selection before speed change:', { currentSelectedClipId, currentSelectedClipIds })
+            
             executeCommand({
                 type: 'BATCH',
                 payload: { commands }
             })
+            
+            // Restore selection after command execution if it was lost
+            setTimeout(() => {
+                if (!selectedClipId && currentSelectedClipId) {
+                    console.log('🎯 Restoring lost selection:', currentSelectedClipId)
+                    setSelectedClipId(currentSelectedClipId)
+                }
+                if (selectedClipIds.length === 0 && currentSelectedClipIds.length > 0) {
+                    console.log('🎯 Restoring lost multi-selection:', currentSelectedClipIds)
+                    setSelectedClipIds(currentSelectedClipIds)
+                }
+            }, 50)
             
             // Debug: Check if the speed was actually applied after a short delay
             setTimeout(() => {
@@ -343,12 +354,10 @@ const ClipTools = () => {
                         `Adjust speed of ${selectedClips.filter(c => c.type === 'video' || c.type === 'audio').length} media clips` : 
                         "Adjust playback speed"
                     }
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        console.log('🎛️ Speed button clicked', { canAdjustSpeed, hasAnySelection, showSpeedSlider, selectedClip: selectedClip?.type, selectedClips: selectedClips.map(c => c.type) })
+                    onClick={() => {
+                        console.log('Speed button clicked', { canAdjustSpeed, hasAnySelection, showSpeedSlider, selectedClip: selectedClip?.type, selectedClips: selectedClips.map(c => c.type) })
                         setShowSpeedSlider(!showSpeedSlider)
                     }}
-                    onMouseDown={(e) => e.stopPropagation()}
                     disabled={!canAdjustSpeed || !hasAnySelection}
                 >
                     <Gauge size={26} />
@@ -364,7 +373,11 @@ const ClipTools = () => {
                         <div className="text-sm font-semibold text-gray-700 mb-3 text-center">
                             {sliderSpeed.toFixed(1)}x speed
                         </div>
-                        <div className="relative">
+                        <div 
+                            className="relative"
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
                             <div
                                 className="absolute w-full h-2 rounded-full"
                                 style={{
@@ -378,6 +391,7 @@ const ClipTools = () => {
                                 step="0.1"
                                 value={sliderSpeed}
                                 onChange={(e) => {
+                                    e.stopPropagation()
                                     const newSpeed = parseFloat(e.target.value)
                                     console.log('🎛️ Slider changed to:', newSpeed)
                                     setSliderSpeed(newSpeed)
