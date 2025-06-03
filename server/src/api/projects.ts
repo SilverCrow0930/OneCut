@@ -1,9 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { check, validationResult } from 'express-validator'
-import { supabase } from '../config/supabaseClient'
-import { AuthenticatedRequest } from '../middleware/authenticate'
-import { generateDefaultName } from '../lib/utils'
-import { DBClip as Clip } from '../types/clips'
+import { supabase } from '../config/supabaseClient.js'
+import { AuthenticatedRequest } from '../middleware/authenticate.js'
+import { generateDefaultName } from '../lib/utils.js'
+import { DBClip as Clip } from '../types/clips.js'
 
 const router = Router()
 

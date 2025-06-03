@@ -1,8 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express'
-import { supabase } from '../config/supabaseClient'
-import { AuthenticatedRequest } from '../middleware/authenticate'
-import { DBClip as Clip } from '../types/clips'
-import { DBTrack as Track } from '../types/tracks'
+import { supabase } from '../config/supabaseClient.js'
+import { AuthenticatedRequest } from '../middleware/authenticate.js'
+import { DBClip as Clip } from '../types/clips.js'
+import { DBTrack as Track } from '../types/tracks.js'
 
 const router = Router()
 

@@ -1,7 +1,7 @@
 // src/api/auth.ts
 import { Router, Request, Response } from 'express'
-import { supabase } from '../config/supabaseClient'
-import { AuthenticatedRequest } from '../middleware/authenticate'
+import { supabase } from '../config/supabaseClient.js'
+import { AuthenticatedRequest } from '../middleware/authenticate.js'
 
 const router = Router()
 

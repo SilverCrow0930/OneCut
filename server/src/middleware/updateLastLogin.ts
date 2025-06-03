@@ -1,6 +1,6 @@
-import { NextFunction, Response, Request } from "express"
-import { supabase } from "../config/supabaseClient"
-import { AuthenticatedRequest } from "./authenticate"
+import { Request, Response, NextFunction } from 'express'
+import { supabase } from '../config/supabaseClient.js'
+import { AuthenticatedRequest } from './authenticate.js'
 
 export async function updateLastLogin(
     req: Request,
