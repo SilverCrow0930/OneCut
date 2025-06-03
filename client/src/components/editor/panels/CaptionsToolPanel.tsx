@@ -8,6 +8,93 @@ import { apiPath } from '@/lib/config'
 import { v4 as uuid } from 'uuid'
 import { TrackType } from '@/types/editor'
 
+// Add CSS animations for trending short video effects
+const captionAnimations = `
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes neonGlow {
+    0% { 
+        text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff88;
+        filter: brightness(1);
+    }
+    100% { 
+        text-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88, 0 0 80px #00ff88;
+        filter: brightness(1.2);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+@keyframes wiggle {
+    0%, 7% { transform: rotateZ(0); }
+    15% { transform: rotateZ(-15deg); }
+    20% { transform: rotateZ(10deg); }
+    25% { transform: rotateZ(-10deg); }
+    30% { transform: rotateZ(6deg); }
+    35% { transform: rotateZ(-4deg); }
+    40%, 100% { transform: rotateZ(0); }
+}
+
+@keyframes colorShift {
+    0% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(180deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+@keyframes zoomPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes slideIn {
+    0% { transform: translateX(-20px); opacity: 0.7; }
+    50% { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(20px); opacity: 0.7; }
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes glowPulse {
+    0% { 
+        text-shadow: 0 0 20px #ffffff, 4px 4px 8px #000000, 8px 8px 16px rgba(255,255,255,0.5);
+    }
+    100% { 
+        text-shadow: 0 0 40px #ffffff, 4px 4px 8px #000000, 8px 8px 16px rgba(255,255,255,0.8);
+    }
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    70% { transform: scale(0.9); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes flashEffect {
+    0%, 50%, 100% { opacity: 1; }
+    25%, 75% { opacity: 0.7; transform: scale(1.05); }
+}
+`
+
 interface Caption {
     id: number
     startTime: string
@@ -15,134 +102,219 @@ interface Caption {
     text: string
 }
 
-// Caption styles based on the provided specifications
+// Trending short video font styles - Exact match to popular social platforms
 export const captionStyles = [
     {
-        name: 'Fira Sans Condensed',
+        name: 'TikTok Bold',
         style: {
-            fontFamily: 'Fira Sans Condensed, Arial, sans-serif',
-            fontSize: 22,
-            fontWeight: 900, // Heavy
+            fontFamily: 'Rubik, Arial Black, sans-serif',
+            fontSize: 24,
+            fontWeight: 900,
             color: '#ffffff',
             backgroundColor: 'transparent',
-            padding: '4px 8px',
-            borderRadius: '0px',
+            padding: '6px 12px',
+            borderRadius: '8px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000', // Medium stroke thickness
-            textShadow: '3px 3px 6px rgba(0, 0, 0, 0.7)', // Medium shadow
+            WebkitTextStroke: '3px #000000',
+            textShadow: '4px 4px 0px #ff0040, 8px 8px 0px rgba(0,0,0,0.3)',
             textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+            animation: 'bounce 2s infinite',
         },
     },
     {
-        name: 'Komika-axis',
+        name: 'Instagram Reels',
         style: {
-            fontFamily: 'Komika Axis, Comic Sans MS, Arial, sans-serif',
+            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
             fontSize: 22,
-            fontWeight: 900, // Heavy
-            color: '#ffffff',
-            backgroundColor: 'transparent',
-            padding: '4px 8px',
-            borderRadius: '0px',
+            fontWeight: 900,
+            color: '#000000',
+            backgroundColor: '#ffff00',
+            padding: '8px 16px',
+            borderRadius: '12px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000', // Medium stroke thickness
-            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.6)', // Small shadow
+            textShadow: '2px 2px 0px #ffffff',
             textTransform: 'uppercase' as const,
+            letterSpacing: '0.5px',
+            border: '3px solid #000000',
+            animation: 'pulse 1.5s infinite',
         },
     },
     {
-        name: 'Circular',
+        name: 'Viral Neon',
         style: {
-            fontFamily: 'Circular, Helvetica, Arial, sans-serif',
+            fontFamily: 'Montserrat, Arial, sans-serif',
             fontSize: 20,
-            fontWeight: 500, // Medium
-            color: '#ffffff',
-            backgroundColor: 'transparent',
-            padding: '4px 8px',
-            borderRadius: '0px',
+            fontWeight: 800,
+            color: '#00ff88',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            padding: '8px 16px',
+            borderRadius: '6px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000', // Medium stroke thickness
-            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.6)', // Small shadow
-            textTransform: 'none' as const, // No uppercase
+            textShadow: '0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff88',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+            border: '2px solid #00ff88',
+            animation: 'neonGlow 3s infinite alternate',
         },
     },
     {
-        name: 'Poppins',
+        name: 'YouTube Shorts',
         style: {
-            fontFamily: 'Poppins, Arial, sans-serif',
-            fontSize: 21,
-            fontWeight: 700, // Bold
-            color: '#ffffff',
-            backgroundColor: 'transparent',
-            padding: '4px 8px',
-            borderRadius: '0px',
+            fontFamily: 'Rubik, Arial Black, sans-serif',
+            fontSize: 26,
+            fontWeight: 900,
+            color: '#ff0000',
+            backgroundColor: '#ffffff',
+            padding: '10px 20px',
+            borderRadius: '16px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '1px #000000', // Small stroke thickness
-            textShadow: 'none', // None shadow
-            textTransform: 'none' as const, // NO uppercase
+            textShadow: '3px 3px 0px #000000',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+            border: '4px solid #ff0000',
+            animation: 'shake 0.8s infinite',
         },
     },
     {
-        name: 'Roboto',
+        name: 'Komika Fun',
         style: {
-            fontFamily: 'Roboto, Arial, sans-serif',
+            fontFamily: 'Komika, Comic Sans MS, cursive',
             fontSize: 22,
-            fontWeight: 900, // Heavy
+            fontWeight: 800,
             color: '#ffffff',
+            backgroundColor: '#ff6600',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            textAlign: 'center' as const,
+            textShadow: '4px 4px 0px #000000, 8px 8px 0px rgba(255,102,0,0.5)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.5px',
+            animation: 'wiggle 2s infinite',
+        },
+    },
+    {
+        name: 'Trending Pop',
+        style: {
+            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
+            fontSize: 24,
+            fontWeight: 900,
+            color: '#ffffff',
+            backgroundColor: 'transparent',
+            padding: '6px 12px',
+            borderRadius: '0px',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '2px #000000',
+            textShadow: '4px 4px 0px #00ffff, -4px -4px 0px #ff00ff',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '2px',
+            animation: 'colorShift 2s infinite',
+        },
+    },
+    {
+        name: 'Montserrat Heavy',
+        style: {
+            fontFamily: 'Montserrat, Arial, sans-serif',
+            fontSize: 20,
+            fontWeight: 900,
+            color: '#000000',
+            backgroundColor: '#00ff00',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            textAlign: 'center' as const,
+            textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+            border: '3px solid #000000',
+            animation: 'zoomPulse 1.5s infinite',
+        },
+    },
+    {
+        name: 'Stroke Master',
+        style: {
+            fontFamily: 'Rubik, Arial Black, sans-serif',
+            fontSize: 22,
+            fontWeight: 900,
+            color: '#ffff00',
             backgroundColor: 'transparent',
             padding: '4px 8px',
             borderRadius: '0px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000', // Medium stroke thickness
-            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.6)', // Small shadow
+            WebkitTextStroke: '4px #000000',
+            textShadow: '6px 6px 0px #ff0000, 12px 12px 0px rgba(0,0,0,0.3)',
             textTransform: 'uppercase' as const,
+            letterSpacing: '1.5px',
+            animation: 'slideIn 3s infinite',
         },
     },
     {
-        name: 'Montserrat Bold Upper',
+        name: 'Triple Color',
+        style: {
+            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
+            fontSize: 24,
+            fontWeight: 900,
+            color: '#ffffff',
+            background: 'linear-gradient(45deg, #ff0000, #00ff00, #00ffff)',
+            padding: '10px 20px',
+            borderRadius: '12px',
+            textAlign: 'center' as const,
+            textShadow: '3px 3px 0px #000000',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+            animation: 'gradientShift 4s infinite',
+        },
+    },
+    {
+        name: 'Shadow Blast',
         style: {
             fontFamily: 'Montserrat, Arial, sans-serif',
             fontSize: 21,
-            fontWeight: 700, // Bold
+            fontWeight: 900,
             color: '#ffffff',
-            backgroundColor: 'transparent',
-            padding: '4px 8px',
-            borderRadius: '0px',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: '8px 16px',
+            borderRadius: '10px',
             textAlign: 'center' as const,
-            WebkitTextStroke: 'none', // None stroke
-            textShadow: 'none', // None shadow
+            textShadow: '0 0 20px #ffffff, 4px 4px 8px #000000, 8px 8px 16px rgba(255,255,255,0.5)',
             textTransform: 'uppercase' as const,
+            letterSpacing: '1px',
+            animation: 'glowPulse 2s infinite alternate',
         },
     },
     {
-        name: 'Montserrat Bold',
+        name: 'Emoji Vibe',
         style: {
-            fontFamily: 'Montserrat, Arial, sans-serif',
-            fontSize: 21,
-            fontWeight: 700, // Bold
-            color: '#ffffff',
-            backgroundColor: 'transparent',
-            padding: '4px 8px',
-            borderRadius: '0px',
+            fontFamily: 'Rubik, Arial Black, sans-serif',
+            fontSize: 20,
+            fontWeight: 800,
+            color: '#000000',
+            backgroundColor: '#ffff00',
+            padding: '8px 16px',
+            borderRadius: '25px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000', // Medium stroke thickness
-            textShadow: 'none', // None shadow
-            textTransform: 'none' as const, // No uppercase
+            textShadow: '2px 2px 0px #ffffff',
+            textTransform: 'lowercase' as const,
+            letterSpacing: '0.5px',
+            border: '3px solid #ff6600',
+            animation: 'bounceIn 2s infinite',
         },
     },
     {
-        name: 'Bold Slav',
+        name: 'Viral Flash',
         style: {
-            fontFamily: 'Impact, Arial Black, sans-serif', // Using Impact as Bold Slav alternative
-            fontSize: 21,
-            fontWeight: 700, // Bold
+            fontFamily: 'Fira Sans Condensed, Impact, sans-serif',
+            fontSize: 25,
+            fontWeight: 900,
             color: '#ffffff',
             backgroundColor: 'transparent',
-            padding: '4px 8px',
-            borderRadius: '0px',
+            padding: '6px 12px',
+            borderRadius: '4px',
             textAlign: 'center' as const,
-            WebkitTextStroke: '1px #000000', // Small stroke thickness
-            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.6)', // Small shadow
-            textTransform: 'none' as const, // No uppercase
+            WebkitTextStroke: '3px #000000',
+            textShadow: '0 0 15px #ff00ff, 4px 4px 0px #00ffff, 8px 8px 0px #ffff00',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '2px',
+            animation: 'flashEffect 1s infinite',
         },
     },
 ]
@@ -177,6 +349,28 @@ const CaptionsToolPanel = () => {
     const { session } = useAuth()
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
+
+    // Inject CSS animations
+    useEffect(() => {
+        const styleId = 'caption-animations'
+        let styleElement = document.getElementById(styleId) as HTMLStyleElement
+        
+        if (!styleElement) {
+            styleElement = document.createElement('style')
+            styleElement.id = styleId
+            document.head.appendChild(styleElement)
+        }
+        
+        styleElement.textContent = captionAnimations
+        
+        return () => {
+            // Cleanup when component unmounts
+            const existingStyle = document.getElementById(styleId)
+            if (existingStyle) {
+                existingStyle.remove()
+            }
+        }
+    }, [])
 
     // Get video/audio clips that can be transcribed
     const transcribableClips = clips.filter(clip => 
