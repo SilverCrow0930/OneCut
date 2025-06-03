@@ -6,6 +6,7 @@ import { useAssetUrls } from '@/hooks/useAssetUrls'
 import ExportStatusModal from './ExportStatusModal'
 import { VideoExporter } from '../VideoExporter'
 import { useAuth } from '@/contexts/AuthContext'
+import { exportService } from '@/services/export'
 
 const ShareButton = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -14,10 +15,17 @@ const ShareButton = () => {
     const [exportProgress, setExportProgress] = useState(0)
     const [exportError, setExportError] = useState<string | null>(null)
     const [quickExport, setQuickExport] = useState(false)
+    const [useServerExport, setUseServerExport] = useState(true) // Default to server export
+    const [currentJobId, setCurrentJobId] = useState<string | null>(null)
     const buttonRef = useRef<HTMLDivElement>(null)
     const { clips, tracks, project } = useEditor()
     const { assets } = useAssets()
     const { session } = useAuth()
+
+    // Set access token when session changes
+    useEffect(() => {
+        exportService.setAccessToken(session?.access_token || null)
+    }, [session?.access_token])
 
     // Memoize asset IDs to prevent unnecessary re-renders and requests
     const assetIds = useMemo(() => {
@@ -58,6 +66,52 @@ const ShareButton = () => {
         }
     }, [isDropdownOpen])
 
+    // Poll server export status
+    useEffect(() => {
+        let pollInterval: NodeJS.Timeout | null = null
+
+        if (isExporting && currentJobId && useServerExport) {
+            pollInterval = setInterval(async () => {
+                try {
+                    const status = await exportService.getExportStatus(currentJobId)
+                    
+                    if (status.success && status.job) {
+                        setExportProgress(status.job.progress)
+                        
+                        if (status.job.status === 'completed') {
+                            setIsExporting(false)
+                            setCurrentJobId(null)
+                            
+                            // Trigger download if URL is available
+                            if (status.job.downloadUrl) {
+                                const a = document.createElement('a')
+                                a.href = status.job.downloadUrl
+                                a.download = `video-export-${selectedExportType}-${Date.now()}.mp4`
+                                a.style.display = 'none'
+                                document.body.appendChild(a)
+                                a.click()
+                                document.body.removeChild(a)
+                            }
+                            
+                        } else if (status.job.status === 'failed') {
+                            setExportError(status.job.error || 'Export failed')
+                            setIsExporting(false)
+                            setCurrentJobId(null)
+                        }
+                    }
+                } catch (error) {
+                    console.error('Status polling error:', error)
+                }
+            }, 2000) // Poll every 2 seconds
+        }
+
+        return () => {
+            if (pollInterval) {
+                clearInterval(pollInterval)
+            }
+        }
+    }, [isExporting, currentJobId, useServerExport, exportService, selectedExportType])
+
     const handleVideoExport = async () => {
         if (isExporting || loadingUrls) return
 
@@ -66,32 +120,51 @@ const ShareButton = () => {
         setExportError(null)
 
         try {
-            const exporter = new VideoExporter({
-                clips,
-                tracks,
-                exportType: selectedExportType as '480p' | '720p' | '1080p',
-                onError: (error) => {
-                    console.error('VideoExporter error:', error)
-                    setExportError(error)
-                    setIsExporting(false)
-                },
-                accessToken: session?.access_token,
-                quickExport,
-                onProgress: (progress) => {
-                    setExportProgress(Math.min(progress, 100))
-                }
-            })
+            if (useServerExport) {
+                // Use server-side export
+                const result = await exportService.startExport(clips, tracks, {
+                    resolution: selectedExportType as '480p' | '720p' | '1080p',
+                    fps: 30,
+                    quality: quickExport ? 'low' : 'medium',
+                    quickExport
+                })
 
-            await exporter.processVideo()
-            
-            // Only set to false if no error occurred
-            if (!exportError) {
-                setIsExporting(false)
+                if (result.success && result.jobId) {
+                    setCurrentJobId(result.jobId)
+                    setExportProgress(5)
+                } else {
+                    throw new Error(result.error || 'Failed to start export')
+                }
+            } else {
+                // Use browser-side export (fallback)
+                const exporter = new VideoExporter({
+                    clips,
+                    tracks,
+                    exportType: selectedExportType as '480p' | '720p' | '1080p',
+                    onError: (error) => {
+                        console.error('VideoExporter error:', error)
+                        setExportError(error)
+                        setIsExporting(false)
+                    },
+                    accessToken: session?.access_token,
+                    quickExport,
+                    onProgress: (progress) => {
+                        setExportProgress(Math.min(progress, 100))
+                    }
+                })
+
+                await exporter.processVideo()
+                
+                // Only set to false if no error occurred
+                if (!exportError) {
+                    setIsExporting(false)
+                }
             }
         } catch (error) {
             console.error('Export error:', error)
             setExportError(error instanceof Error ? error.message : 'Export failed')
             setIsExporting(false)
+            setCurrentJobId(null)
         }
     }
 
@@ -120,65 +193,86 @@ const ShareButton = () => {
     }
 
     const handleCloseExport = () => {
-        if (exportProgress < 100) {
-            // TODO: Show confirmation dialog
+        setIsExporting(false)
+        setExportError(null)
+        setExportProgress(0)
+        setCurrentJobId(null)
+    }
+
+    const handleProjectExport = () => {
+        if (!project) {
+            setExportError('No project data available')
             return
         }
-        setIsExporting(false)
-        setExportProgress(0)
-        setExportError(null)
+
+        try {
+            const projectData = {
+                project,
+                clips,
+                tracks,
+                exportedAt: new Date().toISOString(),
+                version: '1.0'
+            }
+
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], { 
+                type: 'application/json' 
+            })
+            const url = URL.createObjectURL(blob)
+            
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${project.name || 'lemona-project'}-${Date.now()}.json`
+            a.style.display = 'none'
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            
+            URL.revokeObjectURL(url)
+        } catch (error) {
+            console.error('Project export error:', error)
+            setExportError('Failed to export project data')
+        }
     }
 
     return (
-        <div ref={buttonRef} className="relative">
+        <div className="relative" ref={buttonRef}>
             <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                disabled={isExporting || loadingUrls}
-                className={`
-                    flex items-center gap-2 px-4 py-2
-                    bg-white text-black hover:bg-gray-200
-                    font-medium rounded-lg
-                    transition-all duration-300
-                    shadow-lg hover:shadow-xl
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                `}
+                className="
+                    flex items-center gap-2 
+                    px-4 py-2
+                    bg-blue-500 hover:bg-blue-600
+                    text-white font-medium rounded-xl
+                    transition-all duration-200
+                    shadow-md hover:shadow-lg
+                "
             >
-                <Share size={18} />
-                <span>Export</span>
+                <Share size={20} />
+                Export
             </button>
 
-            {isDropdownOpen && !isExporting && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50">
-                    <div className="px-6 py-2 border-b border-gray-200">
-                        <h3 className="text-lg font-semibold text-gray-900">Export Options</h3>
-                    </div>
-
-                    {/* Missing Assets Warning */}
-                    {assetIds.filter(id => !id.startsWith('external_') && assetUrls.get(id) === null).length > 0 && (
+            {isDropdownOpen && (
+                <div className="
+                    absolute top-full mt-2 right-0
+                    bg-white border border-gray-200 rounded-xl shadow-xl
+                    w-80 z-50
+                    overflow-hidden
+                ">
+                    {missingAssets.length > 0 && (
                         <div className="px-6 py-4 border-b border-gray-200">
                             <div className="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
                                 <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
                                 <div>
                                     <h4 className="text-sm font-semibold text-red-800">Missing Assets</h4>
                                     <p className="text-xs text-red-700 mt-1">
-                                        Some uploaded assets in your project could not be found. Export may fail or be incomplete.
+                                        {missingAssets.length} asset(s) failed to load. Export may fail.
                                     </p>
-                                    <p className="text-xs text-red-600 mt-1 font-mono">
-                                        Missing: {assetIds.filter(id => !id.startsWith('external_') && assetUrls.get(id) === null).length} asset(s)
-                                    </p>
-                                    <button
-                                        onClick={handleCleanupMissingAssets}
-                                        className="mt-2 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition-colors"
-                                    >
-                                        Remove Missing Assets
-                                    </button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Browser Compatibility Warning */}
-                    {typeof SharedArrayBuffer === 'undefined' && (
+                    {typeof SharedArrayBuffer === 'undefined' && !useServerExport && (
                         <div className="px-6 py-4 border-b border-gray-200">
                             <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                                 <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -191,6 +285,31 @@ const ShareButton = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* Export Mode Toggle */}
+                    <div className="px-6 py-4 border-b border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Export Mode</h4>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <span className="text-sm font-medium text-gray-700">Server Export</span>
+                                <p className="text-xs text-gray-500">Process on server (recommended)</p>
+                            </div>
+                            <button
+                                onClick={() => setUseServerExport(!useServerExport)}
+                                className={`
+                                    w-12 h-6 rounded-full transition-colors duration-200
+                                    ${useServerExport ? 'bg-blue-500' : 'bg-gray-300'}
+                                    relative
+                                `}
+                            >
+                                <div className={`
+                                    w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200
+                                    absolute top-0.5
+                                    ${useServerExport ? 'translate-x-6' : 'translate-x-0.5'}
+                                `} />
+                            </button>
+                        </div>
+                    </div>
 
                     {/* Video Export Type Selection */}
                     <div className="px-6 py-4">
@@ -259,6 +378,30 @@ const ShareButton = () => {
                         >
                             {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Export' : 'Export Video'}
                         </button>
+                    </div>
+
+                    {/* Project Data Export */}
+                    <div className="px-6 py-4 border-t border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Project Data</h4>
+                        <button
+                            onClick={handleProjectExport}
+                            disabled={!project}
+                            className="
+                                w-full px-4 py-3
+                                bg-green-500 hover:bg-green-600
+                                text-white font-semibold rounded-xl
+                                transition-colors duration-200
+                                shadow-md
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                                flex items-center justify-center gap-2
+                            "
+                        >
+                            <Download size={18} />
+                            Export Project JSON
+                        </button>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                            Download project data for backup or sharing
+                        </p>
                     </div>
                 </div>
             )}
