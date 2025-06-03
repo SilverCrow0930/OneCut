@@ -509,6 +509,7 @@ export class VideoExporter {
 
                     // Scale to match the selected resolution
                     const targetResolution = this.exportType === '480p' ? '480:854' : this.exportType === '720p' ? '720:1280' : '1080:1920'
+                    console.log(`[VideoExporter] Using resolution: ${this.exportType} -> ${targetResolution}`)
                     let vf = `scale=${targetResolution}:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=${targetResolution}:(ow-iw)/2:(oh-ih)/2:black`
                     
                     filterChains.push(`[${inputIndex}:v]${vf}[v${inputIndex}]`)
@@ -518,6 +519,7 @@ export class VideoExporter {
             } else {
                 // Create blank background with selected resolution
                 const backgroundSize = this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920'
+                console.log(`[VideoExporter] Using background resolution: ${this.exportType} -> ${backgroundSize}`)
                 filterInputs.push(
                     '-f', 'lavfi',
                     '-t', `${totalDurationSec}`,
@@ -542,44 +544,37 @@ export class VideoExporter {
             console.log('[VideoExporter] filterChains:', filterChains)
             console.log('[VideoExporter] inputMaps:', inputMaps)
             console.log('[VideoExporter] filterComplex:', filterComplex)
+            console.log(`[VideoExporter] Export settings: type=${this.exportType}, quickExport=${this.quickExport}`)
 
             // Build optimized FFmpeg command for browser (software encoding only)
             let ffmpegArgs = [
                 ...filterInputs,
                 '-filter_complex', filterComplex,
-                '-filter_threads', '0', // Enable multi-threading for filters
                 '-map', '[outv]',
                 '-c:v', 'libx264', // Only software encoding works in browsers
-                '-preset', 'faster', // Good speed/quality balance for web
-                '-crf', this.exportType === '480p' ? '28' : this.exportType === '720p' ? '25' : '23', // Higher CRF for lower res
+                '-preset', 'medium', // More conservative preset for browser compatibility
+                '-crf', this.exportType === '480p' ? '28' : this.exportType === '720p' ? '25' : '23',
                 '-pix_fmt', 'yuv420p',
-                '-r', '30', // Ensure 30 FPS output
-                '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920', // Match resolution
+                '-r', '30',
+                '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920',
                 '-movflags', '+faststart',
-                '-threads', '0', // Use all available threads in WASM
-                '-tune', 'zerolatency', // Optimize for web streaming
-                '-x264-params', 'ref=2:bframes=1:me=hex:subme=2:analyse=none:trellis=0:no-cabac:aq-mode=0', // Web-optimized x264 settings
                 '-y',
                 'output.mp4'
             ]
 
-            // Quick export mode - prioritize speed over quality
+            // Quick export mode - use ultrafast preset but keep it simple
             if (this.quickExport) {
                 ffmpegArgs = [
                     ...filterInputs,
                     '-filter_complex', filterComplex,
-                    '-filter_threads', '0',
                     '-map', '[outv]',
                     '-c:v', 'libx264',
-                    '-preset', 'ultrafast', // Maximum speed
-                    '-crf', '30', // Lower quality for speed
+                    '-preset', 'ultrafast',
+                    '-crf', '30',
                     '-pix_fmt', 'yuv420p',
-                    '-r', '30', // Keep 30 FPS
-                    '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920', // Match resolution
+                    '-r', '30',
+                    '-s', this.exportType === '480p' ? '480x854' : this.exportType === '720p' ? '720x1280' : '1080x1920',
                     '-movflags', '+faststart',
-                    '-threads', '0',
-                    '-tune', 'zerolatency',
-                    '-x264-params', 'ref=1:bframes=0:me=dia:subme=1:analyse=none:no-cabac:no-deblock', // Ultra fast web settings
                     '-y',
                     'output.mp4'
                 ]
