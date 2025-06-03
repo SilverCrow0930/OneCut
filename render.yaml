@@ -2,8 +2,9 @@ services:
   - type: web
     name: lemona-backend
     env: node
-    buildCommand: cd server && npm install && npm run build
-    startCommand: cd server && npm start
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     packages:
       - ffmpeg
     envVars:
@@ -12,13 +13,13 @@ services:
       - key: PORT
         value: 8080
       - key: ALLOWED_ORIGINS
-        value: https://lemona.studio,https://lemona-app.onrender.com
+        value: https://lemona.studio,https://www.lemona.studio,https://lemona-app.onrender.com
       - key: FFMPEG_PATH
         value: ffmpeg
       - key: FFPROBE_PATH
         value: ffprobe
       - key: GCLOUD_STORAGE_BUCKET
-        sync: false
+        value: lemona-edit-assets
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_KEY
@@ -27,19 +28,26 @@ services:
         sync: false
       - key: GIPHY_API_KEY
         sync: false
-      - key: GOOGLE_CLOUD_STORAGE_BUCKET
+      - key: OPENAI_API_KEY
         sync: false
-      - key: GOOGLE_CLOUD_PROJECT_ID
-        sync: false
-      - key: GOOGLE_CLOUD_PRIVATE_KEY
-        sync: false
-      - key: GOOGLE_CLOUD_CLIENT_EMAIL
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: GOOGLE_CLOUD_PROJECT
-        sync: false
-      - key: GOOGLE_CLOUD_LOCATION
-        sync: false
-      - key: ELEVENLABS_API_KEY
-        sync: false 
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: ./lemona-app-4d1a5c95d8c6.json
+
+  - type: web
+    name: lemona-frontend
+    env: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/out
+    pullRequestPreviewsEnabled: false
+    buildFilter:
+      paths:
+        - client/**
+      ignoredPaths:
+        - server/**
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://lemona-app.onrender.com/api/*
+      - type: rewrite
+        source: /socket.io/*
+        destination: https://lemona-app.onrender.com/socket.io/* 
