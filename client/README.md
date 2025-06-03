@@ -1,3 +1,84 @@
+# Lemona App Client
+
+## Video Export Requirements
+
+### SharedArrayBuffer Support
+
+For browser-based video export to work, the application requires SharedArrayBuffer support. This has been disabled in most browsers due to security concerns but can be re-enabled with proper headers.
+
+#### Required Headers
+
+The following headers must be set by your web server:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+#### Next.js Configuration
+
+These headers are automatically configured in `next.config.ts` for local development.
+
+#### Production Deployment
+
+For production deployments (Vercel, Netlify, etc.), ensure these headers are set:
+
+**Vercel**: Add to `vercel.json`:
+```json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Netlify**: Add to `netlify.toml`:
+```toml
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+```
+
+#### Fallback Export
+
+If SharedArrayBuffer is not available, the app will automatically:
+1. Download a project bundle (JSON) with all clip metadata
+2. Attempt to download individual asset files
+3. Provide instructions for using desktop video editing software
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+## Troubleshooting Export Issues
+
+### Asset 404 Errors
+- Check if asset IDs exist in the database
+- Verify asset files are uploaded to cloud storage
+- Check server logs for asset URL generation errors
+
+### Browser Support
+- Use Chrome or Firefox for best compatibility
+- Ensure HTTPS is enabled (required for SharedArrayBuffer)
+- Check browser console for detailed error messages
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

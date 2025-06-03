@@ -15,19 +15,48 @@ interface VideoExporterProps {
 async function fetchAssetUrls(assetIds: string[], accessToken?: string | null): Promise<Map<string, string>> {
     const urls = new Map<string, string>()
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || ''
+    const errors: string[] = []
+    
+    console.log('[VideoExporter] Fetching asset URLs for:', assetIds.length, 'assets')
+    
     for (const id of assetIds) {
         try {
-            const response = await fetch(`${baseUrl}/api/v1/assets/${id}/url`, {
+            const url = `${baseUrl}/api/v1/assets/${id}/url`
+            console.log(`[VideoExporter] Fetching asset URL: ${url}`)
+            
+            const response = await fetch(url, {
                 headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}
             })
-            if (!response.ok) throw new Error(`Failed to fetch asset URL: ${response.status} ${response.statusText}`)
+            
+            if (!response.ok) {
+                const errorText = await response.text()
+                const errorMsg = `Asset ${id}: ${response.status} ${response.statusText} - ${errorText}`
+                console.error('[VideoExporter] Asset fetch failed:', errorMsg)
+                errors.push(errorMsg)
+                continue
+            }
+            
             const data = await response.json()
-            if (data.url) urls.set(id, data.url)
+            if (data.url) {
+                urls.set(id, data.url)
+                console.log(`[VideoExporter] Successfully fetched URL for asset: ${id}`)
+            } else {
+                const errorMsg = `Asset ${id}: Response missing URL field`
+                console.error('[VideoExporter] Asset URL missing:', errorMsg)
+                errors.push(errorMsg)
+            }
         } catch (error) {
-            console.error('Error fetching asset URL:', error)
-            throw new Error(`Failed to fetch asset URL for ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            const errorMsg = `Asset ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`
+            console.error('[VideoExporter] Asset fetch exception:', errorMsg)
+            errors.push(errorMsg)
         }
     }
+    
+    if (errors.length > 0) {
+        console.error('[VideoExporter] Asset loading errors:', errors)
+        throw new Error(`Failed to fetch asset URLs:\n${errors.join('\n')}`)
+    }
+    
     return urls
 }
 
@@ -81,12 +110,26 @@ export class VideoExporter {
                 throw new Error('No valid assets found in clips')
             }
 
+            console.log('[VideoExporter] Loading asset URLs for IDs:', assetIds)
             this.assetUrls = await fetchAssetUrls(assetIds, this.accessToken)
 
             if (this.assetUrls.size === 0) {
-                throw new Error('Failed to fetch any asset URLs')
+                throw new Error('Failed to fetch any asset URLs. Check if assets exist on the server.')
+            }
+
+            // Log successful and failed asset loads
+            const successfulAssets = Array.from(this.assetUrls.keys())
+            const failedAssets = assetIds.filter(id => !this.assetUrls.has(id))
+            
+            if (successfulAssets.length > 0) {
+                console.log('[VideoExporter] Successfully loaded asset URLs:', successfulAssets)
+            }
+            if (failedAssets.length > 0) {
+                console.error('[VideoExporter] Failed to load asset URLs:', failedAssets)
+                throw new Error(`Failed to load ${failedAssets.length} asset(s): ${failedAssets.join(', ')}. These assets may not exist on the server.`)
             }
         } catch (error) {
+            console.error('[VideoExporter] Asset loading error:', error)
             throw new Error(`Failed to load asset URLs: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
     }
@@ -127,6 +170,21 @@ export class VideoExporter {
     async processVideo() {
         try {
             console.log('[VideoExporter] Starting processVideo')
+
+            // Check if FFmpeg is available
+            let ffmpegAvailable = true
+            try {
+                await this.initializeFFmpeg()
+            } catch (error) {
+                console.warn('[VideoExporter] FFmpeg not available:', error)
+                ffmpegAvailable = false
+            }
+
+            // If FFmpeg is not available, use fallback method
+            if (!ffmpegAvailable) {
+                console.log('[VideoExporter] Using fallback export method')
+                return await this.processFallbackExport()
+            }
 
             console.log('[VideoExporter] tracks:', this.tracks)
             console.log('[VideoExporter] clips:', this.clips)
@@ -497,6 +555,95 @@ export class VideoExporter {
         } catch (error) {
             console.error('[VideoExporter] Export error:', error)
             this.onError(error instanceof Error ? error.message : 'Export failed')
+        }
+    }
+
+    private async processFallbackExport() {
+        try {
+            console.log('[VideoExporter] Starting fallback export (no FFmpeg)')
+            
+            if (this.onProgress) this.onProgress(10)
+            
+            await this.loadAssetUrls()
+            
+            if (this.onProgress) this.onProgress(30)
+            
+            // Create a project bundle with all assets and metadata
+            const projectData = {
+                exportInfo: {
+                    type: 'fallback_export',
+                    reason: 'FFmpeg not available - SharedArrayBuffer not supported',
+                    exportedAt: new Date().toISOString(),
+                    browserInfo: {
+                        userAgent: navigator.userAgent,
+                        sharedArrayBufferSupported: typeof SharedArrayBuffer !== 'undefined'
+                    }
+                },
+                tracks: this.tracks,
+                clips: this.clips,
+                assetUrls: Object.fromEntries(this.assetUrls),
+                instructions: {
+                    message: 'Video processing is not available in this browser. Here are your project assets:',
+                    steps: [
+                        '1. Download each asset individually using the URLs provided',
+                        '2. Use desktop video editing software (like DaVinci Resolve, Premiere Pro, or OpenShot)',
+                        '3. Import assets and recreate your timeline using the clip timing data provided',
+                        '4. Alternative: Use Chrome or Firefox with HTTPS hosting for browser-based export'
+                    ]
+                }
+            }
+            
+            if (this.onProgress) this.onProgress(60)
+            
+            // Create and download project bundle
+            const jsonData = JSON.stringify(projectData, null, 2)
+            const blob = new Blob([jsonData], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `project-bundle-${Date.now()}.json`
+            a.style.display = 'none'
+            document.body.appendChild(a)
+            a.click()
+            
+            setTimeout(() => {
+                document.body.removeChild(a)
+                URL.revokeObjectURL(url)
+            }, 100)
+            
+            if (this.onProgress) this.onProgress(80)
+            
+            // Also try to download individual assets if possible
+            let downloadedAssets = 0
+            for (const [assetId, assetUrl] of this.assetUrls.entries()) {
+                try {
+                    // Create download link for each asset
+                    const assetLink = document.createElement('a')
+                    assetLink.href = assetUrl
+                    assetLink.download = `asset-${assetId}`
+                    assetLink.style.display = 'none'
+                    document.body.appendChild(assetLink)
+                    
+                    // Small delay between downloads to avoid overwhelming the browser
+                    setTimeout(() => {
+                        assetLink.click()
+                        document.body.removeChild(assetLink)
+                    }, downloadedAssets * 500)
+                    
+                    downloadedAssets++
+                } catch (error) {
+                    console.warn(`[VideoExporter] Failed to queue download for asset ${assetId}:`, error)
+                }
+            }
+            
+            if (this.onProgress) this.onProgress(100)
+            
+            console.log(`[VideoExporter] Fallback export complete - downloaded project bundle and ${downloadedAssets} assets`)
+            
+        } catch (error) {
+            console.error('[VideoExporter] Fallback export error:', error)
+            throw new Error(`Fallback export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
     }
 } 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Share, Download } from 'lucide-react'
+import { Share, Download, AlertCircle } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { useAssetUrls } from '@/hooks/useAssetUrls'
@@ -150,6 +150,21 @@ const ShareButton = () => {
                     <div className="px-6 py-2 border-b border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-900">Export Options</h3>
                     </div>
+
+                    {/* Browser Compatibility Warning */}
+                    {typeof SharedArrayBuffer === 'undefined' && (
+                        <div className="px-6 py-4 border-b border-gray-200">
+                            <div className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <h4 className="text-sm font-semibold text-amber-800">Browser Limitation</h4>
+                                    <p className="text-xs text-amber-700 mt-1">
+                                        Video processing requires SharedArrayBuffer support. Your browser will download project assets instead.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Project Data Export */}
                     <div className="px-6 py-4 border-b border-gray-200">
