@@ -1,5 +1,5 @@
 import React from 'react'
-import { Loader2, X, Download, AlertCircle } from 'lucide-react'
+import { Loader2, X, Download, AlertCircle, CheckCircle } from 'lucide-react'
 
 interface ExportStatusModalProps {
     isOpen: boolean
@@ -24,50 +24,83 @@ const ExportStatusModal = ({ isOpen, progress, onClose, error }: ExportStatusMod
 
     const getStatusIcon = () => {
         if (error) return <AlertCircle className="w-5 h-5 text-red-500" />
-        if (progress === 100) return <Download className="w-5 h-5 text-green-500" />
+        if (progress === 100) return <CheckCircle className="w-5 h-5 text-green-500" />
         return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
     }
 
+    const getTroubleshootingInfo = () => {
+        if (!error) return null
+        
+        return (
+            <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                <h4 className="text-sm font-semibold text-red-800 mb-2">Troubleshooting Tips:</h4>
+                <ul className="text-xs text-red-700 space-y-1">
+                    <li>• Check if your browser blocks downloads</li>
+                    <li>• Ensure you have enough storage space</li>
+                    <li>• Try using Chrome or Firefox with latest updates</li>
+                    <li>• Clear browser cache and try again</li>
+                    <li>• Check browser console for detailed error messages</li>
+                </ul>
+            </div>
+        )
+    }
+
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-6 w-96 shadow-2xl">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-semibold text-gray-900">
-                        {error ? 'Export Failed' : 'Exporting Video'}
-                    </h3>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    {/* Progress bar */}
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                            className={`h-full transition-all duration-300 ease-out ${error ? 'bg-red-500' :
-                                progress === 100 ? 'bg-green-500' : 'bg-blue-500'
-                                }`}
-                            style={{ width: error ? '100%' : `${progress}%` }}
-                        />
-                    </div>
-
-                    {/* Status text only below the progress bar */}
-                    <div className="flex items-center justify-center gap-2 text-gray-600 mt-4">
-                        {getStatusIcon()}
-                        <span>{getStatusMessage()}</span>
-                    </div>
-
-                    {/* Error details */}
-                    {error && (
-                        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-                            <AlertCircle className="w-4 h-4" />
-                            <span>Please try again or contact support if the problem persists</span>
-                        </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-gray-900">Export Status</h2>
+                    {(error || progress === 100) && (
+                        <button
+                            onClick={onClose}
+                            className="text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                            <X size={24} />
+                        </button>
                     )}
                 </div>
+
+                <div className="flex items-center gap-3 mb-4">
+                    {getStatusIcon()}
+                    <span className="text-lg font-medium text-gray-900">
+                        {getStatusMessage()}
+                    </span>
+                </div>
+
+                {!error && progress < 100 && (
+                    <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+                        <div
+                            className="bg-blue-500 h-3 rounded-full transition-all duration-300"
+                            style={{ width: `${progress}%` }}
+                        />
+                    </div>
+                )}
+
+                {!error && progress < 100 && (
+                    <p className="text-sm text-gray-600 mb-4">
+                        {progress.toFixed(0)}% complete
+                    </p>
+                )}
+
+                {progress === 100 && !error && (
+                    <div className="text-center py-4">
+                        <p className="text-sm text-green-600 mb-2">
+                            Your video has been exported successfully!
+                        </p>
+                        <p className="text-xs text-gray-500">
+                            Check your browser's download folder for the exported video file.
+                        </p>
+                    </div>
+                )}
+
+                {error && (
+                    <div className="text-center py-2">
+                        <p className="text-sm text-red-600 mb-2">
+                            {error}
+                        </p>
+                        {getTroubleshootingInfo()}
+                    </div>
+                )}
             </div>
         </div>
     )

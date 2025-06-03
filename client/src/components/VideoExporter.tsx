@@ -57,6 +57,12 @@ export class VideoExporter {
         if (this.ffmpeg) return this.ffmpeg
         try {
             this.ffmpeg = new FFmpeg()
+            
+            // Check for SharedArrayBuffer support (required for FFmpeg)
+            if (typeof SharedArrayBuffer === 'undefined') {
+                throw new Error('SharedArrayBuffer is not available. This browser may not support video export. Please try Chrome or Firefox with appropriate security headers.')
+            }
+            
             await this.ffmpeg.load()
             return this.ffmpeg
         } catch (error) {
@@ -121,38 +127,6 @@ export class VideoExporter {
     async processVideo() {
         try {
             console.log('[VideoExporter] Starting processVideo')
-
-            // Simulate export progress
-            if (this.onProgress) {
-                const startTime = Date.now()
-                const duration = 5000 // 5 seconds
-                const onProgress = this.onProgress // Store reference to avoid undefined issues
-
-                const simulateProgress = () => {
-                    const elapsed = Date.now() - startTime
-                    const progress = Math.min((elapsed / duration) * 100, 100)
-                    onProgress(progress)
-
-                    if (progress < 100) {
-                        requestAnimationFrame(simulateProgress)
-                    } else {
-                        // Create a dummy video file for download
-                        const dummyVideo = new Uint8Array(1024) // 1KB dummy file
-                        const blob = new Blob([dummyVideo], { type: 'video/mp4' })
-                        const url = URL.createObjectURL(blob)
-                        const a = document.createElement('a')
-                        a.href = url
-                        a.download = `video-export-${Date.now()}.mp4`
-                        document.body.appendChild(a)
-                        a.click()
-                        document.body.removeChild(a)
-                        URL.revokeObjectURL(url)
-                    }
-                }
-
-                simulateProgress()
-                return
-            }
 
             console.log('[VideoExporter] tracks:', this.tracks)
             console.log('[VideoExporter] clips:', this.clips)
@@ -447,6 +421,9 @@ export class VideoExporter {
                     if (data.length === 0) {
                         throw new Error('Output file has zero bytes')
                     }
+                    if (data.length < 1000) {
+                        console.warn('[VideoExporter] Output file seems very small, may be corrupted')
+                    }
                 } else if (typeof data === 'string') {
                     console.log('[VideoExporter] Output file is a string, length:', data.length)
                     if (data.length === 0) {
@@ -471,14 +448,45 @@ export class VideoExporter {
                 }
 
                 console.log('[VideoExporter] Initiating browser download...')
+                
+                // Enhanced download with better cross-browser support
                 const a = document.createElement('a')
                 a.href = url
                 a.download = `video-export-${Date.now()}.mp4`
+                a.style.display = 'none'
+                
+                // Add to DOM to ensure it works in all browsers
                 document.body.appendChild(a)
-                a.click()
-                document.body.removeChild(a)
-                URL.revokeObjectURL(url)
+                
+                // Try click
+                try {
+                    a.click()
+                } catch (clickError) {
+                    console.warn('[VideoExporter] Click method failed, trying alternative:', clickError)
+                    // Alternative method for some browsers
+                    const event = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    })
+                    a.dispatchEvent(event)
+                }
+                
+                // Clean up
+                setTimeout(() => {
+                    document.body.removeChild(a)
+                    URL.revokeObjectURL(url)
+                }, 100)
+                
                 console.log('[VideoExporter] Download initiated successfully - check your browser\'s download folder')
+                
+                // Verify download was triggered (best effort)
+                setTimeout(() => {
+                    if (this.onProgress) {
+                        this.onProgress(100)
+                    }
+                }, 500)
+                
             } catch (error) {
                 console.error('[VideoExporter] Output processing error details:', error)
                 if (error instanceof Error) {

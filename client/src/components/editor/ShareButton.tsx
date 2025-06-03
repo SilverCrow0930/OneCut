@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Share } from 'lucide-react'
+import { Share, Download } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { useAssetUrls } from '@/hooks/useAssetUrls'
@@ -13,8 +13,9 @@ const ShareButton = () => {
     const [isExporting, setIsExporting] = useState(false)
     const [exportProgress, setExportProgress] = useState(0)
     const [exportError, setExportError] = useState<string | null>(null)
+    const [quickExport, setQuickExport] = useState(false)
     const buttonRef = useRef<HTMLDivElement>(null)
-    const { clips, tracks } = useEditor()
+    const { clips, tracks, project } = useEditor()
     const { assets } = useAssets()
     const { session } = useAuth()
 
@@ -46,7 +47,7 @@ const ShareButton = () => {
         }
     }, [isDropdownOpen])
 
-    const handleExport = async () => {
+    const handleVideoExport = async () => {
         if (isExporting || loadingUrls) return
 
         setIsExporting(true)
@@ -54,28 +55,65 @@ const ShareButton = () => {
         setExportError(null)
 
         try {
-            // Simulate export progress
-            const simulateProgress = () => {
-                return new Promise<void>((resolve) => {
-                    let progress = 0;
-                    const interval = setInterval(() => {
-                        progress += Math.random() * 10;
-                        if (progress >= 100) {
-                            progress = 100;
-                            clearInterval(interval);
-                            resolve();
-                        }
-                        setExportProgress(progress);
-                    }, 500);
-                });
-            };
+            const exporter = new VideoExporter({
+                clips,
+                tracks,
+                exportType: selectedExportType as 'studio' | 'social' | 'web',
+                onError: (error) => {
+                    console.error('VideoExporter error:', error)
+                    setExportError(error)
+                    setIsExporting(false)
+                },
+                accessToken: session?.access_token,
+                quickExport,
+                onProgress: (progress) => {
+                    setExportProgress(Math.min(progress, 100))
+                }
+            })
 
-            await simulateProgress();
-            setIsExporting(false);
+            await exporter.processVideo()
+            
+            // Only set to false if no error occurred
+            if (!exportError) {
+                setIsExporting(false)
+            }
         } catch (error) {
             console.error('Export error:', error)
             setExportError(error instanceof Error ? error.message : 'Export failed')
             setIsExporting(false)
+        }
+    }
+
+    const handleProjectExport = () => {
+        if (!project) return
+
+        try {
+            const projectData = {
+                project: {
+                    id: project.id,
+                    name: project.name,
+                    created_at: project.created_at,
+                    updated_at: project.updated_at
+                },
+                tracks,
+                clips,
+                exportedAt: new Date().toISOString(),
+                version: '1.0'
+            }
+
+            const dataStr = JSON.stringify(projectData, null, 2)
+            const blob = new Blob([dataStr], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_project_data.json`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        } catch (error) {
+            console.error('Project export error:', error)
         }
     }
 
@@ -104,34 +142,79 @@ const ShareButton = () => {
                 `}
             >
                 <Share size={18} />
-                <span>Share</span>
+                <span>Export</span>
             </button>
 
             {isDropdownOpen && !isExporting && (
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50">
                     <div className="px-6 py-2 border-b border-gray-200">
-                        <h3 className="text-lg font-semibold text-gray-900">Export Settings</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">Export Options</h3>
                     </div>
 
-                    {/* Export Type Selection */}
+                    {/* Project Data Export */}
+                    <div className="px-6 py-4 border-b border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Project Data</h4>
+                        <button
+                            onClick={handleProjectExport}
+                            className="
+                                w-full px-4 py-2
+                                bg-gray-100 hover:bg-gray-200
+                                text-gray-900 font-medium rounded-lg
+                                transition-colors duration-200
+                                flex items-center gap-2
+                            "
+                        >
+                            <Download size={16} />
+                            Export Project as JSON
+                        </button>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Download project data for backup or sharing
+                        </p>
+                    </div>
+
+                    {/* Video Export Type Selection */}
                     <div className="px-6 py-4">
-                        <div className="flex flex-col gap-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Video Export</h4>
+                        
+                        {/* Quick Export Toggle */}
+                        <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <span className="text-sm font-medium text-gray-700">Quick Export</span>
+                                <p className="text-xs text-gray-500">Lower quality, faster processing</p>
+                            </div>
+                            <button
+                                onClick={() => setQuickExport(!quickExport)}
+                                className={`
+                                    w-12 h-6 rounded-full transition-colors duration-200
+                                    ${quickExport ? 'bg-blue-500' : 'bg-gray-300'}
+                                    relative
+                                `}
+                            >
+                                <div className={`
+                                    w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200
+                                    absolute top-0.5
+                                    ${quickExport ? 'translate-x-6' : 'translate-x-0.5'}
+                                `} />
+                            </button>
+                        </div>
+                        
+                        <div className="flex flex-col gap-3">
                             {exportTypeOptions.map((type) => (
                                 <div key={type.id} className="flex flex-col">
                                     <button
                                         onClick={() => setSelectedExportType(type.id)}
                                         className={`
-                                            px-6 py-4 rounded-2xl text-lg text-left font-bold
-                                            border transition-all duration-200 shadow-sm
+                                            px-4 py-3 rounded-lg text-left font-medium
+                                            border transition-all duration-200
                                             ${selectedExportType === type.id
-                                                ? 'bg-blue-500 text-white border-blue-500 shadow-lg'
+                                                ? 'bg-blue-500 text-white border-blue-500'
                                                 : 'bg-gray-100 text-gray-900 border-gray-200 hover:bg-gray-200 hover:border-gray-300'}
                                         `}
                                     >
                                         {type.label}
                                     </button>
                                     {selectedExportType === type.id && (
-                                        <p className="text-sm text-gray-400 mt-3 ml-1 leading-snug">
+                                        <p className="text-xs text-gray-500 mt-2 ml-1">
                                             {type.description}
                                         </p>
                                     )}
@@ -140,11 +223,11 @@ const ShareButton = () => {
                         </div>
                     </div>
 
-                    {/* Export Button */}
+                    {/* Video Export Button */}
                     <div className="px-6 py-4 border-t border-gray-200">
                         <button
-                            onClick={handleExport}
-                            disabled={loadingUrls}
+                            onClick={handleVideoExport}
+                            disabled={loadingUrls || clips.length === 0}
                             className="
                                 w-full px-4 py-3
                                 bg-blue-500 hover:bg-blue-600
@@ -154,7 +237,7 @@ const ShareButton = () => {
                                 disabled:opacity-50 disabled:cursor-not-allowed
                             "
                         >
-                            {loadingUrls ? 'Loading Assets...' : 'Export Video'}
+                            {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Export' : 'Export Video'}
                         </button>
                     </div>
                 </div>
