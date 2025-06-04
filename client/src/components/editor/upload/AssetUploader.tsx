@@ -167,33 +167,49 @@ export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
             <label 
                 className={`
                     relative flex flex-col w-full items-center justify-center
-                    p-6 rounded-xl gap-3 cursor-pointer
+                    p-8 rounded-2xl gap-4 cursor-pointer group
                     border-2 transition-all duration-300 ease-in-out
                     ${isDragging ?
-                        'border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 shadow-xl scale-[1.01] ring-4 ring-blue-200/30' :
-                        'border-gray-300 bg-gradient-to-br from-white to-gray-50 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-white hover:shadow-lg hover:scale-[1.005]'
+                        'border-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 shadow-xl scale-[1.02] shadow-blue-200/50' :
+                        'border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:border-blue-300 hover:bg-gradient-to-br hover:from-blue-50 hover:to-white hover:shadow-lg hover:shadow-blue-100/30'
                     }
-                    ${uploading ? 'opacity-75 cursor-not-allowed' : ''}
-                    shadow-sm hover:shadow-md
+                    ${uploading ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.01]'}
                 `}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
             >
-                <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg transition-all duration-300 ${
-                        isDragging ? 'bg-blue-500 shadow-lg' : 'bg-gray-100 group-hover:bg-blue-100'
-                    }`}>
-                        <Upload className={`w-5 h-5 ${isDragging ? 'text-white' : 'text-gray-600'} transition-colors`} />
+                {/* Background decoration */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                <div className="relative flex items-center gap-4">
+                    <div className={`
+                        p-3 rounded-xl transition-all duration-300
+                        ${isDragging ? 
+                            'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : 
+                            'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
+                        }
+                    `}>
+                        <Upload className="w-6 h-6" />
                     </div>
-                    <span className={`text-lg font-semibold ${isDragging ? 'text-blue-700' : 'text-gray-800'} transition-colors`}>
-                        {uploading ? 'Uploading…' : 'Upload files'}
-                    </span>
+                    <div className="text-left">
+                        <div className={`text-xl font-semibold transition-colors duration-300 ${
+                            isDragging ? 'text-blue-700' : 'text-gray-800 group-hover:text-blue-700'
+                        }`}>
+                            {uploading ? 'Uploading…' : 'Upload files'}
+                        </div>
+                        <p className={`text-sm transition-colors duration-300 mt-1 ${
+                            isDragging ? 'text-blue-600' : 'text-gray-500 group-hover:text-blue-600'
+                        }`}>
+                            Click to browse or drag files here
+                        </p>
+                    </div>
                 </div>
-                <p className={`text-sm font-medium ${isDragging ? 'text-blue-600' : 'text-gray-500'} transition-colors`}>
-                    Click to browse or drag files here
-                </p>
+                
+                {/* Subtle pattern overlay */}
+                <div className="absolute inset-0 rounded-2xl opacity-5 bg-[radial-gradient(circle_at_50%_50%,_rgba(59,130,246,0.3)_0%,_transparent_50%)] pointer-events-none" />
+                
                 <input
                     type="file"
                     accept="image/*, video/*, audio/*"

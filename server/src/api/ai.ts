@@ -30,7 +30,7 @@ const FAL_MODELS = {
 const MODEL_DISPLAY_NAMES = {
     image: {
         'normal': 'Flux Dev',
-        'Thumbnail': 'Lumina V2',
+        'premium': 'Lumina V2',
         'high_quality': 'Flux Pro 1.1'
     },
     video: {
