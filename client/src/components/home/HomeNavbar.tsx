@@ -38,45 +38,68 @@ export default function HomeNavbar() {
     }
 
     return (
-        <nav className="absolute top-4 left-0 flex items-center justify-center w-full px-4 md:px-6 py-4">
-            <div className="flex flex-row items-center justify-between w-full md:w-[80%]">
-
-                {/* Logo */}
-                <LemonaLogo />
-
-                <div
-                    className="flex flex-row items-center gap-4 md:gap-12"
-                >
-                    {/* Navigation Links */}
-                    <div className="hidden md:flex items-center space-x-12">
-                        <a href="#" className="text-white hover:text-gray-300 transition-colors">Product</a>
-                        <a href="/pricing" className="text-white hover:text-gray-300 transition-colors">Pricing</a>
-                        <a href="https://x.com/lemona_labs" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-300 transition-colors">Twitter</a>
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-16">
+                    {/* Logo */}
+                    <div className="flex-shrink-0">
+                        <LemonaLogo />
                     </div>
-                    {
-                        user ? (
-                            <LogoutButton
-                                onClick={handleSignOut}
-                            />
+
+                    {/* Navigation and Actions */}
+                    <div className="flex items-center space-x-8">
+                        {/* Navigation Links */}
+                        <div className="hidden md:flex items-center space-x-8">
+                            <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
+                                Product
+                            </a>
+                            <a href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
+                                Pricing
+                            </a>
+                            <a 
+                                href="https://x.com/lemona_labs" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+                            >
+                                Twitter
+                            </a>
+                        </div>
+
+                        {/* Auth Section */}
+                        {user ? (
+                            <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-sm font-semibold">
+                                            {user.email?.charAt(0).toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <span className="text-gray-700 text-sm font-medium hidden sm:block">
+                                        {user.email}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={handleSignOut}
+                                    className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+                                >
+                                    Sign Out
+                                </button>
+                            </div>
                         ) : (
                             <button
-                                className="
-                                    flex flex-row items-center gap-2
-                                    bg-white/20 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-2xl
-                                    hover:bg-white/30 transition-all duration-300
-                                    text-sm sm:text-base
-                                "
+                                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
                                 onClick={handleSignIn}
                             >
                                 <img
                                     src="/assets/icons/google.png"
-                                    alt="google"
-                                    className="w-5 h-5 sm:w-6 sm:h-6"
+                                    alt="Google"
+                                    className="w-4 h-4"
                                 />
-                                Sign In
+                                <span>Sign In</span>
                             </button>
-                        )
-                    }
+                        )}
+                    </div>
                 </div>
             </div>
         </nav>

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Project } from '@/types/projects'
 import { formatSecondsAsTimestamp } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
-import { Play, Clock, Calendar, Star, MoreVertical, Edit2, Trash2, Copy, Share2, Loader2, AlertCircle, Folder } from 'lucide-react'
+import { Clock, Play, Folder } from 'lucide-react'
 
 export default function ProjectsList() {
     const router = useRouter()
@@ -12,7 +12,6 @@ export default function ProjectsList() {
     const [projects, setProjects] = useState<Project[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [hoveredProject, setHoveredProject] = useState<string | null>(null)
 
     useEffect(() => {
         // only fetch once we have a valid token
@@ -62,107 +61,78 @@ export default function ProjectsList() {
 
     if (!session) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4 text-center">
-                <div className="w-20 h-20 mb-6 text-white/60">
-                    <AlertCircle className="w-full h-full" />
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 mb-4 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
                 </div>
-                <h3 className="text-2xl font-semibold text-white mb-3">Authentication Required</h3>
-                <p className="text-gray-300 max-w-md leading-relaxed">
-                    Please sign in to access your projects and start creating amazing content.
-                </p>
+                <p className="text-gray-600">Please sign in to see your projects.</p>
             </div>
         )
     }
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4 text-center">
-                <div className="relative mb-8">
-                    <div className="w-16 h-16 border-4 border-purple-600/30 border-t-purple-500 rounded-full animate-spin"></div>
-                    <div className="absolute inset-0 w-16 h-16 border-4 border-blue-600/20 border-b-blue-500 rounded-full animate-spin animation-delay-75"></div>
+            <div className="flex items-center justify-center py-12">
+                <div className="flex items-center space-x-3 text-gray-600">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span>Loading your projects...</span>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">Loading your projects</h3>
-                <p className="text-gray-400">
-                    Gathering your creative work...
-                </p>
             </div>
         )
     }
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4 text-center">
-                <div className="w-20 h-20 mb-6 text-red-400">
-                    <AlertCircle className="w-full h-full" />
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 mb-4 text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
                 </div>
-                <h3 className="text-2xl font-semibold text-white mb-3">Something went wrong</h3>
-                <p className="text-gray-300 max-w-md mb-6">
-                    {error}
-                </p>
-                <button 
-                    onClick={() => window.location.reload()}
-                    className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors duration-200"
-                >
-                    Try Again
-                </button>
+                <p className="text-red-600 font-medium">Error loading projects</p>
+                <p className="text-gray-600 text-sm mt-1">{error}</p>
             </div>
         )
     }
 
     if (projects.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4 text-center">
-                <div className="relative mb-8">
-                    <div className="w-24 h-24 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-3xl flex items-center justify-center border border-white/20">
-                        <Folder className="w-12 h-12 text-white/60" />
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                        <Star className="w-4 h-4 text-white" />
-                    </div>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-20 h-20 mb-6 text-gray-300">
+                    <Folder className="w-full h-full" strokeWidth={1} />
                 </div>
-                <h3 className="text-3xl font-bold text-white mb-4">Your creative journey starts here</h3>
-                <p className="text-gray-300 max-w-lg leading-relaxed mb-8">
-                    Ready to bring your ideas to life? Create your first project and discover the power of visual storytelling.
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No projects yet</h3>
+                <p className="text-gray-500 max-w-sm">
+                    Start creating amazing videos by making your first project. Click "Create New Project" to get started.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg">
-                        Create Your First Project
-                    </button>
-                    <button className="px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl font-semibold transition-all duration-300">
-                        Explore Templates
-                    </button>
-                </div>
             </div>
         )
     }
 
     return (
-        <div className="space-y-6">
-            {/* Projects Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                {projects.map((project, index) => (
-                    <div
-                        key={project.id}
-                        className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 hover:border-white/40 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl cursor-pointer"
-                        onClick={() => router.push(`/projects/${project.id}`)}
-                        onMouseEnter={() => setHoveredProject(project.id)}
-                        onMouseLeave={() => setHoveredProject(null)}
-                        style={{ 
-                            animationDelay: `${index * 100}ms`,
-                            animation: 'fadeInUp 0.6s ease-out forwards'
-                        }}
-                    >
-                        {/* Thumbnail Section */}
-                        <div className="relative aspect-video overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {projects.map((project, index) => (
+                <div
+                    key={index}
+                    className="group cursor-pointer"
+                    onClick={() => {
+                        router.push(`/projects/${project.id}`)
+                    }}
+                >
+                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300">
+                        {/* Thumbnail */}
+                        <div className="aspect-video relative bg-gray-100">
                             {project.thumbnail_url ? (
                                 <img
                                     src={project.thumbnail_url}
                                     alt={project.name}
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                    className="w-full h-full object-cover"
                                     onError={(e) => {
                                         const target = e.currentTarget;
                                         target.style.display = 'none';
-                                        const fallback = target.parentElement?.querySelector('.fallback-bg');
+                                        const fallback = target.parentElement?.querySelector('.fallback-content');
                                         if (fallback) {
                                             (fallback as HTMLElement).style.display = 'flex';
                                         }
@@ -170,112 +140,48 @@ export default function ProjectsList() {
                                 />
                             ) : null}
                             
-                            {/* Enhanced fallback background */}
+                            {/* Fallback content */}
                             <div 
-                                className={`fallback-bg w-full h-full bg-gradient-to-br from-purple-600/30 via-blue-600/30 to-pink-600/30 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
+                                className={`fallback-content w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
                             >
-                                <div className="p-4 bg-white/10 rounded-2xl mb-3 backdrop-blur-sm">
-                                    <Play className="w-8 h-8 text-white/80" />
+                                <div className="w-12 h-12 text-gray-400 mb-2">
+                                    <Play className="w-full h-full" strokeWidth={1.5} />
                                 </div>
-                                <span className="text-sm text-white/60 font-medium">No Preview</span>
-                            </div>
-
-                            {/* Overlay with play button */}
-                            <div className={`absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity duration-300 ${hoveredProject === project.id ? 'opacity-100' : 'opacity-0'}`}>
-                                <div className="p-4 bg-white/20 rounded-full backdrop-blur-sm border border-white/30 transform transition-transform duration-300 hover:scale-110">
-                                    <Play className="w-8 h-8 text-white fill-white" />
-                                </div>
+                                <span className="text-xs text-gray-500 font-medium">No Preview</span>
                             </div>
 
                             {/* Duration badge */}
                             {project.duration && project.duration > 0 && (
                                 <div className="absolute top-3 right-3">
-                                    <div className="flex items-center gap-1 px-2 py-1 bg-black/70 backdrop-blur-sm rounded-lg border border-white/20">
-                                        <Clock className="w-3 h-3 text-white/80" />
-                                        <span className="text-xs font-medium text-white">
+                                    <div className="flex items-center space-x-1 bg-black/75 text-white px-2 py-1 rounded-md backdrop-blur-sm">
+                                        <Clock className="w-3 h-3" />
+                                        <span className="text-xs font-medium">
                                             {formatSecondsAsTimestamp(project.duration)}
                                         </span>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Action buttons */}
-                            <div className={`absolute top-3 left-3 flex gap-2 transition-opacity duration-300 ${hoveredProject === project.id ? 'opacity-100' : 'opacity-0'}`}>
-                                <button 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        // Handle favorite toggle
-                                    }}
-                                    className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg border border-white/30 transition-colors duration-200"
-                                >
-                                    <Star className="w-4 h-4 text-white" />
-                                </button>
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <div className="bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg">
+                                    <Play className="w-6 h-6 text-gray-700" />
+                                </div>
                             </div>
                         </div>
 
-                        {/* Content Section */}
-                        <div className="p-4 space-y-3">
-                            <div className="flex items-start gap-3">
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-white text-lg leading-tight line-clamp-2 mb-1">
-                                        {project.name || 'Untitled Project'}
-                                    </h3>
-                                    <div className="flex items-center gap-2 text-gray-400 text-sm">
-                                        <Calendar className="w-3 h-3" />
-                                        <span>
-                                            {new Date(project.created_at || '').toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                {/* More options */}
-                                <button 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        // Handle menu toggle
-                                    }}
-                                    className="p-1 hover:bg-white/20 rounded-lg transition-colors duration-200 opacity-0 group-hover:opacity-100"
-                                >
-                                    <MoreVertical className="w-4 h-4 text-gray-400" />
-                                </button>
-                            </div>
-
-                            {/* Progress bar or status */}
-                            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-1000"
-                                    style={{ width: '75%' }} // This could be dynamic based on project completion
-                                />
-                            </div>
+                        {/* Project info */}
+                        <div className="p-4">
+                            <h3 className="font-semibold text-gray-900 truncate mb-1">
+                                {project.name || 'Untitled Project'}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                                {new Date(project.created_at || Date.now()).toLocaleDateString()}
+                            </p>
                         </div>
                     </div>
-                ))}
-            </div>
+                </div>
+            ))}
         </div>
     )
-}
-
-// Add CSS for animations
-const styles = `
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animation-delay-75 {
-    animation-delay: 0.075s;
-}
-`
-
-// Inject styles
-if (typeof document !== 'undefined') {
-    const styleSheet = document.createElement('style')
-    styleSheet.textContent = styles
-    document.head.appendChild(styleSheet)
 }
