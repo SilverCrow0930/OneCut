@@ -1,7 +1,7 @@
 import React from 'react'
 import { useAssets, Asset } from '@/contexts/AssetsContext'
 import AssetUploader from '@/components/editor/upload/AssetUploader'
-import AssetThumbnail from '../upload/AssetThumbnail'
+import MasonryGrid from '../upload/MasonryGrid'
 import { Upload, Loader2 } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 
@@ -45,18 +45,11 @@ const UploadToolPanel: React.FC<UploadToolPanelProps> = ({ highlightedAssetId, u
                 }
                 {
                     !loading && !error && (
-                        <div className="grid grid-cols-2 gap-2">
-                            {
-                                assets.map((asset, index) => (
-                                    <AssetThumbnail
-                                        key={asset.id}
-                                        asset={asset}
-                                        highlight={highlightedAssetId === asset.id}
-                                        uploading={uploadingAssetId === asset.id}
-                                    />
-                                ))
-                            }
-                        </div>
+                        <MasonryGrid
+                            assets={assets}
+                            highlightedAssetId={highlightedAssetId}
+                            uploadingAssetId={uploadingAssetId}
+                        />
                     )
                 }
             </div>

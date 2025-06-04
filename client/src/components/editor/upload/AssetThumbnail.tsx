@@ -6,6 +6,7 @@ import { useAssets } from '@/contexts/AssetsContext'
 import { useEditor } from '@/contexts/EditorContext'
 import { useParams } from 'next/navigation'
 import { addAssetToTrack } from '@/lib/editor/utils'
+import { Download, Trash2 } from 'lucide-react'
 
 interface AssetThumbnailProps {
     asset: {
@@ -16,9 +17,10 @@ interface AssetThumbnailProps {
     }
     highlight?: boolean
     uploading?: boolean
+    style?: React.CSSProperties // Add style prop for masonry positioning
 }
 
-export default function AssetThumbnail({ asset, highlight, uploading }: AssetThumbnailProps) {
+export default function AssetThumbnail({ asset, highlight, uploading, style }: AssetThumbnailProps) {
     const { url, loading } = useAssetUrl(asset.id)
     const { deleteAsset } = useAssets()
     const { tracks, executeCommand, clips } = useEditor()
@@ -49,6 +51,39 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
         setShowContextMenu(false)
     }
 
+    const handleDownload = async () => {
+        if (!url) {
+            console.error('No URL available for download')
+            return
+        }
+
+        try {
+            // Try to download directly first
+            const link = document.createElement('a')
+            link.href = url
+            
+            // Set filename - use asset name if available, otherwise generate from mime type
+            const extension = asset.mime_type.split('/')[1] || 'file'
+            const filename = asset.name || `asset_${asset.id}.${extension}`
+            link.download = filename
+            
+            // Set CORS mode to try to download directly
+            link.setAttribute('crossorigin', 'anonymous')
+            
+            // Trigger download
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            
+        } catch (error) {
+            console.warn('Direct download failed, opening in new tab:', error)
+            // Fallback: open in new tab for user to save manually
+            window.open(url, '_blank')
+        }
+        
+        setShowContextMenu(false)
+    }
+
     // Handle click to add asset to track
     const handleClick = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -69,13 +104,19 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
 
     if (loading) {
         return (
-            <div className="relative w-32 h-32 bg-gray-200 animate-pulse rounded-lg" />
+            <div 
+                className="relative bg-gray-200 animate-pulse rounded-lg" 
+                style={{ ...style, minHeight: '120px' }}
+            />
         )
     }
 
     if (!url) {
         return (
-            <div className="relative w-32 h-32 bg-red-100 text-red-500 flex items-center justify-center rounded-lg">
+            <div 
+                className="relative bg-red-100 text-red-500 flex items-center justify-center rounded-lg"
+                style={{ ...style, minHeight: '120px' }}
+            >
                 !
             </div>
         )
@@ -88,13 +129,14 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
             <DraggableAsset assetId={asset.id}>
                 <div
                     className={`
-                        relative w-32 h-32 rounded-lg overflow-hidden 
+                        relative rounded-lg overflow-hidden 
                         bg-gray-50 hover:opacity-80 transition-all duration-200
-                        flex items-center justify-center shadow-sm hover:shadow-md
+                        shadow-sm hover:shadow-md
                         cursor-pointer
                         ${highlight ? 'ring-4 ring-blue-400 animate-pulse-fast' : ''}
                         ${uploading ? 'opacity-60 pointer-events-none' : ''}
                     `}
+                    style={style}
                     onContextMenu={handleContextMenu}
                     onClick={handleClick}
                 >
@@ -107,14 +149,14 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
                         isVideo ? (
                             <video
                                 src={url}
-                                className="max-w-full max-h-full object-contain rounded"
+                                className="w-full h-full object-cover rounded"
                                 muted
                                 loop
                             />
                         ) : (
                             <img
                                 src={url}
-                                className="max-w-full max-h-full object-contain rounded"
+                                className="w-full h-full object-cover rounded"
                             />
                         )
                     }
@@ -132,7 +174,7 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
             {
                 showContextMenu && (
                     <div
-                        className="fixed bg-white shadow-lg rounded-lg py-1 z-50 hover:bg-gray-100"
+                        className="fixed bg-white shadow-lg rounded-lg py-1 z-50 border border-gray-200 min-w-[140px]"
                         style={{
                             left: contextMenuPosition.x,
                             top: contextMenuPosition.y,
@@ -140,9 +182,18 @@ export default function AssetThumbnail({ asset, highlight, uploading }: AssetThu
                         }}
                     >
                         <button
-                            className="w-full px-4 py-2 text-left text-red-600"
+                            className="w-full px-4 py-2 text-left text-blue-600 hover:bg-blue-50 flex items-center gap-2 text-sm"
+                            onClick={handleDownload}
+                        >
+                            <Download size={16} />
+                            Download
+                        </button>
+                        <hr className="border-gray-100 my-1" />
+                        <button
+                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 text-sm"
                             onClick={handleDelete}
                         >
+                            <Trash2 size={16} />
                             Delete Asset
                         </button>
                     </div>

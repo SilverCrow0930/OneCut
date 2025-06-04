@@ -1,9 +1,12 @@
 import React, { useState } from 'react'
-import { Sparkles, Image, Video, Music, Camera, Film, AudioLines, Upload, Wand2, Download, Play } from 'lucide-react'
+import { Sparkles, Image, Video, Music, Camera, Film, AudioLines, Upload, Wand2, Play, Plus } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAssets } from '@/contexts/AssetsContext'
+import { useEditor } from '@/contexts/EditorContext'
+import { useParams } from 'next/navigation'
 import { apiPath } from '@/lib/config'
+import { addAssetToTrack } from '@/lib/editor/utils'
 
 interface GenerationType {
     id: 'image' | 'video' | 'music'
@@ -19,6 +22,12 @@ interface GeneratedResult {
     url: string
     filename: string
     prompt: string
+    asset: {
+        id: string
+        name: string
+        mime_type: string
+        duration: number | null
+    }
 }
 
 const GENERATION_TYPES: GenerationType[] = [
@@ -67,6 +76,8 @@ const AIGenerationToolPanel = () => {
 
     const { session } = useAuth()
     const { refresh } = useAssets()
+    const { tracks, clips, executeCommand } = useEditor()
+    const params = useParams()
 
     const activeType = GENERATION_TYPES.find(type => type.id === activeTab)!
 
@@ -134,7 +145,13 @@ const AIGenerationToolPanel = () => {
                 type: activeTab,
                 url: resultData.url,
                 filename: resultData.filename || `generated_${activeTab}_${Date.now()}`,
-                prompt: prompt
+                prompt: prompt,
+                asset: {
+                    id: resultData.asset.id,
+                    name: resultData.asset.name,
+                    mime_type: resultData.asset.mime_type,
+                    duration: resultData.asset.duration
+                }
             })
 
             // Refresh assets to show the new generated content
@@ -149,15 +166,29 @@ const AIGenerationToolPanel = () => {
         }
     }
 
-    const downloadResult = () => {
-        if (result?.url) {
-            const link = document.createElement('a')
-            link.href = result.url
-            link.download = result.filename
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
+    const addToTimeline = () => {
+        if (!result?.asset || !params.projectId) {
+            console.error('No asset or project ID available')
+            return
         }
+
+        // Get project ID
+        const projectId = Array.isArray(params.projectId) 
+            ? params.projectId[0] 
+            : params.projectId
+
+        // Create asset object for timeline
+        const asset = {
+            id: result.asset.id,
+            name: result.asset.name,
+            mime_type: result.asset.mime_type,
+            duration: result.asset.duration
+        }
+
+        // Add to timeline using the utility function
+        addAssetToTrack(asset, tracks, clips, executeCommand, projectId)
+
+        console.log('✅ Added generated asset to timeline:', asset.name)
     }
 
     const renderImageGeneration = () => (
@@ -327,11 +358,11 @@ const AIGenerationToolPanel = () => {
                 <div className="flex items-center justify-between">
                     <h6 className="font-semibold text-gray-800">Generated {result.type}</h6>
                     <button
-                        onClick={downloadResult}
-                        className="flex items-center gap-2 px-3 py-1 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        onClick={addToTimeline}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                     >
-                        <Download size={14} />
-                        Download
+                        <Plus size={14} />
+                        Add to Timeline
                     </button>
                 </div>
 
@@ -367,6 +398,10 @@ const AIGenerationToolPanel = () => {
                         <p className="text-xs text-gray-600 italic">"{result.prompt}"</p>
                     </div>
                 )}
+                
+                <div className="text-xs text-gray-500">
+                    ✅ Saved to your assets - accessible in Upload panel
+                </div>
             </div>
         )
     }

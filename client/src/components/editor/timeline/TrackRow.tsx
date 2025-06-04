@@ -6,6 +6,7 @@ import ClipItem from './ClipItem'
 import { getTimeScale } from '@/lib/constants'
 import { useZoom } from '@/contexts/ZoomContext'
 import type { Track, Clip } from '@/types/editor'
+import { X } from 'lucide-react'
 
 export default function TrackRow({
     track,
@@ -33,6 +34,7 @@ export default function TrackRow({
     // context menu state
     const [showContextMenu, setShowContextMenu] = useState(false)
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
+    const [isHovered, setIsHovered] = useState(false)
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault()
@@ -349,6 +351,12 @@ export default function TrackRow({
         setShowContextMenu(false)
     }
 
+    const handleDeleteClick = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        handleDeleteTrack()
+    }
+
     // Close context menu when clicking outside
     React.useEffect(() => {
         const handleClickOutside = () => setShowContextMenu(false)
@@ -382,6 +390,8 @@ export default function TrackRow({
                     msOverflowStyle: 'none', /* IE and Edge */
                 }}
                 onContextMenu={handleContextMenu}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
                 onDragOver={e => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -436,6 +446,27 @@ export default function TrackRow({
                             : `Track ${track.index + 1} • ${track.type}`
                         }
                     </div>
+
+                    {/* Delete button - only show for real tracks and on hover */}
+                    {!((track as any).isEmpty) && isHovered && (
+                        <button
+                            className="
+                                absolute right-2 top-1 
+                                w-6 h-6 
+                                flex items-center justify-center
+                                bg-red-500 hover:bg-red-600 
+                                text-white rounded-full 
+                                transition-all duration-200
+                                pointer-events-auto
+                                shadow-sm hover:shadow-md
+                                z-30
+                            "
+                            onClick={handleDeleteClick}
+                            title="Delete Track"
+                        >
+                            <X size={12} />
+                        </button>
+                    )}
 
                     {/* Background div that receives timeline clicks */}
                     <div

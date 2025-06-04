@@ -2,6 +2,9 @@ import { Router, Request, Response, NextFunction } from 'express'
 import { check, validationResult } from 'express-validator'
 import { AuthenticatedRequest } from '../middleware/authenticate.js'
 import { fal } from '@fal-ai/client'
+import { supabase } from '../config/supabaseClient.js'
+import { bucket } from '../integrations/googleStorage.js'
+import { v4 as uuid } from 'uuid'
 
 const router = Router()
 
@@ -49,6 +52,99 @@ const getModelDisplayName = (type: string, quality: string): string => {
         return typeModels[quality as keyof typeof typeModels]
     }
     return `${type} ${quality}`
+}
+
+// Helper function to get local user ID
+async function getLocalUserId(supaUid: string) {
+    const { data: profile, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', supaUid)
+        .single()
+
+    if (error || !profile) {
+        throw new Error('Profile lookup failed')
+    }
+
+    return profile.id
+}
+
+// Helper function to download and save AI-generated content as an asset
+async function saveGeneratedAsset(contentUrl: string, filename: string, type: string, userId: string, prompt: string, actualDuration?: number) {
+    try {
+        console.log('📥 Downloading generated content:', contentUrl)
+        
+        // Download the content from Fal.ai
+        const response = await fetch(contentUrl)
+        if (!response.ok) {
+            throw new Error(`Failed to download content: ${response.statusText}`)
+        }
+        
+        const buffer = Buffer.from(await response.arrayBuffer())
+        
+        // Determine MIME type and extension
+        let mimeType: string
+        let extension: string
+        
+        switch (type) {
+            case 'image':
+                mimeType = 'image/png'
+                extension = 'png'
+                break
+            case 'video':
+                mimeType = 'video/mp4'
+                extension = 'mp4'
+                break
+            case 'music':
+                mimeType = 'audio/wav'
+                extension = 'wav'
+                break
+            default:
+                throw new Error(`Unsupported content type: ${type}`)
+        }
+        
+        // Get local user ID
+        const localUserId = await getLocalUserId(userId)
+        
+        // Upload to Google Cloud Storage
+        const key = `${userId}/${uuid()}.${extension}`
+        const gcsFile = bucket.file(key)
+        
+        await gcsFile.save(buffer, {
+            metadata: { contentType: mimeType },
+            public: false,
+        })
+        
+        console.log('☁️ Uploaded to GCS:', key)
+        
+        // Save to database with actual duration
+        const assetName = `AI Generated ${type.charAt(0).toUpperCase() + type.slice(1)}`
+        const duration = actualDuration ? actualDuration * 1000 : (type === 'music' ? 30000 : (type === 'video' ? 10000 : null))
+        
+        const { data: asset, error } = await supabase
+            .from('assets')
+            .insert({
+                user_id: localUserId,
+                name: assetName,
+                mime_type: mimeType,
+                duration,
+                object_key: key,
+            })
+            .select('*')
+            .single()
+        
+        if (error) {
+            console.error('Asset insert error:', error)
+            throw new Error('Failed to save asset to database')
+        }
+        
+        console.log('💾 Saved asset to database:', asset.id)
+        return asset
+        
+    } catch (error) {
+        console.error('❌ Failed to save generated asset:', error)
+        throw error
+    }
 }
 
 // POST /api/v1/ai/generate - Generate content using Fal.ai
@@ -219,6 +315,9 @@ router.post(
                 throw new Error('Failed to get generated content URL')
             }
 
+            // Save the asset to the database and storage
+            const asset = await saveGeneratedAsset(contentUrl, filename, type, user?.id, prompt, result.data.duration)
+
             // Return the result
             res.json({
                 success: true,
@@ -229,6 +328,12 @@ router.post(
                 filename,
                 prompt,
                 requestId: result.requestId,
+                asset: {
+                    id: asset.id,
+                    name: asset.name,
+                    mime_type: asset.mime_type,
+                    duration: asset.duration
+                },
                 data: result.data
             })
 
