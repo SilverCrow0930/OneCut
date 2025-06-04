@@ -304,7 +304,7 @@ export function addAssetToTrack(
         id: generateUUID(),
         trackId: targetTrack.id,
         assetId: isExternal ? externalAsset!.id : asset.id,
-        type: trackType,
+        type: isExternal && asset.isSticker ? 'image' : trackType,
         sourceStartMs: 0,
         sourceEndMs: duration,
         timelineStartMs: startTimeMs,

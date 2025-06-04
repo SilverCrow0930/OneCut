@@ -37,8 +37,10 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
 
     // Memoize crop state initialization
     const [crop, setCrop] = useState(() => ({
-        width: clip.type === 'text' || clip.type === 'caption' ? 300 : 320,
-        height: clip.type === 'text' || clip.type === 'caption' ? 80 : 180,
+        width: clip.type === 'text' || clip.type === 'caption' ? 300 : 
+               (externalAsset?.isExternal && clip.properties?.externalAsset?.originalData?.isSticker) ? 200 : 320,
+        height: clip.type === 'text' || clip.type === 'caption' ? 80 : 
+                (externalAsset?.isExternal && clip.properties?.externalAsset?.originalData?.isSticker) ? 200 : 180,
         left: 0,
         top: 0
     }))
@@ -310,7 +312,10 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                 return (
                     <img
                         src={mediaUrl!}
-                        style={style}
+                        style={{
+                            ...style,
+                            objectFit: externalAsset?.originalData?.isSticker ? 'contain' : 'cover'
+                        }}
                         onClick={handleClick}
                         draggable={false}
                         loading="lazy" // Add lazy loading
