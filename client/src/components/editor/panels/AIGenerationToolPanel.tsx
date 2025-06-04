@@ -110,7 +110,7 @@ const AIGenerationToolPanel = () => {
                 }
             }
 
-            console.log(`🎨 Generating ${activeTab} with Fal.ai:`, requestBody)
+            console.log(`Generating ${activeTab} with Fal.ai:`, requestBody)
 
             // Call your backend API that will handle Fal.ai integration
             const response = await fetch(apiPath('ai/generate'), {
@@ -128,7 +128,7 @@ const AIGenerationToolPanel = () => {
             }
 
             const resultData = await response.json()
-            console.log('✅ Generation completed:', resultData)
+            console.log('Generation completed:', resultData)
 
             setResult({
                 type: activeTab,
@@ -141,7 +141,7 @@ const AIGenerationToolPanel = () => {
             refresh()
 
         } catch (error: any) {
-            console.error('❌ Generation failed:', error)
+            console.error('Generation failed:', error)
             setError(error.message || 'Failed to generate content')
         } finally {
             setIsGenerating(false)

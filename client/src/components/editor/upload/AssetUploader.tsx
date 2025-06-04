@@ -167,13 +167,14 @@ export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
             <label 
                 className={`
                     relative flex flex-col w-full items-center justify-center
-                    p-8 rounded-xl gap-3 cursor-pointer
+                    p-6 rounded-xl gap-3 cursor-pointer
                     border-2 transition-all duration-300 ease-in-out
                     ${isDragging ?
-                        'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]' :
-                        'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50 hover:shadow-md'
+                        'border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 shadow-xl scale-[1.01] ring-4 ring-blue-200/30' :
+                        'border-gray-300 bg-gradient-to-br from-white to-gray-50 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-white hover:shadow-lg hover:scale-[1.005]'
                     }
                     ${uploading ? 'opacity-75 cursor-not-allowed' : ''}
+                    shadow-sm hover:shadow-md
                 `}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
@@ -181,12 +182,16 @@ export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
                 onDrop={handleDrop}
             >
                 <div className="flex items-center gap-3">
-                    <Upload className={`w-6 h-6 ${isDragging ? 'text-blue-600' : 'text-gray-500'} transition-colors`} />
-                    <span className={`text-lg font-medium ${isDragging ? 'text-blue-600' : 'text-gray-700'} transition-colors`}>
+                    <div className={`p-2 rounded-lg transition-all duration-300 ${
+                        isDragging ? 'bg-blue-500 shadow-lg' : 'bg-gray-100 group-hover:bg-blue-100'
+                    }`}>
+                        <Upload className={`w-5 h-5 ${isDragging ? 'text-white' : 'text-gray-600'} transition-colors`} />
+                    </div>
+                    <span className={`text-lg font-semibold ${isDragging ? 'text-blue-700' : 'text-gray-800'} transition-colors`}>
                         {uploading ? 'Uploading…' : 'Upload files'}
                     </span>
                 </div>
-                <p className={`text-sm ${isDragging ? 'text-blue-500' : 'text-gray-500'} transition-colors`}>
+                <p className={`text-sm font-medium ${isDragging ? 'text-blue-600' : 'text-gray-500'} transition-colors`}>
                     Click to browse or drag files here
                 </p>
                 <input
