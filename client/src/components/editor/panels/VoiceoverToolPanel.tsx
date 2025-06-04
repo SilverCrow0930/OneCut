@@ -356,7 +356,7 @@ const VoiceoverToolPanel = () => {
                         <textarea
                             value={script}
                             onChange={(e) => setScript(e.target.value)}
-                            placeholder="Enter your script here... Use templates above or write your own content."
+                            placeholder="Enter your script here"
                             maxLength={5000}
                             className="w-full h-32 p-4 border border-gray-200 rounded-lg 
                                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
