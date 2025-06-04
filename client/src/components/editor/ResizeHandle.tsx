@@ -45,8 +45,9 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onResize, className = '' })
                 startXRef.current = e.clientX
                 document.body.classList.add('cursor-ew-resize')
             }}
+            title="Drag to resize"
         >
-            <div className="w-0.5 h-8 bg-gray-300 hover:bg-blue-400 transition-colors duration-150 rounded-full opacity-60 hover:opacity-100" />
+            <div className="w-1 h-16 bg-gray-400 hover:bg-blue-500 transition-colors duration-150 rounded-full opacity-80 hover:opacity-100 shadow-sm" />
         </div>
     )
 }
