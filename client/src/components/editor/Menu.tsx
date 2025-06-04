@@ -150,12 +150,7 @@ const Menu = () => {
                             `}
                             title="Undo"
                         >
-                            <img 
-                                src="/undo.png" 
-                                alt="Undo" 
-                                className="w-5 h-5"
-                                style={{ filter: canUndo ? 'brightness(0) invert(1)' : 'brightness(0) invert(1) opacity(40%)' }}
-                            />
+                            <Undo2 size={20} />
                         </button>
                         
                         <button
@@ -170,15 +165,7 @@ const Menu = () => {
                             `}
                             title="Redo"
                         >
-                            <img 
-                                src="/undo.png" 
-                                alt="Redo" 
-                                className="w-5 h-5"
-                                style={{ 
-                                    filter: canRedo ? 'brightness(0) invert(1)' : 'brightness(0) invert(1) opacity(40%)',
-                                    transform: 'scaleX(-1)' // Flip horizontally for redo
-                                }}
-                            />
+                            <Redo2 size={20} />
                         </button>
                     </div>
                 </div>
