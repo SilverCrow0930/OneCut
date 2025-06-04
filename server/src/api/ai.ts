@@ -103,25 +103,39 @@ router.post(
                 case 'image':
                     // Add image-specific parameters
                     if (aspect_ratio) {
-                        // Convert aspect ratio to width/height based on model
-                        const ratios: { [key: string]: { width: number, height: number } } = {
-                            '1:1': { width: 1024, height: 1024 },
-                            '16:9': { width: 1344, height: 768 },
-                            '9:16': { width: 768, height: 1344 },
-                            '4:3': { width: 1152, height: 896 }
-                        }
-                        const ratio = ratios[aspect_ratio] || ratios['16:9']
-                        
-                        // Different models may have different parameter names
+                        // Use proper image size parameters based on model
                         if (model.includes('lumina')) {
+                            // Lumina uses width/height
+                            const ratios: { [key: string]: { width: number, height: number } } = {
+                                '1:1': { width: 1024, height: 1024 },
+                                '16:9': { width: 1344, height: 768 },
+                                '9:16': { width: 768, height: 1344 },
+                                '4:3': { width: 1152, height: 896 }
+                            }
+                            const ratio = ratios[aspect_ratio] || ratios['16:9']
                             input.width = ratio.width
                             input.height = ratio.height
+                        } else if (model.includes('flux')) {
+                            // Flux models use predefined image_size strings
+                            const fluxSizes: { [key: string]: string } = {
+                                '1:1': 'square_hd',      // 1024x1024
+                                '16:9': 'landscape_16_9', // 1344x768  
+                                '9:16': 'portrait_16_9',  // 768x1344
+                                '4:3': 'landscape_4_3'    // 1152x896
+                            }
+                            input.image_size = fluxSizes[aspect_ratio] || 'landscape_16_9'
+                        }
+                    } else {
+                        // Default size if no aspect ratio specified
+                        if (model.includes('lumina')) {
+                            input.width = 1024
+                            input.height = 1024
                         } else {
-                            input.image_size = `${ratio.width}x${ratio.height}`
+                            input.image_size = 'square_hd'
                         }
                     }
                     
-                    // Add style for applicable models
+                    // Add style for applicable models (but don't modify prompt for lumina)
                     if (style && !model.includes('lumina')) {
                         input.prompt = `${prompt}, ${style} style`
                     }
@@ -292,7 +306,7 @@ router.get('/test', async (req: Request, res: Response) => {
         const result = await fal.subscribe('fal-ai/flux/dev', {
             input: {
                 prompt: 'A simple red circle on white background',
-                image_size: 'square'
+                image_size: 'square_hd'
             },
             logs: true
         })
