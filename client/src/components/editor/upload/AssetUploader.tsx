@@ -121,42 +121,84 @@ export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
         }
     }
 
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(false)
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+    }
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(false)
+
+        const files = Array.from(e.dataTransfer.files)
+        if (files.length === 0) return
+
+        setUploading(true)
+        setUploadProgress([])
+        setShowProgress(true)
+
+        try {
+            const uploadedAssets = await Promise.all(files.map(file => uploadFile(file)))
+            if (onUploadSuccess) {
+                onUploadSuccess(uploadedAssets)
+            }
+        } catch (err) {
+            console.error('Batch upload error:', err)
+        } finally {
+            setUploading(false)
+        }
+    }
+
     return (
         <div className="flex flex-col w-full gap-2">
-            <div
+            <label 
                 className={`
-                    relative flex flex-col w-full min-h-64 items-center justify-center
-                    p-6 rounded-xl gap-4
-                    border-2 border-gray-200 bg-gray-50 transition-all duration-300 ease-in-out
+                    relative flex flex-col w-full items-center justify-center
+                    p-8 rounded-xl gap-3 cursor-pointer
+                    border-2 transition-all duration-300 ease-in-out
                     ${isDragging ?
-                        'border-blue-400 bg-blue-100 shadow-inner' :
-                        ''
+                        'border-blue-400 bg-blue-50 shadow-lg scale-[1.02]' :
+                        'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50 hover:shadow-md'
                     }
+                    ${uploading ? 'opacity-75 cursor-not-allowed' : ''}
                 `}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
             >
-                <label className="
-                    flex flex-row gap-2 items-center text-white 
-                    px-6 py-3 rounded-xl
-                    bg-blue-400 hover:bg-blue-500 active:bg-blue-600
-                    transition-all duration-200
-                    cursor-pointer
-                ">
-                    <Upload className='w-5 h-5' />
-                    {uploading ? 'Uploading…' : 'Upload'}
-                    <input
-                        type="file"
-                        accept="image/*, video/*, audio/*"
-                        ref={inputRef}
-                        onChange={handleUpload}
-                        disabled={uploading}
-                        multiple
-                        className="hidden"
-                    />
-                </label>
-                <p className="text-gray-500 text-sm">
-                    or drag here
+                <div className="flex items-center gap-3">
+                    <Upload className={`w-6 h-6 ${isDragging ? 'text-blue-600' : 'text-gray-500'} transition-colors`} />
+                    <span className={`text-lg font-medium ${isDragging ? 'text-blue-600' : 'text-gray-700'} transition-colors`}>
+                        {uploading ? 'Uploading…' : 'Upload files'}
+                    </span>
+                </div>
+                <p className={`text-sm ${isDragging ? 'text-blue-500' : 'text-gray-500'} transition-colors`}>
+                    Click to browse or drag files here
                 </p>
-            </div>
+                <input
+                    type="file"
+                    accept="image/*, video/*, audio/*"
+                    ref={inputRef}
+                    onChange={handleUpload}
+                    disabled={uploading}
+                    multiple
+                    className="hidden"
+                />
+            </label>
 
             {/* Upload Progress */}
             {showProgress && uploadProgress.length > 0 && (

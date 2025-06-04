@@ -174,7 +174,7 @@ const AIGenerationToolPanel = () => {
             
             <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-600">Model Quality</label>
+                    <label className="text-xs font-medium text-gray-600">Model</label>
                     <select 
                         value={quality}
                         onChange={(e) => setQuality(e.target.value)}
@@ -230,7 +230,7 @@ const AIGenerationToolPanel = () => {
             
             <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-600">Model Quality</label>
+                    <label className="text-xs font-medium text-gray-600">Model</label>
                     <select 
                         value={quality}
                         onChange={(e) => setQuality(e.target.value)}
@@ -281,18 +281,14 @@ const AIGenerationToolPanel = () => {
                 />
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
                 <div className="space-y-2">
                     <label className="text-xs font-medium text-gray-600">Model</label>
-                    <select 
-                        value={quality}
-                        onChange={(e) => setQuality(e.target.value)}
-                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500"
-                        disabled
-                    >
-                        <option value="normal">Lyria 2 (Google AI)</option>
-                    </select>
+                    <div className="w-full p-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                        Lyria 2
+                    </div>
                 </div>
+                
                 <div className="space-y-2">
                     <label className="text-xs font-medium text-gray-600">Duration</label>
                     <select 
@@ -304,21 +300,21 @@ const AIGenerationToolPanel = () => {
                         <option value="30">30 seconds</option>
                     </select>
                 </div>
-            </div>
-            
-            <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-600">Genre</label>
-                <select 
-                    value={musicGenre}
-                    onChange={(e) => setMusicGenre(e.target.value)}
-                    className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500"
-                >
-                    <option value="ambient">Ambient</option>
-                    <option value="electronic">Electronic</option>
-                    <option value="cinematic">Cinematic</option>
-                    <option value="acoustic">Acoustic</option>
-                    <option value="upbeat">Upbeat</option>
-                </select>
+                
+                <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-600">Genre</label>
+                    <select 
+                        value={musicGenre}
+                        onChange={(e) => setMusicGenre(e.target.value)}
+                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500"
+                    >
+                        <option value="ambient">Ambient</option>
+                        <option value="electronic">Electronic</option>
+                        <option value="cinematic">Cinematic</option>
+                        <option value="acoustic">Acoustic</option>
+                        <option value="upbeat">Upbeat</option>
+                    </select>
+                </div>
             </div>
         </div>
     )
@@ -413,19 +409,6 @@ const AIGenerationToolPanel = () => {
                     })}
                 </div>
 
-                {/* Active Tab Info */}
-                <div className={`p-4 rounded-lg border ${activeType.bgColor} border-${activeType.color.replace('text-', '').replace('-600', '-200')}`}>
-                    <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg bg-white flex items-center justify-center ${activeType.color}`}>
-                            <activeType.icon size={20} />
-                        </div>
-                        <div>
-                            <h5 className="font-semibold text-gray-800">{activeType.name} Generation</h5>
-                            <p className="text-sm text-gray-600">{activeType.description}</p>
-                        </div>
-                    </div>
-                </div>
-
                 {/* Error Message */}
                 {error && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -469,14 +452,6 @@ const AIGenerationToolPanel = () => {
 
                 {/* Result Display */}
                 {renderResult()}
-
-                {/* Powered by Fal.ai */}
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-xs text-blue-700 text-center flex items-center justify-center gap-1">
-                        <Sparkles size={12} />
-                        <span>Powered by <strong>Fal.ai</strong> - State-of-the-art AI models</span>
-                    </p>
-                </div>
             </div>
         </div>
     )
