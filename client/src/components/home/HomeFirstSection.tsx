@@ -33,7 +33,7 @@ const HomeFirstSection = () => {
                     {/* Title */}
                     <div className="
                         flex flex-col items-center justify-center gap-2
-                        text-2xl sm:text-3xl md:text-4xl lg:text-6xl text-white font-[600]
+                        text-2xl sm:text-3xl md:text-4xl lg:text-6xl text-gray-900 font-[600]
                         text-center whitespace-nowrap
                     ">
                         <p>
@@ -43,11 +43,11 @@ const HomeFirstSection = () => {
 
                     {/* Description */}
                     <div className="flex flex-col items-center justify-center gap-1">
-                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
+                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 text-center">
                             <span className="hidden sm:inline">The AI video co-pilot that takes you from nothing</span>
                             <span className="sm:hidden">The AI video co-pilot that takes you from</span>
                         </p>
-                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 text-center">
+                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 text-center">
                             <span className="hidden sm:inline">to viral-ready content.</span>
                             <span className="sm:hidden">nothing to viral-ready content.</span>
                         </p>
@@ -56,7 +56,7 @@ const HomeFirstSection = () => {
 
                 {/* Button */}
                 <button className="
-                    bg-blue-500 hover:bg-blue-600 mt-2
+                    bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 mt-2
                     text-white font-semibold text-base sm:text-lg md:text-xl
                     px-6 sm:px-8 md:px-12 py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl 
                     active:transform active:scale-95 cursor-pointer

@@ -107,44 +107,44 @@ const Demos = () => {
     }
 
     return (
-        <div className="flex flex-col md:flex-row w-full h-fit gap-8 border-[0.5px] border-white/50 rounded-xl px-4 md:px-8 py-4 md:py-8 text-white">
+        <div className="flex flex-col md:flex-row w-full h-fit gap-8 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-4 md:px-8 py-4 md:py-8 shadow-lg">
             <div className="flex flex-col w-full md:w-80 gap-4 flex-none">
-                <p className="text-xl md:text-2xl font-bold my-2 md:my-4">🎬 Demos</p>
+                <p className="text-xl md:text-2xl font-bold my-2 md:my-4 text-gray-900">🎬 Demos</p>
                 {
                     DEMOS.map((demo, index) => (
                         <div
                             key={index}
                             className={`
-                                flex flex-col w-full md:w-80 gap-4 border-[0.5px] border-white/50 rounded-xl p-3 md:p-4 
-                                cursor-pointer hover:bg-white/5 transition-colors 
-                                ${selectedDemo === index ? 'border-blue-500 bg-white/10' : ''}`}
+                                flex flex-col w-full md:w-80 gap-4 border border-gray-200 rounded-xl p-3 md:p-4 
+                                cursor-pointer hover:bg-gray-50 transition-colors bg-white
+                                ${selectedDemo === index ? 'border-blue-500 bg-blue-50 shadow-md' : ''}`}
                             onClick={() => {
                                 handleManualSelect(index)
                             }}
                         >
                             <div className="flex items-center justify-between">
-                                <p className="text-base md:text-lg">
+                                <p className="text-base md:text-lg text-gray-900 font-medium">
                                     {demo.title}
                                 </p>
                                 {
                                     expandedDemos.has(index) ? (
-                                        <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+                                        <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
                                     ) : (
-                                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+                                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
                                     )
                                 }
                             </div>
                             {
                                 expandedDemos.has(index) && (
-                                    <p className="text-xs md:text-sm text-gray-300 pl-4 leading-relaxed relative before:absolute before:left-0 before:top-0 before:content-['•'] before:text-gray-300">
+                                    <p className="text-xs md:text-sm text-gray-600 pl-4 leading-relaxed relative before:absolute before:left-0 before:top-0 before:content-['•'] before:text-blue-500">
                                         {demo.description}
                                     </p>
                                 )
                             }
                             {selectedDemo === index && (
-                                <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden mt-2">
+                                <div className="w-full bg-gray-200 h-1 rounded-full overflow-hidden mt-2">
                                     <div
-                                        className="bg-orange-500 h-full transition-all duration-[100ms]"
+                                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-[100ms]"
                                         style={{ width: `${progress}%` }}
                                     />
                                 </div>
@@ -155,7 +155,7 @@ const Demos = () => {
             </div>
             <div className="flex flex-col flex-grow h-full">
                 <p className="h-10 md:h-20"></p>
-                <div className="w-full h-[300px] md:h-full rounded-xl overflow-hidden">
+                <div className="w-full h-[300px] md:h-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
                     {DEMOS[selectedDemo].video.type === 'youtube' ? (
                         <iframe
                             src={DEMOS[selectedDemo].video.url.replace('watch?v=', 'embed/')}
