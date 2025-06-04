@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Project } from '@/types/projects'
 import { formatSecondsAsTimestamp } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { Play, Clock, Calendar, Video, FolderOpen, Plus } from 'lucide-react'
 
 export default function ProjectsList() {
     const router = useRouter()
@@ -58,130 +59,188 @@ export default function ProjectsList() {
         }
     }, [session?.access_token])
 
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString)
+        const now = new Date()
+        const diffTime = Math.abs(now.getTime() - date.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        if (diffDays === 1) return 'Yesterday'
+        if (diffDays < 7) return `${diffDays} days ago`
+        if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`
+        if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`
+        return date.toLocaleDateString()
+    }
+
     if (!session) {
-        return <p className="text-white">
-            Please sign in to see your projects.
-        </p>
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4 text-center">
+                <div className="w-16 h-16 mb-6 p-4 bg-white/10 rounded-full backdrop-blur-sm">
+                    <FolderOpen className="w-full h-full text-white/60" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Sign In Required</h3>
+                <p className="text-gray-400 max-w-sm">
+                    Please sign in to view and manage your projects.
+                </p>
+            </div>
+        )
     }
+    
     if (loading) {
-        return <p className="text-white">
-            Loading projects ...
-        </p>
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {Array.from({ length: 8 }).map((_, index) => (
+                    <div key={index} className="animate-pulse">
+                        <div className="bg-white/10 rounded-xl h-48 mb-4"></div>
+                        <div className="space-y-2">
+                            <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                            <div className="h-3 bg-white/10 rounded w-1/2"></div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
     }
+    
     if (error) {
-        return <p className="text-red-500">
-            Error: {error}
-        </p>
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4 text-center">
+                <div className="w-16 h-16 mb-6 p-4 bg-red-500/20 rounded-full">
+                    <Video className="w-full h-full text-red-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Error Loading Projects</h3>
+                <p className="text-red-400 max-w-sm mb-4">{error}</p>
+                <button 
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                >
+                    Try Again
+                </button>
+            </div>
+        )
     }
+    
     if (projects.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 px-4 text-center">
-                <div className="w-24 h-24 mb-6 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-                    </svg>
+                <div className="w-20 h-20 mb-6 p-5 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl backdrop-blur-sm border border-white/10">
+                    <Plus className="w-full h-full text-white/60" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">No Projects Yet</h3>
-                <p className="text-gray-400 max-w-sm">
-                    Get started by creating your first project.
+                <h3 className="text-2xl font-semibold text-white mb-3">Ready to Create?</h3>
+                <p className="text-gray-400 max-w-md mb-6 leading-relaxed">
+                    Start your creative journey by creating your first project. Bring your ideas to life with our powerful video editing tools.
                 </p>
+                <button 
+                    onClick={() => router.push('/projects/new')}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                    Create Your First Project
+                </button>
             </div>
         )
     }
 
     return (
-        <ul className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {
-                projects.map((project, index) => (
-                    <div
-                        key={index}
-                        className="
-                            group
-                            relative
-                            flex flex-col
-                            rounded-lg overflow-hidden
-                            bg-gray-900 hover:bg-gray-800
-                            text-white transition-all duration-300
-                            cursor-pointer
-                            aspect-video h-32
-                            border border-gray-700 hover:border-gray-600
-                            hover:scale-105
-                        "
-                        onClick={() => {
-                            router.push(`/projects/${project.id}`)
-                        }}
-                    >
-                        {/* Thumbnail Background */}
-                        <div className="absolute inset-0 w-full h-full">
-                            {project.thumbnail_url ? (
-                                <img
-                                    src={project.thumbnail_url}
-                                    alt={project.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        // Show fallback background if image fails
-                                        const target = e.currentTarget;
-                                        target.style.display = 'none';
-                                        const fallback = target.parentElement?.querySelector('.fallback-bg');
-                                        if (fallback) {
-                                            (fallback as HTMLElement).style.display = 'flex';
-                                        }
-                                    }}
-                                />
-                            ) : null}
-                            
-                            {/* Enhanced fallback background - always present but hidden if image loads */}
-                            <div 
-                                className={`fallback-bg w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
-                            >
-                                {/* Video/Film icon */}
-                                <div className="p-3 bg-gray-700/50 rounded-xl mb-2">
-                                    <svg 
-                                        className="w-6 h-6 text-gray-300" 
-                                        fill="none" 
-                                        stroke="currentColor" 
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={1.5} 
-                                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" 
-                        />
-                                    </svg>
-                                </div>
-                                {/* "No Preview" text */}
-                                <span className="text-xs text-gray-400 font-medium">No Preview</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {projects.map((project, index) => (
+                <div
+                    key={index}
+                    className="
+                        group
+                        relative
+                        bg-white/5 backdrop-blur-sm
+                        rounded-2xl overflow-hidden
+                        border border-white/10 hover:border-white/20
+                        transition-all duration-300
+                        cursor-pointer
+                        hover:transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-500/20
+                    "
+                    onClick={() => router.push(`/projects/${project.id}`)}
+                >
+                    {/* Thumbnail Section */}
+                    <div className="relative aspect-video w-full overflow-hidden">
+                        {project.thumbnail_url ? (
+                            <img
+                                src={project.thumbnail_url}
+                                alt={project.name}
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                onError={(e) => {
+                                    const target = e.currentTarget;
+                                    target.style.display = 'none';
+                                    const fallback = target.parentElement?.querySelector('.fallback-bg');
+                                    if (fallback) {
+                                        (fallback as HTMLElement).style.display = 'flex';
+                                    }
+                                }}
+                            />
+                        ) : null}
+                        
+                        {/* Enhanced fallback background */}
+                        <div 
+                            className={`fallback-bg w-full h-full bg-gradient-to-br from-gray-700/50 to-gray-900/50 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
+                        >
+                            <div className="p-4 bg-white/10 rounded-2xl mb-3 backdrop-blur-sm">
+                                <Video className="w-8 h-8 text-white/60" />
+                            </div>
+                            <span className="text-sm text-white/40 font-medium">No Preview</span>
+                        </div>
+
+                        {/* Overlay gradient */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                        {/* Play button overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-95 group-hover:scale-100">
+                            <div className="p-4 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                                <Play className="w-6 h-6 text-white fill-current" />
                             </div>
                         </div>
 
-                        {/* Dark overlay on hover */}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
-
-                        {/* Duration badge - top right */}
+                        {/* Duration badge */}
                         {project.duration && project.duration > 0 && (
-                            <div className="absolute top-2 right-2 z-20">
-                            <span className="
-                                    px-2 py-1 rounded
-                                    bg-black/70 backdrop-blur-sm text-xs font-medium
-                                    text-white shadow-md
-                            ">
-                                    {formatSecondsAsTimestamp(project.duration)}
-                                </span>
+                            <div className="absolute top-3 right-3">
+                                <div className="flex items-center gap-1 px-2 py-1 bg-black/70 backdrop-blur-sm rounded-lg">
+                                    <Clock className="w-3 h-3 text-white/80" />
+                                    <span className="text-xs font-medium text-white">
+                                        {formatSecondsAsTimestamp(project.duration)}
+                                    </span>
+                                </div>
                             </div>
                         )}
+                    </div>
 
-                        {/* Title - bottom */}
-                        <div className="absolute bottom-0 left-0 right-0 z-20">
-                            <div className="p-3 bg-gradient-to-t from-black/80 to-transparent">
-                                <span className="text-white text-sm font-medium line-clamp-2 leading-tight">
-                                    {project.name || `Untitled Project`}
-                            </span>
+                    {/* Content Section */}
+                    <div className="p-5">
+                        {/* Project Name */}
+                        <h3 className="text-lg font-semibold text-white mb-2 line-clamp-2 leading-tight group-hover:text-blue-300 transition-colors">
+                            {project.name || `Untitled Project`}
+                        </h3>
+
+                        {/* Project Info */}
+                        <div className="flex items-center justify-between text-sm text-white/60 mb-3">
+                            <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                <span>{formatDate(project.created_at)}</span>
                             </div>
+                            {project.updated_at && project.updated_at !== project.created_at && (
+                                <span className="text-xs text-white/40">
+                                    Updated {formatDate(project.updated_at)}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Progress Bar (if applicable) */}
+                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
+                                style={{ width: '70%' }} // This could be dynamic based on project completion
+                            />
                         </div>
                     </div>
-                ))
-            }
-        </ul>
+
+                    {/* Hover glow effect */}
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                </div>
+            ))}
+        </div>
     )
 }

@@ -310,7 +310,7 @@ export default function TextToolPanel() {
                             <textarea
                                 value={stylePrompt}
                                 onChange={(e) => setStylePrompt(e.target.value)}
-                                placeholder="Describe your desired style... e.g., 'Bold neon cyberpunk style with glowing edges' or 'Elegant gold text with shadow for luxury brand'"
+                                placeholder="Bold neon cyberpunk style with glowing edges or Elegant gold text with shadow for luxury brand"
                                 className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 rows={3}
                             />

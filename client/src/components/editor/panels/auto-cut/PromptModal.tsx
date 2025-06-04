@@ -99,8 +99,8 @@ export const PromptModal: React.FC<PromptModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-5000 animate-fadeIn">
-            <div className="bg-white rounded-xl p-6 w-[500px] max-w-[90%] max-h-[90vh] overflow-y-auto shadow-2xl transform transition-all animate-slideUp">
+        <div className="w-full h-full bg-white rounded-lg flex flex-col animate-fadeIn">
+            <div className="w-full flex-1 p-6 overflow-y-auto elegant-scrollbar">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-50 rounded-lg">
