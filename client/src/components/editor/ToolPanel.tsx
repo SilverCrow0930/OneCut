@@ -6,6 +6,7 @@ import StickersToolPanel from './panels/StickersToolPanel'
 import VoiceoverToolPanel from './panels/VoiceoverToolPanel'
 import CaptionsToolPanel from './panels/CaptionsToolPanel'
 import AutoCutToolPanel from './panels/AutoCutToolPanel'
+import AIGenerationToolPanel from './panels/AIGenerationToolPanel'
 import TransitionsToolPanel from './panels/TransitionsToolPanel'
 import { useEditor } from '@/contexts/EditorContext'
 
@@ -17,6 +18,7 @@ const toolComponents: { [key: string]: React.ComponentType<any> } = {
     Voiceover: VoiceoverToolPanel,
     Captions: CaptionsToolPanel,
     Autocut: AutoCutToolPanel,
+    Generation: AIGenerationToolPanel,
     Transitions: TransitionsToolPanel,
 }
 

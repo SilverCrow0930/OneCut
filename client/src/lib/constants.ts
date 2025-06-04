@@ -7,6 +7,7 @@ import StickersToolPanel from "@/components/editor/panels/StickersToolPanel"
 import VoiceoverToolPanel from "@/components/editor/panels/VoiceoverToolPanel"
 import CaptionsToolPanel from "@/components/editor/panels/CaptionsToolPanel"
 import AutoCutToolPanel from "@/components/editor/panels/AutoCutToolPanel"
+import AIGenerationToolPanel from "@/components/editor/panels/AIGenerationToolPanel"
 import TransitionsToolPanel from "@/components/editor/panels/TransitionsToolPanel"
 
 export const TOOLS: Tool[] = [
@@ -33,6 +34,11 @@ export const TOOLS: Tool[] = [
     {
         label: 'Autocut',
         icon: '/assets/icons/scissors.png',
+        aiTool: true,
+    },
+    {
+        label: 'Generation',
+        icon: '/assets/icons/generation.png',
         aiTool: true,
     },
     {
@@ -72,6 +78,10 @@ export const TOOL_PANELS: ToolPanel[] = [
     {
         label: 'Autocut',
         component: AutoCutToolPanel
+    },
+    {
+        label: 'Generation',
+        component: AIGenerationToolPanel
     },
     {
         label: 'Voiceover',

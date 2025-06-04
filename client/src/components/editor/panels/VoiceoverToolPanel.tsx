@@ -311,7 +311,7 @@ const VoiceoverToolPanel = () => {
 
     return (
         <div className="flex flex-col gap-6 p-4 bg-white rounded-lg min-h-full">
-            <PanelHeader icon={Mic} title="AI Voiceover" description="Generate realistic voice narration from your text" />
+            <PanelHeader icon={Mic} title="AI Voiceover" description="Generate realistic voice narration" />
             
             <div className="space-y-6 flex-1">
                 {/* Script Section */}
