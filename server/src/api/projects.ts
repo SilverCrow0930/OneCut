@@ -125,7 +125,7 @@ router.post(
             }
 
             // 2) Insert new project using the public.users.id
-            const projectName = await generateDefaultName(profile.id)
+            const projectName = generateDefaultName()
             const { data, error } = await supabase
                 .from('projects')
                 .insert({
