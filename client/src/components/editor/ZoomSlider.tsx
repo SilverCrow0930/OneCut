@@ -115,6 +115,8 @@ const ZoomSlider = () => {
                         [&::-webkit-slider-thumb]:h-4 
                         [&::-webkit-slider-thumb]:rounded-full 
                         [&::-webkit-slider-thumb]:bg-white
+                        [&::-webkit-slider-thumb]:border 
+                        [&::-webkit-slider-thumb]:border-gray-300
                         [&::-webkit-slider-thumb]:shadow-2xl 
                         [&::-webkit-slider-thumb]:cursor-pointer 
                         [&::-moz-range-thumb]:w-4 
@@ -122,7 +124,7 @@ const ZoomSlider = () => {
                         [&::-moz-range-thumb]:rounded-full 
                         [&::-moz-range-thumb]:bg-white 
                         [&::-moz-range-thumb]:border 
-                        [&::-moz-range-thumb]:border-black 
+                        [&::-moz-range-thumb]:border-gray-300 
                         [&::-moz-range-thumb]:shadow-2xl 
                         [&::-moz-range-thumb]:cursor-pointer"
                 />
