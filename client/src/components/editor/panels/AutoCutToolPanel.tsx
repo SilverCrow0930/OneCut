@@ -124,7 +124,7 @@ const FuturisticThought: React.FC<{
                     </div>
 
                     {/* Content area with markdown support and scrolling */}
-                    <div className="prose prose-sm max-w-none max-h-[400px] overflow-y-auto elegant-scrollbar" ref={contentRef}>
+                    <div className="prose prose-sm max-w-none max-h-[250px] overflow-y-auto elegant-scrollbar" ref={contentRef}>
                         <div className="relative">
                             <ReactMarkdown
                                 components={{
@@ -671,7 +671,7 @@ const AutoCutToolPanel = () => {
     };
 
     return (
-        <div className="flex flex-col gap-6 p-4 bg-white rounded-lg h-full">
+        <div className="flex flex-col gap-3 p-4 bg-white rounded-lg h-full">
             <PanelHeader
                 icon={Brain}
                 title="Autocut"
@@ -679,7 +679,7 @@ const AutoCutToolPanel = () => {
                 iconBgColor="bg-purple-50"
                 iconColor="text-purple-600"
             />
-            <div className="space-y-4 flex-1 min-h-0">
+            <div className="space-y-2 flex-1 min-h-0">
                 <div className="flex flex-col gap-2 h-full">
                     <style>{styles}</style>
                     <input

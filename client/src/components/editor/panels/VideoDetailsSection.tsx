@@ -60,17 +60,17 @@ const VideoDetailsSection: React.FC<VideoDetailsSectionProps> = ({
                 )}
             </button>
             <div
-                className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
                     }`}
             >
-                <div className="p-4 space-y-4">
+                <div className="p-3 space-y-3">
                     {/* Content based on processing state */}
                     {processingState !== 'completed' ? (
                         // During processing
                         <>
                             {selectedFile && (
                                 <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-                                    <div className="w-full aspect-[16/9]">
+                                    <div className="w-full aspect-[16/9] max-h-[120px]">
                                         <video
                                             src={selectedFile ? URL.createObjectURL(selectedFile) : undefined}
                                             className="w-full h-full object-cover"
@@ -79,7 +79,7 @@ const VideoDetailsSection: React.FC<VideoDetailsSectionProps> = ({
                                     </div>
                                 </div>
                             )}
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                     <div className="p-2 bg-blue-50 rounded-lg">
                                         <MessageSquare className="w-4 h-4 text-blue-500" />
@@ -98,13 +98,13 @@ const VideoDetailsSection: React.FC<VideoDetailsSectionProps> = ({
                         uploadedAsset && (
                             <>
                                 <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-                                    <div className="w-full aspect-[16/9]">
+                                    <div className="w-full aspect-[16/9] max-h-[120px]">
                                         <AssetThumbnail
                                             asset={uploadedAsset}
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                     <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                         <div className="p-2 bg-blue-50 rounded-lg">
                                             <MessageSquare className="w-4 h-4 text-blue-500" />
