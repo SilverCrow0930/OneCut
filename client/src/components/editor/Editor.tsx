@@ -45,7 +45,7 @@ const Editor = () => {
     } = useEditor()
     const params = useParams()
     const [assistantWidth, setAssistantWidth] = useState(384)
-    const [toolPanelWidth, setToolPanelWidth] = useState(320)
+    const [toolPanelWidth, setToolPanelWidth] = useState(320) // Initial width of 320px (w-80 = 320px)
 
     const handleAssistantResize = (deltaX: number) => {
         setAssistantWidth(prev => Math.max(200, Math.min(800, prev - deltaX)))
