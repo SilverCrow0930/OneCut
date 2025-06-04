@@ -383,6 +383,7 @@ const AIGenerationToolPanel = () => {
                 {/* Tab Navigation */}
                 <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
                     {GENERATION_TYPES.map((type) => {
+                        const Icon = type.icon
                         return (
                             <button
                                 key={type.id}
@@ -394,13 +395,14 @@ const AIGenerationToolPanel = () => {
                                     setQuality('normal') // Reset quality to normal
                                 }}
                                 className={`
-                                    flex-1 flex items-center justify-center px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium
+                                    flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium
                                     ${activeTab === type.id 
                                         ? `bg-white shadow-sm ${type.color}` 
                                         : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                     }
                                 `}
                             >
+                                <Icon size={16} />
                                 <span>{type.name}</span>
                             </button>
                         )

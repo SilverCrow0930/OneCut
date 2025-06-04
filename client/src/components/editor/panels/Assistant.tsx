@@ -20,23 +20,20 @@ const Assistant = () => {
     const { session } = useAuth()
 
     useEffect(() => {
-        console.log('Initializing WebSocket connection to:', API_URL);
-        // Initialize socket connection with polling prioritized for production reliability
+        // Initialize socket connection with proper configuration
         socketRef.current = io(API_URL, {
-            transports: ['polling', 'websocket'], // Prioritize polling for production
+            transports: ['websocket'],  // Force WebSocket only
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 2000,
-            reconnectionDelayMax: 10000,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
             randomizationFactor: 0.5,
-            timeout: 30000, // Reduced timeout
+            timeout: 60000,  // Match server pingTimeout
             autoConnect: true,
-            forceNew: false,
-            upgrade: true, // Allow upgrade to websocket after polling works
-            rememberUpgrade: false, // Don't remember failed websocket upgrades
-            timestampRequests: true,
-            timestampParam: 't'
+            forceNew: true,
+            upgrade: false,  // Disable transport upgrade
+            rememberUpgrade: false
         });
 
         // Log connection events

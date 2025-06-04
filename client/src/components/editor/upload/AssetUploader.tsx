@@ -121,105 +121,42 @@ export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
         }
     }
 
-    const handleDragEnter = (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setIsDragging(true)
-    }
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setIsDragging(false)
-    }
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-    }
-
-    const handleDrop = async (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setIsDragging(false)
-
-        const files = Array.from(e.dataTransfer.files)
-        if (files.length === 0) return
-
-        setUploading(true)
-        setUploadProgress([])
-        setShowProgress(true)
-
-        try {
-            const uploadedAssets = await Promise.all(files.map(file => uploadFile(file)))
-            if (onUploadSuccess) {
-                onUploadSuccess(uploadedAssets)
-            }
-        } catch (err) {
-            console.error('Batch upload error:', err)
-        } finally {
-            setUploading(false)
-        }
-    }
-
     return (
         <div className="flex flex-col w-full gap-2">
-            <label 
+            <div
                 className={`
-                    relative flex flex-col w-full items-center justify-center
-                    p-8 rounded-2xl gap-4 cursor-pointer group
-                    border-2 transition-all duration-300 ease-in-out
+                    relative flex flex-col w-full min-h-64 items-center justify-center
+                    p-6 rounded-xl gap-4
+                    border-2 border-gray-200 bg-gray-50 transition-all duration-300 ease-in-out
                     ${isDragging ?
-                        'border-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 shadow-xl scale-[1.02] shadow-blue-200/50' :
-                        'border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:border-blue-300 hover:bg-gradient-to-br hover:from-blue-50 hover:to-white hover:shadow-lg hover:shadow-blue-100/30'
+                        'border-blue-400 bg-blue-100 shadow-inner' :
+                        ''
                     }
-                    ${uploading ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.01]'}
                 `}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
             >
-                {/* Background decoration */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                <div className="relative flex items-center gap-4">
-                    <div className={`
-                        p-3 rounded-xl transition-all duration-300
-                        ${isDragging ? 
-                            'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : 
-                            'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
-                        }
-                    `}>
-                        <Upload className="w-6 h-6" />
-                    </div>
-                    <div className="text-left">
-                        <div className={`text-xl font-semibold transition-colors duration-300 ${
-                            isDragging ? 'text-blue-700' : 'text-gray-800 group-hover:text-blue-700'
-                        }`}>
-                            {uploading ? 'Uploading…' : 'Upload files'}
-                        </div>
-                        <p className={`text-sm transition-colors duration-300 mt-1 ${
-                            isDragging ? 'text-blue-600' : 'text-gray-500 group-hover:text-blue-600'
-                        }`}>
-                            Click to browse or drag files here
-                        </p>
-                    </div>
-                </div>
-                
-                {/* Subtle pattern overlay */}
-                <div className="absolute inset-0 rounded-2xl opacity-5 bg-[radial-gradient(circle_at_50%_50%,_rgba(59,130,246,0.3)_0%,_transparent_50%)] pointer-events-none" />
-                
-                <input
-                    type="file"
-                    accept="image/*, video/*, audio/*"
-                    ref={inputRef}
-                    onChange={handleUpload}
-                    disabled={uploading}
-                    multiple
-                    className="hidden"
-                />
-            </label>
+                <label className="
+                    flex flex-row gap-2 items-center text-white 
+                    px-6 py-3 rounded-xl
+                    bg-blue-400 hover:bg-blue-500 active:bg-blue-600
+                    transition-all duration-200
+                    cursor-pointer
+                ">
+                    <Upload className='w-5 h-5' />
+                    {uploading ? 'Uploading…' : 'Upload'}
+                    <input
+                        type="file"
+                        accept="image/*, video/*, audio/*"
+                        ref={inputRef}
+                        onChange={handleUpload}
+                        disabled={uploading}
+                        multiple
+                        className="hidden"
+                    />
+                </label>
+                <p className="text-gray-500 text-sm">
+                    or drag here
+                </p>
+            </div>
 
             {/* Upload Progress */}
             {showProgress && uploadProgress.length > 0 && (

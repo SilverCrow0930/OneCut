@@ -34,59 +34,33 @@ export function AutoCutProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         console.log('Initializing WebSocket connection to:', API_URL);
-        // Initialize socket connection with polling prioritized for production reliability
+        // Initialize socket connection with proper configuration
         const newSocket = io(API_URL, {
-            transports: ['polling', 'websocket'], // Prioritize polling for production
+            transports: ['websocket'],
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 2000,
-            reconnectionDelayMax: 10000,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
             randomizationFactor: 0.5,
-            timeout: 30000, // Reduced timeout
+            timeout: 60000,
             autoConnect: true,
-            forceNew: false,
-            upgrade: true, // Allow upgrade to websocket after polling works
-            rememberUpgrade: false, // Don't remember failed websocket upgrades
-            timestampRequests: true,
-            timestampParam: 't'
+            forceNew: true,
+            upgrade: false,
+            rememberUpgrade: false
         });
 
         // Log connection events
         newSocket.on('connect', () => {
-            console.log('✅ WebSocket connected successfully');
-            console.log('Transport used:', newSocket.io.engine.transport.name);
-            console.log('Socket ID:', newSocket.id);
+            console.log('WebSocket connected successfully');
         });
 
         newSocket.on('connect_error', (error) => {
-            console.error('❌ WebSocket connection error:', error);
-            console.log('Attempting to reconnect...');
+            console.error('WebSocket connection error:', error);
         });
 
         newSocket.on('disconnect', (reason) => {
-            console.log('🔌 WebSocket disconnected:', reason);
-            if (reason === 'io server disconnect') {
-                console.log('Server initiated disconnect, attempting to reconnect...');
-                newSocket.connect();
-            }
-        });
-
-        newSocket.on('reconnect', (attemptNumber) => {
-            console.log('🔄 Reconnected after', attemptNumber, 'attempts');
-            console.log('Transport used:', newSocket.io.engine.transport.name);
-        });
-
-        newSocket.on('reconnect_attempt', (attemptNumber) => {
-            console.log('🔄 Reconnection attempt #', attemptNumber);
-        });
-
-        newSocket.on('reconnect_error', (error) => {
-            console.error('❌ Reconnection error:', error);
-        });
-
-        newSocket.on('reconnect_failed', () => {
-            console.error('❌ Failed to reconnect after all attempts');
+            console.log('WebSocket disconnected:', reason);
         });
 
         socketRef.current = newSocket;
