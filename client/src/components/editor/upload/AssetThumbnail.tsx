@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { formatTimeMs } from '@/lib/utils'
 import DraggableAsset from './DraggableAsset'
@@ -26,7 +26,7 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
     const { tracks, executeCommand, clips } = useEditor()
     const params = useParams()
     const [showContextMenu, setShowContextMenu] = useState(false)
-    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
+    const containerRef = useRef<HTMLDivElement>(null)
 
     // Get project ID
     const projectId = Array.isArray(params.projectId) 
@@ -35,23 +35,32 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
 
     // Close context menu when clicking outside
     useEffect(() => {
-        const handleClickOutside = () => setShowContextMenu(false)
+        const handleClickOutside = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setShowContextMenu(false)
+            }
+        }
         document.addEventListener('click', handleClickOutside)
         return () => document.removeEventListener('click', handleClickOutside)
     }, [])
 
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault()
-        setContextMenuPosition({ x: e.clientX, y: e.clientY })
+        e.stopPropagation()
         setShowContextMenu(true)
     }
 
-    const handleDelete = async () => {
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
         await deleteAsset(asset.id)
         setShowContextMenu(false)
     }
 
-    const handleDownload = async () => {
+    const handleDownload = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        
         if (!url) {
             console.error('No URL available for download')
             return
@@ -86,6 +95,8 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
 
     // Handle click to add asset to track
     const handleClick = (e: React.MouseEvent) => {
+        if (showContextMenu) return // Don't add to track when context menu is open
+        
         e.preventDefault()
         e.stopPropagation()
         
@@ -128,6 +139,7 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
         <>
             <DraggableAsset assetId={asset.id}>
                 <div
+                    ref={containerRef}
                     className={`
                         relative rounded-lg overflow-hidden 
                         bg-gray-50 hover:opacity-80 transition-all duration-200
@@ -161,7 +173,7 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
                         )
                     }
 
-                    {/* duration badge */}
+                    {/* Duration badge */}
                     {
                         asset.duration && (
                             <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
@@ -169,36 +181,31 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
                             </div>
                         )
                     }
+
+                    {/* Context Menu Overlay - Large buttons covering half the asset */}
+                    {showContextMenu && (
+                        <div className="absolute inset-0 bg-black/40 flex rounded-lg z-20">
+                            {/* Download Button - Left Half */}
+                            <button
+                                className="flex-1 flex flex-col items-center justify-center bg-blue-600/90 hover:bg-blue-700/90 text-white transition-colors duration-200 border-r border-white/20"
+                                onClick={handleDownload}
+                            >
+                                <Download size={32} className="mb-2" />
+                                <span className="font-medium text-lg">Download</span>
+                            </button>
+                            
+                            {/* Delete Button - Right Half */}
+                            <button
+                                className="flex-1 flex flex-col items-center justify-center bg-red-600/90 hover:bg-red-700/90 text-white transition-colors duration-200"
+                                onClick={handleDelete}
+                            >
+                                <Trash2 size={32} className="mb-2" />
+                                <span className="font-medium text-lg">Delete</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </DraggableAsset>
-            {
-                showContextMenu && (
-                    <div
-                        className="fixed bg-white shadow-lg rounded-lg py-1 z-50 border border-gray-200 min-w-[140px]"
-                        style={{
-                            left: contextMenuPosition.x,
-                            top: contextMenuPosition.y,
-                            zIndex: 9999
-                        }}
-                    >
-                        <button
-                            className="w-full px-4 py-2 text-left text-blue-600 hover:bg-blue-50 flex items-center gap-2 text-sm"
-                            onClick={handleDownload}
-                        >
-                            <Download size={16} />
-                            Download
-                        </button>
-                        <hr className="border-gray-100 my-1" />
-                        <button
-                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 text-sm"
-                            onClick={handleDelete}
-                        >
-                            <Trash2 size={16} />
-                            Delete Asset
-                        </button>
-                    </div>
-                )
-            }
             <style jsx>{`
                 @keyframes pulse-fast {
                     0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.7); }
