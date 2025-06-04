@@ -7,7 +7,7 @@ const router = Router()
 
 // Configure Fal.ai client
 fal.config({
-    credentials: process.env.FAL_API_KEY
+    credentials: process.env.FAL_KEY
 })
 
 // Fal.ai model mappings with quality options
@@ -63,26 +63,38 @@ router.post(
         try {
             const errors = validationResult(req)
             if (!errors.isEmpty()) {
+                console.error('❌ Validation errors:', errors.array())
                 return res.status(400).json({ errors: errors.array() })
             }
 
             const { user } = req as AuthenticatedRequest
             const { type, prompt, quality = 'normal', style, aspect_ratio, duration, motion, genre } = req.body
 
-            console.log(`🎨 Starting ${type} generation with Fal.ai:`, { prompt, type, quality })
+            console.log(`🎨 Starting ${type} generation with Fal.ai:`, { 
+                prompt: prompt?.substring(0, 100) + '...', 
+                type, 
+                quality,
+                userId: user?.id
+            })
 
-            if (!process.env.FAL_API_KEY) {
-                console.error('❌ FAL_API_KEY environment variable not set')
+            // Check environment
+            if (!process.env.FAL_KEY) {
+                console.error('❌ FAL_KEY environment variable not set')
                 return res.status(500).json({ error: 'AI service not configured' })
             }
+
+            console.log('✅ FAL_KEY is set, length:', process.env.FAL_KEY.length)
 
             // Get the appropriate model based on type and quality
             const typeModels = FAL_MODELS[type as keyof typeof FAL_MODELS]
             const model = typeModels[quality as keyof typeof typeModels] || typeModels['normal']
             
             if (!model) {
+                console.error('❌ Invalid model configuration:', { type, quality, availableModels: typeModels })
                 return res.status(400).json({ error: `Invalid quality option for ${type}` })
             }
+
+            console.log('📋 Selected model:', model)
 
             let input: any = { prompt }
 
@@ -262,6 +274,49 @@ router.get('/models', async (req: Request, res: Response) => {
             }
         }
     })
+})
+
+// GET /api/v1/ai/test - Test Fal.ai connection
+router.get('/test', async (req: Request, res: Response) => {
+    try {
+        console.log('🧪 Testing Fal.ai connection...')
+        
+        if (!process.env.FAL_KEY) {
+            return res.status(500).json({ 
+                error: 'FAL_KEY not set',
+                status: 'failed'
+            })
+        }
+
+        // Test with a simple image generation
+        const result = await fal.subscribe('fal-ai/flux/dev', {
+            input: {
+                prompt: 'A simple red circle on white background',
+                image_size: 'square'
+            },
+            logs: true
+        })
+
+        res.json({
+            status: 'success',
+            message: 'Fal.ai connection working',
+            testResult: {
+                hasImage: !!result.data?.images?.[0]?.url,
+                requestId: result.requestId
+            }
+        })
+
+    } catch (error: any) {
+        console.error('❌ Fal.ai test failed:', error)
+        res.status(500).json({
+            status: 'failed',
+            error: error.message,
+            details: {
+                name: error.name,
+                code: error.code
+            }
+        })
+    }
 })
 
 export default router 
