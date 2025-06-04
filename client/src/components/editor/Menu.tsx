@@ -133,16 +133,16 @@ const Menu = () => {
                         className={`cursor-pointer ${!canRedo ? 'opacity-50' : ''}`}
                     />
                 </div> */}
-                <div className="flex flex-row items-center gap-3">
+                <div className="flex flex-row items-center gap-6">
                     <SaveStatusIndicator />
                     
                     {/* Undo/Redo buttons */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                         <button
                             onClick={undo}
                             disabled={!canUndo}
                             className={`
-                                p-1.5 rounded-md transition-all duration-200
+                                p-2 rounded-md transition-all duration-200
                                 ${canUndo 
                                     ? 'hover:bg-white/10 text-white' 
                                     : 'text-white/40 cursor-not-allowed'
@@ -150,14 +150,14 @@ const Menu = () => {
                             `}
                             title="Undo"
                         >
-                            <Undo2 size={20} />
+                            <Undo2 size={24} />
                         </button>
                         
                         <button
                             onClick={redo}
                             disabled={!canRedo}
                             className={`
-                                p-1.5 rounded-md transition-all duration-200
+                                p-2 rounded-md transition-all duration-200
                                 ${canRedo 
                                     ? 'hover:bg-white/10 text-white' 
                                     : 'text-white/40 cursor-not-allowed'
@@ -165,7 +165,7 @@ const Menu = () => {
                             `}
                             title="Redo"
                         >
-                            <Redo2 size={20} />
+                            <Redo2 size={24} />
                         </button>
                     </div>
                 </div>
