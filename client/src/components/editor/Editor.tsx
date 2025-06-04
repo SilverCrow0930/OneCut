@@ -45,14 +45,14 @@ const Editor = () => {
     } = useEditor()
     const params = useParams()
     const [assistantWidth, setAssistantWidth] = useState(384)
-    const [toolPanelWidth, setToolPanelWidth] = useState(320) // Initial width of 320px (w-80 = 320px)
+    const [toolPanelWidth, setToolPanelWidth] = useState(320) // Default 320px (w-80)
 
     const handleAssistantResize = (deltaX: number) => {
         setAssistantWidth(prev => Math.max(200, Math.min(800, prev - deltaX)))
     }
 
     const handleToolPanelResize = (deltaX: number) => {
-        setToolPanelWidth(prev => Math.max(250, Math.min(600, prev + deltaX)))
+        setToolPanelWidth(prev => Math.max(200, Math.min(600, prev + deltaX)))
     }
 
     // Function to delete multiple selected clips (same logic as in ClipTools.tsx)
@@ -315,7 +315,10 @@ const Editor = () => {
                         onToolSelect={setSelectedTool}
                     />
                 </div>
-                <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0" style={{ width: toolPanelWidth }}>
+                <div 
+                    className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0 relative"
+                    style={{ width: toolPanelWidth }}
+                >
                     <ToolPanel />
                     <ResizeHandle
                         className="absolute -right-2 z-10"
