@@ -277,22 +277,21 @@ const Editor = () => {
             <div className="
                 flex flex-row flex-1 min-h-0 gap-1 p-1
             ">
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60">
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
                     <ToolBar
                         selectedTool={selectedTool}
                         onToolSelect={setSelectedTool}
                     />
                 </div>
-                <div className="w-80 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60">
+                <div className="w-80 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
                     <ToolPanel />
                 </div>
                 <div 
-                    className="bg-white/60 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60"
-                    style={{ width: `calc(100% - 80px - 320px - ${assistantWidth}px - 1rem)` }}
+                    className="flex-1 bg-white/60 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 min-w-0"
                 >
                     <EditorContent />
                 </div>
-                <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60" style={{ width: assistantWidth }}>
+                <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0" style={{ width: assistantWidth }}>
                     <ResizeHandle
                         className="absolute -left-2 z-10"
                         onResize={handleAssistantResize}
