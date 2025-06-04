@@ -137,7 +137,7 @@ const Menu = () => {
                     <SaveStatusIndicator />
                     
                     {/* Undo/Redo buttons */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                         <button
                             onClick={undo}
                             disabled={!canUndo}
@@ -150,7 +150,7 @@ const Menu = () => {
                             `}
                             title="Undo"
                         >
-                            <Undo2 size={24} />
+                            <Undo2 size={28} />
                         </button>
                         
                         <button
@@ -165,7 +165,7 @@ const Menu = () => {
                             `}
                             title="Redo"
                         >
-                            <Redo2 size={24} />
+                            <Redo2 size={28} />
                         </button>
                     </div>
                 </div>
