@@ -36,18 +36,18 @@ export function AutoCutProvider({ children }: { children: ReactNode }) {
         console.log('Initializing WebSocket connection to:', API_URL);
         // Initialize socket connection with proper configuration
         const newSocket = io(API_URL, {
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'],
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: Infinity,
+            reconnectionAttempts: 10,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             randomizationFactor: 0.5,
             timeout: 60000,
             autoConnect: true,
-            forceNew: true,
-            upgrade: false,
-            rememberUpgrade: false
+            forceNew: false,
+            upgrade: true,
+            rememberUpgrade: true
         });
 
         // Log connection events

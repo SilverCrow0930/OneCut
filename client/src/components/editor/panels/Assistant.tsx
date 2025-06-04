@@ -22,18 +22,18 @@ const Assistant = () => {
     useEffect(() => {
         // Initialize socket connection with proper configuration
         socketRef.current = io(API_URL, {
-            transports: ['websocket'],  // Force WebSocket only
+            transports: ['websocket', 'polling'], // Add polling as fallback
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: Infinity,
+            reconnectionAttempts: 10, // Reduce from Infinity
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             randomizationFactor: 0.5,
             timeout: 60000,  // Match server pingTimeout
             autoConnect: true,
-            forceNew: true,
-            upgrade: false,  // Disable transport upgrade
-            rememberUpgrade: false
+            forceNew: false, // Allow reusing connections
+            upgrade: true,  // Allow transport upgrade
+            rememberUpgrade: true
         });
 
         // Log connection events

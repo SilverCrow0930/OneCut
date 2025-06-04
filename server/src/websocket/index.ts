@@ -26,16 +26,42 @@ export const setupWebSocket = (server: any) => {
     
     const io = new Server(server, {
         cors: {
-            origin: allowedOrigins,
+            origin: function (origin: string | undefined, callback: Function) {
+                console.log('[WebSocket CORS] Checking origin:', origin)
+                
+                // Allow requests with no origin (like mobile apps)
+                if (!origin) {
+                    console.log('[WebSocket CORS] No origin - allowing request')
+                    return callback(null, true)
+                }
+                
+                if (allowedOrigins.includes(origin)) {
+                    console.log('[WebSocket CORS] Origin allowed:', origin)
+                    callback(null, true)
+                } else {
+                    console.log('[WebSocket CORS] Origin blocked:', origin)
+                    console.log('[WebSocket CORS] Allowed origins:', allowedOrigins)
+                    callback(new Error('Not allowed by CORS'), false)
+                }
+            },
             methods: ["GET", "POST"],
-            credentials: true
+            credentials: true,
+            allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
         },
         maxHttpBufferSize: 1e8,
         transports: ['websocket', 'polling'], // Add polling as fallback
         allowEIO3: true,
         path: '/socket.io/',
         serveClient: false,
-        cookie: false
+        cookie: {
+            name: 'io',
+            httpOnly: true,
+            sameSite: 'none',
+            secure: process.env.NODE_ENV === 'production'
+        },
+        connectTimeout: 60000,
+        pingTimeout: 60000,
+        pingInterval: 25000
     });
 
     // Store chat sessions for each socket
