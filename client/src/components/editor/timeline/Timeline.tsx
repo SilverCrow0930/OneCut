@@ -538,7 +538,7 @@ export default function Timeline() {
                     isPlaying={isPlaying}
                 />
                 <div 
-                    className="flex flex-col gap-3 overflow-y-auto"
+                    className="flex flex-col gap-3 overflow-y-auto elegant-scrollbar"
                     style={{
                         height: `${displayTracks.length * 60}px`, // Exact height: 48px track + 12px gap = 60px per track
                         maxHeight: '240px', // Still keep a max height to enable scrolling when there are too many tracks

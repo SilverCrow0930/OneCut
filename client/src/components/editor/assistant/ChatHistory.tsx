@@ -53,7 +53,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state }) => {
                 flex flex-col w-full h-full
                 gap-2 pr-2 pb-4
                 overflow-y-auto
-                hide-scrollbar
+                elegant-scrollbar
             "
         >
             {/* Welcome message when no chat messages */}

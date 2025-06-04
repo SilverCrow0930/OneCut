@@ -124,7 +124,7 @@ const FuturisticThought: React.FC<{
                     </div>
 
                     {/* Content area with markdown support and scrolling */}
-                    <div className="prose prose-sm max-w-none max-h-[400px] overflow-y-auto custom-scrollbar-hidden" ref={contentRef}>
+                    <div className="prose prose-sm max-w-none max-h-[400px] overflow-y-auto elegant-scrollbar" ref={contentRef}>
                         <div className="relative">
                             <ReactMarkdown
                                 components={{
@@ -847,7 +847,7 @@ const AutoCutToolPanel = () => {
                                         </div>
 
                                         <div className="flex-1 min-h-0 px-4 pb-4">
-                                            <div className="space-y-3 h-full overflow-y-auto custom-scrollbar-hidden">
+                                            <div className="space-y-3 h-full overflow-y-auto elegant-scrollbar">
                                                 {(() => {
                                                     try {
                                                         const scenes: Scene[] = JSON.parse(modelResponse.textOutput);

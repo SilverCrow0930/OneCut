@@ -560,7 +560,7 @@ interface TextStyleSelectorProps {
 export default function TextStyleSelector({ selectedStyleIdx, setSelectedStyleIdx, className }: TextStyleSelectorProps) {
     return (
         <div className={className}>
-            <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto elegant-scrollbar">
                 {stylePresets.map((preset, i) => (
                     <button
                         key={preset.name}
