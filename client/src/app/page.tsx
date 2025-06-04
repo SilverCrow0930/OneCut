@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import BubbleEffect from "@/components/ui/backgrounds/BubbleEffect";
 import HomeFirstSection from "@/components/home/HomeFirstSection";
 import HomeNavbar from "@/components/home/HomeNavbar";
 import ConfidentialityButton from "@/components/layout/ConfidentialityButton";
@@ -11,7 +10,7 @@ export default function Home() {
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
 
   return (
-    <div className="relative flex flex-col items-center w-full h-full bg-black overflow-x-hidden">
+    <div className="relative flex flex-col items-center w-full h-full bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-x-hidden">
 
       {/* Background */}
       {/* <div className="absolute top-0 left-0 w-full h-full opacity-30">
@@ -23,7 +22,7 @@ export default function Home() {
         Lemona's AI copilot cuts long recordings into short videos based on your needs.
       </p>
 
-      <div className="fixed right-2 bottom-2">
+      <div className="fixed right-2 bottom-2 z-50">
         <ConfidentialityButton
           showHelpModal={showHelpModal}
           setShowHelpModal={setShowHelpModal}

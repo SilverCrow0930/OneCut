@@ -6,7 +6,7 @@ import HomeNavbar from "@/components/home/HomeNavbar";
 
 export default function CreatePage() {
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
             {/* Navigation */}
             <HomeNavbar />
 
@@ -18,9 +18,7 @@ export default function CreatePage() {
                 </div>
 
                 {/* Projects Grid */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <ProjectsList />
-                </div>
+                <ProjectsList />
             </main>
         </div>
     )
