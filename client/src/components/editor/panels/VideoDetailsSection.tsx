@@ -40,10 +40,10 @@ const VideoDetailsSection: React.FC<VideoDetailsSectionProps> = ({
     const displayedPrompt = processingState !== 'completed' ? prompt : lastPrompt;
 
     return (
-        <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full px-4 py-3 flex items-center justify-between bg-gray-50/80 hover:bg-gray-100/80 transition-colors border-b border-gray-200"
+                className="w-full px-3 py-2 flex items-center justify-between bg-gray-50/80 hover:bg-gray-100/80 transition-colors border-b border-gray-200"
             >
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-700">
@@ -60,7 +60,7 @@ const VideoDetailsSection: React.FC<VideoDetailsSectionProps> = ({
                 )}
             </button>
             <div
-                className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
+                className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                     }`}
             >
                 <div className="p-3 space-y-3">
@@ -70,7 +70,7 @@ const VideoDetailsSection: React.FC<VideoDetailsSectionProps> = ({
                         <>
                             {selectedFile && (
                                 <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-                                    <div className="w-full aspect-[16/9] max-h-[120px]">
+                                    <div className="w-full aspect-[16/9]">
                                         <video
                                             src={selectedFile ? URL.createObjectURL(selectedFile) : undefined}
                                             className="w-full h-full object-cover"
@@ -80,7 +80,7 @@ const VideoDetailsSection: React.FC<VideoDetailsSectionProps> = ({
                                 </div>
                             )}
                             <div className="space-y-2">
-                                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                     <div className="p-2 bg-blue-50 rounded-lg">
                                         <MessageSquare className="w-4 h-4 text-blue-500" />
                                     </div>
@@ -98,14 +98,14 @@ const VideoDetailsSection: React.FC<VideoDetailsSectionProps> = ({
                         uploadedAsset && (
                             <>
                                 <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-                                    <div className="w-full aspect-[16/9] max-h-[120px]">
+                                    <div className="w-full aspect-[16/9]">
                                         <AssetThumbnail
                                             asset={uploadedAsset}
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                         <div className="p-2 bg-blue-50 rounded-lg">
                                             <MessageSquare className="w-4 h-4 text-blue-500" />
                                         </div>

@@ -92,17 +92,17 @@ const FuturisticThought: React.FC<{
         <div className="w-full h-full flex items-center justify-center">
             <div className="relative w-full max-w-2xl mx-auto">
                 {/* Futuristic background with dynamic gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-indigo-50/20 to-slate-100 rounded-2xl" />
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-indigo-50/20 to-slate-100 rounded-xl" />
 
                 {/* Animated grid overlay */}
-                <div className="absolute inset-0 overflow-hidden rounded-2xl">
+                <div className="absolute inset-0 overflow-hidden rounded-xl">
                     <div className="absolute inset-0 opacity-10">
-                        {Array.from({ length: 30 }).map((_, i) => (
+                        {Array.from({ length: 20 }).map((_, i) => (
                             <div
                                 key={i}
                                 className="absolute h-[1px] bg-gradient-to-r from-indigo-400/0 via-indigo-400/20 to-indigo-400/0"
                                 style={{
-                                    top: `${i * 3.33}%`,
+                                    top: `${i * 5}%`,
                                     left: '0',
                                     right: '0',
                                     animation: `scanline ${2 + i * 0.1}s linear infinite`,
@@ -114,9 +114,9 @@ const FuturisticThought: React.FC<{
                 </div>
 
                 {/* Main content container */}
-                <div className="relative bg-white/90 backdrop-blur-md rounded-2xl p-6 border border-indigo-200/50">
+                <div className="relative bg-white/90 backdrop-blur-md rounded-xl p-4 border border-indigo-200/50">
                     {/* Header with progress indicator */}
-                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-indigo-200/50">
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-indigo-200/50">
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
                             <span className="text-xs font-medium text-indigo-600/70">THOUGHT PROCESS</span>
@@ -124,12 +124,12 @@ const FuturisticThought: React.FC<{
                     </div>
 
                     {/* Content area with markdown support and scrolling */}
-                    <div className="prose prose-sm max-w-none max-h-[250px] overflow-y-auto elegant-scrollbar" ref={contentRef}>
+                    <div className="prose prose-sm max-w-none max-h-64 overflow-y-auto elegant-scrollbar" ref={contentRef}>
                         <div className="relative">
                             <ReactMarkdown
                                 components={{
                                     p: ({ children }) => (
-                                        <p className="text-gray-700 leading-relaxed mb-4">
+                                        <p className="text-gray-700 leading-relaxed mb-3">
                                             {children}
                                         </p>
                                     ),
@@ -154,12 +154,12 @@ const FuturisticThought: React.FC<{
                                         </pre>
                                     ),
                                     ul: ({ children }) => (
-                                        <ul className="list-disc list-inside text-gray-700 space-y-2">
+                                        <ul className="list-disc list-inside text-gray-700 space-y-1">
                                             {children}
                                         </ul>
                                     ),
                                     ol: ({ children }) => (
-                                        <ol className="list-decimal list-inside text-gray-700 space-y-2">
+                                        <ol className="list-decimal list-inside text-gray-700 space-y-1">
                                             {children}
                                         </ol>
                                     ),
@@ -180,7 +180,7 @@ const FuturisticThought: React.FC<{
                     </div>
 
                     {/* Processing indicator */}
-                    <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                    <div className="absolute bottom-2 right-2 flex items-center gap-2">
                         <div className="flex gap-1">
                             {Array.from({ length: 3 }).map((_, i) => (
                                 <div
@@ -671,7 +671,7 @@ const AutoCutToolPanel = () => {
     };
 
     return (
-        <div className="flex flex-col gap-3 p-4 bg-white rounded-lg h-full">
+        <div className="flex flex-col gap-4 p-4 bg-white rounded-lg h-full">
             <PanelHeader
                 icon={Brain}
                 title="Autocut"
@@ -689,14 +689,14 @@ const AutoCutToolPanel = () => {
                         accept="video/*"
                         className="hidden"
                     />
-                    <div className="sticky top-0 z-10 bg-white mb-2">
+                    <div className="bg-white">
                         <UploadButton
                             onClick={() => {
                                 fileInputRef.current?.click()
                             }}
                         />
                     </div>
-                    <div className="flex-1 flex flex-col gap-4 min-h-0">
+                    <div className="flex-1 flex flex-col gap-2 min-h-0">
                         {
                             ((isUploading || processingState !== 'idle') && !showThoughts && !showResponse) && (
                                 <ProcessingStatus
@@ -709,7 +709,7 @@ const AutoCutToolPanel = () => {
                         }
                         {
                             showThoughts && modelResponse && thoughtsRef.current.length > 0 && (
-                                <div className="h-fit">
+                                <div className="h-64">
                                     <FuturisticThought
                                         text={thoughtsRef.current.join('\n\n')}
                                         index={0}
@@ -751,8 +751,8 @@ const AutoCutToolPanel = () => {
                         {
                             showResponse && modelResponse && (
                                 <div className="animate-slideUp flex-1 min-h-0">
-                                    <div className="flex flex-col gap-4 bg-white rounded-lg h-full">
-                                        <div className="flex items-center gap-3 p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+                                    <div className="flex flex-col gap-2 bg-white rounded-lg h-full">
+                                        <div className="flex items-center gap-3 p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
                                             <div className="p-2 bg-white rounded-lg shadow-sm">
                                                 <img
                                                     src="/assets/icons/lemon.png"
@@ -846,8 +846,8 @@ const AutoCutToolPanel = () => {
                                             </button>
                                         </div>
 
-                                        <div className="flex-1 min-h-0 px-4 pb-4">
-                                            <div className="space-y-3 h-full overflow-y-auto elegant-scrollbar">
+                                        <div className="flex-1 min-h-0 px-3 pb-3">
+                                            <div className="space-y-2 h-full overflow-y-auto elegant-scrollbar">
                                                 {(() => {
                                                     try {
                                                         const scenes: Scene[] = JSON.parse(modelResponse.textOutput);
