@@ -183,7 +183,6 @@ export const PromptModal: React.FC<PromptModalProps> = ({
                                     disabled={isUploading}
                                 >
                                     <div className="flex items-center gap-2">
-                                        <span className="text-lg">{platform.emoji}</span>
                                         <span className="font-medium text-sm">{platform.platform}</span>
                                     </div>
                                 </button>
