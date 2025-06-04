@@ -135,6 +135,52 @@ const Menu = () => {
                 </div> */}
                 <div className="flex flex-row items-center gap-3">
                     <SaveStatusIndicator />
+                    
+                    {/* Undo/Redo buttons */}
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={undo}
+                            disabled={!canUndo}
+                            className={`
+                                p-1.5 rounded-md transition-all duration-200
+                                ${canUndo 
+                                    ? 'hover:bg-white/10 text-white' 
+                                    : 'text-white/40 cursor-not-allowed'
+                                }
+                            `}
+                            title="Undo"
+                        >
+                            <img 
+                                src="/undo.png" 
+                                alt="Undo" 
+                                className="w-5 h-5"
+                                style={{ filter: canUndo ? 'brightness(0) invert(1)' : 'brightness(0) invert(1) opacity(40%)' }}
+                            />
+                        </button>
+                        
+                        <button
+                            onClick={redo}
+                            disabled={!canRedo}
+                            className={`
+                                p-1.5 rounded-md transition-all duration-200
+                                ${canRedo 
+                                    ? 'hover:bg-white/10 text-white' 
+                                    : 'text-white/40 cursor-not-allowed'
+                                }
+                            `}
+                            title="Redo"
+                        >
+                            <img 
+                                src="/undo.png" 
+                                alt="Redo" 
+                                className="w-5 h-5"
+                                style={{ 
+                                    filter: canRedo ? 'brightness(0) invert(1)' : 'brightness(0) invert(1) opacity(40%)',
+                                    transform: 'scaleX(-1)' // Flip horizontally for redo
+                                }}
+                            />
+                        </button>
+                    </div>
                 </div>
             </div>
             <div className="flex flex-row items-center gap-3">

@@ -107,7 +107,10 @@ export default function Timeline() {
     }, [tracks.length])
     
     // Fixed timeline approach: Keep timeline container at fixed width, let tracks handle their own scrolling
-    const timelineContainerWidth = containerWidth || 1000 // Fixed width for timeline container
+    const timelineContainerWidth = Math.max(
+        totalContentPx, // Scale with actual content and zoom
+        containerWidth || 1000 // Minimum width
+    )
 
     const playheadX = currentTimeMs * timeScale
 
@@ -482,7 +485,7 @@ export default function Timeline() {
 
     // Determine if we need scrollbars based on content
     const hasActualContent = clips.length > 0 || tracks.length > 0
-    const needsHorizontalScroll = hasActualContent && (timelineContainerWidth > containerWidth || zoomLevel > 1)
+    const needsHorizontalScroll = hasActualContent && (totalContentPx > containerWidth)
 
     if (loadingTimeline) {
         return <TimelineLoading />
