@@ -29,6 +29,9 @@ interface Scene {
     src_start: number;
     src_end: number;
     description: string;
+    captions: string[];
+    viral_score?: number;
+    hook_type?: string;
 }
 
 interface SceneCardProps {
@@ -326,6 +329,7 @@ const AutoCutToolPanel = () => {
     const [showPromptModal, setShowPromptModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [prompt, setPrompt] = useState('');
+    const [contentType, setContentType] = useState<string>('');
     const [lastPrompt, setLastPrompt] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -534,6 +538,7 @@ const AutoCutToolPanel = () => {
             // Reset previous asset's state
             setUploadedAsset(null);
             setPrompt('');
+            setContentType('');
             setError(null);
             setUploadProgress(0);
             setProcessingState('idle');
@@ -565,6 +570,9 @@ const AutoCutToolPanel = () => {
             form.append('file', selectedFile);
             form.append('duration', String(durationSeconds));
             form.append('prompt', prompt);
+            if (contentType) {
+                form.append('contentType', contentType);
+            }
 
             const xhr = new XMLHttpRequest();
 
@@ -604,6 +612,7 @@ const AutoCutToolPanel = () => {
             setProcessingState('starting');
             sendAutoCutRequest({
                 prompt,
+                contentType,
                 fileUri: `gs://${process.env.NEXT_PUBLIC_GCS_BUCKET_NAME}/${assetData.object_key}`,
                 mimeType: selectedFile.type
             });
@@ -638,6 +647,7 @@ const AutoCutToolPanel = () => {
         setShowPromptModal(false);
         setSelectedFile(null);
         setPrompt('');
+        setContentType('');
         setError(null);
     };
 
@@ -749,38 +759,30 @@ const AutoCutToolPanel = () => {
                                                 />
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900">Cut my video!</p>
+                                                <p className="text-sm font-medium text-gray-900">Viral Moments Found!</p>
+                                                <p className="text-xs text-gray-500">Ranked by engagement potential</p>
                                             </div>
+                                                                
                                             <button
-                                                className="p-2 hover:bg-gray-300 rounded-lg transition-colors duration-500"
+                                                className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                                                 onClick={() => {
                                                     if (!modelResponse?.textOutput || !uploadedAsset?.id) return;
 
                                                     try {
-                                                        // Extract JSON from markdown code block if present
-                                                        let jsonStr = modelResponse.textOutput;
-                                                        const jsonMatch = jsonStr.match(/```json\n([\s\S]*?)\n```/);
-                                                        if (jsonMatch) {
-                                                            jsonStr = jsonMatch[1].trim();
-                                                        } else {
-                                                            // If no markdown block, try to find JSON array
-                                                            const arrayMatch = jsonStr.match(/\[\s*\{[\s\S]*\}\s*\]/);
-                                                            if (arrayMatch) {
-                                                                jsonStr = arrayMatch[0].trim();
-                                                            }
-                                                        }
+                                                        const scenes: Scene[] = JSON.parse(modelResponse.textOutput);
+                                                        console.log('Adding scenes to timeline:', scenes);
 
-                                                        // Parse the scenes from the extracted JSON
-                                                        const scenes: Scene[] = JSON.parse(jsonStr);
+                                                        // Sort scenes by viral score for better ordering
+                                                        const sortedScenes = scenes.sort((a, b) => (b.viral_score || 0) - (a.viral_score || 0));
 
                                                         // Create a new video track
                                                         const newTrack = {
                                                             id: uuid(),
                                                             projectId: projectId!,
-                                                            index: tracks.length, // Add at the end
+                                                            index: tracks.length,
                                                             type: 'video' as TrackType,
                                                             createdAt: new Date().toISOString(),
-                                                            name: 'AutoCut Video Track',
+                                                            name: 'AutoCut - Viral Clips',
                                                             isLocked: false,
                                                             isMuted: false,
                                                             isSolo: false,
@@ -788,14 +790,10 @@ const AutoCutToolPanel = () => {
                                                             pan: 0,
                                                         };
 
-                                                        // First, collect all tracks and clips
-                                                        const allTracks = [newTrack];
-                                                        const allClips = [];
-
-                                                        // Create all the clips
-                                                        const newClips = scenes.map((scene, index) => {
+                                                        // Create clips from sorted scenes
+                                                        const newClips = sortedScenes.map((scene, index) => {
                                                             const duration = scene.src_end - scene.src_start;
-                                                            const timelineStartMs = index === 0 ? 0 : scenes.slice(0, index).reduce((acc, s) => acc + (s.src_end - s.src_start), 0);
+                                                            const timelineStartMs = index === 0 ? 0 : sortedScenes.slice(0, index).reduce((acc, s) => acc + (s.src_end - s.src_start), 0);
                                                             const timelineEndMs = timelineStartMs + duration;
 
                                                             const videoClip = {
@@ -811,7 +809,7 @@ const AutoCutToolPanel = () => {
                                                                 volume: 1,
                                                                 speed: 1,
                                                                 properties: {
-                                                                    name: `Scene ${index + 1}`,
+                                                                    name: `${scene.hook_type || 'Clip'} ${index + 1} (${scene.viral_score || 'N/A'}/10)`,
                                                                     isLocked: false,
                                                                     isMuted: false,
                                                                     isSolo: false,
@@ -819,22 +817,18 @@ const AutoCutToolPanel = () => {
                                                                 createdAt: new Date().toISOString(),
                                                             };
 
-                                                            return {
-                                                                videoClip
-                                                            };
+                                                            return { videoClip };
                                                         });
 
-                                                        // Add track and clips in a single batch command
+                                                        // Add track and clips
                                                         executeCommand({
                                                             type: 'BATCH',
                                                             payload: {
                                                                 commands: [
-                                                                    // First, add all tracks
-                                                                    ...allTracks.map(track => ({
+                                                                    {
                                                                         type: 'ADD_TRACK' as const,
-                                                                        payload: { track }
-                                                                    })),
-                                                                    // Then, add all clips
+                                                                        payload: { track: newTrack }
+                                                                    },
                                                                     ...newClips.map(({ videoClip }) => ({
                                                                         type: 'ADD_CLIP' as const,
                                                                         payload: { clip: videoClip }
@@ -850,8 +844,57 @@ const AutoCutToolPanel = () => {
                                                 <Play className="w-4 h-4 text-blue-600" />
                                             </button>
                                         </div>
-                                        <div className="text-sm text-gray-600 overflow-y-auto custom-scrollbar-hidden flex-1 min-h-0">
-                                            <AnalysisResult data={modelResponse.textOutput} />
+
+                                        <div className="flex-1 min-h-0 px-4 pb-4">
+                                            <div className="space-y-3 h-full overflow-y-auto custom-scrollbar-hidden">
+                                                {(() => {
+                                                    try {
+                                                        const scenes: Scene[] = JSON.parse(modelResponse.textOutput);
+                                                        // Sort by viral score descending
+                                                        const sortedScenes = scenes.sort((a, b) => (b.viral_score || 0) - (a.viral_score || 0));
+                                                        
+                                                        return sortedScenes.map((scene, index) => (
+                                                            <div key={index} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                                                <div className="flex items-start justify-between mb-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-sm font-semibold text-gray-900">
+                                                                            Clip {index + 1}
+                                                                        </span>
+                                                                        {scene.viral_score && (
+                                                                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                                                scene.viral_score >= 8 ? 'bg-green-100 text-green-700' :
+                                                                                scene.viral_score >= 6 ? 'bg-yellow-100 text-yellow-700' :
+                                                                                'bg-gray-100 text-gray-600'
+                                                                            }`}>
+                                                                                🔥 {scene.viral_score}/10
+                                                                            </div>
+                                                                        )}
+                                                                        {scene.hook_type && (
+                                                                            <div className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                                                                {scene.hook_type.replace('_', ' ')}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-xs text-gray-500">
+                                                                        {formatDuration(scene.src_start)} - {formatDuration(scene.src_end)}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-sm text-gray-700 mb-2">
+                                                                    {scene.description}
+                                                                </p>
+                                                                {scene.captions && scene.captions.length > 0 && (
+                                                                    <div className="text-xs text-gray-500 italic">
+                                                                        "{scene.captions.join(' • ')}"
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ));
+                                                    } catch (error) {
+                                                        console.error('Error parsing scenes:', error);
+                                                        return <div className="text-red-500 text-sm">Error parsing scenes</div>;
+                                                    }
+                                                })()}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -865,6 +908,8 @@ const AutoCutToolPanel = () => {
                     selectedFile={selectedFile}
                     prompt={prompt}
                     onPromptChange={setPrompt}
+                    contentType={contentType}
+                    onContentTypeChange={setContentType}
                     onSubmit={handlePromptSubmit}
                     isUploading={isUploading}
                     error={error}

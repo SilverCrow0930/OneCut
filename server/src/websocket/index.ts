@@ -134,7 +134,8 @@ export const setupWebSocket = (server: any) => {
         socket.on('autocut', async (data: {
             prompt: string,
             fileUri: string,
-            mimeType: string
+            mimeType: string,
+            contentType?: string
         }) => {
             const processStartTime = Date.now();
             console.log('=== AUTOCUT PROCESS STARTED ===');
@@ -142,6 +143,7 @@ export const setupWebSocket = (server: any) => {
                 promptLength: data.prompt?.length,
                 fileUri: data.fileUri,
                 mimeType: data.mimeType,
+                contentType: data.contentType,
                 timestamp: new Date().toISOString(),
                 socketId: socket.id
             });
@@ -219,13 +221,14 @@ export const setupWebSocket = (server: any) => {
                 });
                 console.log('✓ Emitted analyzing state');
 
-                // Send the signed URL directly to Gemini
+                // Send the signed URL directly to Gemini with content type
                 console.log('Sending request to Gemini...');
                 const modelStartTime = Date.now();
                 const modelResponse = await generateContent(
                     data.prompt,
                     signedUrl,
-                    data.mimeType
+                    data.mimeType,
+                    data.contentType
                 );
                 console.log('✓ Received response from Gemini:', {
                     duration: `${((Date.now() - modelStartTime) / 1000).toFixed(2)}s`,

@@ -6,6 +6,7 @@ interface AutoCutEvent {
     prompt: string;
     fileUri: string;
     mimeType: string;
+    contentType?: string;
 }
 
 interface AutoCutResponse {

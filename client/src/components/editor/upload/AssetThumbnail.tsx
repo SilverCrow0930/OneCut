@@ -66,30 +66,8 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
             return
         }
 
-        try {
-            // Try to download directly first
-            const link = document.createElement('a')
-            link.href = url
-            
-            // Set filename - use asset name if available, otherwise generate from mime type
-            const extension = asset.mime_type.split('/')[1] || 'file'
-            const filename = asset.name || `asset_${asset.id}.${extension}`
-            link.download = filename
-            
-            // Set CORS mode to try to download directly
-            link.setAttribute('crossorigin', 'anonymous')
-            
-            // Trigger download
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-            
-        } catch (error) {
-            console.warn('Direct download failed, opening in new tab:', error)
-            // Fallback: open in new tab for user to save manually
-            window.open(url, '_blank')
-        }
-        
+        // Always open in new tab to avoid replacing the current Lemona Studio tab
+        window.open(url, '_blank')
         setShowContextMenu(false)
     }
 
