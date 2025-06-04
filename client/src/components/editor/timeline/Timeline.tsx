@@ -318,7 +318,7 @@ export default function Timeline() {
                 id: uuid(),
                 trackId: newTrack.id,
                 assetId: externalAsset.id,
-                type: trackType,
+                type: (payload.asset.isSticker ? 'image' : trackType) as 'image' | 'video' | 'audio', // Use 'image' for stickers specifically
                 sourceStartMs: 0,
                 sourceEndMs: dur,
                 timelineStartMs: adjustedStartMs,

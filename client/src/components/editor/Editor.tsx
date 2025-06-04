@@ -7,6 +7,7 @@ import ToolPanel from './ToolPanel'
 import Assistant from './panels/Assistant'
 import ResizeHandle from './ResizeHandle'
 import EditorContent from './EditorContent'
+import { useParams } from 'next/navigation'
 
 const LoadingSpinner = () => (
     <div className="relative w-5 h-5">
@@ -36,9 +37,13 @@ const Editor = () => {
         clips,
         tracks,
         selectedClipIds,
-        setSelectedClipIds
+        setSelectedClipIds,
+        undo,
+        redo,
+        canUndo,
+        canRedo
     } = useEditor()
-
+    const params = useParams()
     const [assistantWidth, setAssistantWidth] = useState(384)
 
     const handleAssistantResize = (deltaX: number) => {
@@ -185,6 +190,25 @@ const Editor = () => {
                 return
             }
 
+            // Handle Ctrl+Z (undo) and Ctrl+Shift+Z (redo)
+            if (e.ctrlKey || e.metaKey) { // Support both Ctrl (Windows/Linux) and Cmd (Mac)
+                if (e.shiftKey && e.key === 'Z') {
+                    // Ctrl+Shift+Z = Redo
+                    e.preventDefault()
+                    if (canRedo) {
+                        redo()
+                    }
+                    return
+                } else if (e.key === 'z' || e.key === 'Z') {
+                    // Ctrl+Z = Undo
+                    e.preventDefault()
+                    if (canUndo) {
+                        undo()
+                    }
+                    return
+                }
+            }
+
             // Handle Backspace or Delete key
             if (e.key === 'Backspace' || e.key === 'Delete') {
                 e.preventDefault()
@@ -204,7 +228,7 @@ const Editor = () => {
         return () => {
             document.removeEventListener('keydown', handleKeyDown)
         }
-    }, [selectedClipId, selectedClipIds, clips, tracks, executeCommand, setSelectedClipId, setSelectedClipIds])
+    }, [selectedClipId, selectedClipIds, clips, tracks, executeCommand, setSelectedClipId, setSelectedClipIds, undo, redo, canUndo, canRedo])
 
     // Deselect clip on global click (outside any clip)
     useEffect(() => {
@@ -226,6 +250,9 @@ const Editor = () => {
             document.removeEventListener('click', handleGlobalClick)
         }
     }, [setSelectedClipId])
+
+    // Ensure projectId is a string
+    const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
 
     // Render states
     if (!session) {
