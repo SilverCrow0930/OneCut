@@ -49,19 +49,18 @@ export const setupWebSocket = (server: any) => {
             allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
         },
         maxHttpBufferSize: 1e8,
-        transports: ['websocket', 'polling'], // Add polling as fallback
+        transports: ['polling', 'websocket'], // Prioritize polling for Render compatibility
         allowEIO3: true,
         path: '/socket.io/',
         serveClient: false,
-        cookie: {
-            name: 'io',
-            httpOnly: true,
-            sameSite: 'none',
-            secure: process.env.NODE_ENV === 'production'
-        },
-        connectTimeout: 60000,
-        pingTimeout: 60000,
-        pingInterval: 25000
+        cookie: false, // Disable cookies for better compatibility
+        connectTimeout: 30000, // Reduced timeout
+        pingTimeout: 25000,
+        pingInterval: 10000,
+        upgradeTimeout: 10000,
+        allowUpgrades: true,
+        perMessageDeflate: false, // Disable compression for better compatibility
+        httpCompression: false
     });
 
     // Store chat sessions for each socket

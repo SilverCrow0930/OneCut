@@ -32,6 +32,8 @@ The server is configured to allow the following origins in production:
 
 WebSocket connections are supported with both `websocket` and `polling` transports for maximum compatibility with various hosting providers and network configurations.
 
+**Transport Priority**: The system now prioritizes `polling` transport first, then upgrades to `websocket` when stable. This provides better reliability on platforms like Render that may have WebSocket connection limitations.
+
 ## Troubleshooting
 
 ### CORS Errors
@@ -44,11 +46,21 @@ If you see CORS errors like "No 'Access-Control-Allow-Origin' header is present"
 ### WebSocket Connection Issues
 If WebSocket connections fail:
 
-1. Check server logs for CORS-related errors
+1. **Check the browser console** for detailed connection logs with emojis (✅, ❌, 🔌, 🔄)
 2. Verify that both websocket and polling transports are enabled
 3. Ensure the frontend is using the correct API URL
+4. **Transport Priority**: The system will try polling first, then upgrade to websocket
+5. **Render-specific**: Render may block direct WebSocket connections, so polling fallback is essential
 
 ### Environment Variable Issues
 - Client environment variables must be prefixed with `NEXT_PUBLIC_`
 - Server environment variables should not have this prefix
-- Restart deployments after changing environment variables 
+- Restart deployments after changing environment variables
+
+### Connection Debugging
+Monitor the browser console for these connection indicators:
+- ✅ `WebSocket connected successfully` - Connection established
+- 🔌 `WebSocket disconnected` - Connection lost
+- 🔄 `Reconnection attempt` - Attempting to reconnect
+- ❌ `WebSocket connection error` - Connection failed
+- `Transport used: polling/websocket` - Shows which transport is active 
