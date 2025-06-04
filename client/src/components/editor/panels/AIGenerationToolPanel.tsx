@@ -163,7 +163,7 @@ const AIGenerationToolPanel = () => {
     const renderImageGeneration = () => (
         <div className="space-y-4">
             <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Describe your image</label>
+                <label className="block text-xs font-medium text-gray-700">Describe your image</label>
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
@@ -219,7 +219,7 @@ const AIGenerationToolPanel = () => {
     const renderVideoGeneration = () => (
         <div className="space-y-4">
             <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Describe your video</label>
+                <label className="block text-xs font-medium text-gray-700">Describe your video</label>
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
@@ -272,7 +272,7 @@ const AIGenerationToolPanel = () => {
     const renderMusicGeneration = () => (
         <div className="space-y-4">
             <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Describe your music</label>
+                <label className="block text-xs font-medium text-gray-700">Describe your music</label>
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
@@ -383,7 +383,6 @@ const AIGenerationToolPanel = () => {
                 {/* Tab Navigation */}
                 <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
                     {GENERATION_TYPES.map((type) => {
-                        const Icon = type.icon
                         return (
                             <button
                                 key={type.id}
@@ -402,7 +401,6 @@ const AIGenerationToolPanel = () => {
                                     }
                                 `}
                             >
-                                <Icon size={16} />
                                 <span>{type.name}</span>
                             </button>
                         )

@@ -125,8 +125,8 @@ export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
         <div className="flex flex-col w-full gap-2">
             <div
                 className={`
-                    relative flex flex-col w-full min-h-64 items-center justify-center
-                    p-6 rounded-xl gap-4
+                    relative flex flex-col w-full min-h-32 items-center justify-center
+                    p-4 rounded-xl gap-3
                     border-2 border-gray-200 bg-gray-50 transition-all duration-300 ease-in-out
                     ${isDragging ?
                         'border-blue-400 bg-blue-100 shadow-inner' :
