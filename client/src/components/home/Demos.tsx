@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Play, AlertCircle } from 'lucide-react'
 
 interface Demo {
     title: string
@@ -65,6 +65,8 @@ const Demos = () => {
     const [expandedDemos, setExpandedDemos] = useState<Set<number>>(new Set([0]))
     const [progress, setProgress] = useState<number>(0)
     const [videoDuration, setVideoDuration] = useState<number>(DURATION)
+    const [videoLoading, setVideoLoading] = useState<boolean>(true)
+    const [videoError, setVideoError] = useState<string | null>(null)
     const intervalRef = useRef<NodeJS.Timeout | null>(null)
     const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -72,8 +74,10 @@ const Demos = () => {
         // Expand only the selected demo
         setExpandedDemos(new Set([selectedDemo]))
 
-        // Reset progress
+        // Reset progress and loading states
         setProgress(0)
+        setVideoLoading(true)
+        setVideoError(null)
 
         // Set duration based on video type
         if (DEMOS[selectedDemo].video.type === 'local') {
@@ -84,26 +88,62 @@ const Demos = () => {
             setVideoDuration(DURATION)
         }
 
-        // Animate progress over duration
-        const step = 100
-        let elapsed = 0
-        intervalRef.current = setInterval(() => {
-            elapsed += step
-            setProgress((elapsed / videoDuration) * 100)
-            if (elapsed >= videoDuration) {
-                clearInterval(intervalRef.current!)
-                setSelectedDemo((prev) => (prev + 1) % DEMOS.length)
-            }
-        }, step)
+        // Clear any existing interval
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current)
+        }
 
-        return () => clearInterval(intervalRef.current!)
+        // Start progress animation after a short delay to allow video to load
+        const startProgress = () => {
+            const step = 100
+            let elapsed = 0
+            intervalRef.current = setInterval(() => {
+                elapsed += step
+                setProgress((elapsed / videoDuration) * 100)
+                if (elapsed >= videoDuration) {
+                    clearInterval(intervalRef.current!)
+                    setSelectedDemo((prev) => (prev + 1) % DEMOS.length)
+                }
+            }, step)
+        }
+
+        // Start progress after a short delay
+        setTimeout(startProgress, 1000)
+
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+            }
+        }
     }, [selectedDemo, videoDuration])
 
     const handleManualSelect = (index: number) => {
         if (index !== selectedDemo) {
-            clearInterval(intervalRef.current!)
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+            }
             setSelectedDemo(index)
         }
+    }
+
+    const handleVideoLoad = () => {
+        setVideoLoading(false)
+        setVideoError(null)
+        console.log('Video loaded successfully')
+    }
+
+    const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+        setVideoLoading(false)
+        setVideoError('Failed to load video')
+        console.error('Video loading error:', e)
+    }
+
+    const handleVideoLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+        const video = e.target as HTMLVideoElement
+        if (video.duration) {
+            setVideoDuration(video.duration * 1000)
+        }
+        setVideoLoading(false)
     }
 
     return (
@@ -155,14 +195,40 @@ const Demos = () => {
             </div>
             <div className="flex flex-col flex-grow h-full">
                 <p className="h-10 md:h-20"></p>
-                <div className="w-full h-[300px] md:h-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
+                <div className="w-full h-[300px] md:h-full rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-gray-100 relative">
+                    {/* Loading State */}
+                    {videoLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                                <p className="text-gray-600 text-sm">Loading video...</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Error State */}
+                    {videoError && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                            <div className="flex flex-col items-center gap-3 text-center">
+                                <AlertCircle className="w-12 h-12 text-gray-400" />
+                                <div>
+                                    <p className="text-gray-600 font-medium">Demo video unavailable</p>
+                                    <p className="text-gray-500 text-sm mt-1">Video content coming soon</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Video Content */}
                     {DEMOS[selectedDemo].video.type === 'youtube' ? (
                         <iframe
                             src={DEMOS[selectedDemo].video.url.replace('watch?v=', 'embed/')}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
                             key={selectedDemo}
+                            onLoad={handleVideoLoad}
+                            style={{ display: videoLoading ? 'none' : 'block' }}
                         />
                     ) : (
                         <video
@@ -172,12 +238,25 @@ const Demos = () => {
                             autoPlay
                             muted
                             playsInline
+                            loop
                             key={selectedDemo}
-                            onLoadedMetadata={(e) => {
-                                const video = e.target as HTMLVideoElement
-                                setVideoDuration(video.duration * 1000)
-                            }}
+                            onLoadedMetadata={handleVideoLoadedMetadata}
+                            onLoadedData={handleVideoLoad}
+                            onError={handleVideoError}
+                            onCanPlay={handleVideoLoad}
+                            style={{ display: videoLoading || videoError ? 'none' : 'block' }}
                         />
+                    )}
+
+                    {/* Fallback placeholder when no video is loading */}
+                    {!videoLoading && !videoError && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50" style={{ display: 'none' }}>
+                            <div className="flex flex-col items-center gap-3">
+                                <Play className="w-16 h-16 text-blue-500" />
+                                <p className="text-gray-700 font-medium">Demo Video</p>
+                                <p className="text-gray-500 text-sm">{DEMOS[selectedDemo].title}</p>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

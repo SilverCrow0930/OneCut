@@ -82,31 +82,54 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
 
     // Optimistic asset deletion
     const deleteAsset = useCallback(async (id: string) => {
-        if (!session?.access_token) return
+        if (!session?.access_token) {
+            throw new Error('Not authenticated')
+        }
         
-        // Optimistically remove from UI immediately
-        const originalAssets = assets
-        setAssets(prev => prev.filter(asset => asset.id !== id))
-        
-        try {
-            const response = await fetch(apiPath(`assets/${id}`), {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-            })
-            if (!response.ok) {
-                throw new Error(await response.text())
+        // Store the original assets for rollback
+        setAssets(prev => {
+            const originalAssets = prev
+            const newAssets = prev.filter(asset => asset.id !== id)
+            
+            // Optimistically remove from UI immediately
+            const performDelete = async () => {
+                try {
+                    console.log('Deleting asset:', id)
+                    const response = await fetch(apiPath(`assets/${id}`), {
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `Bearer ${session.access_token}`,
+                            'Content-Type': 'application/json'
+                        },
+                    })
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text()
+                        console.error('Delete asset failed:', {
+                            status: response.status,
+                            statusText: response.statusText,
+                            error: errorText
+                        })
+                        throw new Error(`Failed to delete asset: ${errorText || response.statusText}`)
+                    }
+                    
+                    console.log('Asset deleted successfully:', id)
+                    // Success - deletion already reflected in UI
+                } catch (err: any) {
+                    console.error('Asset deletion error:', err)
+                    // Rollback on error
+                    setAssets(originalAssets)
+                    setError(`Failed to delete asset: ${err.message}`)
+                    throw err
+                }
             }
-            // Success - deletion already reflected in UI
-        }
-        catch (err: any) {
-            // Rollback on error
-            setAssets(originalAssets)
-            setError(err.message)
-        }
-    }, [session, assets])
+            
+            // Perform the delete operation asynchronously
+            performDelete()
+            
+            return newAssets
+        })
+    }, [session?.access_token]) // Removed assets from dependencies to prevent stale closure
 
     useEffect(() => {
         refresh()
