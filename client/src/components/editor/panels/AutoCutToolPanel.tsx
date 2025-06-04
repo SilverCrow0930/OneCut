@@ -663,6 +663,7 @@ const AutoCutToolPanel = () => {
             <PanelHeader
                 icon={Brain}
                 title="Autocut"
+                description="Instantly find the moments worth sharing"
                 iconBgColor="bg-purple-50"
                 iconColor="text-purple-600"
             />
