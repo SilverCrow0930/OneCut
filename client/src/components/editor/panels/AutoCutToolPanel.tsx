@@ -200,8 +200,10 @@ const FuturisticThought: React.FC<{
     );
 };
 
-const formatDuration = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
+const formatDuration = (timeValue: number) => {
+    // Handle both seconds and milliseconds
+    // If the value is very large (>10000), assume it's in milliseconds
+    const seconds = timeValue > 10000 ? Math.floor(timeValue / 1000) : Math.floor(timeValue);
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
@@ -759,8 +761,7 @@ const AutoCutToolPanel = () => {
                                                 />
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900">Viral Moments Found!</p>
-                                                <p className="text-xs text-gray-500">Ranked by engagement potential</p>
+                                                <p className="text-sm font-medium text-gray-900">Autocut</p>
                                             </div>
                                                                 
                                             <button

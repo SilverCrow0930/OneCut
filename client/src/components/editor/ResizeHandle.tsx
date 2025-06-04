@@ -37,6 +37,8 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onResize, className = '' })
             className={`
                 w-4 h-full cursor-ew-resize
                 flex items-center justify-center
+                hover:bg-blue-50/50 transition-colors duration-200
+                group
                 ${className}
             `}
             onMouseDown={(e) => {
@@ -45,7 +47,7 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onResize, className = '' })
                 document.body.classList.add('cursor-ew-resize')
             }}
         >
-            <div className="w-0.5 h-full opacity-0 transition-all duration-150" />
+            <div className="w-0.5 h-12 bg-gray-300 group-hover:bg-blue-400 transition-colors duration-200 rounded-full" />
         </div>
     )
 }
