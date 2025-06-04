@@ -51,47 +51,19 @@ const CONTENT_TYPES = [
 const PLATFORM_PROMPTS = [
     {
         platform: "TikTok",
-        emoji: "📱",
-        color: "bg-pink-50 border-pink-500 text-pink-700",
-        prompts: [
-            "Find viral moments that hook viewers in the first 3 seconds with high energy",
-            "Extract trending sounds, popular formats, and meme-worthy moments",
-            "Look for relatable content that gets people commenting and sharing",
-            "Find quick, snappy moments perfect for TikTok's fast-paced style"
-        ]
+        color: "bg-pink-50 border-pink-500 text-pink-700"
     },
     {
         platform: "Instagram Reels", 
-        emoji: "📸",
-        color: "bg-purple-50 border-purple-500 text-purple-700",
-        prompts: [
-            "Create aesthetic clips with beautiful visuals and Instagram vibes",
-            "Find lifestyle moments that fit Instagram's aspirational culture",
-            "Extract visually stunning content with good lighting and composition",
-            "Look for behind-the-scenes and authentic moments that feel premium"
-        ]
+        color: "bg-purple-50 border-purple-500 text-purple-700"
     },
     {
         platform: "YouTube Shorts",
-        emoji: "🎬", 
-        color: "bg-red-50 border-red-500 text-red-700",
-        prompts: [
-            "Find educational or entertaining moments that work well in vertical format",
-            "Extract content that tells a complete story in under 60 seconds",
-            "Look for clear thumbnails moments and engaging titles opportunities",
-            "Find content that encourages viewers to watch the full video"
-        ]
+        color: "bg-red-50 border-red-500 text-red-700"
     },
     {
         platform: "Twitter/X",
-        emoji: "🐦",
-        color: "bg-blue-50 border-blue-500 text-blue-700", 
-        prompts: [
-            "Find quotable moments and hot takes that spark conversation",
-            "Extract newsworthy or controversial moments that drive engagement",
-            "Look for quick insights or opinions that people will want to share",
-            "Find moments that work well with text overlays and captions"
-        ]
+        color: "bg-blue-50 border-blue-500 text-blue-700"
     }
 ]
 
@@ -123,11 +95,6 @@ export const PromptModal: React.FC<PromptModalProps> = ({
     onContentTypeChange
 }) => {
     const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null)
-
-    const handlePromptSelect = (prompt: string) => {
-        onPromptChange(prompt)
-        setSelectedPlatform(null)
-    }
 
     if (!isOpen) return null;
 
@@ -225,32 +192,9 @@ export const PromptModal: React.FC<PromptModalProps> = ({
                     </div>
                 )}
 
-                {/* Prompt Templates */}
-                {selectedPlatform && (
-                    <div className="mb-6">
-                        <h3 className="text-sm font-medium text-gray-700 mb-3">
-                            {PLATFORM_PROMPTS.find(p => p.platform === selectedPlatform)?.emoji} {selectedPlatform} Optimization Ideas:
-                        </h3>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                            {PLATFORM_PROMPTS.find(p => p.platform === selectedPlatform)?.prompts.map((promptTemplate, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => handlePromptSelect(promptTemplate)}
-                                    className={`w-full p-3 text-left rounded-lg transition-colors border text-sm ${
-                                        PLATFORM_PROMPTS.find(p => p.platform === selectedPlatform)?.color.replace('text-', 'hover:text-').replace('bg-', 'hover:bg-').replace('border-', 'hover:border-') || 'hover:bg-blue-50'
-                                    } border-gray-200 hover:border-opacity-50 hover:shadow-sm`}
-                                    disabled={isUploading}
-                                >
-                                    <p className="text-gray-700">{promptTemplate}</p>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
-                        {contentType ? 'Custom instructions (optional):' : 'Describe what you\'re looking for:'}
+                        Custom instruction:
                     </label>
                     <textarea
                         value={prompt}
@@ -261,22 +205,14 @@ export const PromptModal: React.FC<PromptModalProps> = ({
                             text-gray-700 placeholder-gray-400
                             transition-all duration-200
                         "
-                        placeholder={contentType 
-                            ? "Add specific requirements or override the AI's approach..." 
-                            : "E.g., Find the most engaging moments where I explain the main concept..."
-                        }
+                        placeholder="E.g., Find the most engaging moments where I explain the main concept, look for viral-worthy clips with strong emotional reactions..."
                         disabled={isUploading}
+                        required
                     />
                     <div className="flex items-center justify-between">
                         <p className="text-xs text-gray-500">
-                            💡 {contentType 
-                                ? 'The AI will automatically optimize for your content type and platform'
-                                : 'Select a content type above for better results'
-                            }
+                            💡 Be specific about what moments, emotions, or content you want highlighted
                         </p>
-                        {contentType && !prompt.trim() && (
-                            <span className="text-xs text-green-600 font-medium">✨ Auto-optimized</span>
-                        )}
                     </div>
                 </div>
 
@@ -290,17 +226,8 @@ export const PromptModal: React.FC<PromptModalProps> = ({
 
                 <ActionButtons
                     onCancel={onClose}
-                    onSubmit={() => {
-                        // If no custom prompt, use a smart default based on content type
-                        if (!prompt.trim() && contentType) {
-                            const defaultPrompt = selectedPlatform 
-                                ? PLATFORM_PROMPTS.find(p => p.platform === selectedPlatform)?.prompts[0] || "Find the most engaging and viral-worthy moments"
-                                : "Find the most engaging and viral-worthy moments for this content type";
-                            onPromptChange(defaultPrompt);
-                        }
-                        onSubmit();
-                    }}
-                    isSubmitDisabled={!contentType || isUploading}
+                    onSubmit={onSubmit}
+                    isSubmitDisabled={!contentType || !prompt.trim() || isUploading}
                     contentType={contentType}
                 />
             </div>
