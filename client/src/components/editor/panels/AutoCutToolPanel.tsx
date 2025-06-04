@@ -696,212 +696,210 @@ const AutoCutToolPanel = () => {
                             }}
                         />
                     </div>
-                    <div className="flex-1 flex flex-col gap-2 min-h-0">
-                        {
-                            ((isUploading || processingState !== 'idle') && !showThoughts && !showResponse) && (
-                                <ProcessingStatus
-                                    processingState={processingState}
-                                    isUploading={isUploading}
-                                    uploadProgress={uploadProgress}
-                                    processingMessage={getProcessingMessage()}
-                                />
-                            )
-                        }
-                        {
-                            showThoughts && modelResponse && thoughtsRef.current.length > 0 && (
-                                <div className="h-64">
-                                    <FuturisticThought
-                                        text={thoughtsRef.current.join('\n\n')}
-                                        index={0}
-                                        total={1}
-                                        onTypingComplete={() => {
-                                            // Wait a bit after typing is complete before showing response
-                                            setTimeout(() => {
-                                                setShowThoughts(false);
-                                                setShowResponse(true);
-                                            }, 2000);
-                                        }}
-                                    />
-                                </div>
-                            )
-                        }
-                        {
-                            ((isUploading || processingState !== 'idle' || uploadedAsset || showThoughts || showResponse)) ? (
-                                <VideoDetailsSection
-                                    isExpanded={isExpanded}
-                                    setIsExpanded={setIsExpanded}
-                                    processingState={processingState}
-                                    selectedFile={selectedFile}
-                                    uploadedAsset={uploadedAsset}
-                                    prompt={prompt}
-                                    lastPrompt={lastPrompt}
-                                    assets={assets}
-                                    showThoughts={showThoughts}
-                                    showResponse={showResponse}
-                                />
-                            ) : null
-                        }
-                        {
-                            error && (
-                                <div className="text-sm text-red-500 animate-fadeIn">
-                                    {error}
-                                </div>
-                            )
-                        }
-                        {
-                            showResponse && modelResponse && (
-                                <div className="animate-slideUp flex-1 min-h-0">
-                                    <div className="flex flex-col gap-2 bg-white rounded-lg h-full">
-                                        <div className="flex items-center gap-3 p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
-                                            <div className="p-2 bg-white rounded-lg shadow-sm">
-                                                <img
-                                                    src="/assets/icons/lemon.png"
-                                                    alt="Autocut"
-                                                    className="w-5 h-5"
-                                                />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900">Autocut</p>
-                                            </div>
+                    
+                    {/* Processing Status */}
+                    {((isUploading || processingState !== 'idle') && !showThoughts && !showResponse) && (
+                        <ProcessingStatus
+                            processingState={processingState}
+                            isUploading={isUploading}
+                            uploadProgress={uploadProgress}
+                            processingMessage={getProcessingMessage()}
+                        />
+                    )}
+                    
+                    {/* Futuristic Thought */}
+                    {showThoughts && modelResponse && thoughtsRef.current.length > 0 && (
+                        <div className="h-64">
+                            <FuturisticThought
+                                text={thoughtsRef.current.join('\n\n')}
+                                index={0}
+                                total={1}
+                                onTypingComplete={() => {
+                                    // Wait a bit after typing is complete before showing response
+                                    setTimeout(() => {
+                                        setShowThoughts(false);
+                                        setShowResponse(true);
+                                    }, 2000);
+                                }}
+                            />
+                        </div>
+                    )}
+                    
+                    {/* Video Details Section */}
+                    {((isUploading || processingState !== 'idle' || uploadedAsset || showThoughts || showResponse)) && (
+                        <VideoDetailsSection
+                            isExpanded={isExpanded}
+                            setIsExpanded={setIsExpanded}
+                            processingState={processingState}
+                            selectedFile={selectedFile}
+                            uploadedAsset={uploadedAsset}
+                            prompt={prompt}
+                            lastPrompt={lastPrompt}
+                            assets={assets}
+                            showThoughts={showThoughts}
+                            showResponse={showResponse}
+                        />
+                    )}
+                    
+                    {/* Error Message */}
+                    {error && (
+                        <div className="text-sm text-red-500 animate-fadeIn">
+                            {error}
+                        </div>
+                    )}
+                    
+                    {/* Results Section */}
+                    {showResponse && modelResponse && (
+                        <div className="animate-slideUp flex-1 min-h-0">
+                            <div className="flex flex-col gap-2 bg-white rounded-lg h-full">
+                                <div className="flex items-center gap-3 p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+                                    <div className="p-2 bg-white rounded-lg shadow-sm">
+                                        <img
+                                            src="/assets/icons/lemon.png"
+                                            alt="Autocut"
+                                            className="w-5 h-5"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-gray-900">Autocut</p>
+                                    </div>
                                                                 
-                                            <button
-                                                className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                                                onClick={() => {
-                                                    if (!modelResponse?.textOutput || !uploadedAsset?.id) return;
+                                    <button
+                                        className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                                        onClick={() => {
+                                            if (!modelResponse?.textOutput || !uploadedAsset?.id) return;
 
-                                                    try {
-                                                        const scenes: Scene[] = JSON.parse(modelResponse.textOutput);
-                                                        console.log('Adding scenes to timeline:', scenes);
+                                            try {
+                                                const scenes: Scene[] = JSON.parse(modelResponse.textOutput);
+                                                console.log('Adding scenes to timeline:', scenes);
 
-                                                        // Sort scenes by viral score for better ordering
-                                                        const sortedScenes = scenes.sort((a, b) => (b.viral_score || 0) - (a.viral_score || 0));
+                                                // Sort scenes by viral score for better ordering
+                                                const sortedScenes = scenes.sort((a, b) => (b.viral_score || 0) - (a.viral_score || 0));
 
-                                                        // Create a new video track
-                                                        const newTrack = {
-                                                            id: uuid(),
-                                                            projectId: projectId!,
-                                                            index: tracks.length,
-                                                            type: 'video' as TrackType,
-                                                            createdAt: new Date().toISOString(),
-                                                            name: 'AutoCut - Viral Clips',
+                                                // Create a new video track
+                                                const newTrack = {
+                                                    id: uuid(),
+                                                    projectId: projectId!,
+                                                    index: tracks.length,
+                                                    type: 'video' as TrackType,
+                                                    createdAt: new Date().toISOString(),
+                                                    name: 'AutoCut - Viral Clips',
+                                                    isLocked: false,
+                                                    isMuted: false,
+                                                    isSolo: false,
+                                                    volume: 1,
+                                                    pan: 0,
+                                                };
+
+                                                // Create clips from sorted scenes
+                                                const newClips = sortedScenes.map((scene, index) => {
+                                                    const duration = scene.src_end - scene.src_start;
+                                                    const timelineStartMs = index === 0 ? 0 : sortedScenes.slice(0, index).reduce((acc, s) => acc + (s.src_end - s.src_start), 0);
+                                                    const timelineEndMs = timelineStartMs + duration;
+
+                                                    const videoClip = {
+                                                        id: uuid(),
+                                                        trackId: newTrack.id,
+                                                        assetId: uploadedAsset.id,
+                                                        type: 'video' as const,
+                                                        sourceStartMs: scene.src_start,
+                                                        sourceEndMs: scene.src_end,
+                                                        timelineStartMs,
+                                                        timelineEndMs,
+                                                        assetDurationMs: uploadedAsset.duration || 0,
+                                                        volume: 1,
+                                                        speed: 1,
+                                                        properties: {
+                                                            name: `${scene.hook_type || 'Clip'} ${index + 1} (${scene.viral_score || 'N/A'}/10)`,
                                                             isLocked: false,
                                                             isMuted: false,
                                                             isSolo: false,
-                                                            volume: 1,
-                                                            pan: 0,
-                                                        };
+                                                        },
+                                                        createdAt: new Date().toISOString(),
+                                                    };
 
-                                                        // Create clips from sorted scenes
-                                                        const newClips = sortedScenes.map((scene, index) => {
-                                                            const duration = scene.src_end - scene.src_start;
-                                                            const timelineStartMs = index === 0 ? 0 : sortedScenes.slice(0, index).reduce((acc, s) => acc + (s.src_end - s.src_start), 0);
-                                                            const timelineEndMs = timelineStartMs + duration;
+                                                    return { videoClip };
+                                                });
 
-                                                            const videoClip = {
-                                                                id: uuid(),
-                                                                trackId: newTrack.id,
-                                                                assetId: uploadedAsset.id,
-                                                                type: 'video' as const,
-                                                                sourceStartMs: scene.src_start,
-                                                                sourceEndMs: scene.src_end,
-                                                                timelineStartMs,
-                                                                timelineEndMs,
-                                                                assetDurationMs: uploadedAsset.duration || 0,
-                                                                volume: 1,
-                                                                speed: 1,
-                                                                properties: {
-                                                                    name: `${scene.hook_type || 'Clip'} ${index + 1} (${scene.viral_score || 'N/A'}/10)`,
-                                                                    isLocked: false,
-                                                                    isMuted: false,
-                                                                    isSolo: false,
-                                                                },
-                                                                createdAt: new Date().toISOString(),
-                                                            };
-
-                                                            return { videoClip };
-                                                        });
-
-                                                        // Add track and clips
-                                                        executeCommand({
-                                                            type: 'BATCH',
-                                                            payload: {
-                                                                commands: [
-                                                                    {
-                                                                        type: 'ADD_TRACK' as const,
-                                                                        payload: { track: newTrack }
-                                                                    },
-                                                                    ...newClips.map(({ videoClip }) => ({
-                                                                        type: 'ADD_CLIP' as const,
-                                                                        payload: { clip: videoClip }
-                                                                    }))
-                                                                ]
-                                                            }
-                                                        });
-                                                    } catch (error) {
-                                                        console.error('Error adding cuts to timeline:', error);
+                                                // Add track and clips
+                                                executeCommand({
+                                                    type: 'BATCH',
+                                                    payload: {
+                                                        commands: [
+                                                            {
+                                                                type: 'ADD_TRACK' as const,
+                                                                payload: { track: newTrack }
+                                                            },
+                                                            ...newClips.map(({ videoClip }) => ({
+                                                                type: 'ADD_CLIP' as const,
+                                                                payload: { clip: videoClip }
+                                                            }))
+                                                        ]
                                                     }
-                                                }}
-                                            >
-                                                <Play className="w-4 h-4 text-blue-600" />
-                                            </button>
-                                        </div>
+                                                });
+                                            } catch (error) {
+                                                console.error('Error adding cuts to timeline:', error);
+                                            }
+                                        }}
+                                    >
+                                        <Play className="w-4 h-4 text-blue-600" />
+                                    </button>
+                                </div>
 
-                                        <div className="flex-1 min-h-0 px-3 pb-3">
-                                            <div className="space-y-2 h-full overflow-y-auto elegant-scrollbar">
-                                                {(() => {
-                                                    try {
-                                                        const scenes: Scene[] = JSON.parse(modelResponse.textOutput);
-                                                        // Sort by viral score descending
-                                                        const sortedScenes = scenes.sort((a, b) => (b.viral_score || 0) - (a.viral_score || 0));
-                                                        
-                                                        return sortedScenes.map((scene, index) => (
-                                                            <div key={index} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                                                <div className="flex items-start justify-between mb-2">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-sm font-semibold text-gray-900">
-                                                                            Clip {index + 1}
-                                                                        </span>
-                                                                        {scene.viral_score && (
-                                                                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                                                scene.viral_score >= 8 ? 'bg-green-100 text-green-700' :
-                                                                                scene.viral_score >= 6 ? 'bg-yellow-100 text-yellow-700' :
-                                                                                'bg-gray-100 text-gray-600'
-                                                                            }`}>
-                                                                                🔥 {scene.viral_score}/10
-                                                                            </div>
-                                                                        )}
-                                                                        {scene.hook_type && (
-                                                                            <div className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                                                                {scene.hook_type.replace('_', ' ')}
-                                                                            </div>
-                                                                        )}
+                                <div className="flex-1 min-h-0 px-3 pb-3">
+                                    <div className="space-y-2 h-full overflow-y-auto elegant-scrollbar">
+                                        {(() => {
+                                            try {
+                                                const scenes: Scene[] = JSON.parse(modelResponse.textOutput);
+                                                // Sort by viral score descending
+                                                const sortedScenes = scenes.sort((a, b) => (b.viral_score || 0) - (a.viral_score || 0));
+                                                
+                                                return sortedScenes.map((scene, index) => (
+                                                    <div key={index} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-semibold text-gray-900">
+                                                                    Clip {index + 1}
+                                                                </span>
+                                                                {scene.viral_score && (
+                                                                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                                        scene.viral_score >= 8 ? 'bg-green-100 text-green-700' :
+                                                                        scene.viral_score >= 6 ? 'bg-yellow-100 text-yellow-700' :
+                                                                        'bg-gray-100 text-gray-600'
+                                                                    }`}>
+                                                                        🔥 {scene.viral_score}/10
                                                                     </div>
-                                                                    <span className="text-xs text-gray-500">
-                                                                        {formatDuration(scene.src_start)} - {formatDuration(scene.src_end)}
-                                                                    </span>
-                                                                </div>
-                                                                <p className="text-sm text-gray-700 mb-2">
-                                                                    {scene.description}
-                                                                </p>
-                                                                {scene.captions && scene.captions.length > 0 && (
-                                                                    <div className="text-xs text-gray-500 italic">
-                                                                        "{scene.captions.join(' • ')}"
+                                                                )}
+                                                                {scene.hook_type && (
+                                                                    <div className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                                                        {scene.hook_type.replace('_', ' ')}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                        ));
-                                                    } catch (error) {
-                                                        console.error('Error parsing scenes:', error);
-                                                        return <div className="text-red-500 text-sm">Error parsing scenes</div>;
-                                                    }
-                                                })()}
-                                            </div>
-                                        </div>
+                                                            <span className="text-xs text-gray-500">
+                                                                {formatDuration(scene.src_start)} - {formatDuration(scene.src_end)}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-700 mb-2">
+                                                            {scene.description}
+                                                        </p>
+                                                        {scene.captions && scene.captions.length > 0 && (
+                                                            <div className="text-xs text-gray-500 italic">
+                                                                "{scene.captions.join(' • ')}"
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ));
+                                            } catch (error) {
+                                                console.error('Error parsing scenes:', error);
+                                                return <div className="text-red-500 text-sm">Error parsing scenes</div>;
+                                            }
+                                        })()}
                                     </div>
                                 </div>
-                            )
-                        }
-                    </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
                 <PromptModal
                     isOpen={showPromptModal}
