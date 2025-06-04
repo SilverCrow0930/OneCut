@@ -45,14 +45,20 @@ const Editor = () => {
     } = useEditor()
     const params = useParams()
     const [assistantWidth, setAssistantWidth] = useState(384)
-    const [toolPanelWidth, setToolPanelWidth] = useState(320) // Default 320px (w-80)
 
     const handleAssistantResize = (deltaX: number) => {
         setAssistantWidth(prev => Math.max(200, Math.min(800, prev - deltaX)))
     }
 
-    const handleToolPanelResize = (deltaX: number) => {
-        setToolPanelWidth(prev => Math.max(200, Math.min(600, prev + deltaX)))
+    // Handle tool selection with toggle functionality
+    const handleToolSelect = (tool: string) => {
+        if (selectedTool === tool) {
+            // If the same tool is clicked, close the tool panel
+            setSelectedTool(null)
+        } else {
+            // Otherwise, select the new tool
+            setSelectedTool(tool)
+        }
     }
 
     // Function to delete multiple selected clips (same logic as in ClipTools.tsx)
@@ -312,19 +318,14 @@ const Editor = () => {
                 <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
                     <ToolBar
                         selectedTool={selectedTool}
-                        onToolSelect={setSelectedTool}
+                        onToolSelect={handleToolSelect}
                     />
                 </div>
-                <div 
-                    className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0 relative"
-                    style={{ width: toolPanelWidth }}
-                >
-                    <ToolPanel />
-                    <ResizeHandle
-                        className="absolute -right-2 z-10"
-                        onResize={handleToolPanelResize}
-                    />
-                </div>
+                {selectedTool && (
+                    <div className="w-96 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
+                        <ToolPanel />
+                    </div>
+                )}
                 <div 
                     className="flex-1 bg-white/60 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 min-w-0"
                 >

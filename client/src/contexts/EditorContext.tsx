@@ -24,7 +24,7 @@ interface EditorContextType {
     loading: boolean
     error: string | null
     selectedTool: string | null
-    setSelectedTool: (tool: string) => void
+    setSelectedTool: (tool: string | null) => void
     refetch: () => void
     updateProjectName: (name: string) => Promise<void>
     updateProjectThumbnail: (thumbnailUrl: string) => Promise<void>

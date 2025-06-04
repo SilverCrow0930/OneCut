@@ -37,8 +37,6 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onResize, className = '' })
             className={`
                 w-4 h-full cursor-ew-resize
                 flex items-center justify-center
-                hover:bg-blue-100/50 transition-colors duration-150
-                group
                 ${className}
             `}
             onMouseDown={(e) => {
@@ -47,14 +45,7 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onResize, className = '' })
                 document.body.classList.add('cursor-ew-resize')
             }}
         >
-            {/* Grip dots indicator */}
-            <div className="flex flex-col gap-1 opacity-40 group-hover:opacity-70 transition-opacity duration-150">
-                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-            </div>
+            <div className="w-0.5 h-full opacity-0 transition-all duration-150" />
         </div>
     )
 }
