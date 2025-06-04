@@ -89,7 +89,7 @@ export default function ProjectsList() {
     if (loading) {
         return (
             <div className="w-full">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
                     {Array.from({ length: 8 }).map((_, index) => (
                         <div key={index} className="animate-pulse">
                             <div className="bg-white/10 rounded-xl h-48 mb-4"></div>
@@ -144,7 +144,7 @@ export default function ProjectsList() {
 
     return (
         <div className="w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
                 {projects.map((project, index) => (
                     <div
                         key={index}

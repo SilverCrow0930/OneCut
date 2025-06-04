@@ -7,7 +7,7 @@ import HomeNavbar from "@/components/home/HomeNavbar";
 
 export default function CreatePage() {
     return (
-        <div className="flex flex-col items-center w-screen h-screen bg-black/70">
+        <div className="flex flex-col items-center w-screen h-screen">
 
             {/* Background */}
             <div className="absolute top-0 left-0 w-full h-full z-[-1]">
@@ -23,7 +23,7 @@ export default function CreatePage() {
                 <HomeNavbar />
 
                 <div
-                    className="h-16"
+                    className="h-24"
                 />
 
                 {/* Projects Header */}
