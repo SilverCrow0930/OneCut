@@ -14,57 +14,112 @@ const HomeFirstSection = () => {
         }
     }
 
+    const scrollToAutocut = () => {
+        const autocutSection = document.getElementById('autocut-section')
+        if (autocutSection) {
+            autocutSection.scrollIntoView({ behavior: 'smooth' })
+        }
+    }
+
     return (
         <div className="
-            flex flex-col w-full h-screen items-center justify-center
+            flex flex-col w-full min-h-screen items-center justify-center
+            py-20 px-4
         ">
-            <div className="flex flex-col items-center justify-center gap-6">
+            <div className="max-w-4xl w-full text-center">
 
                 {/* Logo */}
-                <div className="flex flex-col items-center justify-center gap-2">
+                <div className="flex justify-center mb-8">
                     <img
                         src="/assets/main/lemona-icon.png"
-                        alt="logo"
-                        className="w-24 h-24 md:w-32 md:h-32"
+                        alt="Lemona Logo"
+                        className="w-20 h-20 md:w-24 md:h-24"
                     />
                 </div>
 
-                <div className="flex flex-col items-center justify-center gap-4 px-2 sm:px-4">
-                    {/* Title */}
-                    <div className="
-                        flex flex-col items-center justify-center gap-2
-                        text-2xl sm:text-3xl md:text-4xl lg:text-6xl text-gray-900 font-[600]
-                        text-center whitespace-nowrap
-                    ">
-                        <p>
-                            The First AI Content Creator
-                        </p>
-                    </div>
+                {/* Main Headline */}
+                <h1 className="
+                    text-4xl sm:text-5xl md:text-6xl lg:text-7xl 
+                    font-bold text-gray-900 mb-6
+                    leading-tight
+                ">
+                    The First AI Content Creator
+                </h1>
 
-                    {/* Description */}
-                    <div className="flex flex-col items-center justify-center gap-1">
-                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 text-center">
-                            <span className="hidden sm:inline">The AI video co-pilot that takes you from nothing</span>
-                            <span className="sm:hidden">The AI video co-pilot that takes you from</span>
-                        </p>
-                        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 text-center">
-                            <span className="hidden sm:inline">to viral-ready content.</span>
-                            <span className="sm:hidden">nothing to viral-ready content.</span>
-                        </p>
-                    </div>
+                {/* Subheadline */}
+                <p className="
+                    text-xl sm:text-2xl md:text-3xl 
+                    text-gray-600 mb-12
+                    leading-relaxed max-w-3xl mx-auto
+                ">
+                    The AI video co-pilot that takes you from nothing<br />
+                    to viral-ready content.
+                </p>
+
+                {/* CTA Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+                    <button 
+                        onClick={scrollToAutocut}
+                        className="
+                            bg-gradient-to-r from-blue-600 to-purple-600 
+                            hover:from-blue-700 hover:to-purple-700
+                            text-white font-semibold text-lg
+                            px-8 py-4 rounded-xl 
+                            transition-all duration-300 shadow-lg hover:shadow-xl 
+                            active:transform active:scale-95
+                            min-w-[200px]
+                        "
+                    >
+                        Upload & Transform
+                    </button>
+                    
+                    <button 
+                        onClick={handleJoinBeta}
+                        className="
+                            border-2 border-gray-300 hover:border-gray-400
+                            text-gray-700 hover:text-gray-900 font-semibold text-lg
+                            px-8 py-4 rounded-xl 
+                            transition-all duration-300 hover:shadow-md
+                            active:transform active:scale-95
+                            min-w-[200px]
+                        "
+                    >
+                        {user ? 'Start the Journey' : 'Sign In to Start'}
+                    </button>
                 </div>
 
-                {/* Button */}
-                <button className="
-                    bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 mt-2
-                    text-white font-semibold text-base sm:text-lg md:text-xl
-                    px-6 sm:px-8 md:px-12 py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl 
-                    active:transform active:scale-95 cursor-pointer
-                "
-                    onClick={handleJoinBeta}
-                >
-                    {user ? 'Start the Journey' : 'Sign In to Start'}
-                </button>
+                {/* Value Props */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                    <div className="text-center">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">AI-Powered</h3>
+                        <p className="text-gray-600">Smart algorithms analyze your content and create engaging highlights automatically</p>
+                    </div>
+                    
+                    <div className="text-center">
+                        <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Long-Form Focus</h3>
+                        <p className="text-gray-600">Transform hours of content into polished 10-20 minute highlights</p>
+                    </div>
+                    
+                    <div className="text-center">
+                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 011-1h1a2 2 0 100-4H7a1 1 0 01-1-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Full Control</h3>
+                        <p className="text-gray-600">Complete video editor with AI assistance for perfect results</p>
+                    </div>
+                </div>
 
             </div>
         </div>
