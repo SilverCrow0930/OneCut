@@ -11,7 +11,7 @@ export default function CreatePage() {
             <HomeNavbar />
 
             {/* Main Content */}
-            <main className="max-w-[95%] mx-auto px-2 sm:px-4 lg:px-6 pt-24 pb-12">
+            <main className="max-w-[85%] mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
                 {/* Header Section */}
                 <div className="mb-8">
                     <ProjectsHeader />
