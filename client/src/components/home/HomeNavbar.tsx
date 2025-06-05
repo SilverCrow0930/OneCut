@@ -38,8 +38,8 @@ export default function HomeNavbar() {
     }
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-gray-800 shadow-sm">
-            <div className="w-full px-4 sm:px-6 lg:px-8">
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
                     <div className="flex-shrink-0">
@@ -47,20 +47,20 @@ export default function HomeNavbar() {
                     </div>
 
                     {/* Navigation and Actions */}
-                    <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-8">
                         {/* Navigation Links */}
-                        <div className="hidden md:flex items-center space-x-6">
-                            <a href="#" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
+                        <div className="hidden md:flex items-center space-x-8">
+                            <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
                                 Product
                             </a>
-                            <a href="/pricing" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
+                            <a href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
                                 Pricing
                             </a>
                             <a 
                                 href="https://x.com/lemona_labs" 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="text-gray-300 hover:text-white transition-colors duration-200 font-medium"
+                                className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
                             >
                                 Twitter
                             </a>
@@ -68,12 +68,23 @@ export default function HomeNavbar() {
 
                         {/* Auth Section */}
                         {user ? (
-                            <div className="flex items-center">
-                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center cursor-pointer hover:scale-105 transition-transform duration-200">
-                                    <span className="text-white text-sm font-semibold">
-                                        {user.email?.charAt(0).toUpperCase()}
+                            <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-sm font-semibold">
+                                            {user.email?.charAt(0).toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <span className="text-gray-700 text-sm font-medium hidden sm:block">
+                                        {user.email}
                                     </span>
                                 </div>
+                                <button
+                                    onClick={handleSignOut}
+                                    className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+                                >
+                                    Sign Out
+                                </button>
                             </div>
                         ) : (
                             <button

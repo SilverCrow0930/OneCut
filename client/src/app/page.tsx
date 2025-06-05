@@ -11,7 +11,7 @@ export default function Home() {
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
 
   return (
-    <div className="relative flex flex-col items-center w-full h-full bg-black overflow-x-hidden">
+    <div className="relative flex flex-col items-center w-full h-full bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-x-hidden">
 
       {/* Background */}
       {/* <div className="absolute top-0 left-0 w-full h-full opacity-30">
@@ -33,8 +33,8 @@ export default function Home() {
       {/* Main Content */}
       <div
         className="
-          flex flex-col w-full px-4 sm:px-6 lg:px-8
-          max-w-none
+          flex flex-col w-full px-2 sm:px-4
+          md:w-[95%] lg:w-[90%] xl:w-[85%]
         "
         style={{
           zIndex: 10

@@ -105,14 +105,14 @@ const AutocutSection = () => {
             flex flex-col w-full min-h-screen items-center justify-center
             py-20 px-4
         ">
-            <div className="max-w-4xl w-full">
+            <div className="max-w-2xl w-full">
                 
                 {/* Title & Subtitle */}
                 <div className="text-center mb-12">
-                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
                         Transform Hours into Highlights
                     </h1>
-                    <p className="text-xl text-gray-300">
+                    <p className="text-xl text-gray-600">
                         AI-powered long-form video editing
                     </p>
                 </div>
@@ -133,19 +133,19 @@ const AutocutSection = () => {
                             border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
                             transition-all duration-200
                             ${selectedFile ? 
-                                'border-blue-400 bg-blue-900/20' : 
-                                'border-gray-600 hover:border-blue-400 hover:bg-blue-900/10'
+                                'border-blue-400 bg-blue-50' : 
+                                'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
                             }
                         `}
                     >
                         {selectedFile ? (
                             <div className="flex items-center justify-center gap-3">
-                                <Video className="w-8 h-8 text-blue-400" />
+                                <Video className="w-8 h-8 text-blue-600" />
                                 <div>
-                                    <p className="text-lg font-medium text-blue-300">
+                                    <p className="text-lg font-medium text-blue-800">
                                         {selectedFile.name}
                                     </p>
-                                    <p className="text-sm text-blue-400">
+                                    <p className="text-sm text-blue-600">
                                         Click to change file
                                     </p>
                                 </div>
@@ -153,7 +153,7 @@ const AutocutSection = () => {
                         ) : (
                             <div>
                                 <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-lg text-gray-300 mb-2">
+                                <p className="text-lg text-gray-600 mb-2">
                                     Upload your 1-2 hour content
                                 </p>
                                 <p className="text-sm text-gray-500">
@@ -167,8 +167,8 @@ const AutocutSection = () => {
                 {/* Target Duration Slider */}
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-4">
-                        <Clock className="w-5 h-5 text-gray-400" />
-                        <span className="text-lg font-medium text-gray-300">
+                        <Clock className="w-5 h-5 text-gray-600" />
+                        <span className="text-lg font-medium text-gray-700">
                             Target Duration: {targetDuration} minutes
                         </span>
                     </div>
@@ -181,7 +181,7 @@ const AutocutSection = () => {
                             value={targetDuration}
                             onChange={(e) => setTargetDuration(parseInt(e.target.value))}
                             className="
-                                w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer
+                                w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer
                                 [&::-webkit-slider-thumb]:appearance-none 
                                 [&::-webkit-slider-thumb]:w-5 
                                 [&::-webkit-slider-thumb]:h-5 
@@ -215,7 +215,7 @@ const AutocutSection = () => {
 
                 {/* Content Type Selection */}
                 <div className="mb-10">
-                    <h3 className="text-lg font-medium text-gray-300 mb-4">Content Type</h3>
+                    <h3 className="text-lg font-medium text-gray-700 mb-4">Content Type</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {contentTypes.map((type) => {
                             const Icon = type.icon
@@ -226,8 +226,8 @@ const AutocutSection = () => {
                                     className={`
                                         flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-200
                                         ${contentType === type.id ? 
-                                            'border-blue-500 bg-blue-900/20 text-blue-300' : 
-                                            'border-gray-600 hover:border-blue-400 hover:bg-blue-900/10 text-gray-300 hover:text-blue-300'
+                                            'border-blue-500 bg-blue-50 text-blue-700' : 
+                                            'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                                         }
                                     `}
                                 >
@@ -246,7 +246,7 @@ const AutocutSection = () => {
                     className="
                         w-full bg-gradient-to-r from-blue-600 to-purple-600 
                         hover:from-blue-700 hover:to-purple-700
-                        disabled:from-gray-600 disabled:to-gray-700
+                        disabled:from-gray-400 disabled:to-gray-500
                         text-white font-semibold text-lg
                         px-8 py-4 rounded-xl 
                         transition-all duration-300 shadow-lg hover:shadow-xl 
