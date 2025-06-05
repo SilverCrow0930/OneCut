@@ -94,13 +94,6 @@ const HomeCTA = () => {
                         <span>100% secure</span>
                     </div>
                 </div>
-
-                {/* Urgency */}
-                <div className="mt-8 p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-                    <p className="text-white/90 text-sm">
-                        🔥 <strong>Special Launch Offer:</strong> First 1,000 users get unlimited videos for 30 days free
-                    </p>
-                </div>
             </div>
         </section>
     )

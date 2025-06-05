@@ -32,19 +32,19 @@ const HomeSocialProof = () => {
     const stats = [
         {
             icon: Users,
-            number: "10,000+",
+            number: "5,000+",
             label: "Active Creators",
             color: "from-blue-500 to-purple-500"
         },
         {
             icon: Video,
-            number: "50,000+",
+            number: "10,000+",
             label: "Videos Created",
             color: "from-emerald-500 to-blue-500"
         },
         {
             icon: Clock,
-            number: "100,000+",
+            number: "50,000+",
             label: "Hours Saved",
             color: "from-purple-500 to-pink-500"
         }

@@ -4,7 +4,6 @@ import { useState } from "react";
 import HomeHeroSection from "@/components/home/HomeHeroSection";
 import HomeSocialProof from "@/components/home/HomeSocialProof";
 import HomeHowItWorks from "@/components/home/HomeHowItWorks";
-import AutocutSection from "@/components/home/AutocutSection";
 import HomeNavbar from "@/components/home/HomeNavbar";
 import ConfidentialityButton from "@/components/layout/ConfidentialityButton";
 import Demos from "@/components/home/Demos";
@@ -37,17 +36,14 @@ export default function Home() {
         {/* Hero Section */}
         <HomeHeroSection />
 
+        {/* Demos */}
+        <Demos />
+
         {/* How It Works */}
         <HomeHowItWorks />
 
         {/* Social Proof */}
         <HomeSocialProof />
-
-        {/* Autocut Section */}
-        <AutocutSection />
-
-        {/* Demos */}
-        <Demos />
 
         {/* Final CTA */}
         <HomeCTA />

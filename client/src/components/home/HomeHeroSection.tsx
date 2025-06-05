@@ -165,7 +165,7 @@ const HomeHeroSection = () => {
                                 onClick={handleGetStarted}
                                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-lg px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
-                                {user ? 'View All Projects' : 'Get Started Free'}
+                                {user ? 'View All Projects' : 'Start Creating'}
                             </button>
                             <button
                                 onClick={handleWatchDemo}
