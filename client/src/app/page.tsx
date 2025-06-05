@@ -5,6 +5,7 @@ import HomeFirstSection from "@/components/home/HomeFirstSection";
 import AutocutSection from "@/components/home/AutocutSection";
 import HomeNavbar from "@/components/home/HomeNavbar";
 import ConfidentialityButton from "@/components/layout/ConfidentialityButton";
+import Demos from "@/components/home/Demos";
 
 export default function Home() {
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
@@ -12,7 +13,11 @@ export default function Home() {
   return (
     <div className="relative flex flex-col items-center w-full h-full bg-black overflow-x-hidden">
 
-      {/* SEO Content */}
+      {/* Background */}
+      {/* <div className="absolute top-0 left-0 w-full h-full opacity-30">
+        <BubbleEffect />
+      </div> */}
+
       <p className="absolute opacity-0">
         AI-powered video editor for podcasters, educators, and content creators.<br />
         Lemona's AI copilot cuts long recordings into short videos based on your needs.
@@ -39,14 +44,19 @@ export default function Home() {
         {/* Navbar */}
         <HomeNavbar />
 
-        {/* Hero Section */}
-        <HomeFirstSection />
-        
-        {/* Autocut Section */}
-        <AutocutSection />
+        <div className="
+          flex flex-col w-full min-h-screen
+          overflow-y-auto overflow-x-hidden
+        ">
+          <HomeFirstSection />
+          
+          {/* New Autocut Section */}
+          <AutocutSection />
+        </div>
 
-        {/* Bottom Spacing */}
-        <div className="h-20" />
+        <Demos />
+
+        <div className="h-40" />
 
       </div>
 

@@ -147,42 +147,45 @@ const Demos = () => {
     }
 
     return (
-        <div className="flex flex-col md:flex-row w-full h-fit gap-8 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-4 md:px-8 py-4 md:py-8 shadow-lg">
+        <div className="flex flex-col md:flex-row w-full h-fit gap-8 bg-gray-900/80 backdrop-blur-sm border border-gray-700 rounded-xl px-4 md:px-8 py-4 md:py-8 shadow-lg">
             <div className="flex flex-col w-full md:w-80 gap-4 flex-none">
-                <p className="text-xl md:text-2xl font-bold my-2 md:my-4 text-gray-900">🎬 Demos</p>
+                <p className="text-xl md:text-2xl font-bold my-2 md:my-4 text-white">🎬 Demos</p>
                 {
                     DEMOS.map((demo, index) => (
                         <div
                             key={index}
                             className={`
-                                flex flex-col w-full md:w-80 gap-4 border border-gray-200 rounded-xl p-3 md:p-4 
-                                cursor-pointer hover:bg-gray-50 transition-colors bg-white
-                                ${selectedDemo === index ? 'border-blue-500 bg-blue-50 shadow-md' : ''}`}
+                                flex flex-col w-full md:w-80 gap-4 border rounded-xl p-3 md:p-4 
+                                cursor-pointer transition-colors
+                                ${selectedDemo === index ? 
+                                    'border-blue-500 bg-blue-900/20 shadow-md' : 
+                                    'border-gray-700 hover:bg-gray-800/50 bg-gray-800/30'
+                                }`}
                             onClick={() => {
                                 handleManualSelect(index)
                             }}
                         >
                             <div className="flex items-center justify-between">
-                                <p className="text-base md:text-lg text-gray-900 font-medium">
+                                <p className="text-base md:text-lg text-white font-medium">
                                     {demo.title}
                                 </p>
                                 {
                                     expandedDemos.has(index) ? (
-                                        <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+                                        <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
                                     ) : (
-                                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+                                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
                                     )
                                 }
                             </div>
                             {
                                 expandedDemos.has(index) && (
-                                    <p className="text-xs md:text-sm text-gray-600 pl-4 leading-relaxed relative before:absolute before:left-0 before:top-0 before:content-['•'] before:text-blue-500">
+                                    <p className="text-xs md:text-sm text-gray-300 pl-4 leading-relaxed relative before:absolute before:left-0 before:top-0 before:content-['•'] before:text-blue-400">
                                         {demo.description}
                                     </p>
                                 )
                             }
                             {selectedDemo === index && (
-                                <div className="w-full bg-gray-200 h-1 rounded-full overflow-hidden mt-2">
+                                <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden mt-2">
                                     <div
                                         className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-[100ms]"
                                         style={{ width: `${progress}%` }}
@@ -195,25 +198,25 @@ const Demos = () => {
             </div>
             <div className="flex flex-col flex-grow h-full">
                 <p className="h-10 md:h-20"></p>
-                <div className="w-full h-[300px] md:h-full rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-gray-100 relative">
+                <div className="w-full h-[300px] md:h-full rounded-xl overflow-hidden shadow-lg border border-gray-700 bg-gray-800 relative">
                     {/* Loading State */}
                     {videoLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
                             <div className="flex flex-col items-center gap-3">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                                <p className="text-gray-600 text-sm">Loading video...</p>
+                                <p className="text-gray-300 text-sm">Loading video...</p>
                             </div>
                         </div>
                     )}
 
                     {/* Error State */}
                     {videoError && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
                             <div className="flex flex-col items-center gap-3 text-center">
-                                <AlertCircle className="w-12 h-12 text-gray-400" />
+                                <AlertCircle className="w-12 h-12 text-gray-500" />
                                 <div>
-                                    <p className="text-gray-600 font-medium">Demo video unavailable</p>
-                                    <p className="text-gray-500 text-sm mt-1">Video content coming soon</p>
+                                    <p className="text-gray-300 font-medium">Demo video unavailable</p>
+                                    <p className="text-gray-400 text-sm mt-1">Video content coming soon</p>
                                 </div>
                             </div>
                         </div>
@@ -250,11 +253,11 @@ const Demos = () => {
 
                     {/* Fallback placeholder when no video is loading */}
                     {!videoLoading && !videoError && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50" style={{ display: 'none' }}>
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900" style={{ display: 'none' }}>
                             <div className="flex flex-col items-center gap-3">
-                                <Play className="w-16 h-16 text-blue-500" />
-                                <p className="text-gray-700 font-medium">Demo Video</p>
-                                <p className="text-gray-500 text-sm">{DEMOS[selectedDemo].title}</p>
+                                <Play className="w-16 h-16 text-blue-400" />
+                                <p className="text-gray-300 font-medium">Demo Video</p>
+                                <p className="text-gray-400 text-sm">{DEMOS[selectedDemo].title}</p>
                             </div>
                         </div>
                     )}

@@ -76,7 +76,7 @@ export default function ProjectsList() {
         return (
             <div className="flex items-center justify-center py-12">
                 <div className="flex items-center space-x-3 text-gray-300">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                     <span>Loading your projects...</span>
                 </div>
             </div>
@@ -121,9 +121,9 @@ export default function ProjectsList() {
                         router.push(`/projects/${project.id}`)
                     }}
                 >
-                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 hover:border-gray-600">
+                    <div className="bg-gray-900 rounded-xl border border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-600">
                         {/* Thumbnail */}
-                        <div className="aspect-video relative bg-gray-700">
+                        <div className="aspect-video relative bg-gray-800">
                             {project.thumbnail_url ? (
                                 <img
                                     src={project.thumbnail_url}
@@ -142,7 +142,7 @@ export default function ProjectsList() {
                             
                             {/* Fallback content */}
                             <div 
-                                className={`fallback-content w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
+                                className={`fallback-content w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
                             >
                                 <div className="w-12 h-12 text-gray-500 mb-2">
                                     <Play className="w-full h-full" strokeWidth={1.5} />
