@@ -83,7 +83,7 @@ const HomeCTA = () => {
                 <div className="flex items-center justify-center gap-8 text-white/70 text-sm">
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                        <span>10,000+ happy creators</span>
+                        <span>5,000+ happy creators</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
