@@ -229,7 +229,10 @@ export default function ProjectsList() {
                             </div>
 
                             {/* Three-dot menu button - only visible on hover */}
-                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div 
+                                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                onClick={(e) => e.stopPropagation()}
+                            >
                                 <button
                                     onClick={(e) => handleMenuClick(e, project.id)}
                                     className="w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-md flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
@@ -239,7 +242,10 @@ export default function ProjectsList() {
                                 
                                 {/* Dropdown menu */}
                                 {showMenu === project.id && (
-                                    <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                                    <div 
+                                        className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
                                         <button
                                             onClick={(e) => handleDownload(e, project)}
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-2"
