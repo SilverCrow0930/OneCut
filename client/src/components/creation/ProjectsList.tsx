@@ -12,22 +12,8 @@ export default function ProjectsList() {
     const [projects, setProjects] = useState<Project[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
-    const dropdownRef = useRef<HTMLDivElement>(null)
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setActiveDropdown(null)
-            }
-        }
-
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside)
-        }
-    }, [])
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+    const menuRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         // only fetch once we have a valid token
@@ -75,40 +61,34 @@ export default function ProjectsList() {
         }
     }, [session?.access_token])
 
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setOpenMenuId(null)
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [])
+
     const handleDownload = async (project: Project, e: React.MouseEvent) => {
         e.stopPropagation()
-        setActiveDropdown(null)
-        
-        try {
-            // Call your download API endpoint here
-            const response = await fetch(apiPath(`projects/${project.id}/download`), {
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                },
-            })
-            
-            if (response.ok) {
-                const blob = await response.blob()
-                const url = window.URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `${project.name || 'project'}.mp4`
-                document.body.appendChild(a)
-                a.click()
-                window.URL.revokeObjectURL(url)
-                document.body.removeChild(a)
-            } else {
-                console.error('Download failed')
-            }
-        } catch (error) {
-            console.error('Download error:', error)
-        }
+        setOpenMenuId(null)
+        // TODO: Implement download functionality
+        console.log('Download project:', project.name)
+        alert('Download functionality will be implemented soon!')
     }
 
     const handleDuplicate = async (project: Project, e: React.MouseEvent) => {
         e.stopPropagation()
-        setActiveDropdown(null)
+        setOpenMenuId(null)
         
+        if (!session?.access_token) return
+
         try {
             const response = await fetch(apiPath('projects'), {
                 method: 'POST',
@@ -118,49 +98,55 @@ export default function ProjectsList() {
                 },
                 body: JSON.stringify({
                     name: `${project.name} (Copy)`,
-                    sourceProjectId: project.id
+                    // Add other project data to duplicate
                 }),
             })
             
-            if (response.ok) {
-                // Refresh the projects list
-                window.location.reload()
-            } else {
-                console.error('Duplicate failed')
+            if (!response.ok) {
+                throw new Error('Failed to duplicate project')
             }
+            
+            // Refresh the projects list
+            window.location.reload()
         } catch (error) {
-            console.error('Duplicate error:', error)
+            console.error('Error duplicating project:', error)
+            alert('Failed to duplicate project')
         }
     }
 
     const handleDelete = async (project: Project, e: React.MouseEvent) => {
         e.stopPropagation()
-        setActiveDropdown(null)
+        setOpenMenuId(null)
         
-        if (window.confirm(`Are you sure you want to delete "${project.name || 'Untitled Project'}"? This action cannot be undone.`)) {
-            try {
-                const response = await fetch(apiPath(`projects/${project.id}`), {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${session?.access_token}`,
-                    },
-                })
-                
-                if (response.ok) {
-                    // Remove the project from the local state
-                    setProjects(projects.filter(p => p.id !== project.id))
-                } else {
-                    console.error('Delete failed')
-                }
-            } catch (error) {
-                console.error('Delete error:', error)
+        if (!session?.access_token) return
+        
+        if (!confirm(`Are you sure you want to delete "${project.name}"? This action cannot be undone.`)) {
+            return
+        }
+
+        try {
+            const response = await fetch(apiPath(`projects/${project.id}`), {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+            })
+            
+            if (!response.ok) {
+                throw new Error('Failed to delete project')
             }
+            
+            // Remove project from local state
+            setProjects(projects.filter(p => p.id !== project.id))
+        } catch (error) {
+            console.error('Error deleting project:', error)
+            alert('Failed to delete project')
         }
     }
 
-    const handleMoreClick = (projectId: string, e: React.MouseEvent) => {
+    const handleMenuClick = (projectId: string, e: React.MouseEvent) => {
         e.stopPropagation()
-        setActiveDropdown(activeDropdown === projectId ? null : projectId)
+        setOpenMenuId(openMenuId === projectId ? null : projectId)
     }
 
     if (!session) {
@@ -227,7 +213,7 @@ export default function ProjectsList() {
                 >
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300">
                         {/* Thumbnail */}
-                        <div className="aspect-video relative bg-white">
+                        <div className="aspect-video relative">
                             {project.thumbnail_url ? (
                                 <img
                                     src={project.thumbnail_url}
@@ -235,13 +221,53 @@ export default function ProjectsList() {
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <div className="w-full h-full bg-white flex flex-col items-center justify-center">
+                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center">
                                     <div className="w-12 h-12 text-gray-400 mb-2">
                                         <Play className="w-full h-full" strokeWidth={1.5} />
                                     </div>
                                     <span className="text-xs text-gray-500 font-medium">No Preview</span>
                                 </div>
                             )}
+
+                            {/* Three-dot menu button */}
+                            <div 
+                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                ref={openMenuId === project.id ? menuRef : null}
+                            >
+                                <button
+                                    onClick={(e) => handleMenuClick(project.id, e)}
+                                    className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm hover:bg-white transition-colors duration-200 flex items-center justify-center"
+                                >
+                                    <MoreVertical className="w-4 h-4 text-gray-600" />
+                                </button>
+                                
+                                {/* Dropdown menu */}
+                                {openMenuId === project.id && (
+                                    <div className="absolute top-10 right-0 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                                        <button
+                                            onClick={(e) => handleDownload(project, e)}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            Download
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDuplicate(project, e)}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <Copy className="w-4 h-4" />
+                                            Duplicate
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDelete(project, e)}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Delete
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Duration badge */}
                             {project.duration && project.duration > 0 && (
@@ -254,45 +280,6 @@ export default function ProjectsList() {
                                     </div>
                                 </div>
                             )}
-
-                            {/* Three-dot menu (appears on hover) */}
-                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                <div className="relative" ref={activeDropdown === project.id ? dropdownRef : null}>
-                                    <button
-                                        onClick={(e) => handleMoreClick(project.id, e)}
-                                        className="bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-md hover:bg-white transition-colors duration-200"
-                                    >
-                                        <MoreVertical className="w-4 h-4 text-gray-600" />
-                                    </button>
-
-                                    {/* Dropdown Menu */}
-                                    {activeDropdown === project.id && (
-                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                                            <button
-                                                onClick={(e) => handleDownload(project, e)}
-                                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                                Download
-                                            </button>
-                                            <button
-                                                onClick={(e) => handleDuplicate(project, e)}
-                                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
-                                            >
-                                                <Copy className="w-4 h-4" />
-                                                Duplicate
-                                            </button>
-                                            <button
-                                                onClick={(e) => handleDelete(project, e)}
-                                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors duration-200"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                Delete
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
 
                             {/* Hover overlay */}
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
