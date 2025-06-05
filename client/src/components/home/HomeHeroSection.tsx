@@ -199,12 +199,8 @@ const HomeHeroSection = () => {
 
                             {/* Upload Header */}
                             <div className="text-center mb-6 relative z-10">
-                                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200 rounded-full px-3 py-1 mb-3">
-                                    <Sparkles className="w-3 h-3 text-blue-600" />
-                                    <span className="text-xs font-medium text-blue-700">AI-Powered</span>
-                                </div>
                                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                                    Try it now
+                                    Autocut
                                 </h3>
                                 <p className="text-gray-600">
                                     Upload your video and see the magic happen
