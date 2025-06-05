@@ -33,8 +33,8 @@ export default function Home() {
       {/* Main Content */}
       <div
         className="
-          flex flex-col w-full px-4
-          md:w-[90%] lg:w-[80%] xl:w-[70%]
+          flex flex-col w-full px-4 sm:px-6 lg:px-8
+          max-w-none
         "
         style={{
           zIndex: 10

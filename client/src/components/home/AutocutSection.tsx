@@ -105,7 +105,7 @@ const AutocutSection = () => {
             flex flex-col w-full min-h-screen items-center justify-center
             py-20 px-4
         ">
-            <div className="max-w-2xl w-full">
+            <div className="max-w-4xl w-full">
                 
                 {/* Title & Subtitle */}
                 <div className="text-center mb-12">
