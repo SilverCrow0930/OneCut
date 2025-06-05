@@ -119,8 +119,19 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
     }, [session?.access_token, projectId]) // Only depend on access_token instead of entire session
 
-    // 2) Selected tool
-    const [selectedTool, setSelectedTool] = useState<string | null>('Upload')
+    // 2) Selected tool - check URL params for initial tool
+    const getInitialTool = () => {
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search)
+            const toolParam = urlParams.get('tool')
+            if (toolParam && ['Upload', 'Text', 'Assets', 'Stickers', 'Voiceover', 'Captions', 'Autocut', 'Generation', 'Transitions'].includes(toolParam)) {
+                return toolParam
+            }
+        }
+        return 'Upload' // Default fallback
+    }
+
+    const [selectedTool, setSelectedTool] = useState<string | null>(getInitialTool())
 
     // 3) History + Timeline
     const [history, dispatch] = useReducer(historyReducer, initialHistory)

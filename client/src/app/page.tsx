@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import HomeFirstSection from "@/components/home/HomeFirstSection";
+import AutocutSection from "@/components/home/AutocutSection";
 import HomeNavbar from "@/components/home/HomeNavbar";
 import ConfidentialityButton from "@/components/layout/ConfidentialityButton";
 import Demos from "@/components/home/Demos";
@@ -48,6 +49,9 @@ export default function Home() {
           overflow-y-auto overflow-x-hidden
         ">
           <HomeFirstSection />
+          
+          {/* New Autocut Section */}
+          <AutocutSection />
         </div>
 
         <Demos />

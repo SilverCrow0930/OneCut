@@ -356,6 +356,60 @@ const AutoCutToolPanel = () => {
     const params = useParams();
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
 
+    // Check for URL settings on component mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const settingsParam = urlParams.get('settings');
+            
+            if (settingsParam) {
+                try {
+                    const settings = JSON.parse(decodeURIComponent(settingsParam));
+                    
+                    // Generate prompt based on settings
+                    const contentTypeLabels: Record<string, string> = {
+                        'meeting': '会议',
+                        'interview': '访谈',
+                        'tutorial': '教程',
+                        'podcast': '播客'
+                    };
+                    
+                    const generatedPrompt = `请帮我从这个${contentTypeLabels[settings.contentType] || settings.contentType}视频中剪辑出${settings.targetDuration}分钟的精彩片段。重点关注最有价值、最吸引人的内容片段。`;
+                    
+                    setPrompt(generatedPrompt);
+                    setContentType(settings.contentType);
+                    
+                    // If coming from home page with file, auto-select the most recent asset
+                    if (settings.hasFile && assets && assets.length > 0) {
+                        const mostRecentAsset = assets
+                            .filter(asset => asset.mime_type?.startsWith('video/'))
+                            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+                            
+                        if (mostRecentAsset) {
+                            setUploadedAsset({
+                                id: mostRecentAsset.id,
+                                mime_type: mostRecentAsset.mime_type,
+                                duration: mostRecentAsset.duration || null,
+                            });
+                            
+                            // Show prompt modal with pre-filled prompt
+                            setTimeout(() => {
+                                setShowPromptModal(true);
+                            }, 1000);
+                        }
+                    }
+                    
+                    // Clear the URL parameters to avoid re-triggering
+                    const newUrl = window.location.pathname + window.location.search.replace(/[?&]settings=[^&]*/, '').replace(/^\?&/, '?').replace(/^\?$/, '');
+                    window.history.replaceState({}, '', newUrl);
+                    
+                } catch (error) {
+                    console.error('Error parsing settings from URL:', error);
+                }
+            }
+        }
+    }, [assets]); // Add assets as dependency
+
     useEffect(() => {
         if (!socket) {
             console.log('No socket connection available');
