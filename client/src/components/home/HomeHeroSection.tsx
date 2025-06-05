@@ -190,19 +190,24 @@ const HomeHeroSection = () => {
 
                     {/* Right Column - Upload Interface */}
                     <div className="relative">
-                        <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 relative overflow-hidden">
-                            {/* Background Pattern */}
-                            <div className="absolute inset-0 opacity-5">
-                                <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-xl"></div>
-                                <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-emerald-400 to-blue-500 rounded-full blur-xl"></div>
+                        <div className="bg-gradient-to-br from-white via-blue-50/50 to-purple-50/50 rounded-3xl p-8 shadow-2xl border border-blue-200/50 relative overflow-hidden backdrop-blur-sm">
+                            {/* Enhanced Background Pattern */}
+                            <div className="absolute inset-0 opacity-10">
+                                <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-xl animate-pulse"></div>
+                                <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-emerald-400 to-blue-500 rounded-full blur-xl animate-pulse"></div>
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-gradient-to-br from-purple-300 to-pink-300 rounded-full blur-2xl opacity-30"></div>
                             </div>
 
                             {/* Upload Header */}
                             <div className="text-center mb-6 relative z-10">
-                                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full px-4 py-2 mb-3 shadow-lg">
+                                    <Zap className="w-4 h-4" />
+                                    <span className="text-sm font-bold">Autocut</span>
+                                </div>
+                                <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-2">
                                     Autocut
                                 </h3>
-                                <p className="text-gray-600">
+                                <p className="text-gray-700 font-medium">
                                     Upload your video and see the magic happen
                                 </p>
                             </div>
@@ -223,55 +228,52 @@ const HomeHeroSection = () => {
                                         border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
                                         transition-all duration-300 group relative overflow-hidden
                                         ${selectedFile ? 
-                                            'border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50 shadow-inner' : 
-                                            'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:shadow-lg'
+                                            'border-blue-500 bg-gradient-to-br from-blue-100 via-purple-50 to-emerald-50 shadow-inner' : 
+                                            'border-blue-300 hover:border-blue-500 hover:bg-gradient-to-br hover:from-blue-100 hover:via-purple-50 hover:to-emerald-50 hover:shadow-xl'
                                         }
                                     `}
                                 >
-                                    {/* Animated background for hover */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                    {/* Enhanced animated background for hover */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 via-purple-400/10 to-emerald-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                     
                                     {selectedFile ? (
                                         <div className="flex flex-col items-center gap-3 relative z-10">
                                             <div className="relative">
-                                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-600 to-emerald-500 rounded-2xl flex items-center justify-center shadow-xl">
                                                     <Video className="w-8 h-8 text-white" />
                                                 </div>
-                                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
                                                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                     </svg>
                                                 </div>
                                             </div>
                                             <div className="text-center">
-                                                <p className="font-semibold text-blue-800 mb-1">
+                                                <p className="font-bold text-blue-900 mb-1">
                                                     {selectedFile.name}
                                                 </p>
-                                                <p className="text-sm text-blue-600">
+                                                <p className="text-sm text-blue-700 font-medium">
                                                     Click to change file
                                                 </p>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="relative z-10">
-                                            <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                                <Upload className="w-8 h-8 text-gray-500 group-hover:text-blue-600 transition-colors duration-300" />
+                                            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-600 to-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-500 shadow-xl">
+                                                <Upload className="w-10 h-10 text-white group-hover:animate-bounce" />
                                             </div>
-                                            <p className="font-semibold text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300">
+                                            <p className="font-bold text-gray-800 mb-2 group-hover:text-blue-800 transition-colors duration-300 text-lg">
                                                 Drop your video here
                                             </p>
-                                            <p className="text-sm text-gray-500 mb-3">
+                                            <p className="text-gray-600 mb-4 font-medium">
                                                 or click to browse
                                             </p>
-                                            <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
-                                                <span>MP4</span>
-                                                <span>•</span>
-                                                <span>MOV</span>
-                                                <span>•</span>
-                                                <span>AVI</span>
-                                                <span>•</span>
-                                                <span>Up to 2GB</span>
+                                            <div className="flex items-center justify-center gap-3 text-sm font-medium">
+                                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">MP4</span>
+                                                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full">MOV</span>
+                                                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full">AVI</span>
                                             </div>
+                                            <p className="text-xs text-gray-500 mt-2 font-medium">Up to 2GB</p>
                                         </div>
                                     )}
                                 </div>
@@ -279,8 +281,8 @@ const HomeHeroSection = () => {
 
                             {/* Content Type Selection */}
                             <div className="mb-6 relative z-10">
-                                <label className="block text-sm font-semibold text-gray-700 mb-3">Content Type</label>
-                                <div className="grid grid-cols-2 gap-2">
+                                <label className="block text-sm font-bold text-gray-800 mb-3">Content Type</label>
+                                <div className="grid grid-cols-2 gap-3">
                                     {contentTypes.map((type) => {
                                         const Icon = type.icon
                                         return (
@@ -288,17 +290,17 @@ const HomeHeroSection = () => {
                                                 key={type.id}
                                                 onClick={() => setContentType(type.id)}
                                                 className={`
-                                                    flex items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 text-sm group
+                                                    flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-300 text-sm group
                                                     ${contentType === type.id ? 
-                                                        'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 text-blue-700 shadow-md' : 
-                                                        'border-gray-200 hover:border-blue-300 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:shadow-sm'
+                                                        'border-blue-500 bg-gradient-to-br from-blue-100 via-purple-50 to-emerald-50 text-blue-800 shadow-lg transform scale-105' : 
+                                                        'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:via-purple-25 hover:to-emerald-25 hover:shadow-md hover:scale-102'
                                                     }
                                                 `}
                                             >
-                                                <div className={`p-1 rounded-lg ${contentType === type.id ? 'bg-blue-500' : 'bg-gray-300 group-hover:bg-blue-400'} transition-colors duration-200`}>
-                                                    <Icon className={`w-3 h-3 ${contentType === type.id ? 'text-white' : 'text-white'}`} />
+                                                <div className={`p-2 rounded-xl ${contentType === type.id ? 'bg-gradient-to-br from-blue-500 to-purple-600' : 'bg-gradient-to-br from-gray-400 to-gray-500 group-hover:from-blue-400 group-hover:to-purple-500'} transition-all duration-300 shadow-md`}>
+                                                    <Icon className="w-4 h-4 text-white" />
                                                 </div>
-                                                <span className="font-medium">{type.label}</span>
+                                                <span className="font-bold">{type.label}</span>
                                             </button>
                                         )
                                     })}
@@ -306,13 +308,13 @@ const HomeHeroSection = () => {
                             </div>
 
                             {/* Target Duration */}
-                            <div className="mb-6 relative z-10">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="p-1 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg">
-                                        <Clock className="w-4 h-4 text-white" />
+                            <div className="mb-8 relative z-10">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 bg-gradient-to-br from-blue-500 via-purple-600 to-emerald-500 rounded-xl shadow-md">
+                                        <Clock className="w-5 h-5 text-white" />
                                     </div>
-                                    <label className="text-sm font-semibold text-gray-700">
-                                        Target: {targetDuration} minutes
+                                    <label className="text-sm font-bold text-gray-800">
+                                        Target: <span className="text-blue-600">{targetDuration} minutes</span>
                                     </label>
                                 </div>
                                 
@@ -324,25 +326,27 @@ const HomeHeroSection = () => {
                                         value={targetDuration}
                                         onChange={(e) => setTargetDuration(parseInt(e.target.value))}
                                         className="
-                                            w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
+                                            w-full h-4 bg-gradient-to-r from-blue-200 via-purple-200 to-emerald-200 rounded-full appearance-none cursor-pointer shadow-inner
                                             [&::-webkit-slider-thumb]:appearance-none 
-                                            [&::-webkit-slider-thumb]:w-6 
-                                            [&::-webkit-slider-thumb]:h-6 
+                                            [&::-webkit-slider-thumb]:w-7 
+                                            [&::-webkit-slider-thumb]:h-7 
                                             [&::-webkit-slider-thumb]:rounded-full 
                                             [&::-webkit-slider-thumb]:bg-gradient-to-r
                                             [&::-webkit-slider-thumb]:from-blue-500
-                                            [&::-webkit-slider-thumb]:to-purple-500
-                                            [&::-webkit-slider-thumb]:border-3
+                                            [&::-webkit-slider-thumb]:via-purple-600
+                                            [&::-webkit-slider-thumb]:to-emerald-500
+                                            [&::-webkit-slider-thumb]:border-4
                                             [&::-webkit-slider-thumb]:border-white
-                                            [&::-webkit-slider-thumb]:shadow-lg
+                                            [&::-webkit-slider-thumb]:shadow-xl
                                             [&::-webkit-slider-thumb]:cursor-pointer
-                                            [&::-webkit-slider-thumb]:hover:scale-110
+                                            [&::-webkit-slider-thumb]:hover:scale-125
                                             [&::-webkit-slider-thumb]:transition-transform
+                                            [&::-webkit-slider-thumb]:duration-200
                                         "
                                     />
-                                    <div className="flex justify-between text-xs text-gray-500 mt-2">
-                                        <span className="font-medium">5 min</span>
-                                        <span className="font-medium">30 min</span>
+                                    <div className="flex justify-between text-sm font-bold text-gray-700 mt-3">
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg">5 min</span>
+                                        <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg">30 min</span>
                                     </div>
                                 </div>
                             </div>
@@ -352,41 +356,41 @@ const HomeHeroSection = () => {
                                 onClick={handleStartEditing}
                                 disabled={isUploading || !selectedFile}
                                 className="
-                                    w-full bg-gradient-to-r from-blue-600 to-purple-600 
-                                    hover:from-blue-700 hover:to-purple-700
+                                    w-full bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 
+                                    hover:from-blue-700 hover:via-purple-700 hover:to-emerald-700
                                     disabled:from-gray-400 disabled:to-gray-500
-                                    text-white font-bold text-lg
-                                    px-6 py-4 rounded-2xl 
-                                    transition-all duration-300 shadow-xl hover:shadow-2xl 
+                                    text-white font-bold text-xl
+                                    px-6 py-5 rounded-2xl 
+                                    transition-all duration-300 shadow-2xl hover:shadow-3xl 
                                     disabled:cursor-not-allowed 
                                     transform hover:scale-105 active:scale-95
                                     relative overflow-hidden group
                                     relative z-10
                                 "
                             >
-                                {/* Button glow effect */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-2xl"></div>
+                                {/* Enhanced button glow effect */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-2xl"></div>
                                 
-                                <span className="relative z-10 flex items-center justify-center gap-2">
+                                <span className="relative z-10 flex items-center justify-center gap-3">
                                     {isUploading ? (
                                         <>
-                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                            Processing...
+                                            <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            <span>Processing...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <Zap className="w-5 h-5" />
-                                            Start AI Editing
+                                            <Zap className="w-6 h-6" />
+                                            <span>Start AI Editing</span>
                                         </>
                                     )}
                                 </span>
                             </button>
 
                             {/* Note */}
-                            <p className="text-xs text-gray-500 text-center mt-4 relative z-10">
+                            <p className="text-sm text-gray-600 text-center mt-4 relative z-10 font-medium">
                                 {user ? (
-                                    <span className="flex items-center justify-center gap-1">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span className="flex items-center justify-center gap-2">
+                                        <div className="w-3 h-3 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full animate-pulse"></div>
                                         Your video will be processed immediately
                                     </span>
                                 ) : (
