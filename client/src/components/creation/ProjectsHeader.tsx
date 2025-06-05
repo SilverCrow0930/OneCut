@@ -6,7 +6,7 @@ const ProjectsHeader = () => {
         <div className="flex flex-col items-center space-y-8">
             {/* Title Section - More prominent like Canva */}
             <div className="space-y-4">
-                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500 bg-clip-text text-transparent">
+                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent">
                     What will you create today?
                 </h1>
                 <p className="text-lg text-gray-600 max-w-2xl mx-auto">

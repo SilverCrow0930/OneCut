@@ -1,23 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import HomeFirstSection from "@/components/home/HomeFirstSection";
+import HomeHeroSection from "@/components/home/HomeHeroSection";
+import HomeFeatures from "@/components/home/HomeFeatures";
+import HomeSocialProof from "@/components/home/HomeSocialProof";
+import HomeHowItWorks from "@/components/home/HomeHowItWorks";
 import AutocutSection from "@/components/home/AutocutSection";
 import HomeNavbar from "@/components/home/HomeNavbar";
 import ConfidentialityButton from "@/components/layout/ConfidentialityButton";
 import Demos from "@/components/home/Demos";
+import HomeCTA from "@/components/home/HomeCTA";
 
 export default function Home() {
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
 
   return (
-    <div className="relative flex flex-col items-center w-full h-full bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-x-hidden">
+    <div className="relative flex flex-col items-center w-full min-h-screen bg-white overflow-x-hidden">
 
-      {/* Background */}
-      {/* <div className="absolute top-0 left-0 w-full h-full opacity-30">
-        <BubbleEffect />
-      </div> */}
-
+      {/* SEO Content */}
       <p className="absolute opacity-0">
         AI-powered video editor for podcasters, educators, and content creators.<br />
         Lemona's AI copilot cuts long recordings into short videos based on your needs.
@@ -30,35 +30,32 @@ export default function Home() {
         />
       </div>
 
+      {/* Navigation */}
+      <HomeNavbar />
+
       {/* Main Content */}
-      <div
-        className="
-          flex flex-col w-full px-2 sm:px-4
-          md:w-[95%] lg:w-[90%] xl:w-[85%]
-        "
-        style={{
-          zIndex: 10
-        }}
-      >
+      <main className="w-full">
+        {/* Hero Section */}
+        <HomeHeroSection />
 
-        {/* Navbar */}
-        <HomeNavbar />
+        {/* Features Section */}
+        <HomeFeatures />
 
-        <div className="
-          flex flex-col w-full min-h-screen
-          overflow-y-auto overflow-x-hidden
-        ">
-          <HomeFirstSection />
-          
-          {/* New Autocut Section */}
-          <AutocutSection />
-        </div>
+        {/* How It Works */}
+        <HomeHowItWorks />
 
+        {/* Social Proof */}
+        <HomeSocialProof />
+
+        {/* Autocut Section */}
+        <AutocutSection />
+
+        {/* Demos */}
         <Demos />
 
-        <div className="h-40" />
-
-      </div>
+        {/* Final CTA */}
+        <HomeCTA />
+      </main>
 
     </div>
   );
