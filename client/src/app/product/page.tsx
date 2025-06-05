@@ -1,33 +1,33 @@
 "use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function ProductPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to home page and scroll to how-it-works section
-    router.replace('/#how-it-works');
+    // Redirect to home page
+    router.replace("/#how-it-works");
     
-    // Small delay to ensure page loads before scrolling
+    // Small delay to ensure the page has loaded before scrolling
     setTimeout(() => {
-      const howItWorksSection = document.getElementById('how-it-works');
+      const howItWorksSection = document.getElementById("how-it-works");
       if (howItWorksSection) {
         howItWorksSection.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'start'
+          behavior: "smooth",
+          block: "start"
         });
       }
     }, 100);
   }, [router]);
 
-  // Show loading state while redirecting
+  // Show a loading state while redirecting
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600">Redirecting to product information...</p>
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading product information...</p>
       </div>
     </div>
   );
