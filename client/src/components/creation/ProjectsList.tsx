@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { apiPath } from '@/lib/config'
 import { useAuth } from '@/contexts/AuthContext'
 import { Project } from '@/types/projects'
 import { formatSecondsAsTimestamp } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
-import { Clock, Play, Folder, MoreVertical, Download, Copy, Trash2 } from 'lucide-react'
+import { Clock, Play, Folder, MoreHorizontal, Download, Copy, Trash2 } from 'lucide-react'
 
 export default function ProjectsList() {
     const router = useRouter()
@@ -12,8 +12,7 @@ export default function ProjectsList() {
     const [projects, setProjects] = useState<Project[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-    const menuRef = useRef<HTMLDivElement>(null)
+    const [showMenu, setShowMenu] = useState<string | null>(null)
 
     useEffect(() => {
         // only fetch once we have a valid token
@@ -63,43 +62,37 @@ export default function ProjectsList() {
 
     // Close menu when clicking outside
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setOpenMenuId(null)
-            }
-        }
-
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside)
-        }
+        const handleClickOutside = () => setShowMenu(null)
+        document.addEventListener('click', handleClickOutside)
+        return () => document.removeEventListener('click', handleClickOutside)
     }, [])
 
-    const handleDownload = async (project: Project, e: React.MouseEvent) => {
+    const handleMenuClick = (e: React.MouseEvent, projectId: string) => {
         e.stopPropagation()
-        setOpenMenuId(null)
-        // TODO: Implement download functionality
-        console.log('Download project:', project.name)
-        alert('Download functionality will be implemented soon!')
+        setShowMenu(showMenu === projectId ? null : projectId)
     }
 
-    const handleDuplicate = async (project: Project, e: React.MouseEvent) => {
+    const handleDownload = async (e: React.MouseEvent, project: Project) => {
         e.stopPropagation()
-        setOpenMenuId(null)
+        setShowMenu(null)
+        // TODO: Implement download functionality
+        console.log('Download project:', project.id)
+        alert('Download functionality coming soon!')
+    }
+
+    const handleDuplicate = async (e: React.MouseEvent, project: Project) => {
+        e.stopPropagation()
+        setShowMenu(null)
         
         if (!session?.access_token) return
 
         try {
-            const response = await fetch(apiPath('projects'), {
+            const response = await fetch(apiPath(`projects/${project.id}/duplicate`), {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({
-                    name: `${project.name} (Copy)`,
-                    // Add other project data to duplicate
-                }),
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                }
             })
             
             if (!response.ok) {
@@ -114,39 +107,34 @@ export default function ProjectsList() {
         }
     }
 
-    const handleDelete = async (project: Project, e: React.MouseEvent) => {
+    const handleDelete = async (e: React.MouseEvent, project: Project) => {
         e.stopPropagation()
-        setOpenMenuId(null)
+        setShowMenu(null)
         
-        if (!session?.access_token) return
-        
-        if (!confirm(`Are you sure you want to delete "${project.name}"? This action cannot be undone.`)) {
+        if (!confirm(`Are you sure you want to delete "${project.name || 'Untitled Project'}"? This action cannot be undone.`)) {
             return
         }
+
+        if (!session?.access_token) return
 
         try {
             const response = await fetch(apiPath(`projects/${project.id}`), {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
+                    'Authorization': `Bearer ${session.access_token}`
+                }
             })
             
             if (!response.ok) {
                 throw new Error('Failed to delete project')
             }
             
-            // Remove project from local state
-            setProjects(projects.filter(p => p.id !== project.id))
+            // Remove from local state
+            setProjects(prev => prev.filter(p => p.id !== project.id))
         } catch (error) {
             console.error('Error deleting project:', error)
             alert('Failed to delete project')
         }
-    }
-
-    const handleMenuClick = (projectId: string, e: React.MouseEvent) => {
-        e.stopPropagation()
-        setOpenMenuId(openMenuId === projectId ? null : projectId)
     }
 
     if (!session) {
@@ -213,63 +201,34 @@ export default function ProjectsList() {
                 >
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300">
                         {/* Thumbnail */}
-                        <div className="aspect-video relative">
+                        <div className="aspect-video relative bg-gray-100">
                             {project.thumbnail_url ? (
                                 <img
                                     src={project.thumbnail_url}
                                     alt={project.name}
                                     className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        const target = e.currentTarget;
+                                        target.style.display = 'none';
+                                        const fallback = target.parentElement?.querySelector('.fallback-content');
+                                        if (fallback) {
+                                            (fallback as HTMLElement).style.display = 'flex';
+                                        }
+                                    }}
                                 />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center">
-                                    <div className="w-12 h-12 text-gray-400 mb-2">
-                                        <Play className="w-full h-full" strokeWidth={1.5} />
-                                    </div>
-                                    <span className="text-xs text-gray-500 font-medium">No Preview</span>
-                                </div>
-                            )}
-
-                            {/* Three-dot menu button */}
+                            ) : null}
+                            
+                            {/* Fallback content */}
                             <div 
-                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                ref={openMenuId === project.id ? menuRef : null}
+                                className={`fallback-content w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
                             >
-                                <button
-                                    onClick={(e) => handleMenuClick(project.id, e)}
-                                    className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm hover:bg-white transition-colors duration-200 flex items-center justify-center"
-                                >
-                                    <MoreVertical className="w-4 h-4 text-gray-600" />
-                                </button>
-                                
-                                {/* Dropdown menu */}
-                                {openMenuId === project.id && (
-                                    <div className="absolute top-10 right-0 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                                        <button
-                                            onClick={(e) => handleDownload(project, e)}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <Download className="w-4 h-4" />
-                                            Download
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDuplicate(project, e)}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <Copy className="w-4 h-4" />
-                                            Duplicate
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDelete(project, e)}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            Delete
-                                        </button>
-                                    </div>
-                                )}
+                                <div className="w-12 h-12 text-gray-400 mb-2">
+                                    <Play className="w-full h-full" strokeWidth={1.5} />
+                                </div>
+                                <span className="text-xs text-gray-500 font-medium">No Preview</span>
                             </div>
 
-                            {/* Duration badge */}
+                            {/* Duration badge - only show if duration > 0 */}
                             {project.duration && project.duration > 0 && (
                                 <div className="absolute top-3 left-3">
                                     <div className="flex items-center space-x-1 bg-black/75 text-white px-2 py-1 rounded-md backdrop-blur-sm">
@@ -280,6 +239,43 @@ export default function ProjectsList() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Three-dot menu button - only visible on hover */}
+                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <button
+                                    onClick={(e) => handleMenuClick(e, project.id)}
+                                    className="w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-md flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
+                                >
+                                    <MoreHorizontal className="w-4 h-4 text-gray-700" />
+                                </button>
+                                
+                                {/* Dropdown menu */}
+                                {showMenu === project.id && (
+                                    <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                                        <button
+                                            onClick={(e) => handleDownload(e, project)}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-2"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            Download
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDuplicate(e, project)}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-2"
+                                        >
+                                            <Copy className="w-4 h-4" />
+                                            Duplicate
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDelete(e, project)}
+                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-2"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Delete
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Hover overlay */}
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
