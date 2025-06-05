@@ -58,70 +58,24 @@ const DEMOS: Demo[] = [
     },
 ]
 
-const DURATION = 10000 // 10 seconds per demo for YouTube videos
-
 const Demos = () => {
     const [selectedDemo, setSelectedDemo] = useState<number>(0)
     const [expandedDemos, setExpandedDemos] = useState<Set<number>>(new Set([0]))
-    const [progress, setProgress] = useState<number>(0)
-    const [videoDuration, setVideoDuration] = useState<number>(DURATION)
     const [videoLoading, setVideoLoading] = useState<boolean>(true)
     const [videoError, setVideoError] = useState<string | null>(null)
-    const intervalRef = useRef<NodeJS.Timeout | null>(null)
     const videoRef = useRef<HTMLVideoElement>(null)
 
     useEffect(() => {
         // Expand only the selected demo
         setExpandedDemos(new Set([selectedDemo]))
 
-        // Reset progress and loading states
-        setProgress(0)
+        // Reset loading states when demo changes
         setVideoLoading(true)
         setVideoError(null)
-
-        // Set duration based on video type
-        if (DEMOS[selectedDemo].video.type === 'local') {
-            if (videoRef.current) {
-                setVideoDuration(videoRef.current.duration * 1000) // Convert to milliseconds
-            }
-        } else {
-            setVideoDuration(DURATION)
-        }
-
-        // Clear any existing interval
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current)
-        }
-
-        // Start progress animation after a short delay to allow video to load
-        const startProgress = () => {
-            const step = 100
-            let elapsed = 0
-            intervalRef.current = setInterval(() => {
-                elapsed += step
-                setProgress((elapsed / videoDuration) * 100)
-                if (elapsed >= videoDuration) {
-                    clearInterval(intervalRef.current!)
-                    setSelectedDemo((prev) => (prev + 1) % DEMOS.length)
-                }
-            }, step)
-        }
-
-        // Start progress after a short delay
-        setTimeout(startProgress, 1000)
-
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current)
-            }
-        }
-    }, [selectedDemo, videoDuration])
+    }, [selectedDemo])
 
     const handleManualSelect = (index: number) => {
         if (index !== selectedDemo) {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current)
-            }
             setSelectedDemo(index)
         }
     }
@@ -129,7 +83,6 @@ const Demos = () => {
     const handleVideoLoad = () => {
         setVideoLoading(false)
         setVideoError(null)
-        console.log('Video loaded successfully')
     }
 
     const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
@@ -139,10 +92,6 @@ const Demos = () => {
     }
 
     const handleVideoLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-        const video = e.target as HTMLVideoElement
-        if (video.duration) {
-            setVideoDuration(video.duration * 1000)
-        }
         setVideoLoading(false)
     }
 
@@ -181,14 +130,6 @@ const Demos = () => {
                                     </p>
                                 )
                             }
-                            {selectedDemo === index && (
-                                <div className="w-full bg-gray-200 h-1 rounded-full overflow-hidden mt-2">
-                                    <div
-                                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-[100ms]"
-                                        style={{ width: `${progress}%` }}
-                                    />
-                                </div>
-                            )}
                         </div>
                     ))
                 }
@@ -246,17 +187,6 @@ const Demos = () => {
                             onCanPlay={handleVideoLoad}
                             style={{ display: videoLoading || videoError ? 'none' : 'block' }}
                         />
-                    )}
-
-                    {/* Fallback placeholder when no video is loading */}
-                    {!videoLoading && !videoError && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50" style={{ display: 'none' }}>
-                            <div className="flex flex-col items-center gap-3">
-                                <Play className="w-16 h-16 text-blue-500" />
-                                <p className="text-gray-700 font-medium">Demo Video</p>
-                                <p className="text-gray-500 text-sm">{DEMOS[selectedDemo].title}</p>
-                            </div>
-                        </div>
                     )}
                 </div>
             </div>
