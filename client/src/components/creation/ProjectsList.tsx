@@ -190,7 +190,7 @@ export default function ProjectsList() {
     }
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
             {projects.map((project, index) => (
                 <div
                     key={project.id}
@@ -199,9 +199,9 @@ export default function ProjectsList() {
                         router.push(`/projects/${project.id}`)
                     }}
                 >
-                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300">
+                    <div className="bg-white rounded-2xl border-0 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                         {/* Thumbnail */}
-                        <div className="aspect-video relative bg-gray-100">
+                        <div className="aspect-video relative bg-gray-50">
                             {project.thumbnail_url ? (
                                 <img
                                     src={project.thumbnail_url}
@@ -220,49 +220,49 @@ export default function ProjectsList() {
                             
                             {/* Fallback content */}
                             <div 
-                                className={`fallback-content w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
+                                className={`fallback-content w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
                             >
-                                <div className="w-12 h-12 text-gray-400 mb-2">
+                                <div className="w-14 h-14 text-gray-300 mb-3">
                                     <Play className="w-full h-full" strokeWidth={1.5} />
                                 </div>
-                                <span className="text-xs text-gray-500 font-medium">No Preview</span>
+                                <span className="text-sm text-gray-400 font-medium">No Preview</span>
                             </div>
 
                             {/* Three-dot menu button - only visible on hover */}
                             <div 
-                                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <button
                                     onClick={(e) => handleMenuClick(e, project.id)}
-                                    className="w-8 h-8 bg-white/90 hover:bg-white rounded-full shadow-md flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
+                                    className="w-9 h-9 bg-white/95 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
                                 >
-                                    <MoreHorizontal className="w-4 h-4 text-gray-700" />
+                                    <MoreHorizontal className="w-4 h-4 text-gray-600" />
                                 </button>
                                 
                                 {/* Dropdown menu */}
                                 {showMenu === project.id && (
                                     <div 
-                                        className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+                                        className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <button
                                             onClick={(e) => handleDownload(e, project)}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-2"
+                                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
                                         >
                                             <Download className="w-4 h-4" />
                                             Download
                                         </button>
                                         <button
                                             onClick={(e) => handleDuplicate(e, project)}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-2"
+                                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
                                         >
                                             <Copy className="w-4 h-4" />
                                             Duplicate
                                         </button>
                                         <button
                                             onClick={(e) => handleDelete(e, project)}
-                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-2"
+                                            className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                             Delete
@@ -272,16 +272,16 @@ export default function ProjectsList() {
                             </div>
 
                             {/* Hover overlay */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                <div className="bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg">
-                                    <Play className="w-6 h-6 text-gray-700" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <div className="bg-white/95 backdrop-blur-sm rounded-full p-4 shadow-lg">
+                                    <Play className="w-6 h-6 text-gray-600" />
                                 </div>
                             </div>
                         </div>
 
                         {/* Project info */}
-                        <div className="p-4">
-                            <h3 className="font-semibold text-gray-900 truncate mb-1">
+                        <div className="p-6">
+                            <h3 className="font-semibold text-gray-900 truncate mb-2 text-base">
                                 {project.name || 'Untitled Project'}
                             </h3>
                             <p className="text-sm text-gray-500">
