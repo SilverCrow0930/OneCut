@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import HomeHeroSection from "@/components/home/HomeHeroSection";
-import HomeFeatures from "@/components/home/HomeFeatures";
 import HomeSocialProof from "@/components/home/HomeSocialProof";
 import HomeHowItWorks from "@/components/home/HomeHowItWorks";
 import AutocutSection from "@/components/home/AutocutSection";
@@ -37,9 +36,6 @@ export default function Home() {
       <main className="w-full">
         {/* Hero Section */}
         <HomeHeroSection />
-
-        {/* Features Section */}
-        <HomeFeatures />
 
         {/* How It Works */}
         <HomeHowItWorks />
