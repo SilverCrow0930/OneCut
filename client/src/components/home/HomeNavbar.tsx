@@ -38,7 +38,7 @@ export default function HomeNavbar() {
     }
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
@@ -50,17 +50,17 @@ export default function HomeNavbar() {
                     <div className="flex items-center space-x-8">
                         {/* Navigation Links */}
                         <div className="hidden md:flex items-center space-x-8">
-                            <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
+                            <a href="#" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
                                 Product
                             </a>
-                            <a href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
+                            <a href="/pricing" className="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
                                 Pricing
                             </a>
                             <a 
                                 href="https://x.com/lemona_labs" 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+                                className="text-gray-300 hover:text-white transition-colors duration-200 font-medium"
                             >
                                 Twitter
                             </a>
@@ -75,13 +75,13 @@ export default function HomeNavbar() {
                                             {user.email?.charAt(0).toUpperCase()}
                                         </span>
                                     </div>
-                                    <span className="text-gray-700 text-sm font-medium hidden sm:block">
+                                    <span className="text-gray-300 text-sm font-medium hidden sm:block">
                                         {user.email}
                                     </span>
                                 </div>
                                 <button
                                     onClick={handleSignOut}
-                                    className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+                                    className="text-gray-300 hover:text-white transition-colors duration-200 font-medium"
                                 >
                                     Sign Out
                                 </button>

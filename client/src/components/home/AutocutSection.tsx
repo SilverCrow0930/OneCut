@@ -105,17 +105,17 @@ const AutocutSection = () => {
             id="autocut-section"
             className="
                 flex flex-col w-full min-h-screen items-center justify-center
-                py-20 px-4 bg-gray-50
+                py-20 px-4 bg-gray-900
             "
         >
             <div className="max-w-2xl w-full">
                 
                 {/* Title & Subtitle */}
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                         Transform Hours into Highlights
                     </h2>
-                    <p className="text-lg text-gray-600">
+                    <p className="text-lg text-gray-300">
                         Upload your long-form content and let AI create polished highlights
                     </p>
                 </div>
@@ -136,37 +136,37 @@ const AutocutSection = () => {
                             border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer
                             transition-all duration-300 hover:scale-[1.02]
                             ${selectedFile ? 
-                                'border-blue-400 bg-blue-50 shadow-lg' : 
-                                'border-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-md'
+                                'border-blue-400 bg-blue-900/20 shadow-lg' : 
+                                'border-gray-600 hover:border-blue-400 hover:bg-blue-900/10 hover:shadow-md'
                             }
                         `}
                     >
                         {selectedFile ? (
                             <div className="flex items-center justify-center gap-4">
-                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <Video className="w-8 h-8 text-blue-600" />
+                                <div className="w-16 h-16 bg-blue-900/50 rounded-full flex items-center justify-center">
+                                    <Video className="w-8 h-8 text-blue-400" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="text-xl font-semibold text-blue-800 mb-1">
+                                    <p className="text-xl font-semibold text-blue-300 mb-1">
                                         {selectedFile.name}
                                     </p>
-                                    <p className="text-sm text-blue-600">
+                                    <p className="text-sm text-blue-400">
                                         Click to change file
                                     </p>
                                 </div>
                             </div>
                         ) : (
                             <div>
-                                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
                                     <Upload className="w-10 h-10 text-gray-400" />
                                 </div>
-                                <h3 className="text-2xl font-semibold text-gray-800 mb-3">
+                                <h3 className="text-2xl font-semibold text-white mb-3">
                                     Upload your 1-2 hour content
                                 </h3>
-                                <p className="text-gray-500 mb-4">
+                                <p className="text-gray-300 mb-4">
                                     Supports MP4, MOV, AVI formats
                                 </p>
-                                <p className="text-sm text-gray-400">
+                                <p className="text-sm text-gray-500">
                                     Drag and drop or click to browse
                                 </p>
                             </div>
@@ -175,12 +175,12 @@ const AutocutSection = () => {
                 </div>
 
                 {/* Target Duration Slider */}
-                <div className="mb-8 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div className="mb-8 bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-700">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Clock className="w-5 h-5 text-blue-600" />
+                        <div className="w-10 h-10 bg-blue-900/50 rounded-full flex items-center justify-center">
+                            <Clock className="w-5 h-5 text-blue-400" />
                         </div>
-                        <span className="text-xl font-semibold text-gray-800">
+                        <span className="text-xl font-semibold text-white">
                             Target Duration: {targetDuration} minutes
                         </span>
                     </div>
@@ -193,7 +193,7 @@ const AutocutSection = () => {
                             value={targetDuration}
                             onChange={(e) => setTargetDuration(parseInt(e.target.value))}
                             className="
-                                w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer
+                                w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer
                                 [&::-webkit-slider-thumb]:appearance-none 
                                 [&::-webkit-slider-thumb]:w-6 
                                 [&::-webkit-slider-thumb]:h-6 
@@ -220,7 +220,7 @@ const AutocutSection = () => {
                                 [&::-moz-range-thumb]:border-none
                             "
                         />
-                        <div className="flex justify-between text-sm text-gray-500 mt-3">
+                        <div className="flex justify-between text-sm text-gray-400 mt-3">
                             <span className="font-medium">5 min</span>
                             <span className="font-medium">30 min</span>
                         </div>
@@ -228,10 +228,10 @@ const AutocutSection = () => {
                 </div>
 
                 {/* Content Type Selection */}
-                <div className="mb-10 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                            <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="mb-10 bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-700">
+                    <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-900/50 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 011 1v2a1 1 0 01-1 1h-1v12a2 2 0 01-2 2H6a2 2 0 01-2-2V8H3a1 1 0 01-1-1V5a1 1 0 011-1h4z" />
                             </svg>
                         </div>
@@ -248,8 +248,8 @@ const AutocutSection = () => {
                                         flex flex-col items-center p-6 rounded-xl border-2 transition-all duration-200
                                         hover:scale-105 active:scale-95
                                         ${contentType === type.id ? 
-                                            'border-blue-500 bg-blue-50 text-blue-700 shadow-md' : 
-                                            'border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm'
+                                            'border-blue-500 bg-blue-900/30 text-blue-300 shadow-md' : 
+                                            'border-gray-600 hover:border-blue-400 hover:bg-blue-900/10 hover:shadow-sm text-gray-300'
                                         }
                                     `}
                                 >
@@ -268,7 +268,7 @@ const AutocutSection = () => {
                     className="
                         w-full bg-gradient-to-r from-blue-600 to-purple-600 
                         hover:from-blue-700 hover:to-purple-700
-                        disabled:from-gray-400 disabled:to-gray-500
+                        disabled:from-gray-600 disabled:to-gray-700
                         text-white font-bold text-xl
                         px-8 py-5 rounded-2xl 
                         transition-all duration-300 shadow-lg hover:shadow-xl 

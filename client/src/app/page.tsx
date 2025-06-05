@@ -10,7 +10,7 @@ export default function Home() {
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
 
   return (
-    <div className="relative flex flex-col items-center w-full h-full bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-x-hidden">
+    <div className="relative flex flex-col items-center w-full h-full bg-black overflow-x-hidden">
 
       {/* SEO Content */}
       <p className="absolute opacity-0">

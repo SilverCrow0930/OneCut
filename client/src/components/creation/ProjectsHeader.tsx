@@ -6,10 +6,10 @@ const ProjectsHeader = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             {/* Title Section */}
             <div className="space-y-2">
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-3xl font-bold text-white">
                     Your Projects
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-300">
                     Create and manage your video projects
                 </p>
             </div>
