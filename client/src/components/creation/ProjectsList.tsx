@@ -62,17 +62,21 @@ export default function ProjectsList() {
 
     // Close menu when clicking outside
     useEffect(() => {
-        const handleClickOutside = () => setShowMenu(null)
-        document.addEventListener('click', handleClickOutside)
-        return () => document.removeEventListener('click', handleClickOutside)
+        const handleClickOutside = (event: MouseEvent) => {
+            setShowMenu(null)
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
     const handleMenuClick = (e: React.MouseEvent, projectId: string) => {
+        e.preventDefault()
         e.stopPropagation()
         setShowMenu(showMenu === projectId ? null : projectId)
     }
 
     const handleDownload = async (e: React.MouseEvent, project: Project) => {
+        e.preventDefault()
         e.stopPropagation()
         setShowMenu(null)
         // TODO: Implement download functionality
@@ -81,6 +85,7 @@ export default function ProjectsList() {
     }
 
     const handleDuplicate = async (e: React.MouseEvent, project: Project) => {
+        e.preventDefault()
         e.stopPropagation()
         setShowMenu(null)
         
@@ -108,6 +113,7 @@ export default function ProjectsList() {
     }
 
     const handleDelete = async (e: React.MouseEvent, project: Project) => {
+        e.preventDefault()
         e.stopPropagation()
         setShowMenu(null)
         
@@ -135,6 +141,14 @@ export default function ProjectsList() {
             console.error('Error deleting project:', error)
             alert('Failed to delete project')
         }
+    }
+
+    const handleProjectClick = (projectId: string) => {
+        if (showMenu) {
+            setShowMenu(null)
+            return
+        }
+        router.push(`/projects/${projectId}`)
     }
 
     if (!session) {
@@ -195,9 +209,7 @@ export default function ProjectsList() {
                 <div
                     key={project.id}
                     className="group cursor-pointer relative"
-                    onClick={() => {
-                        router.push(`/projects/${project.id}`)
-                    }}
+                    onClick={() => handleProjectClick(project.id)}
                 >
                     <div className="bg-white rounded-2xl border-0 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                         {/* Thumbnail */}
@@ -230,10 +242,21 @@ export default function ProjectsList() {
 
                             {/* Three-dot menu button - only visible on hover */}
                             <div 
-                                className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                onClick={(e) => e.stopPropagation()}
+                                className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                                onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }}
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }}
                             >
                                 <button
+                                    onMouseDown={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                    }}
                                     onClick={(e) => handleMenuClick(e, project.id)}
                                     className="w-9 h-9 bg-white/95 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
                                 >
@@ -244,7 +267,14 @@ export default function ProjectsList() {
                                 {showMenu === project.id && (
                                     <div 
                                         className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                        }}
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                        }}
                                     >
                                         <button
                                             onClick={(e) => handleDownload(e, project)}
