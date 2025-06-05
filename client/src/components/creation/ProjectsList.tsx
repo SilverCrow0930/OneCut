@@ -228,18 +228,6 @@ export default function ProjectsList() {
                                 <span className="text-xs text-gray-500 font-medium">No Preview</span>
                             </div>
 
-                            {/* Duration badge - only show if duration > 0 */}
-                            {project.duration && project.duration > 0 && (
-                                <div className="absolute top-3 left-3">
-                                    <div className="flex items-center space-x-1 bg-black/75 text-white px-2 py-1 rounded-md backdrop-blur-sm">
-                                        <Clock className="w-3 h-3" />
-                                        <span className="text-xs font-medium">
-                                            {formatSecondsAsTimestamp(project.duration)}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
                             {/* Three-dot menu button - only visible on hover */}
                             <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 <button
