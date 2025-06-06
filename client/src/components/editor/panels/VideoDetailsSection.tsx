@@ -6,7 +6,7 @@ import { Asset } from '@/contexts/AssetsContext'; // Assuming Asset type is expo
 interface VideoDetailsSectionProps {
     isExpanded: boolean;
     setIsExpanded: (expanded: boolean) => void;
-    processingState: 'idle' | 'starting' | 'generatingurl' | 'analyzing' | 'completed' | 'error';
+    processingState: 'idle' | 'starting' | 'generatingurl' | 'analyzing' | 'generating_clips' | 'clips_ready' | 'completed' | 'error';
     selectedFile: File | null;
     uploadedAsset: { id: string; mime_type: string; duration: number | null; } | null;
     prompt: string;

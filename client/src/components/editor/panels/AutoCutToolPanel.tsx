@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { UploadButton } from './auto-cut/UploadButton'
 import { PromptModal } from './auto-cut/PromptModal'
 import { ProcessingStatus } from './auto-cut/ProcessingStatus'
+import { ClipResultsView } from './auto-cut/ClipResultsView'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { useAutoCut } from '@/contexts/AutocutContext'
@@ -18,7 +19,7 @@ import { useParams } from 'next/navigation'
 import { TrackType } from '@/types/editor'
 import PanelHeader from './PanelHeader'
 
-type ProcessingState = 'idle' | 'starting' | 'generatingurl' | 'analyzing' | 'completed' | 'error';
+type ProcessingState = 'idle' | 'starting' | 'generatingurl' | 'analyzing' | 'generating_clips' | 'clips_ready' | 'completed' | 'error';
 
 interface ModelResponse {
     thoughts: string;
@@ -349,6 +350,7 @@ const AutoCutToolPanel = () => {
         mime_type: string;
         duration: number | null;
     } | null>(null);
+    const [generatedClips, setGeneratedClips] = useState<any[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { session } = useAuth();
     const { refresh, assets } = useAssets();
@@ -539,17 +541,60 @@ const AutoCutToolPanel = () => {
                 console.log('Processed thoughts array:', processedThoughts);
                 thoughtsRef.current = processedThoughts;
 
-                // Set processing state to completed
-                setProcessingState('completed');
+                // New OpusClip-style workflow: Generate downloadable clips
+                setProcessingState('generating_clips');
                 setIsUploading(false);
                 setUploadProgress(0);
 
-                // Show thoughts after a short delay
-                setTimeout(() => {
-                    console.log('Setting showThoughts to true after delay');
-                    setShowThoughts(true);
-                    setCurrentThoughtIndex(0); // Reset thought index
-                }, 1500);
+                // Parse the textOutput to get scenes and generate clips
+                try {
+                    const textOutput = response.data.textOutput?.text || response.data.textOutput || '';
+                    let scenes: Scene[];
+                    
+                    // Try to parse scenes from the textOutput
+                    if (typeof textOutput === 'string') {
+                        // Try to extract JSON from markdown code block if present
+                        const jsonMatch = textOutput.match(/```json\n([\s\S]*?)\n```/);
+                        if (jsonMatch) {
+                            scenes = JSON.parse(jsonMatch[1].trim());
+                        } else {
+                            // If no markdown block, try to find JSON array
+                            const arrayMatch = textOutput.match(/\[\s*\{[\s\S]*\}\s*\]/);
+                            if (arrayMatch) {
+                                scenes = JSON.parse(arrayMatch[0].trim());
+                            } else {
+                                // Try to parse directly
+                                scenes = JSON.parse(textOutput);
+                            }
+                        }
+                    } else {
+                        scenes = Array.isArray(textOutput) ? textOutput : [textOutput];
+                    }
+
+                    if (Array.isArray(scenes) && scenes.length > 0) {
+                        // Simulate clip generation delay
+                        setTimeout(() => {
+                            generateDownloadableClips(scenes);
+                        }, 2000);
+                    } else {
+                        // Fallback to old workflow if parsing fails
+                        setProcessingState('completed');
+                        setTimeout(() => {
+                            console.log('Setting showThoughts to true after delay');
+                            setShowThoughts(true);
+                            setCurrentThoughtIndex(0);
+                        }, 1500);
+                    }
+                } catch (error) {
+                    console.error('Error parsing scenes for clip generation:', error);
+                    // Fallback to old workflow
+                    setProcessingState('completed');
+                    setTimeout(() => {
+                        console.log('Setting showThoughts to true after delay');
+                        setShowThoughts(true);
+                        setCurrentThoughtIndex(0);
+                    }, 1500);
+                }
 
                 // Reset file and prompt states
                 setSelectedFile(null);
@@ -743,6 +788,28 @@ const AutoCutToolPanel = () => {
         setShowResponse(false);
         setUploadProgress(0);
         setIsUploading(false);
+        setGeneratedClips([]);
+    };
+
+    // Mock function to generate downloadable clips from scenes
+    const generateDownloadableClips = (scenes: Scene[]) => {
+        const clips = scenes.map((scene, index) => ({
+            id: `clip-${index}`,
+            title: `Clip ${index + 1}: ${scene.hook_type || 'Highlight'}`,
+            description: scene.description,
+            duration: Math.round((scene.src_end - scene.src_start) / 1000), // Convert to seconds
+            src_start: scene.src_start,
+            src_end: scene.src_end,
+            viral_score: scene.viral_score,
+            hook_type: scene.hook_type,
+            preview_url: `${apiPath('assets/preview')}/${uploadedAsset?.id}?start=${scene.src_start}&end=${scene.src_end}&quality=low`,
+            download_url: `${apiPath('assets/clip')}/${uploadedAsset?.id}?start=${scene.src_start}&end=${scene.src_end}`,
+            thumbnail_url: `${apiPath('assets/thumbnail')}/${uploadedAsset?.id}?time=${scene.src_start}`,
+            aspect_ratio: videoFormat === 'short_vertical' ? '9:16' : '16:9' as '9:16' | '16:9'
+        }));
+
+        setGeneratedClips(clips);
+        setProcessingState('clips_ready');
     };
 
     const getProcessingMessage = () => {
@@ -753,6 +820,10 @@ const AutoCutToolPanel = () => {
                 return 'Preparing video for analysis...';
             case 'analyzing':
                 return 'Analyzing video content...';
+            case 'generating_clips':
+                return 'Generating downloadable clips...';
+            case 'clips_ready':
+                return 'Clips are ready for download!';
             case 'completed':
                 return 'Analysis completed!';
             case 'error':
@@ -823,7 +894,7 @@ const AutoCutToolPanel = () => {
                     )}
                     
                     {/* Processing Status */}
-                    {((isUploading || processingState !== 'idle') && !showThoughts && !showResponse) && (
+                    {((isUploading || processingState !== 'idle') && !showThoughts && !showResponse && processingState !== 'clips_ready') && (
                         <ProcessingStatus
                             processingState={processingState}
                             isUploading={isUploading}
@@ -879,8 +950,23 @@ const AutoCutToolPanel = () => {
                         </div>
                     )}
                     
-                    {/* Results Section */}
-                    {showResponse && modelResponse && (
+                    {/* New OpusClip-style Results Section */}
+                    {processingState === 'clips_ready' && generatedClips.length > 0 && (
+                        <div className="animate-slideUp flex-1 min-h-0">
+                            <ClipResultsView
+                                clips={generatedClips}
+                                onEditClip={(clip) => {
+                                    // Convert clip back to timeline format and add to editor
+                                    console.log('Edit clip:', clip);
+                                    // TODO: Implement timeline editing from clip
+                                }}
+                                onStartOver={resetToUploadView}
+                            />
+                        </div>
+                    )}
+
+                    {/* Original Timeline Results Section (fallback) */}
+                    {showResponse && modelResponse && processingState !== 'clips_ready' && (
                         <div className="animate-slideUp flex-1 min-h-0">
                             <div className="flex flex-col gap-2 bg-white rounded-lg h-full">
                                 <div className="flex items-center gap-3 p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
