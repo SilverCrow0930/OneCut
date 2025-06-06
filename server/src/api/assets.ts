@@ -133,6 +133,49 @@ router.post(
     }
 )
 
+// POST /api/v1/assets/upload-to-gcs — upload file to GCS and return GS URI (for QuickClips)
+router.post(
+    '/upload-to-gcs',
+    upload.single('file'),
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const authReq = req as AuthenticatedRequest
+            const file = req.file
+            if (!file) {
+                return res.status(400).json({
+                    error: 'No file uploaded'
+                })
+            }
+
+            // Build GCS key & upload
+            const ext = (file.originalname.split('.').pop() || '').toLowerCase()
+            const key = `${authReq.user.id}/${uuid()}.${ext}`
+            const gcsFile = bucket.file(key)
+
+            await gcsFile.save(file.buffer, {
+                metadata: { contentType: file.mimetype },
+                public: false,
+            })
+
+            console.log('File uploaded to GCS:', key)
+
+            // Return the GS URI for processing
+            const gsUri = `gs://lemona-edit-assets/${key}`
+            
+            res.status(200).json({ 
+                gsUri,
+                objectKey: key,
+                filename: file.originalname,
+                mimeType: file.mimetype
+            })
+        }
+        catch (err) {
+            console.error('GCS upload error:', err)
+            next(err)
+        }
+    }
+)
+
 // GET /api/v1/assets/:id/url — returns a signed URL valid for 1h
 router.get('/:id/url', async (req: Request, res: Response, next: NextFunction) => {
     try {

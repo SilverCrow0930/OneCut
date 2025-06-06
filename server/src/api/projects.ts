@@ -124,8 +124,25 @@ router.post(
                 })
             }
 
-            // 2) Insert new project using the public.users.id
-            const projectName = generateDefaultName()
+            // 2) Extract project data from request body
+            const {
+                name,
+                project_type = 'timeline',
+                processing_status = 'completed',
+                processing_progress = 100,
+                processing_message,
+                original_file_uri,
+                content_type,
+                target_duration,
+                video_format,
+                error_message,
+                quickclips_data
+            } = req.body
+
+            // Generate default name if not provided
+            const projectName = name || generateDefaultName()
+
+            // 3) Insert new project using the public.users.id
             const { data, error } = await supabase
                 .from('projects')
                 .insert({
@@ -134,8 +151,18 @@ router.post(
                     thumbnail_url: null,
                     duration: 0,
                     is_public: false,
+                    project_type,
+                    processing_status,
+                    processing_progress,
+                    processing_message,
+                    original_file_uri,
+                    content_type,
+                    target_duration,
+                    video_format,
+                    error_message,
+                    quickclips_data
                 })
-                .select('id')
+                .select('*')
                 .single()
 
             if (error || !data) {
@@ -145,10 +172,8 @@ router.post(
                 })
             }
 
-            // 3) Redirect browser to the editor URL
-            return res.status(201).json({
-                id: data.id
-            })
+            // 4) Return the created project
+            return res.status(201).json(data)
         }
         catch (err) {
             next(err)

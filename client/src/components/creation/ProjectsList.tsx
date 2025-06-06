@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Project } from '@/types/projects'
 import { formatSecondsAsTimestamp } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
-import { Clock, Play, Folder, MoreHorizontal, Download, Copy, Trash2 } from 'lucide-react'
+import { Clock, Play, Folder, MoreHorizontal, Download, Copy, Trash2, Loader2, CheckCircle, AlertCircle, Zap } from 'lucide-react'
 
 export default function ProjectsList() {
     const router = useRouter()
@@ -54,11 +54,22 @@ export default function ProjectsList() {
 
         load()
 
+        // Set up polling for processing projects
+        const interval = setInterval(() => {
+            const hasProcessingProjects = projects.some(p => 
+                p.project_type === 'quickclips' && p.processing_status === 'processing'
+            )
+            if (hasProcessingProjects) {
+                load()
+            }
+        }, 5000) // Poll every 5 seconds
+
         // cleanup in case the component unmounts early
         return () => {
             cancelled = true
+            clearInterval(interval)
         }
-    }, [session?.access_token])
+    }, [session?.access_token, projects])
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -143,12 +154,70 @@ export default function ProjectsList() {
         }
     }
 
-    const handleProjectClick = (projectId: string) => {
+    const getProjectStatusDisplay = (project: Project) => {
+        if (project.project_type !== 'quickclips') {
+            return null
+        }
+
+        switch (project.processing_status) {
+            case 'processing':
+                return (
+                    <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mb-3" />
+                        <p className="text-sm font-medium text-gray-900 mb-1">AI Processing...</p>
+                        <p className="text-xs text-gray-600 text-center px-4">{project.processing_message}</p>
+                        {project.processing_progress !== undefined && (
+                            <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-3">
+                                <div 
+                                    className="bg-emerald-600 h-1.5 rounded-full transition-all duration-500"
+                                    style={{ width: `${project.processing_progress}%` }}
+                                ></div>
+                            </div>
+                        )}
+                    </div>
+                )
+            case 'error':
+                return (
+                    <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center">
+                        <AlertCircle className="w-8 h-8 text-red-600 mb-3" />
+                        <p className="text-sm font-medium text-red-900 mb-1">Processing Failed</p>
+                        <p className="text-xs text-red-600 text-center px-4">{project.error_message || 'Unknown error'}</p>
+                    </div>
+                )
+            case 'completed':
+                return (
+                    <div className="absolute top-2 left-2">
+                        <div className="flex items-center gap-1 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                            <CheckCircle className="w-3 h-3" />
+                            Ready
+                        </div>
+                    </div>
+                )
+            default:
+                return null
+        }
+    }
+
+    const getProjectTypeIcon = (project: Project) => {
+        if (project.project_type === 'quickclips') {
+            return <Zap className="w-4 h-4 text-emerald-600" />
+        }
+        return <Play className="w-4 h-4 text-gray-400" />
+    }
+
+    const handleProjectClick = (project: Project) => {
         if (showMenu) {
             setShowMenu(null)
             return
         }
-        router.push(`/projects/${projectId}`)
+        
+        if (project.project_type === 'quickclips') {
+            // For QuickClips projects, go to a special view
+            router.push(`/quickclips/${project.id}`)
+        } else {
+            // For regular projects, go to the editor
+            router.push(`/projects/${project.id}`)
+        }
     }
 
     if (!session) {
@@ -209,7 +278,7 @@ export default function ProjectsList() {
                 <div
                     key={project.id}
                     className="group cursor-pointer relative"
-                    onClick={() => handleProjectClick(project.id)}
+                    onClick={() => handleProjectClick(project)}
                 >
                     <div className="bg-white rounded-2xl border-0 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                         {/* Thumbnail */}
@@ -235,88 +304,112 @@ export default function ProjectsList() {
                                 className={`fallback-content w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
                             >
                                 <div className="w-14 h-14 text-gray-300 mb-3">
-                                    <Play className="w-full h-full" strokeWidth={1.5} />
+                                    {getProjectTypeIcon(project)}
                                 </div>
-                                <span className="text-sm text-gray-400 font-medium">No Preview</span>
+                                <span className="text-sm text-gray-400 font-medium">
+                                    {project.project_type === 'quickclips' ? 'QuickClips' : 'No Preview'}
+                                </span>
                             </div>
 
-                            {/* Three-dot menu button - only visible on hover */}
-                            <div 
-                                className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
-                                onMouseDown={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                }}
-                                onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                }}
-                            >
-                                <button
+                            {/* Processing/Status Overlay */}
+                            {getProjectStatusDisplay(project)}
+
+                            {/* Three-dot menu button - only visible on hover and when not processing */}
+                            {project.processing_status !== 'processing' && (
+                                <div 
+                                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
                                     onMouseDown={(e) => {
                                         e.preventDefault()
                                         e.stopPropagation()
                                     }}
-                                    onClick={(e) => handleMenuClick(e, project.id)}
-                                    className="w-9 h-9 bg-white/95 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                    }}
                                 >
-                                    <MoreHorizontal className="w-4 h-4 text-gray-600" />
-                                </button>
-                                
-                                {/* Dropdown menu */}
-                                {showMenu === project.id && (
-                                    <div 
-                                        className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
+                                    <button
                                         onMouseDown={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()
                                         }}
-                                        onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                        }}
+                                        onClick={(e) => handleMenuClick(e, project.id)}
+                                        className="w-9 h-9 bg-white/95 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
                                     >
-                                        <button
-                                            onClick={(e) => handleDownload(e, project)}
-                                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
+                                        <MoreHorizontal className="w-4 h-4 text-gray-600" />
+                                    </button>
+                                    
+                                    {/* Dropdown menu */}
+                                    {showMenu === project.id && (
+                                        <div 
+                                            className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
+                                            onMouseDown={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                            }}
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                            }}
                                         >
-                                            <Download className="w-4 h-4" />
-                                            Download
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDuplicate(e, project)}
-                                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
-                                        >
-                                            <Copy className="w-4 h-4" />
-                                            Duplicate
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDelete(e, project)}
-                                            className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            Delete
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Hover overlay */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                <div className="bg-white/95 backdrop-blur-sm rounded-full p-4 shadow-lg">
-                                    <Play className="w-6 h-6 text-gray-600" />
+                                            <button
+                                                onClick={(e) => handleDownload(e, project)}
+                                                className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                Download
+                                            </button>
+                                            <button
+                                                onClick={(e) => handleDuplicate(e, project)}
+                                                className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
+                                            >
+                                                <Copy className="w-4 h-4" />
+                                                Duplicate
+                                            </button>
+                                            <button
+                                                onClick={(e) => handleDelete(e, project)}
+                                                className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            )}
+
+                            {/* Hover overlay - only show when not processing */}
+                            {project.processing_status !== 'processing' && (
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <div className="bg-white/95 backdrop-blur-sm rounded-full p-4 shadow-lg">
+                                        {getProjectTypeIcon(project)}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Project info */}
                         <div className="p-6">
-                            <h3 className="font-semibold text-gray-900 truncate mb-2 text-base">
-                                {project.name || 'Untitled Project'}
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                                {new Date(project.created_at || Date.now()).toLocaleDateString()}
-                            </p>
+                            <div className="flex items-center gap-2 mb-2">
+                                {project.project_type === 'quickclips' && (
+                                    <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full text-xs font-medium">
+                                        <Zap className="w-3 h-3" />
+                                        QuickClips
+                                    </span>
+                                )}
+                                <h3 className="font-semibold text-gray-900 truncate text-base flex-1">
+                                    {project.name || 'Untitled Project'}
+                                </h3>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm text-gray-500">
+                                    {new Date(project.created_at || Date.now()).toLocaleDateString()}
+                                </p>
+                                {project.project_type === 'quickclips' && project.quickclips_data?.clips && (
+                                    <p className="text-xs text-gray-400">
+                                        {project.quickclips_data.clips.length} clips ready
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
