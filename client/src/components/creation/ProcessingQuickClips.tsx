@@ -10,7 +10,6 @@ export default function ProcessingQuickClips() {
     const { session } = useAuth()
     const [processingProjects, setProcessingProjects] = useState<Project[]>([])
     const [loading, setLoading] = useState(true)
-    const [allProjects, setAllProjects] = useState<Project[]>([]) // Debug: store all projects
 
     useEffect(() => {
         if (!session?.access_token) {
@@ -30,21 +29,20 @@ export default function ProcessingQuickClips() {
                 
                 if (res.ok) {
                     const allProjectsData: Project[] = await res.json()
-                    console.log('🔍 All projects loaded:', allProjectsData)
-                    setAllProjects(allProjectsData) // Debug: store all projects
                     
                     const quickClipsProjects = allProjectsData.filter(p => 
                         p.type === 'quickclips' && 
                         (p.processing_status === 'processing' || p.processing_status === 'completed' || p.processing_status === 'error')
                     )
-                    console.log('🎬 QuickClips projects found:', quickClipsProjects)
                     setProcessingProjects(quickClipsProjects)
 
-                    // Set up polling if there are processing projects (reduced frequency)
+                    // Set up polling ONLY if there are actively processing projects
                     const hasActiveProcessing = quickClipsProjects.some(p => p.processing_status === 'processing')
                     if (hasActiveProcessing && !intervalId) {
-                        intervalId = setInterval(loadProcessingProjects, 10000) // Poll every 10 seconds instead of 2
+                        console.log('Starting polling for processing QuickClips projects')
+                        intervalId = setInterval(loadProcessingProjects, 5000) // Poll every 5 seconds (less frequent)
                     } else if (!hasActiveProcessing && intervalId) {
+                        console.log('Stopping polling - no actively processing QuickClips projects')
                         clearInterval(intervalId)
                         intervalId = null
                     }
@@ -115,13 +113,7 @@ export default function ProcessingQuickClips() {
         }
     }
 
-    // Only show when we have session and there are QuickClips projects
     if (!session?.access_token) {
-        return null
-    }
-
-    // Hide section if no QuickClips projects exist at all
-    if (!loading && processingProjects.length === 0 && allProjects.filter(p => p.type === 'quickclips').length === 0) {
         return null
     }
 
@@ -145,44 +137,9 @@ export default function ProcessingQuickClips() {
         )
     }
 
-    // Debug: Show debug info when no processing projects
+    // Don't show the section if there are no QuickClips projects at all
     if (processingProjects.length === 0) {
-        return (
-            <div className="mb-12">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                        <Zap className="w-5 h-5 text-gray-600" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-900">AI Clips Processing</h2>
-                    <div className="flex-1 h-px bg-gradient-to-r from-gray-300 to-transparent"></div>
-                </div>
-                <div className="p-6 rounded-xl border-2 bg-yellow-50 border-yellow-200">
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600 mb-2">
-                            🔍 Debug: No processing projects found
-                        </p>
-                        <p className="text-xs text-gray-500 mb-4">
-                            Total projects: {allProjects.length} | 
-                            QuickClips projects: {allProjects.filter(p => p.type === 'quickclips').length} |
-                            Processing projects: {allProjects.filter(p => p.processing_status === 'processing').length}
-                        </p>
-                        {allProjects.length > 0 && (
-                            <details className="text-left">
-                                <summary className="cursor-pointer text-xs text-blue-600">Show all projects (debug)</summary>
-                                <pre className="text-xs bg-gray-100 p-2 rounded mt-2 overflow-auto">
-                                    {JSON.stringify(allProjects.map(p => ({
-                                        id: p.id,
-                                        name: p.name,
-                                        type: p.type,
-                                        processing_status: p.processing_status
-                                    })), null, 2)}
-                                </pre>
-                            </details>
-                        )}
-                    </div>
-                </div>
-            </div>
-        )
+        return null
     }
 
     return (

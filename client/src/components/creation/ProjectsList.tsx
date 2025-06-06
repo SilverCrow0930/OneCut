@@ -13,7 +13,6 @@ export default function ProjectsList() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showMenu, setShowMenu] = useState<string | null>(null)
-    const [deletingProject, setDeletingProject] = useState<string | null>(null)
 
     useEffect(() => {
         // only fetch once we have a valid token
@@ -41,16 +40,18 @@ export default function ProjectsList() {
                 if (!cancelled) {
                     setProjects(data)
                     
-                    // Set up polling for processing projects (reduced frequency)
-                    const hasProcessingProjects = data.some(p => 
+                    // Set up polling ONLY for actively processing projects
+                    const hasActivelyProcessingProjects = data.some(p => 
                         p.type === 'quickclips' && p.processing_status === 'processing'
                     )
                     
-                    if (hasProcessingProjects && !intervalId) {
+                    if (hasActivelyProcessingProjects && !intervalId) {
+                        console.log('Setting up polling for actively processing projects')
                         intervalId = setInterval(() => {
                             load()
-                        }, 15000) // Poll every 15 seconds instead of 3 for processing projects
-                    } else if (!hasProcessingProjects && intervalId) {
+                        }, 5000) // Poll every 5 seconds (less frequent)
+                    } else if (!hasActivelyProcessingProjects && intervalId) {
+                        console.log('Stopping polling - no actively processing projects')
                         clearInterval(intervalId)
                         intervalId = null
                     }
@@ -136,51 +137,29 @@ export default function ProjectsList() {
         e.stopPropagation()
         setShowMenu(null)
         
-        // Prevent multiple deletes
-        if (deletingProject === project.id) {
-            return
-        }
-        
         if (!confirm(`Are you sure you want to delete "${project.name || 'Untitled Project'}"? This action cannot be undone.`)) {
             return
         }
 
-        if (!session?.access_token) {
-            alert('Please sign in to delete projects')
-            return
-        }
-
-        setDeletingProject(project.id)
+        if (!session?.access_token) return
 
         try {
-            console.log('Deleting project:', project.id)
-            
             const response = await fetch(apiPath(`projects/${project.id}`), {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
+                    'Authorization': `Bearer ${session.access_token}`
                 }
             })
             
-            console.log('Delete response status:', response.status)
-            
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}))
-                console.error('Delete failed:', errorData)
-                throw new Error(errorData.error || `Failed to delete project (${response.status})`)
+                throw new Error('Failed to delete project')
             }
             
-            // Remove from local state immediately
+            // Remove from local state
             setProjects(prev => prev.filter(p => p.id !== project.id))
-            
-            console.log('Project deleted successfully')
-            
         } catch (error) {
             console.error('Error deleting project:', error)
-            alert(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        } finally {
-            setDeletingProject(null)
+            alert('Failed to delete project')
         }
     }
 
@@ -419,24 +398,10 @@ export default function ProjectsList() {
                                             </button>
                                             <button
                                                 onClick={(e) => handleDelete(e, project)}
-                                                disabled={deletingProject === project.id}
-                                                className={`w-full text-left px-4 py-3 text-sm transition-colors duration-200 flex items-center gap-3 ${
-                                                    deletingProject === project.id
-                                                        ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
-                                                        : 'text-red-600 hover:bg-red-50'
-                                                }`}
+                                                className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
                                             >
-                                                {deletingProject === project.id ? (
-                                                    <>
-                                                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                                                        Deleting...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Trash2 className="w-4 h-4" />
-                                                        Delete
-                                                    </>
-                                                )}
+                                                <Trash2 className="w-4 h-4" />
+                                                Delete
                                             </button>
                                         </div>
                                     )}

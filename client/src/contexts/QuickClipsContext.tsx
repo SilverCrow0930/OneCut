@@ -71,28 +71,17 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
             withCredentials: true // Include credentials for CORS
         });
 
-        // Log connection events with better error handling
+        // Log connection events
         newSocket.on('connect', () => {
-            console.log('✅ QuickClips WebSocket connected successfully');
-            console.log('Transport used:', newSocket.io.engine.transport.name);
+            console.log('QuickClips WebSocket connected successfully');
         });
 
         newSocket.on('connect_error', (error) => {
-            console.warn('⚠️ QuickClips WebSocket connection error (will retry with polling):', error.message);
-            // Don't log full error details - this is expected in many production environments
+            console.error('QuickClips WebSocket connection error:', error);
         });
 
         newSocket.on('disconnect', (reason) => {
-            console.log('📡 QuickClips WebSocket disconnected:', reason);
-        });
-
-        // Handle transport events
-        newSocket.on('upgrade', () => {
-            console.log('🚀 Upgraded to WebSocket transport');
-        });
-
-        newSocket.on('upgradeError', (error: any) => {
-            console.log('⬇️ Transport upgrade failed, staying with polling');
+            console.log('QuickClips WebSocket disconnected:', reason);
         });
 
         socketRef.current = newSocket;

@@ -262,9 +262,7 @@ router.delete(
             const { user } = req as AuthenticatedRequest
             const { id } = req.params
 
-            console.log('[Projects] Deleting project:', id, 'for user:', user.id)
-
-            // First verify the project exists and belongs to this user using profile lookup
+            // lookup profile id
             const { data: profile, error: profileError } = await supabase
                 .from('users')
                 .select('id')
@@ -272,46 +270,29 @@ router.delete(
                 .single()
 
             if (profileError || !profile) {
-                console.error('[Projects] Profile lookup failed:', profileError)
+                console.error('Profile lookup failed:', profileError)
                 return res.status(500).json({
                     error: 'Could not load user profile'
                 })
             }
 
-            // Verify ownership first
-            const { data: project, error: projectError } = await supabase
-                .from('projects')
-                .select('id')
-                .eq('id', id)
-                .eq('user_id', profile.id)
-                .single()
-
-            if (projectError || !project) {
-                console.error('[Projects] Project not found or access denied:', projectError)
-                return res.status(404).json({
-                    error: 'Project not found'
-                })
-            }
-
-            // Use service role to delete (bypass RLS since we already verified ownership)
-            const { error: deleteError } = await supabase
+            // delete project
+            const { error } = await supabase
                 .from('projects')
                 .delete()
                 .eq('id', id)
                 .eq('user_id', profile.id)
 
-            if (deleteError) {
-                console.error('[Projects] Delete error:', deleteError)
+            if (error) {
+                console.error('Project delete error:', error)
                 return res.status(500).json({
-                    error: deleteError.message
+                    error: error.message
                 })
             }
 
-            console.log('[Projects] Successfully deleted project:', id)
             return res.sendStatus(204)
         }
         catch (err) {
-            console.error('[Projects] Delete exception:', err)
             next(err)
         }
     }

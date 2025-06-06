@@ -99,7 +99,7 @@ app.get('/health', (req, res) => {
 })
 
 // Add a CORS test endpoint that doesn't require auth
-app.get('/cors-test', (req, res) => {
+app.get('/api/v1/cors-test', (req, res) => {
     res.json({ 
         message: 'CORS working', 
         origin: req.headers.origin || 'no-origin',
@@ -108,7 +108,7 @@ app.get('/cors-test', (req, res) => {
 })
 
 // Add a database test endpoint
-app.get('/db-test', async (req, res) => {
+app.get('/api/v1/db-test', async (req, res) => {
     try {
         const { supabase } = await import('./config/supabaseClient.js')
         
@@ -140,49 +140,16 @@ app.get('/db-test', async (req, res) => {
     }
 })
 
-// Add a project deletion test endpoint
-app.get('/delete-test/:projectId', async (req, res) => {
-    try {
-        const { supabase } = await import('./config/supabaseClient.js')
-        const { projectId } = req.params
-        
-        // Check if project exists
-        const { data: project, error: projectError } = await supabase
-            .from('projects')
-            .select('*')
-            .eq('id', projectId)
-            .single()
-        
-        if (projectError) {
-            return res.json({
-                status: 'project_not_found',
-                error: projectError.message,
-                projectId
-            })
-        }
-        
-        res.json({
-            status: 'project_found',
-            project: {
-                id: project.id,
-                name: project.name,
-                user_id: project.user_id,
-                type: project.type
-            },
-            timestamp: new Date().toISOString()
-        })
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            error: error instanceof Error ? error.message : 'Unknown error'
-        })
-    }
-})
-
-// protect everything under /api/v1 with authentication
+// protect everything under /api except the test endpoint
 app.use(
     '/api/v1',
-    authenticate,
+    (req, res, next) => {
+        // Skip auth for cors-test endpoint
+        if (req.path === '/cors-test') {
+            return next()
+        }
+        return authenticate(req, res, next)
+    },
     updateLastLogin,
     apiRouter
 )
