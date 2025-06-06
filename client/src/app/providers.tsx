@@ -2,11 +2,14 @@
 
 import React from 'react'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { QuickClipsProvider } from '@/contexts/QuickClipsContext'
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
         <AuthProvider>
-            {children}
+            <QuickClipsProvider>
+                {children}
+            </QuickClipsProvider>
         </AuthProvider>
     )
 }

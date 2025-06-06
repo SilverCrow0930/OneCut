@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle2, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 
 interface ProcessingStatusProps {
-    processingState: 'idle' | 'starting' | 'generatingurl' | 'analyzing' | 'generating_clips' | 'clips_ready' | 'completed' | 'error';
+    processingState: 'idle' | 'starting' | 'generatingurl' | 'analyzing' | 'completed' | 'error';
     isUploading: boolean;
     uploadProgress: number;
     processingMessage: string;
