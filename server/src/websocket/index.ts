@@ -2,7 +2,6 @@ import { Server, Socket } from 'socket.io';
 import { generativeModel } from '../integrations/vertexAI.js';
 import { generateContent } from '../integrations/googleGenAI.js';
 import { bucket } from '../integrations/googleStorage.js';
-import { supabase } from '../config/supabaseClient.js';
 
 const googleSearchRetrievalTool = {
     googleSearchRetrieval: {
@@ -50,48 +49,18 @@ export const setupWebSocket = (server: any) => {
         
         const io = new Server(server, {
             cors: {
-                origin: allowedOrigins, // Use simple array for Render.com compatibility
-                methods: ["GET", "POST", "OPTIONS"],
-                credentials: true,
-                allowedHeaders: [
-                    'Content-Type', 
-                    'Authorization', 
-                    'Accept', 
-                    'Origin', 
-                    'X-Requested-With',
-                    'Access-Control-Allow-Origin',
-                    'Cache-Control'
-                ],
-                optionsSuccessStatus: 200
+                origin: allowedOrigins,
+                methods: ["GET", "POST"],
+                credentials: true
             },
             maxHttpBufferSize: 1e8,
-            transports: ['polling', 'websocket'], // Start with polling for Render.com
+            transports: ['websocket', 'polling'], // Add polling as fallback
             allowEIO3: true,
             path: '/socket.io/',
             serveClient: false,
             cookie: false,
             pingTimeout: 60000,
-            pingInterval: 25000,
-            // Add specific settings for Render.com deployment
-            allowRequest: (req, callback) => {
-                const origin = req.headers.origin;
-                console.log('[WebSocket] allowRequest check for origin:', origin || 'no-origin');
-                
-                // Allow if no origin
-                if (!origin) {
-                    console.log('[WebSocket] ✓ Allowing request with no origin');
-                    return callback(null, true);
-                }
-                
-                // Check if origin is allowed
-                if (allowedOrigins.includes(origin)) {
-                    console.log('[WebSocket] ✓ Origin allowed:', origin);
-                    return callback(null, true);
-                } else {
-                    console.error('[WebSocket] ❌ Origin blocked:', origin);
-                    return callback('Origin not allowed', false);
-                }
-            }
+            pingInterval: 25000
         });
 
         console.log('[WebSocket] ✓ Socket.IO server created successfully');
@@ -369,9 +338,7 @@ export const setupWebSocket = (server: any) => {
                 mimeType: string,
                 contentType?: string,
                 targetDuration?: number,
-                videoFormat?: string,
-                outputMode?: 'individual' | 'stitched',
-                projectId?: string
+                videoFormat?: string
             }) => {
                 const processStartTime = Date.now();
                 console.log('=== QUICKCLIPS PROCESS STARTED ===');
@@ -381,47 +348,11 @@ export const setupWebSocket = (server: any) => {
                     contentType: data.contentType,
                     targetDuration: data.targetDuration,
                     videoFormat: data.videoFormat,
-                    projectId: data.projectId,
                     timestamp: new Date().toISOString(),
                     socketId: socket.id
                 });
 
-                // Helper function to update project status
-                const updateProjectStatus = async (status: string, message: string, clips?: any[]) => {
-                    if (!data.projectId) return;
-                    
-                    try {
-                        const updateData: any = {
-                            processing_status: status,
-                            processing_message: message
-                        };
-
-                        if (clips) {
-                            updateData.quickclips_data = {
-                                clips,
-                                contentType: data.contentType,
-                                targetDuration: data.targetDuration,
-                                videoFormat: data.videoFormat,
-                                outputMode: data.outputMode,
-                                originalFilename: 'uploaded_video' // TODO: Get from initial request
-                            };
-                        }
-
-                        await supabase
-                            .from('projects')
-                            .update(updateData)
-                            .eq('id', data.projectId);
-                        
-                        console.log(`✓ Updated project ${data.projectId} status: ${status}`);
-                    } catch (error) {
-                        console.error('Failed to update project status:', error);
-                    }
-                };
-
                 try {
-                    // Update project status: starting
-                    await updateProjectStatus('processing', 'Starting quick clips processing...');
-
                     // Send initial state
                     socket.emit('quickclips_state', {
                         state: 'starting',
@@ -452,9 +383,6 @@ export const setupWebSocket = (server: any) => {
                         throw new Error(`File not found in GCS: ${objectKey}`);
                     }
 
-                    // Update project status: analyzing
-                    await updateProjectStatus('processing', 'Analyzing video content...');
-
                     socket.emit('quickclips_state', {
                         state: 'analyzing',
                         message: 'Analyzing video content...',
@@ -469,70 +397,37 @@ export const setupWebSocket = (server: any) => {
                             expires: Date.now() + 24 * 60 * 60 * 1000,
                         });
 
-                    // Update project status: generating
-                    await updateProjectStatus('processing', 'AI is creating clips...');
-
                     socket.emit('quickclips_state', {
                         state: 'generating',
                         message: 'AI is creating clips...',
                         progress: 40
                     });
 
-                    // Generate prompt based on content type and output mode
+                    // Generate prompt based on content type and format
                     const contentTypePrompts = {
-                        'talking': 'Extract the most engaging and quotable moments from this talking video',
-                        'professional': 'Identify key insights, decisions, and important moments from this professional content',
-                        'gaming': 'Find the most exciting gameplay moments, highlights, epic fails, and clutch plays',
+                        'podcast': 'Extract the most engaging and shareable moments from this podcast',
+                        'professional_meeting': 'Identify key decisions, insights, and action items from this meeting',
+                        'educational_video': 'Find the most valuable learning moments and key takeaways',
+                        'talking_video': 'Extract the most engaging, quotable, and shareable moments'
                     };
 
-                    // Use custom content type if provided, otherwise use predefined
-                    const basePrompt = data.contentType && contentTypePrompts[data.contentType as keyof typeof contentTypePrompts] 
-                        ? contentTypePrompts[data.contentType as keyof typeof contentTypePrompts]
-                        : data.contentType 
-                            ? `Extract the most engaging and valuable moments from this ${data.contentType} content`
-                            : contentTypePrompts['talking'];
+                    const basePrompt = contentTypePrompts[data.contentType as keyof typeof contentTypePrompts] || contentTypePrompts['talking_video'];
+                    const formatInstruction = data.videoFormat === 'short_vertical' 
+                        ? 'Create 3-5 viral-ready clips (15-90 seconds each) optimized for mobile viewing.'
+                        : 'Create 2-4 substantial clips (2-5 minutes each) with complete context.';
 
-                    // Different instructions based on output mode
-                    const outputMode = data.outputMode || 'individual';
-                    let formatInstruction = '';
-                    let responseFormat = '';
+                    const fullPrompt = `${basePrompt}. ${formatInstruction} 
 
-                    if (outputMode === 'individual') {
-                        // Short Videos: Multiple 20-90s clips for social media
-                        formatInstruction = `Create 3-6 viral-ready clips (20-90 seconds each) optimized for social media.
-                        Each clip should be a single continuous segment that stands alone.
-                        Focus on hooks, emotional moments, and shareable content.`;
-                        
-                        responseFormat = `Return ONLY a JSON array of clips, no other text. Each clip should have:
-                        {
-                            "title": "Catchy, clickable title",
-                            "start_time": start_seconds,
-                            "end_time": end_seconds,
-                            "viral_score": score_1_to_10,
-                            "description": "Why this moment will go viral"
-                        }`;
-                    } else {
-                        // Long Video: One stitched highlight reel
-                        formatInstruction = `Create 4-8 highlight segments that will be stitched into one final video.
-                        Each segment should represent a key moment or topic.
-                        Focus on comprehensive coverage and smooth flow between segments.
-                        No time restrictions on individual segments.`;
-                        
-                        responseFormat = `Return ONLY a JSON array of segments, no other text. Each segment should have:
-                        {
-                            "title": "Descriptive segment title",
-                            "start_time": start_seconds,
-                            "end_time": end_seconds,
-                            "viral_score": importance_score_1_to_10,
-                            "description": "Why this segment is important for the highlight reel"
-                        }`;
+                    Return ONLY a JSON array of clips, no other text. Each clip should have:
+                    {
+                        "title": "Descriptive title",
+                        "start_time": start_seconds,
+                        "end_time": end_seconds,
+                        "viral_score": score_0_to_10,
+                        "description": "Why this moment is valuable"
                     }
 
-                    const fullPrompt = `${basePrompt}. ${formatInstruction}
-
-                    ${responseFormat}
-
-                    Target total duration: approximately ${data.targetDuration || 60} seconds across all ${outputMode === 'individual' ? 'clips' : 'segments'}.`;
+                    Target approximately ${data.targetDuration || 60} seconds total across all clips.`;
 
                     // Get AI analysis
                     const modelResponse = await generateContent(
@@ -543,26 +438,11 @@ export const setupWebSocket = (server: any) => {
                         data.videoFormat
                     );
 
-                    // Update project status: processing
-                    await updateProjectStatus('processing', 'Creating video files...');
-
                     socket.emit('quickclips_state', {
                         state: 'processing',
                         message: 'Creating video files...',
                         progress: 70
                     });
-
-                    // Send processing progress for each clip
-                    const updateClipProgress = (current: number, total: number, clipTitle: string) => {
-                        const progressPerClip = 20 / total; // 20% of total progress for video processing
-                        const currentProgress = 70 + (current * progressPerClip);
-                        
-                        socket.emit('quickclips_state', {
-                            state: 'processing',
-                            message: `Processing clip ${current + 1}/${total}: ${clipTitle}`,
-                            progress: Math.round(currentProgress)
-                        });
-                    };
 
                     // Parse AI response to extract clips
                     let clips;
@@ -598,45 +478,31 @@ export const setupWebSocket = (server: any) => {
                         ];
                     }
 
-                    // Update project status: finalizing
-                    await updateProjectStatus('processing', 'Finalizing clips...');
-
                     socket.emit('quickclips_state', {
                         state: 'finalizing',
                         message: 'Finalizing clips...',
                         progress: 90
                     });
 
-                    // Process actual video clips using FFmpeg
-                    const { VideoProcessor } = await import('../utils/videoProcessing');
-                    const videoProcessor = new VideoProcessor();
+                    // TODO: In a real implementation, you would:
+                    // 1. Use FFmpeg to extract video segments based on start/end times
+                    // 2. Upload the processed clips to GCS
+                    // 3. Generate signed download URLs
+                    // 4. Create thumbnails for each clip
 
-                    // Add unique IDs to clips
-                    const clipsWithIds = clips.map((clip: any, index: number) => ({
+                    // For now, simulate the final clips with mock download URLs
+                    const processedClips = clips.map((clip: any, index: number) => ({
                         id: `clip_${Date.now()}_${index}`,
                         title: clip.title,
+                        duration: clip.end_time - clip.start_time,
                         start_time: clip.start_time,
                         end_time: clip.end_time,
                         viral_score: clip.viral_score,
-                        description: clip.description
+                        description: clip.description,
+                        thumbnail: `https://picsum.photos/320/180?random=${index + 1}`, // Mock thumbnail
+                        downloadUrl: '#', // TODO: Real download URL from processed clip
+                        previewUrl: signedUrl // For now, use original video URL for preview
                     }));
-
-                    console.log('Starting video processing for clips:', clipsWithIds.length);
-
-                    // Process clips and generate actual video files
-                    const processedClips = await videoProcessor.processClips(
-                        data.fileUri,
-                        clipsWithIds,
-                        data.projectId || 'unknown',
-                        (data.videoFormat as 'short_vertical' | 'long_horizontal') || 'short_vertical',
-                        updateClipProgress,
-                        data.outputMode || 'individual'
-                    );
-
-                    console.log('Video processing completed, generated clips:', processedClips.length);
-
-                    // Update project status: completed with clips data
-                    await updateProjectStatus('completed', 'Clips ready for download!', processedClips);
 
                     socket.emit('quickclips_state', {
                         state: 'completed',
@@ -657,9 +523,6 @@ export const setupWebSocket = (server: any) => {
                 } catch (error) {
                     console.error('=== QUICKCLIPS PROCESS FAILED ===');
                     console.error('Error details:', error);
-
-                    // Update project status: error
-                    await updateProjectStatus('error', error instanceof Error ? error.message : 'An unknown error occurred');
 
                     socket.emit('quickclips_state', {
                         state: 'error',

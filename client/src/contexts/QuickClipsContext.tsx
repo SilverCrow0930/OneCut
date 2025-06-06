@@ -8,8 +8,6 @@ interface QuickClipsEvent {
     contentType?: string;
     targetDuration?: number;
     videoFormat?: string;
-    outputMode?: 'individual' | 'stitched';
-    projectId?: string;
 }
 
 interface QuickClip {
@@ -54,24 +52,20 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         console.log('Initializing QuickClips WebSocket connection to:', API_URL);
         
-        // Initialize socket connection with polling fallback optimized for Render.com
+        // Initialize socket connection
         const newSocket = io(API_URL, {
-            transports: ['polling', 'websocket'], // Start with polling for Render.com
+            transports: ['websocket'],
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: 5, // Reduced attempts
-            reconnectionDelay: 2000, // Increased delay
-            reconnectionDelayMax: 10000,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
             randomizationFactor: 0.5,
-            timeout: 30000, // Increased timeout for Render.com
+            timeout: 60000,
             autoConnect: true,
-            forceNew: false,
-            upgrade: true,
-            rememberUpgrade: false, // Don't remember upgrades on Render.com
-            withCredentials: true,
-            // Add specific options for Render.com
-            timestampRequests: true,
-            timestampParam: 't'
+            forceNew: true,
+            upgrade: false,
+            rememberUpgrade: false
         });
 
         // Log connection events

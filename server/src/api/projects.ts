@@ -109,8 +109,6 @@ router.post(
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { user } = req as AuthenticatedRequest
-            console.log('[Projects] Creating project for user:', user.id)
-            console.log('[Projects] Request body:', req.body)
 
             // 1) Find the public.users row for this auth_id
             const { data: profile, error: profileError } = await supabase
@@ -120,66 +118,36 @@ router.post(
                 .single()
 
             if (profileError || !profile) {
-                console.error('[Projects] Profile lookup failed for auth_id=', user.id, profileError)
-                console.error('[Projects] ProfileError details:', {
-                    code: profileError?.code,
-                    message: profileError?.message,
-                    details: profileError?.details,
-                    hint: profileError?.hint
-                })
+                console.error('Could not find public.users for auth_id=', user.id, profileError)
                 return res.status(500).json({
-                    error: 'Profile lookup failed',
-                    details: profileError?.message
+                    error: 'Profile lookup failed'
                 })
             }
-
-            console.log('[Projects] Found profile:', profile.id)
 
             // 2) Insert new project using the public.users.id
-            const projectName = req.body.name || generateDefaultName()
-            const projectData = {
-                user_id: profile.id,
-                name: projectName,
-                thumbnail_url: req.body.thumbnail_url || null,
-                duration: req.body.duration || 0,
-                is_public: req.body.is_public || false,
-                // QuickClips fields
-                type: req.body.type || 'project',
-                processing_status: req.body.processing_status || 'idle',
-                processing_message: req.body.processing_message || null,
-                quickclips_data: req.body.quickclips_data || null
-            }
-            
-            console.log('[Projects] Inserting project data:', projectData)
-            
+            const projectName = generateDefaultName()
             const { data, error } = await supabase
                 .from('projects')
-                .insert(projectData)
-                .select('*')
+                .insert({
+                    user_id: profile.id,
+                    name: projectName,
+                    thumbnail_url: null,
+                    duration: 0,
+                    is_public: false,
+                })
+                .select('id')
                 .single()
 
             if (error || !data) {
-                console.error('[Projects] Insert error details:', {
-                    error: error,
-                    code: error?.code,
-                    message: error?.message,
-                    details: error?.details,
-                    hint: error?.hint
-                })
+                console.error('Project insert error:', error)
                 return res.status(500).json({
-                    error: error?.message ?? 'Insert failed',
-                    code: error?.code,
-                    details: error?.details,
-                    hint: error?.hint
+                    error: error?.message ?? 'Insert failed'
                 })
             }
 
-            console.log('[Projects] Successfully created project:', data.id)
-
-            // 3) Return the created project
+            // 3) Redirect browser to the editor URL
             return res.status(201).json({
-                id: data.id,
-                ...data
+                id: data.id
             })
         }
         catch (err) {
@@ -362,28 +330,18 @@ router.put(
         try {
             const { projectId } = req.params
             const { user } = req as AuthenticatedRequest
+            const uid = user.id
             const { tracks, clips } = req.body as {
                 tracks: Array<{ id: string; project_id?: string; index: number; type: string }>
                 clips: Array<Partial<Record<keyof Clip, any>> & { id: string; track_id: string }>
             }
 
-            // 1) Find your app-profile ID
-            const { data: profile, error: profErr } = await supabase
-                .from('users')
-                .select('id')
-                .eq('auth_id', user.id)
-                .single()
-            if (profErr || !profile) {
-                console.error('Profile lookup failed:', profErr)
-                return res.status(500).json({ error: 'Could not load user profile' })
-            }
-
-            // 2) Ownership check against the profile.id
+            // 1) Ownership check
             const { data: project, error: projectErr } = await supabase
                 .from('projects')
                 .select('id')
                 .eq('id', projectId)
-                .eq('user_id', profile.id)
+                .eq('user_id', uid)
                 .single()
 
             if (projectErr || !project) {

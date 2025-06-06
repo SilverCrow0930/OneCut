@@ -1,22 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Zap, Upload, Clock, Users, BookOpen, Mic, Video, Download, Play, X, Gamepad2 } from 'lucide-react'
+import { Zap, Upload, Clock, Users, BookOpen, Mic, Video, Download, Play, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useQuickClips, QuickClip } from '@/contexts/QuickClipsContext'
 import { apiPath } from '@/lib/config'
-import { useRouter } from 'next/navigation'
 
 const QuickClipsButton = () => {
     const { user, session, signIn } = useAuth()
     const { sendQuickClipsRequest, onQuickClipsResponse, onQuickClipsState } = useQuickClips()
-    const router = useRouter()
     const fileInputRef = useRef<HTMLInputElement>(null)
     
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60)
-    const [contentType, setContentType] = useState('talking')
-    const [customContentType, setCustomContentType] = useState('')
-    const [outputMode, setOutputMode] = useState<'individual' | 'stitched'>('individual')
+    const [contentType, setContentType] = useState('talking_video')
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingProgress, setProcessingProgress] = useState(0)
     const [processingMessage, setProcessingMessage] = useState('')
@@ -27,16 +23,16 @@ const QuickClipsButton = () => {
     const [error, setError] = useState<string | null>(null)
     
     const contentTypes = [
-        { id: 'talking', label: 'Talking Video', icon: Video },
-        { id: 'professional', label: 'Professional', icon: Users },
-        { id: 'gaming', label: 'Gaming', icon: Gamepad2 },
-        { id: 'custom', label: 'Custom', icon: BookOpen }
+        { id: 'podcast', label: 'Podcast', icon: Mic },
+        { id: 'professional_meeting', label: 'Meeting', icon: Users },
+        { id: 'educational_video', label: 'Tutorial', icon: BookOpen },
+        { id: 'talking_video', label: 'Talking Video', icon: Video }
     ]
 
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
 
-    const getVideoFormat = (mode: 'individual' | 'stitched') => {
-        return mode === 'individual' ? 'short_vertical' : 'long_horizontal'
+    const getVideoFormat = (durationSeconds: number) => {
+        return durationSeconds < 120 ? 'short_vertical' : 'long_horizontal'
     }
 
     const formatDuration = (seconds: number) => {
@@ -168,77 +164,6 @@ const QuickClipsButton = () => {
         })
     }
 
-    const createProject = async (filename: string, contentType: string): Promise<string> => {
-        const contentTypeLabels: Record<string, string> = {
-            'talking': 'Talking Video',
-            'professional': 'Professional',
-            'gaming': 'Gaming',
-            'custom': customContentType || 'Custom'
-        }
-
-        const response = await fetch(apiPath('projects'), {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${session?.access_token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: `AI Clips - ${filename}`,
-                type: 'quickclips',
-                processing_status: 'processing',
-                processing_message: 'Starting AI analysis...',
-                quickclips_data: {
-                    clips: [],
-                    contentType,
-                    targetDuration,
-                    videoFormat: getVideoFormat(outputMode),
-                    outputMode,
-                    originalFilename: filename
-                }
-            })
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            console.error('Project creation failed:', {
-                status: response.status,
-                statusText: response.statusText,
-                errorData
-            })
-            throw new Error(errorData.error || `Failed to create project (${response.status})`)
-        }
-
-        const project = await response.json()
-        return project.id
-    }
-
-    const updateProjectStatus = async (projectId: string, status: string, message: string, clips?: QuickClip[]) => {
-        const updateData: any = {
-            processing_status: status,
-            processing_message: message
-        }
-
-        if (clips) {
-            updateData.quickclips_data = {
-                clips,
-                contentType,
-                targetDuration,
-                videoFormat: getVideoFormat(outputMode),
-                outputMode,
-                originalFilename: selectedFile?.name || 'Unknown'
-            }
-        }
-
-        await fetch(apiPath(`projects/${projectId}`), {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${session?.access_token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updateData)
-        })
-    }
-
     const handleStartProcessing = async () => {
         if (!user) {
             signIn()
@@ -250,60 +175,28 @@ const QuickClipsButton = () => {
             return
         }
 
-        if (contentType === 'custom' && !customContentType.trim()) {
-            alert('Please describe your custom content type')
-            return
-        }
-
         setIsUploading(true)
         setIsProcessing(true)
         setProcessingProgress(0)
         setError(null)
 
-        let projectId: string | null = null
-
         try {
-            // 1. Create project immediately with uploading status
-            projectId = await createProject(selectedFile.name, contentType)
-            
-            // 2. Close modal and redirect to projects page
-            setIsModalOpen(false)
-            router.push('/creation')
-
-            // 3. Update project to show uploading status
-            await updateProjectStatus(projectId, 'processing', 'Uploading video file...')
-
-            // 4. Upload file to GCS (this may take time for large files)
+            // Upload file to GCS
             const fileUri = await uploadFileToGCS(selectedFile)
             setIsUploading(false)
 
-            // 5. Update project status after upload
-            await updateProjectStatus(projectId, 'processing', 'Upload complete, starting AI analysis...')
-
-            // 6. Send to QuickClips processing with project ID
+            // Send to QuickClips processing
             sendQuickClipsRequest({
                 fileUri,
                 mimeType: selectedFile.type,
-                contentType: contentType === 'custom' ? customContentType : contentType,
+                contentType,
                 targetDuration,
-                videoFormat: getVideoFormat(outputMode),
-                outputMode,
-                projectId  // Include project ID for updates
+                videoFormat: getVideoFormat(targetDuration)
             })
 
         } catch (error) {
             console.error('Error processing video:', error)
             setError(error instanceof Error ? error.message : 'Upload failed')
-            
-            // Update project status to error if we have a project ID
-            if (projectId) {
-                try {
-                    await updateProjectStatus(projectId, 'error', error instanceof Error ? error.message : 'Upload failed')
-                } catch (updateError) {
-                    console.error('Failed to update project error status:', updateError)
-                }
-            }
-            
             setIsUploading(false)
             setIsProcessing(false)
         }
@@ -354,7 +247,7 @@ const QuickClipsButton = () => {
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-900">Quick AI Clips</h2>
-                                <p className="text-gray-600">Upload video and we'll process it in the background</p>
+                                <p className="text-gray-600">Get instant downloadable clips from your video</p>
                             </div>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -372,195 +265,216 @@ const QuickClipsButton = () => {
                                 </div>
                             )}
 
-                            {/* Upload View */}
-                            <div className="space-y-6">
-                                {/* Upload Area */}
-                                <div>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileSelect}
-                                        accept="video/*"
-                                        className="hidden"
-                                    />
-                                    
-                                    <div 
-                                        onClick={() => fileInputRef.current?.click()}
-                                        onDragEnter={handleDragEnter}
-                                        onDragLeave={handleDragLeave}
-                                        onDragOver={handleDragOver}
-                                        onDrop={handleDrop}
-                                        className={`
-                                            border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
-                                            transition-all duration-300
-                                            ${selectedFile ? 
-                                                'border-emerald-400 bg-emerald-50' : 
-                                                isDragOver ?
-                                                    'border-emerald-500 bg-emerald-100 scale-105' :
-                                                    'border-gray-300 hover:border-emerald-400 hover:bg-emerald-50'
-                                            }
-                                        `}
-                                    >
-                                        {selectedFile ? (
-                                            <div className="flex items-center justify-center gap-3">
-                                                <Video className="w-8 h-8 text-emerald-600" />
-                                                <div>
-                                                    <p className="font-medium text-emerald-800">{selectedFile.name}</p>
-                                                    <p className="text-sm text-emerald-600">Click to change file</p>
+                            {generatedClips.length > 0 ? (
+                                /* Results View */
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-semibold text-gray-900">
+                                            Generated Clips ({generatedClips.length})
+                                        </h3>
+                                        <button
+                                            onClick={handleReset}
+                                            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                        >
+                                            Process New Video
+                                        </button>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {generatedClips.map((clip) => (
+                                            <div key={clip.id} className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-shadow">
+                                                <div className="relative mb-3">
+                                                    <img
+                                                        src={clip.thumbnail}
+                                                        alt={clip.title}
+                                                        className="w-full h-32 object-cover rounded-lg"
+                                                    />
+                                                    <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                                                        {formatDuration(clip.duration)}
+                                                    </div>
+                                                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-emerald-500 text-white text-xs px-2 py-1 rounded">
+                                                        <Zap className="w-3 h-3" />
+                                                        <span>{clip.viral_score}</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <h4 className="font-medium text-gray-900 mb-2">{clip.title}</h4>
+                                                <p className="text-xs text-gray-600 mb-3">{clip.description}</p>
+                                                
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleDownload(clip)}
+                                                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                                                    >
+                                                        <Download className="w-4 h-4" />
+                                                        Download
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => window.open(clip.previewUrl, '_blank')}
+                                                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                                    >
+                                                        <Play className="w-4 h-4" />
+                                                    </button>
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <div>
-                                                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                                <p className="text-lg text-gray-600 mb-2">Drop your video here</p>
-                                                <p className="text-sm text-gray-500">or click to browse</p>
-                                            </div>
-                                        )}
+                                        ))}
                                     </div>
                                 </div>
-
-                                {/* Settings */}
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    {/* Content Type */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-3">Content Type</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {contentTypes.map((type) => {
-                                                const Icon = type.icon
-                                                return (
-                                                    <button
-                                                        key={type.id}
-                                                        onClick={() => setContentType(type.id)}
-                                                        className={`
-                                                            flex items-center gap-2 p-3 rounded-lg border text-sm
-                                                            ${contentType === type.id ? 
-                                                                'border-emerald-500 bg-emerald-50 text-emerald-700' : 
-                                                                'border-gray-200 hover:border-emerald-300'
-                                                            }
-                                                        `}
-                                                    >
-                                                        <Icon className="w-4 h-4" />
-                                                        <span>{type.label}</span>
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                        
-                                        {/* Custom Content Type Input */}
-                                        {contentType === 'custom' && (
-                                            <div className="mt-3">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Describe your content type..."
-                                                    value={customContentType}
-                                                    onChange={(e) => setCustomContentType(e.target.value)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                                />
-                                            </div>
-                                        )}
+                            ) : (isProcessing || isUploading) ? (
+                                /* Processing View */
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Zap className="w-8 h-8 text-white animate-pulse" />
                                     </div>
-
-                                    {/* Output Mode */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-3">Output Mode</label>
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-1 gap-3">
-                                                <button
-                                                    onClick={() => setOutputMode('individual')}
-                                                    className={`
-                                                        p-4 rounded-lg border text-left
-                                                        ${outputMode === 'individual' ? 
-                                                            'border-emerald-500 bg-emerald-50' : 
-                                                            'border-gray-200 hover:border-emerald-300'
-                                                        }
-                                                    `}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex-shrink-0 w-8 h-12 bg-emerald-100 rounded border-2 border-emerald-300"></div>
-                                                        <div>
-                                                            <div className="font-medium text-gray-900">Short Videos</div>
-                                                            <div className="text-sm text-gray-600">Multiple 20-90s clips (9:16)</div>
-                                                            <div className="text-xs text-gray-500">Individual downloads for social media</div>
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                                
-                                                <button
-                                                    onClick={() => setOutputMode('stitched')}
-                                                    className={`
-                                                        p-4 rounded-lg border text-left
-                                                        ${outputMode === 'stitched' ? 
-                                                            'border-emerald-500 bg-emerald-50' : 
-                                                            'border-gray-200 hover:border-emerald-300'
-                                                        }
-                                                    `}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex-shrink-0 w-12 h-8 bg-emerald-100 rounded border-2 border-emerald-300"></div>
-                                                        <div>
-                                                            <div className="font-medium text-gray-900">Long Video</div>
-                                                            <div className="text-sm text-gray-600">One highlight reel (16:9)</div>
-                                                            <div className="text-xs text-gray-500">Multiple clips stitched together</div>
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Target Duration */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                                            Target Length: {formatDuration(targetDuration)}
-                                        </label>
-                                        <div className="space-y-3">
-                                            <input
-                                                type="range"
-                                                min="20"
-                                                max="1800"
-                                                value={targetDuration}
-                                                onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-                                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                        {isUploading ? 'Uploading Video...' : 'Processing Your Video'}
+                                    </h3>
+                                    <p className="text-gray-600 mb-6">
+                                        {isUploading ? 'Uploading to cloud storage...' : processingMessage || 'AI is analyzing and creating clips...'}
+                                    </p>
+                                    
+                                    <div className="max-w-xs mx-auto">
+                                        <div className="bg-gray-200 rounded-full h-2 mb-2">
+                                            <div 
+                                                className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full transition-all duration-300"
+                                                style={{ width: `${isUploading ? uploadProgress : processingProgress}%` }}
                                             />
-                                            <div className="flex justify-between text-xs text-gray-500">
-                                                <span>20s</span>
-                                                <span>30m</span>
+                                        </div>
+                                        <p className="text-sm text-gray-500">
+                                            {Math.round(isUploading ? uploadProgress : processingProgress)}% complete
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* Upload View - Same as before */
+                                <div className="space-y-6">
+                                    {/* Upload Area */}
+                                    <div>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileSelect}
+                                            accept="video/*"
+                                            className="hidden"
+                                        />
+                                        
+                                        <div 
+                                            onClick={() => fileInputRef.current?.click()}
+                                            onDragEnter={handleDragEnter}
+                                            onDragLeave={handleDragLeave}
+                                            onDragOver={handleDragOver}
+                                            onDrop={handleDrop}
+                                            className={`
+                                                border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+                                                transition-all duration-300
+                                                ${selectedFile ? 
+                                                    'border-emerald-400 bg-emerald-50' : 
+                                                    isDragOver ?
+                                                        'border-emerald-500 bg-emerald-100 scale-105' :
+                                                        'border-gray-300 hover:border-emerald-400 hover:bg-emerald-50'
+                                                }
+                                            `}
+                                        >
+                                            {selectedFile ? (
+                                                <div className="flex items-center justify-center gap-3">
+                                                    <Video className="w-8 h-8 text-emerald-600" />
+                                                    <div>
+                                                        <p className="font-medium text-emerald-800">{selectedFile.name}</p>
+                                                        <p className="text-sm text-emerald-600">Click to change file</p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                                    <p className="text-lg text-gray-600 mb-2">Drop your video here</p>
+                                                    <p className="text-sm text-gray-500">or click to browse</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Settings */}
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        {/* Content Type */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-3">Content Type</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {contentTypes.map((type) => {
+                                                    const Icon = type.icon
+                                                    return (
+                                                        <button
+                                                            key={type.id}
+                                                            onClick={() => setContentType(type.id)}
+                                                            className={`
+                                                                flex items-center gap-2 p-3 rounded-lg border text-sm
+                                                                ${contentType === type.id ? 
+                                                                    'border-emerald-500 bg-emerald-50 text-emerald-700' : 
+                                                                    'border-gray-200 hover:border-emerald-300'
+                                                                }
+                                                            `}
+                                                        >
+                                                            <Icon className="w-4 h-4" />
+                                                            <span>{type.label}</span>
+                                                        </button>
+                                                    )
+                                                })}
                                             </div>
-                                            <div className="text-center">
-                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm">
-                                                    <Clock className="w-4 h-4" />
-                                                    {getVideoFormat(outputMode) === 'short_vertical' ? 'Vertical (9:16)' : 'Horizontal (16:9)'}
-                                                </span>
+                                        </div>
+
+                                        {/* Target Duration */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                Target Length: {formatDuration(targetDuration)}
+                                            </label>
+                                            <div className="space-y-3">
+                                                <input
+                                                    type="range"
+                                                    min="20"
+                                                    max="1800"
+                                                    value={targetDuration}
+                                                    onChange={(e) => handleDurationChange(parseInt(e.target.value))}
+                                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                                />
+                                                <div className="flex justify-between text-xs text-gray-500">
+                                                    <span>20s</span>
+                                                    <span>30m</span>
+                                                </div>
+                                                <div className="text-center">
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm">
+                                                        <Clock className="w-4 h-4" />
+                                                        {getVideoFormat(targetDuration) === 'short_vertical' ? 'Vertical (9:16)' : 'Horizontal (16:9)'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Generate Button */}
+                                    <button
+                                        onClick={handleStartProcessing}
+                                        disabled={!selectedFile || isProcessing || isUploading}
+                                        className="
+                                            w-full bg-gradient-to-r from-emerald-600 to-teal-600 
+                                            hover:from-emerald-700 hover:to-teal-700
+                                            disabled:from-gray-400 disabled:to-gray-500
+                                            text-white font-bold text-lg
+                                            px-6 py-4 rounded-xl 
+                                            transition-all duration-300 shadow-lg hover:shadow-xl 
+                                            disabled:cursor-not-allowed 
+                                            transform hover:scale-105 active:scale-95
+                                        "
+                                    >
+                                        <span className="flex items-center justify-center gap-2">
+                                            <Zap className="w-5 h-5" />
+                                            Generate AI Clips
+                                        </span>
+                                    </button>
+
+                                    <p className="text-xs text-gray-500 text-center">
+                                        Get instant downloadable clips in minutes - no timeline editing required!
+                                    </p>
                                 </div>
-
-                                {/* Generate Button */}
-                                <button
-                                    onClick={handleStartProcessing}
-                                    disabled={!selectedFile || isProcessing || isUploading}
-                                    className="
-                                        w-full bg-gradient-to-r from-emerald-600 to-teal-600 
-                                        hover:from-emerald-700 hover:to-teal-700
-                                        disabled:from-gray-400 disabled:to-gray-500
-                                        text-white font-bold text-lg
-                                        px-6 py-4 rounded-xl 
-                                        transition-all duration-300 shadow-lg hover:shadow-xl 
-                                        disabled:cursor-not-allowed 
-                                        transform hover:scale-105 active:scale-95
-                                    "
-                                >
-                                    <span className="flex items-center justify-center gap-2">
-                                        <Zap className="w-5 h-5" />
-                                        Start Background Processing
-                                    </span>
-                                </button>
-
-                                <p className="text-xs text-gray-500 text-center">
-                                    Processing will continue in the background. You can navigate away and check progress later!
-                                </p>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>

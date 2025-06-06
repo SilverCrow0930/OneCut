@@ -18,28 +18,19 @@ export default function Timeline() {
     const timeScale = getTimeScale(zoomLevel)
     const dragCounterRef = useRef(0)
 
-    // 1) More robust project ID extraction with better error handling
-    const projectId = useMemo(() => {
-        if (!params || !params.id) {
-            console.error('Timeline: No project ID found in params:', params)
-            return null
-        }
-        return Array.isArray(params.id) ? params.id[0] : params.id
-    }, [params])
-
-    // 2) Guard: if there's no projectId, show loading or error
-    if (!projectId) {
+    // 1) Guard: if there's no projectId, bail out or show an error
+    if (!params.projectId) {
         return (
-            <div className="flex items-center justify-center h-32">
-                <div className="text-center">
-                    <div className="text-red-500 mb-2">⚠️ Project ID Missing</div>
-                    <div className="text-sm text-gray-500">
-                        Please refresh the page or return to your projects
-                    </div>
-                </div>
-            </div>
+            <p className="text-red-500 p-4">
+                Error: missing project ID in URL
+            </p>
         )
     }
+
+    // 2) Normalize to a single string
+    const projectId = Array.isArray(params.projectId)
+        ? params.projectId[0]
+        : params.projectId
 
     const { tracks, clips, loadingTimeline, timelineError, executeCommand, setSelectedClipId, selectedClipId } = useEditor()
     const { currentTime, setDuration, isPlaying, setCurrentTime } = usePlayback()

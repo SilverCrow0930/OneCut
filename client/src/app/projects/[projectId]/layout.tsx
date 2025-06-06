@@ -28,4 +28,4 @@ export default function ProjectLayout({ children }: LayoutProps) {
             </EditorProvider>
         </AutoCutProvider>
     )
-} 
+}

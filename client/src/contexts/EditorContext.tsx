@@ -74,11 +74,8 @@ export function useEditor() {
 
 
 export function EditorProvider({ children }: { children: ReactNode }) {
-    const params = useParams<{ id: string }>()
-    const projectId = params?.id
+    const { projectId } = useParams<{ projectId: string }>()
     const { session } = useAuth()
-
-
 
     // 1) Project metadata
     const [project, setProject] = useState<Project | null>(null)
@@ -86,15 +83,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     const [error, setError] = useState<string | null>(null)
 
     const fetchProject = async () => {
-        if (!session?.access_token) {
-            return
-        }
-
-        if (!projectId) {
-            setError('Missing project ID in URL')
-            setLoading(false)
-            return
-        }
+        if (!session?.access_token) return
 
         // Don't reload if we already have the project data
         if (project && !error) return
@@ -175,21 +164,13 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const fetchTimeline = async () => {
-        if (!session?.access_token) {
-            return
-        }
-
-        if (!projectId) {
-            setTimelineError('Missing project ID in URL')
-            setLoadingTimeline(false)
-            return
-        }
+        if (!session?.access_token) return
 
         setLoadingTimeline(true);
         setTimelineError(null)
 
         try {
-            const response = await fetch(apiPath(`projects/${projectId}/timeline`),
+            const response = await fetch(apiPath(`timeline/${projectId}`),
                 {
                     headers: {
                         Authorization: `Bearer ${session.access_token}`,
@@ -290,10 +271,12 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
         // flip into "saving"
         setSaveState('saving');
+        console.log('🔄 [AutoSave] scheduling PUT…')
 
         const timer = setTimeout(async () => {
+            console.log(`🔄 [AutoSave] PUT /timeline/${projectId}`)
             try {
-                const res = await fetch(apiPath(`projects/${projectId}/timeline`), {
+                const res = await fetch(apiPath(`timeline/${projectId}`), {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -306,14 +289,18 @@ export function EditorProvider({ children }: { children: ReactNode }) {
                     }),
                 });
 
+                console.log('📬 [AutoSave] response status:', res.status);
+
                 if (!res.ok) {
                     const err = await res.text();
                     throw new Error(err || res.statusText);
                 }
 
+                console.log('✅ [AutoSave] saved!')
                 setSaveState('saved');
             }
             catch (e) {
+                console.error('🚨 [AutoSave] failed:', e);
                 setSaveState('error');
             }
         }, 500);
