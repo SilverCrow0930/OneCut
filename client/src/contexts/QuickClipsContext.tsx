@@ -54,21 +54,24 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         console.log('Initializing QuickClips WebSocket connection to:', API_URL);
         
-        // Initialize socket connection with polling fallback
+        // Initialize socket connection with polling fallback optimized for Render.com
         const newSocket = io(API_URL, {
-            transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket if possible
+            transports: ['polling', 'websocket'], // Start with polling for Render.com
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: 10, // Reduced from Infinity
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
+            reconnectionAttempts: 5, // Reduced attempts
+            reconnectionDelay: 2000, // Increased delay
+            reconnectionDelayMax: 10000,
             randomizationFactor: 0.5,
-            timeout: 20000, // Reduced timeout
+            timeout: 30000, // Increased timeout for Render.com
             autoConnect: true,
-            forceNew: false, // Changed to false
-            upgrade: true, // Allow transport upgrades
-            rememberUpgrade: true, // Remember successful upgrades
-            withCredentials: true // Include credentials for CORS
+            forceNew: false,
+            upgrade: true,
+            rememberUpgrade: false, // Don't remember upgrades on Render.com
+            withCredentials: true,
+            // Add specific options for Render.com
+            timestampRequests: true,
+            timestampParam: 't'
         });
 
         // Log connection events

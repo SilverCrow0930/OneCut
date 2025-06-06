@@ -140,6 +140,15 @@ app.get('/api/v1/db-test', async (req, res) => {
     }
 })
 
+// Add Socket.IO endpoint test
+app.get('/socket.io/test', (req, res) => {
+    res.json({
+        status: 'Socket.IO endpoint reachable',
+        timestamp: new Date().toISOString(),
+        origin: req.headers.origin || 'no-origin'
+    })
+})
+
 // protect everything under /api except the test endpoint
 app.use(
     '/api/v1',

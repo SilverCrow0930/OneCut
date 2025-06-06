@@ -50,37 +50,48 @@ export const setupWebSocket = (server: any) => {
         
         const io = new Server(server, {
             cors: {
-                origin: (origin, callback) => {
-                    console.log('[WebSocket CORS] Checking origin:', origin || 'no-origin');
-                    
-                    // Allow requests with no origin (like mobile apps or server-to-server)
-                    if (!origin) {
-                        console.log('[WebSocket CORS] ✓ Allowing request with no origin');
-                        return callback(null, true);
-                    }
-                    
-                    if (allowedOrigins.indexOf(origin) !== -1) {
-                        console.log('[WebSocket CORS] ✓ Origin allowed:', origin);
-                        callback(null, true);
-                    } else {
-                        console.error('[WebSocket CORS] ❌ Origin blocked:', origin);
-                        console.error('[WebSocket CORS] Allowed origins:', allowedOrigins);
-                        callback(new Error('Not allowed by CORS'));
-                    }
-                },
+                origin: allowedOrigins, // Use simple array for Render.com compatibility
                 methods: ["GET", "POST", "OPTIONS"],
                 credentials: true,
-                allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+                allowedHeaders: [
+                    'Content-Type', 
+                    'Authorization', 
+                    'Accept', 
+                    'Origin', 
+                    'X-Requested-With',
+                    'Access-Control-Allow-Origin',
+                    'Cache-Control'
+                ],
                 optionsSuccessStatus: 200
             },
             maxHttpBufferSize: 1e8,
-            transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket
+            transports: ['polling', 'websocket'], // Start with polling for Render.com
             allowEIO3: true,
             path: '/socket.io/',
             serveClient: false,
             cookie: false,
             pingTimeout: 60000,
-            pingInterval: 25000
+            pingInterval: 25000,
+            // Add specific settings for Render.com deployment
+            allowRequest: (req, callback) => {
+                const origin = req.headers.origin;
+                console.log('[WebSocket] allowRequest check for origin:', origin || 'no-origin');
+                
+                // Allow if no origin
+                if (!origin) {
+                    console.log('[WebSocket] ✓ Allowing request with no origin');
+                    return callback(null, true);
+                }
+                
+                // Check if origin is allowed
+                if (allowedOrigins.includes(origin)) {
+                    console.log('[WebSocket] ✓ Origin allowed:', origin);
+                    return callback(null, true);
+                } else {
+                    console.error('[WebSocket] ❌ Origin blocked:', origin);
+                    return callback('Origin not allowed', false);
+                }
+            }
         });
 
         console.log('[WebSocket] ✓ Socket.IO server created successfully');
