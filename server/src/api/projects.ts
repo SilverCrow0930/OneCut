@@ -125,16 +125,23 @@ router.post(
             }
 
             // 2) Insert new project using the public.users.id
-            const projectName = generateDefaultName()
+            const projectName = req.body.name || generateDefaultName()
+            const projectData = {
+                user_id: profile.id,
+                name: projectName,
+                thumbnail_url: req.body.thumbnail_url || null,
+                duration: req.body.duration || 0,
+                is_public: req.body.is_public || false,
+                // QuickClips fields
+                type: req.body.type || 'project',
+                processing_status: req.body.processing_status || 'idle',
+                processing_message: req.body.processing_message || null,
+                quickclips_data: req.body.quickclips_data || null
+            }
+            
             const { data, error } = await supabase
                 .from('projects')
-                .insert({
-                    user_id: profile.id,
-                    name: projectName,
-                    thumbnail_url: null,
-                    duration: 0,
-                    is_public: false,
-                })
+                .insert(projectData)
                 .select('id')
                 .single()
 
@@ -164,6 +171,9 @@ router.put(
     check('thumbnail_url').optional().isString(),
     check('duration').optional().isInt({ min: 0 }),
     check('is_public').optional().isBoolean(),
+    check('type').optional().isIn(['project', 'quickclips']),
+    check('processing_status').optional().isIn(['idle', 'processing', 'completed', 'error']),
+    check('processing_message').optional().isString(),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             const errors = validationResult(req)
