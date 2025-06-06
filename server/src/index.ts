@@ -107,6 +107,39 @@ app.get('/api/v1/cors-test', (req, res) => {
     })
 })
 
+// Add a database test endpoint
+app.get('/api/v1/db-test', async (req, res) => {
+    try {
+        const { supabase } = await import('./config/supabaseClient.js')
+        
+        // Test 1: Check projects table structure
+        const { data: tableInfo, error: tableError } = await supabase
+            .from('projects')
+            .select('*')
+            .limit(1)
+        
+        if (tableError) {
+            return res.json({
+                status: 'error',
+                tableError: tableError,
+                message: 'Projects table access failed'
+            })
+        }
+        
+        res.json({
+            status: 'ok',
+            tableAccess: 'working',
+            sampleColumns: tableInfo?.[0] ? Object.keys(tableInfo[0]) : 'no data',
+            timestamp: new Date().toISOString()
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        })
+    }
+})
+
 // protect everything under /api except the test endpoint
 app.use(
     '/api/v1',

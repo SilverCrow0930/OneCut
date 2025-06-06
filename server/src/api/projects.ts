@@ -109,6 +109,8 @@ router.post(
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { user } = req as AuthenticatedRequest
+            console.log('[Projects] Creating project for user:', user.id)
+            console.log('[Projects] Request body:', req.body)
 
             // 1) Find the public.users row for this auth_id
             const { data: profile, error: profileError } = await supabase
@@ -118,11 +120,20 @@ router.post(
                 .single()
 
             if (profileError || !profile) {
-                console.error('Could not find public.users for auth_id=', user.id, profileError)
+                console.error('[Projects] Profile lookup failed for auth_id=', user.id, profileError)
+                console.error('[Projects] ProfileError details:', {
+                    code: profileError?.code,
+                    message: profileError?.message,
+                    details: profileError?.details,
+                    hint: profileError?.hint
+                })
                 return res.status(500).json({
-                    error: 'Profile lookup failed'
+                    error: 'Profile lookup failed',
+                    details: profileError?.message
                 })
             }
+
+            console.log('[Projects] Found profile:', profile.id)
 
             // 2) Insert new project using the public.users.id
             const projectName = req.body.name || generateDefaultName()
@@ -139,6 +150,8 @@ router.post(
                 quickclips_data: req.body.quickclips_data || null
             }
             
+            console.log('[Projects] Inserting project data:', projectData)
+            
             const { data, error } = await supabase
                 .from('projects')
                 .insert(projectData)
@@ -146,15 +159,27 @@ router.post(
                 .single()
 
             if (error || !data) {
-                console.error('Project insert error:', error)
+                console.error('[Projects] Insert error details:', {
+                    error: error,
+                    code: error?.code,
+                    message: error?.message,
+                    details: error?.details,
+                    hint: error?.hint
+                })
                 return res.status(500).json({
-                    error: error?.message ?? 'Insert failed'
+                    error: error?.message ?? 'Insert failed',
+                    code: error?.code,
+                    details: error?.details,
+                    hint: error?.hint
                 })
             }
 
-            // 3) Redirect browser to the editor URL
+            console.log('[Projects] Successfully created project:', data.id)
+
+            // 3) Return the created project
             return res.status(201).json({
-                id: data.id
+                id: data.id,
+                ...data
             })
         }
         catch (err) {

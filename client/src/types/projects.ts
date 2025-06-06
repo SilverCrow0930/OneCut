@@ -16,6 +16,7 @@ export interface Project {
         contentType: string
         targetDuration: number
         videoFormat: string
+        outputMode?: 'individual' | 'stitched'
         originalFilename: string
     }
 }

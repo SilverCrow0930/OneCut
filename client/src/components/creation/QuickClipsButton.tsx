@@ -192,13 +192,20 @@ const QuickClipsButton = () => {
                     contentType,
                     targetDuration,
                     videoFormat: getVideoFormat(outputMode),
+                    outputMode,
                     originalFilename: filename
                 }
             })
         })
 
         if (!response.ok) {
-            throw new Error('Failed to create project')
+            const errorData = await response.json().catch(() => ({}))
+            console.error('Project creation failed:', {
+                status: response.status,
+                statusText: response.statusText,
+                errorData
+            })
+            throw new Error(errorData.error || `Failed to create project (${response.status})`)
         }
 
         const project = await response.json()
@@ -217,6 +224,7 @@ const QuickClipsButton = () => {
                 contentType,
                 targetDuration,
                 videoFormat: getVideoFormat(outputMode),
+                outputMode,
                 originalFilename: selectedFile?.name || 'Unknown'
             }
         }
@@ -239,6 +247,11 @@ const QuickClipsButton = () => {
 
         if (!selectedFile) {
             alert('Please select a video file first')
+            return
+        }
+
+        if (contentType === 'custom' && !customContentType.trim()) {
+            alert('Please describe your custom content type')
             return
         }
 
