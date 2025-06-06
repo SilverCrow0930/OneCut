@@ -245,22 +245,27 @@ const QuickClipsButton = () => {
         setProcessingProgress(0)
         setError(null)
 
+        let projectId: string | null = null
+
         try {
-            // 1. Create project immediately
-            const projectId = await createProject(selectedFile.name, contentType)
+            // 1. Create project immediately with uploading status
+            projectId = await createProject(selectedFile.name, contentType)
             
             // 2. Close modal and redirect to projects page
             setIsModalOpen(false)
             router.push('/creation')
 
-            // 3. Upload file to GCS
+            // 3. Update project to show uploading status
+            await updateProjectStatus(projectId, 'processing', 'Uploading video file...')
+
+            // 4. Upload file to GCS (this may take time for large files)
             const fileUri = await uploadFileToGCS(selectedFile)
             setIsUploading(false)
 
-            // 4. Update project status
-            await updateProjectStatus(projectId, 'processing', 'Uploading complete, analyzing video...')
+            // 5. Update project status after upload
+            await updateProjectStatus(projectId, 'processing', 'Upload complete, starting AI analysis...')
 
-            // 5. Send to QuickClips processing with project ID
+            // 6. Send to QuickClips processing with project ID
             sendQuickClipsRequest({
                 fileUri,
                 mimeType: selectedFile.type,
@@ -273,6 +278,16 @@ const QuickClipsButton = () => {
         } catch (error) {
             console.error('Error processing video:', error)
             setError(error instanceof Error ? error.message : 'Upload failed')
+            
+            // Update project status to error if we have a project ID
+            if (projectId) {
+                try {
+                    await updateProjectStatus(projectId, 'error', error instanceof Error ? error.message : 'Upload failed')
+                } catch (updateError) {
+                    console.error('Failed to update project error status:', updateError)
+                }
+            }
+            
             setIsUploading(false)
             setIsProcessing(false)
         }

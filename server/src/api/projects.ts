@@ -142,7 +142,7 @@ router.post(
             const { data, error } = await supabase
                 .from('projects')
                 .insert(projectData)
-                .select('id')
+                .select('*')
                 .single()
 
             if (error || !data) {
@@ -171,9 +171,6 @@ router.put(
     check('thumbnail_url').optional().isString(),
     check('duration').optional().isInt({ min: 0 }),
     check('is_public').optional().isBoolean(),
-    check('type').optional().isIn(['project', 'quickclips']),
-    check('processing_status').optional().isIn(['idle', 'processing', 'completed', 'error']),
-    check('processing_message').optional().isString(),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             const errors = validationResult(req)
