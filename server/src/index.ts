@@ -140,6 +140,45 @@ app.get('/api/v1/db-test', async (req, res) => {
     }
 })
 
+// Add a project deletion test endpoint
+app.get('/api/v1/delete-test/:projectId', async (req, res) => {
+    try {
+        const { supabase } = await import('./config/supabaseClient.js')
+        const { projectId } = req.params
+        
+        // Check if project exists
+        const { data: project, error: projectError } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('id', projectId)
+            .single()
+        
+        if (projectError) {
+            return res.json({
+                status: 'project_not_found',
+                error: projectError.message,
+                projectId
+            })
+        }
+        
+        res.json({
+            status: 'project_found',
+            project: {
+                id: project.id,
+                name: project.name,
+                user_id: project.user_id,
+                type: project.type
+            },
+            timestamp: new Date().toISOString()
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        })
+    }
+})
+
 // protect everything under /api except the test endpoint
 app.use(
     '/api/v1',

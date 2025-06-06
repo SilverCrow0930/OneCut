@@ -13,6 +13,7 @@ export default function ProjectsList() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showMenu, setShowMenu] = useState<string | null>(null)
+    const [deletingProject, setDeletingProject] = useState<string | null>(null)
 
     useEffect(() => {
         // only fetch once we have a valid token
@@ -135,29 +136,51 @@ export default function ProjectsList() {
         e.stopPropagation()
         setShowMenu(null)
         
+        // Prevent multiple deletes
+        if (deletingProject === project.id) {
+            return
+        }
+        
         if (!confirm(`Are you sure you want to delete "${project.name || 'Untitled Project'}"? This action cannot be undone.`)) {
             return
         }
 
-        if (!session?.access_token) return
+        if (!session?.access_token) {
+            alert('Please sign in to delete projects')
+            return
+        }
+
+        setDeletingProject(project.id)
 
         try {
+            console.log('Deleting project:', project.id)
+            
             const response = await fetch(apiPath(`projects/${project.id}`), {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
                 }
             })
             
+            console.log('Delete response status:', response.status)
+            
             if (!response.ok) {
-                throw new Error('Failed to delete project')
+                const errorData = await response.json().catch(() => ({}))
+                console.error('Delete failed:', errorData)
+                throw new Error(errorData.error || `Failed to delete project (${response.status})`)
             }
             
-            // Remove from local state
+            // Remove from local state immediately
             setProjects(prev => prev.filter(p => p.id !== project.id))
+            
+            console.log('Project deleted successfully')
+            
         } catch (error) {
             console.error('Error deleting project:', error)
-            alert('Failed to delete project')
+            alert(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        } finally {
+            setDeletingProject(null)
         }
     }
 
@@ -396,10 +419,24 @@ export default function ProjectsList() {
                                             </button>
                                             <button
                                                 onClick={(e) => handleDelete(e, project)}
-                                                className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
+                                                disabled={deletingProject === project.id}
+                                                className={`w-full text-left px-4 py-3 text-sm transition-colors duration-200 flex items-center gap-3 ${
+                                                    deletingProject === project.id
+                                                        ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
+                                                        : 'text-red-600 hover:bg-red-50'
+                                                }`}
                                             >
-                                                <Trash2 className="w-4 h-4" />
-                                                Delete
+                                                {deletingProject === project.id ? (
+                                                    <>
+                                                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                                                        Deleting...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Trash2 className="w-4 h-4" />
+                                                        Delete
+                                                    </>
+                                                )}
                                             </button>
                                         </div>
                                     )}

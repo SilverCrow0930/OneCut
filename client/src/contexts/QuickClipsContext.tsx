@@ -54,33 +54,45 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         console.log('Initializing QuickClips WebSocket connection to:', API_URL);
         
-        // Initialize socket connection with polling only (more reliable in production)
+        // Initialize socket connection with polling fallback
         const newSocket = io(API_URL, {
-            transports: ['polling'], // Use only polling to avoid WebSocket connection errors
+            transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket if possible
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: 10,
+            reconnectionAttempts: 10, // Reduced from Infinity
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             randomizationFactor: 0.5,
-            timeout: 20000,
+            timeout: 20000, // Reduced timeout
             autoConnect: true,
-            forceNew: false,
-            upgrade: false, // Disable upgrades to prevent WebSocket attempts
-            withCredentials: true
+            forceNew: false, // Changed to false
+            upgrade: true, // Allow transport upgrades
+            rememberUpgrade: true, // Remember successful upgrades
+            withCredentials: true // Include credentials for CORS
         });
 
-        // Log connection events
+        // Log connection events with better error handling
         newSocket.on('connect', () => {
-            console.log('✅ QuickClips connected successfully via polling');
+            console.log('✅ QuickClips WebSocket connected successfully');
+            console.log('Transport used:', newSocket.io.engine.transport.name);
         });
 
         newSocket.on('connect_error', (error) => {
-            console.warn('⚠️ QuickClips connection error:', error.message);
+            console.warn('⚠️ QuickClips WebSocket connection error (will retry with polling):', error.message);
+            // Don't log full error details - this is expected in many production environments
         });
 
         newSocket.on('disconnect', (reason) => {
-            console.log('📡 QuickClips disconnected:', reason);
+            console.log('📡 QuickClips WebSocket disconnected:', reason);
+        });
+
+        // Handle transport events
+        newSocket.on('upgrade', () => {
+            console.log('🚀 Upgraded to WebSocket transport');
+        });
+
+        newSocket.on('upgradeError', (error: any) => {
+            console.log('⬇️ Transport upgrade failed, staying with polling');
         });
 
         socketRef.current = newSocket;
