@@ -60,9 +60,8 @@ CREATE POLICY clips_select_own
       SELECT 1
       FROM public.tracks t
       JOIN public.projects p ON t.project_id = p.id
-      JOIN public.users u ON p.user_id = u.id
       WHERE t.id = public.clips.track_id
-        AND u.auth_id = auth.uid()
+        AND p.user_id = auth.uid()
     )
   );
 
@@ -76,9 +75,8 @@ CREATE POLICY clips_insert_own
       SELECT 1
       FROM public.tracks t
       JOIN public.projects p ON t.project_id = p.id
-      JOIN public.users u ON p.user_id = u.id
       WHERE t.id = public.clips.track_id
-        AND u.auth_id = auth.uid()
+        AND p.user_id = auth.uid()
     )
   );
 
@@ -92,9 +90,8 @@ CREATE POLICY clips_update_own
       SELECT 1
       FROM public.tracks t
       JOIN public.projects p ON t.project_id = p.id
-      JOIN public.users u ON p.user_id = u.id
       WHERE t.id = public.clips.track_id
-        AND u.auth_id = auth.uid()
+        AND p.user_id = auth.uid()
     )
   )
   WITH CHECK (
@@ -102,9 +99,8 @@ CREATE POLICY clips_update_own
       SELECT 1
       FROM public.tracks t
       JOIN public.projects p ON t.project_id = p.id
-      JOIN public.users u ON p.user_id = u.id
       WHERE t.id = public.clips.track_id
-        AND u.auth_id = auth.uid()
+        AND p.user_id = auth.uid()
     )
   );
 
@@ -118,8 +114,7 @@ CREATE POLICY clips_delete_own
       SELECT 1
       FROM public.tracks t
       JOIN public.projects p ON t.project_id = p.id
-      JOIN public.users u ON p.user_id = u.id
       WHERE t.id = public.clips.track_id
-        AND u.auth_id = auth.uid()
+        AND p.user_id = auth.uid()
     )
   );

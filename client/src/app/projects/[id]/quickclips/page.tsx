@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { Project } from '@/types/projects'
-import { Download, Play, ArrowLeft, Zap, Clock, Star, Share2, Eye } from 'lucide-react'
+import { Download, Play, ArrowLeft, Zap, Clock, Star, Share2, Eye, Edit3, DownloadCloud } from 'lucide-react'
 
 interface QuickClip {
     id: string
@@ -81,14 +81,68 @@ export default function QuickClipsPage() {
     }
 
     const handleDownload = (clip: QuickClip) => {
-        // TODO: Implement actual download when backend provides real URLs
-        console.log('Downloading clip:', clip)
-        // For now, just open the preview URL
-        window.open(clip.previewUrl, '_blank')
+        // Create a download link that forces file download
+        const link = document.createElement('a')
+        link.href = clip.downloadUrl
+        link.download = `${clip.title.replace(/[^a-zA-Z0-9]/g, '_')}.mp4`
+        link.target = '_blank'
+        
+        // Append to body, click, and remove
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
+        console.log('Downloaded clip:', clip.title)
     }
 
     const handlePreview = (clip: QuickClip) => {
         window.open(clip.previewUrl, '_blank')
+    }
+
+    const handleEdit = async (clip: QuickClip) => {
+        // Create a new project for editing this specific clip
+        try {
+            const response = await fetch(apiPath('projects'), {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: `Edit - ${clip.title}`,
+                    description: `Editing clip: ${clip.description}`
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to create editing project')
+            }
+
+            const newProject = await response.json()
+            
+            // Navigate to editor with the clip loaded
+            router.push(`/projects/${newProject.id}?clipUrl=${encodeURIComponent(clip.downloadUrl)}`)
+        } catch (error) {
+            console.error('Failed to create editing project:', error)
+            alert('Failed to open editor. Please try again.')
+        }
+    }
+
+    const handleBulkDownload = () => {
+        clips.forEach((clip, index) => {
+            setTimeout(() => {
+                const link = document.createElement('a')
+                link.href = clip.downloadUrl
+                link.download = `${clip.title.replace(/[^a-zA-Z0-9]/g, '_')}.mp4`
+                link.target = '_blank'
+                
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+            }, index * 1000) // Stagger downloads by 1 second to avoid browser limits
+        })
+        
+        console.log('Started bulk download of', clips.length, 'clips')
     }
 
     const getViralScoreColor = (score: number) => {
@@ -244,8 +298,17 @@ export default function QuickClipsPage() {
                         <div>
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-semibold text-gray-900">Generated Clips</h2>
-                                <div className="text-sm text-gray-600">
-                                    Sorted by viral score
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={handleBulkDownload}
+                                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                                    >
+                                        <DownloadCloud className="w-4 h-4" />
+                                        Download All
+                                    </button>
+                                    <div className="text-sm text-gray-600">
+                                        Sorted by viral score
+                                    </div>
                                 </div>
                             </div>
                             
@@ -274,16 +337,23 @@ export default function QuickClipsPage() {
                                                     <div className="flex gap-2">
                                                         <button
                                                             onClick={() => handlePreview(clip)}
-                                                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white/90 backdrop-blur-sm text-gray-900 text-sm rounded-lg hover:bg-white transition-colors"
+                                                            className="flex-1 flex items-center justify-center gap-1 px-2 py-2 bg-white/90 backdrop-blur-sm text-gray-900 text-xs rounded-lg hover:bg-white transition-colors"
                                                         >
-                                                            <Play className="w-4 h-4" />
+                                                            <Play className="w-3 h-3" />
                                                             Preview
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDownload(clip)}
-                                                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors"
+                                                            onClick={() => handleEdit(clip)}
+                                                            className="flex-1 flex items-center justify-center gap-1 px-2 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors"
                                                         >
-                                                            <Download className="w-4 h-4" />
+                                                            <Edit3 className="w-3 h-3" />
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDownload(clip)}
+                                                            className="flex-1 flex items-center justify-center gap-1 px-2 py-2 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 transition-colors"
+                                                        >
+                                                            <Download className="w-3 h-3" />
                                                             Download
                                                         </button>
                                                     </div>

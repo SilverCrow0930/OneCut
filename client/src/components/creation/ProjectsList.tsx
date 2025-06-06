@@ -150,23 +150,14 @@ export default function ProjectsList() {
             })
             
             if (!response.ok) {
-                let errorMessage = 'Failed to delete project'
-                try {
-                    const errorData = await response.text()
-                    console.error('Delete error response:', response.status, errorData)
-                    errorMessage = `Error ${response.status}: ${errorData}`
-                } catch (parseError) {
-                    console.error('Could not parse error response:', parseError)
-                }
-                throw new Error(errorMessage)
+                throw new Error('Failed to delete project')
             }
             
             // Remove from local state
             setProjects(prev => prev.filter(p => p.id !== project.id))
-            console.log('Project deleted successfully:', project.id)
         } catch (error) {
             console.error('Error deleting project:', error)
-            alert(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            alert('Failed to delete project')
         }
     }
 

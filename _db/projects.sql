@@ -81,26 +81,26 @@ DROP POLICY IF EXISTS projects_delete_own  ON public.projects;
 CREATE POLICY projects_select_own
   ON public.projects
   FOR SELECT
-  USING (user_id IN (SELECT id FROM public.users WHERE auth_id = auth.uid()));
+  USING (user_id = auth.uid());
 
 -- 7.2 INSERT: only create projects under your own user_id
 CREATE POLICY projects_insert_own
   ON public.projects
   FOR INSERT
-  WITH CHECK (user_id IN (SELECT id FROM public.users WHERE auth_id = auth.uid()));
+  WITH CHECK (user_id = auth.uid());
 
 -- 7.3 UPDATE: only update your own projects
 CREATE POLICY projects_update_own
   ON public.projects
   FOR UPDATE
-  USING (user_id IN (SELECT id FROM public.users WHERE auth_id = auth.uid()))
-  WITH CHECK (user_id IN (SELECT id FROM public.users WHERE auth_id = auth.uid()));
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
 -- 7.4 DELETE: only delete your own projects
 CREATE POLICY projects_delete_own
   ON public.projects
   FOR DELETE
-  USING (user_id IN (SELECT id FROM public.users WHERE auth_id = auth.uid()));
+  USING (user_id = auth.uid());
 
 -- 8. Index to speed up lookups by user
 CREATE INDEX IF NOT EXISTS idx_projects_user_id

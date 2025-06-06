@@ -340,6 +340,7 @@ export const setupWebSocket = (server: any) => {
                 contentType?: string,
                 targetDuration?: number,
                 videoFormat?: string,
+                outputMode?: 'individual' | 'stitched',
                 projectId?: string
             }) => {
                 const processStartTime = Date.now();
@@ -371,6 +372,7 @@ export const setupWebSocket = (server: any) => {
                                 contentType: data.contentType,
                                 targetDuration: data.targetDuration,
                                 videoFormat: data.videoFormat,
+                                outputMode: data.outputMode,
                                 originalFilename: 'uploaded_video' // TODO: Get from initial request
                             };
                         }
@@ -446,31 +448,61 @@ export const setupWebSocket = (server: any) => {
                         progress: 40
                     });
 
-                    // Generate prompt based on content type and format
+                    // Generate prompt based on content type and output mode
                     const contentTypePrompts = {
-                        'podcast': 'Extract the most engaging and shareable moments from this podcast',
-                        'professional_meeting': 'Identify key decisions, insights, and action items from this meeting',
-                        'educational_video': 'Find the most valuable learning moments and key takeaways',
-                        'talking_video': 'Extract the most engaging, quotable, and shareable moments'
+                        'talking': 'Extract the most engaging and quotable moments from this talking video',
+                        'professional': 'Identify key insights, decisions, and important moments from this professional content',
+                        'gaming': 'Find the most exciting gameplay moments, highlights, epic fails, and clutch plays',
                     };
 
-                    const basePrompt = contentTypePrompts[data.contentType as keyof typeof contentTypePrompts] || contentTypePrompts['talking_video'];
-                    const formatInstruction = data.videoFormat === 'short_vertical' 
-                        ? 'Create 3-5 viral-ready clips (15-90 seconds each) optimized for mobile viewing.'
-                        : 'Create 2-4 substantial clips (2-5 minutes each) with complete context.';
+                    // Use custom content type if provided, otherwise use predefined
+                    const basePrompt = data.contentType && contentTypePrompts[data.contentType as keyof typeof contentTypePrompts] 
+                        ? contentTypePrompts[data.contentType as keyof typeof contentTypePrompts]
+                        : data.contentType 
+                            ? `Extract the most engaging and valuable moments from this ${data.contentType} content`
+                            : contentTypePrompts['talking'];
 
-                    const fullPrompt = `${basePrompt}. ${formatInstruction} 
+                    // Different instructions based on output mode
+                    const outputMode = data.outputMode || 'individual';
+                    let formatInstruction = '';
+                    let responseFormat = '';
 
-                    Return ONLY a JSON array of clips, no other text. Each clip should have:
-                    {
-                        "title": "Descriptive title",
-                        "start_time": start_seconds,
-                        "end_time": end_seconds,
-                        "viral_score": score_0_to_10,
-                        "description": "Why this moment is valuable"
+                    if (outputMode === 'individual') {
+                        // Short Videos: Multiple 20-90s clips for social media
+                        formatInstruction = `Create 3-6 viral-ready clips (20-90 seconds each) optimized for social media.
+                        Each clip should be a single continuous segment that stands alone.
+                        Focus on hooks, emotional moments, and shareable content.`;
+                        
+                        responseFormat = `Return ONLY a JSON array of clips, no other text. Each clip should have:
+                        {
+                            "title": "Catchy, clickable title",
+                            "start_time": start_seconds,
+                            "end_time": end_seconds,
+                            "viral_score": score_1_to_10,
+                            "description": "Why this moment will go viral"
+                        }`;
+                    } else {
+                        // Long Video: One stitched highlight reel
+                        formatInstruction = `Create 4-8 highlight segments that will be stitched into one final video.
+                        Each segment should represent a key moment or topic.
+                        Focus on comprehensive coverage and smooth flow between segments.
+                        No time restrictions on individual segments.`;
+                        
+                        responseFormat = `Return ONLY a JSON array of segments, no other text. Each segment should have:
+                        {
+                            "title": "Descriptive segment title",
+                            "start_time": start_seconds,
+                            "end_time": end_seconds,
+                            "viral_score": importance_score_1_to_10,
+                            "description": "Why this segment is important for the highlight reel"
+                        }`;
                     }
 
-                    Target approximately ${data.targetDuration || 60} seconds total across all clips.`;
+                    const fullPrompt = `${basePrompt}. ${formatInstruction}
+
+                    ${responseFormat}
+
+                    Target total duration: approximately ${data.targetDuration || 60} seconds across all ${outputMode === 'individual' ? 'clips' : 'segments'}.`;
 
                     // Get AI analysis
                     const modelResponse = await generateContent(
@@ -489,6 +521,18 @@ export const setupWebSocket = (server: any) => {
                         message: 'Creating video files...',
                         progress: 70
                     });
+
+                    // Send processing progress for each clip
+                    const updateClipProgress = (current: number, total: number, clipTitle: string) => {
+                        const progressPerClip = 20 / total; // 20% of total progress for video processing
+                        const currentProgress = 70 + (current * progressPerClip);
+                        
+                        socket.emit('quickclips_state', {
+                            state: 'processing',
+                            message: `Processing clip ${current + 1}/${total}: ${clipTitle}`,
+                            progress: Math.round(currentProgress)
+                        });
+                    };
 
                     // Parse AI response to extract clips
                     let clips;
@@ -533,25 +577,33 @@ export const setupWebSocket = (server: any) => {
                         progress: 90
                     });
 
-                    // TODO: In a real implementation, you would:
-                    // 1. Use FFmpeg to extract video segments based on start/end times
-                    // 2. Upload the processed clips to GCS
-                    // 3. Generate signed download URLs
-                    // 4. Create thumbnails for each clip
+                    // Process actual video clips using FFmpeg
+                    const { VideoProcessor } = await import('../utils/videoProcessing');
+                    const videoProcessor = new VideoProcessor();
 
-                    // For now, simulate the final clips with mock download URLs
-                    const processedClips = clips.map((clip: any, index: number) => ({
+                    // Add unique IDs to clips
+                    const clipsWithIds = clips.map((clip: any, index: number) => ({
                         id: `clip_${Date.now()}_${index}`,
                         title: clip.title,
-                        duration: clip.end_time - clip.start_time,
                         start_time: clip.start_time,
                         end_time: clip.end_time,
                         viral_score: clip.viral_score,
-                        description: clip.description,
-                        thumbnail: `https://picsum.photos/320/180?random=${index + 1}`, // Mock thumbnail
-                        downloadUrl: '#', // TODO: Real download URL from processed clip
-                        previewUrl: signedUrl // For now, use original video URL for preview
+                        description: clip.description
                     }));
+
+                    console.log('Starting video processing for clips:', clipsWithIds.length);
+
+                    // Process clips and generate actual video files
+                    const processedClips = await videoProcessor.processClips(
+                        data.fileUri,
+                        clipsWithIds,
+                        data.projectId || 'unknown',
+                        (data.videoFormat as 'short_vertical' | 'long_horizontal') || 'short_vertical',
+                        updateClipProgress,
+                        data.outputMode || 'individual'
+                    );
+
+                    console.log('Video processing completed, generated clips:', processedClips.length);
 
                     // Update project status: completed with clips data
                     await updateProjectStatus('completed', 'Clips ready for download!', processedClips);

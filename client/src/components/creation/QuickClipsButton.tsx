@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Zap, Upload, Clock, Users, BookOpen, Mic, Video, Download, Play, X } from 'lucide-react'
+import { Zap, Upload, Clock, Users, BookOpen, Mic, Video, Download, Play, X, Gamepad2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useQuickClips, QuickClip } from '@/contexts/QuickClipsContext'
 import { apiPath } from '@/lib/config'
@@ -14,7 +14,9 @@ const QuickClipsButton = () => {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60)
-    const [contentType, setContentType] = useState('talking_video')
+    const [contentType, setContentType] = useState('talking')
+    const [customContentType, setCustomContentType] = useState('')
+    const [outputMode, setOutputMode] = useState<'individual' | 'stitched'>('individual')
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingProgress, setProcessingProgress] = useState(0)
     const [processingMessage, setProcessingMessage] = useState('')
@@ -25,16 +27,16 @@ const QuickClipsButton = () => {
     const [error, setError] = useState<string | null>(null)
     
     const contentTypes = [
-        { id: 'podcast', label: 'Podcast', icon: Mic },
-        { id: 'professional_meeting', label: 'Meeting', icon: Users },
-        { id: 'educational_video', label: 'Tutorial', icon: BookOpen },
-        { id: 'talking_video', label: 'Talking Video', icon: Video }
+        { id: 'talking', label: 'Talking Video', icon: Video },
+        { id: 'professional', label: 'Professional', icon: Users },
+        { id: 'gaming', label: 'Gaming', icon: Gamepad2 },
+        { id: 'custom', label: 'Custom', icon: BookOpen }
     ]
 
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
 
-    const getVideoFormat = (durationSeconds: number) => {
-        return durationSeconds < 120 ? 'short_vertical' : 'long_horizontal'
+    const getVideoFormat = (mode: 'individual' | 'stitched') => {
+        return mode === 'individual' ? 'short_vertical' : 'long_horizontal'
     }
 
     const formatDuration = (seconds: number) => {
@@ -168,10 +170,10 @@ const QuickClipsButton = () => {
 
     const createProject = async (filename: string, contentType: string): Promise<string> => {
         const contentTypeLabels: Record<string, string> = {
-            'podcast': 'Podcast',
-            'professional_meeting': 'Meeting',
-            'educational_video': 'Tutorial',
-            'talking_video': 'Talking Video'
+            'talking': 'Talking Video',
+            'professional': 'Professional',
+            'gaming': 'Gaming',
+            'custom': customContentType || 'Custom'
         }
 
         const response = await fetch(apiPath('projects'), {
@@ -189,7 +191,7 @@ const QuickClipsButton = () => {
                     clips: [],
                     contentType,
                     targetDuration,
-                    videoFormat: getVideoFormat(targetDuration),
+                    videoFormat: getVideoFormat(outputMode),
                     originalFilename: filename
                 }
             })
@@ -214,7 +216,7 @@ const QuickClipsButton = () => {
                 clips,
                 contentType,
                 targetDuration,
-                videoFormat: getVideoFormat(targetDuration),
+                videoFormat: getVideoFormat(outputMode),
                 originalFilename: selectedFile?.name || 'Unknown'
             }
         }
@@ -269,9 +271,10 @@ const QuickClipsButton = () => {
             sendQuickClipsRequest({
                 fileUri,
                 mimeType: selectedFile.type,
-                contentType,
+                contentType: contentType === 'custom' ? customContentType : contentType,
                 targetDuration,
-                videoFormat: getVideoFormat(targetDuration),
+                videoFormat: getVideoFormat(outputMode),
+                outputMode,
                 projectId  // Include project ID for updates
             })
 
@@ -429,6 +432,67 @@ const QuickClipsButton = () => {
                                                 )
                                             })}
                                         </div>
+                                        
+                                        {/* Custom Content Type Input */}
+                                        {contentType === 'custom' && (
+                                            <div className="mt-3">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Describe your content type..."
+                                                    value={customContentType}
+                                                    onChange={(e) => setCustomContentType(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Output Mode */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-3">Output Mode</label>
+                                        <div className="space-y-3">
+                                            <div className="grid grid-cols-1 gap-3">
+                                                <button
+                                                    onClick={() => setOutputMode('individual')}
+                                                    className={`
+                                                        p-4 rounded-lg border text-left
+                                                        ${outputMode === 'individual' ? 
+                                                            'border-emerald-500 bg-emerald-50' : 
+                                                            'border-gray-200 hover:border-emerald-300'
+                                                        }
+                                                    `}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex-shrink-0 w-8 h-12 bg-emerald-100 rounded border-2 border-emerald-300"></div>
+                                                        <div>
+                                                            <div className="font-medium text-gray-900">Short Videos</div>
+                                                            <div className="text-sm text-gray-600">Multiple 20-90s clips (9:16)</div>
+                                                            <div className="text-xs text-gray-500">Individual downloads for social media</div>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                                
+                                                <button
+                                                    onClick={() => setOutputMode('stitched')}
+                                                    className={`
+                                                        p-4 rounded-lg border text-left
+                                                        ${outputMode === 'stitched' ? 
+                                                            'border-emerald-500 bg-emerald-50' : 
+                                                            'border-gray-200 hover:border-emerald-300'
+                                                        }
+                                                    `}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex-shrink-0 w-12 h-8 bg-emerald-100 rounded border-2 border-emerald-300"></div>
+                                                        <div>
+                                                            <div className="font-medium text-gray-900">Long Video</div>
+                                                            <div className="text-sm text-gray-600">One highlight reel (16:9)</div>
+                                                            <div className="text-xs text-gray-500">Multiple clips stitched together</div>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Target Duration */}
@@ -452,7 +516,7 @@ const QuickClipsButton = () => {
                                             <div className="text-center">
                                                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm">
                                                     <Clock className="w-4 h-4" />
-                                                    {getVideoFormat(targetDuration) === 'short_vertical' ? 'Vertical (9:16)' : 'Horizontal (16:9)'}
+                                                    {getVideoFormat(outputMode) === 'short_vertical' ? 'Vertical (9:16)' : 'Horizontal (16:9)'}
                                                 </span>
                                             </div>
                                         </div>
