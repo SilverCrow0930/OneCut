@@ -29,7 +29,9 @@ CREATE POLICY commands_select_own
   FOR SELECT
   USING (
     project_id IN (
-      SELECT id FROM public.projects WHERE user_id = auth.uid()
+      SELECT p.id FROM public.projects p
+      JOIN public.users u ON p.user_id = u.id
+      WHERE u.auth_id = auth.uid()
     )
   );
 
@@ -40,7 +42,9 @@ CREATE POLICY commands_insert_own
   FOR INSERT
   WITH CHECK (
     project_id IN (
-      SELECT id FROM public.projects WHERE user_id = auth.uid()
+      SELECT p.id FROM public.projects p
+      JOIN public.users u ON p.user_id = u.id
+      WHERE u.auth_id = auth.uid()
     )
   );
 
@@ -51,12 +55,16 @@ CREATE POLICY commands_update_own
   FOR UPDATE
   USING (
     project_id IN (
-      SELECT id FROM public.projects WHERE user_id = auth.uid()
+      SELECT p.id FROM public.projects p
+      JOIN public.users u ON p.user_id = u.id
+      WHERE u.auth_id = auth.uid()
     )
   )
   WITH CHECK (
     project_id IN (
-      SELECT id FROM public.projects WHERE user_id = auth.uid()
+      SELECT p.id FROM public.projects p
+      JOIN public.users u ON p.user_id = u.id
+      WHERE u.auth_id = auth.uid()
     )
   );
 
@@ -67,6 +75,8 @@ CREATE POLICY commands_delete_own
   FOR DELETE
   USING (
     project_id IN (
-      SELECT id FROM public.projects WHERE user_id = auth.uid()
+      SELECT p.id FROM public.projects p
+      JOIN public.users u ON p.user_id = u.id
+      WHERE u.auth_id = auth.uid()
     )
   );
