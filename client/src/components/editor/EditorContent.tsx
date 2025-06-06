@@ -5,6 +5,7 @@ import ClipTools from './ClipTools'
 import ZoomSlider from './ZoomSlider'
 import Timeline from './timeline/Timeline'
 import MarqueeSelection from './MarqueeSelection'
+import { AspectRatioButton } from './AspectRatioButton'
 import { useEditor } from '@/contexts/EditorContext'
 
 const EditorContent = () => {
@@ -32,8 +33,9 @@ const EditorContent = () => {
                 bg-white/80 backdrop-blur-sm py-1 px-4 rounded-lg shadow-sm border border-gray-200/60
                 flex-shrink-0 z-10
             ">
-                <div className="flex w-64 items-center">
+                <div className="flex w-64 items-center gap-3">
                     <ClipTools />
+                    <AspectRatioButton />
                 </div>
                 <div className="flex w-full items-center justify-center">
                     <PlaybackControls />

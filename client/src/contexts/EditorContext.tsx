@@ -56,6 +56,10 @@ interface EditorContextType {
     setSelectedClipIds: (ids: string[]) => void
     selectedTrackId: string | null
     setSelectedTrackId: (id: string | null) => void
+
+    // aspect ratio
+    aspectRatio: 'vertical' | 'horizontal'
+    setAspectRatio: (ratio: 'vertical' | 'horizontal') => void
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined)
@@ -422,6 +426,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
     }, [project?.id, project?.thumbnail_url, clips.length, session?.access_token])
 
+    // aspect ratio
+    const [aspectRatio, setAspectRatio] = useState<'vertical' | 'horizontal'>('vertical')
+
     return (
         <EditorContext.Provider value={{
             project, loading, error,
@@ -450,6 +457,10 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             setSelectedClipIds: safeSetSelectedClipIds,
             selectedTrackId,
             setSelectedTrackId,
+
+            // aspect ratio
+            aspectRatio,
+            setAspectRatio,
         }}>
             {children}
         </EditorContext.Provider>

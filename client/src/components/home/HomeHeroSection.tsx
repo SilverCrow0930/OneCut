@@ -13,6 +13,7 @@ const HomeHeroSection = () => {
     const [targetDuration, setTargetDuration] = useState(60) // Default 60 seconds (1 minute)
     const [contentType, setContentType] = useState('talking_video')
     const [isUploading, setIsUploading] = useState(false)
+    const [isDragOver, setIsDragOver] = useState(false)
     
     // Specific time intervals in seconds
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
@@ -73,6 +74,37 @@ const HomeHeroSection = () => {
         const file = event.target.files?.[0]
         if (file && file.type.startsWith('video/')) {
             setSelectedFile(file)
+        }
+    }
+
+    // Drag and drop handlers
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragOver(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragOver(false)
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+    }
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragOver(false)
+
+        const files = Array.from(e.dataTransfer.files)
+        const videoFile = files.find(file => file.type.startsWith('video/'))
+        
+        if (videoFile) {
+            setSelectedFile(videoFile)
         }
     }
 
@@ -248,9 +280,6 @@ const HomeHeroSection = () => {
 
                             {/* Upload Header */}
                             <div className="text-center mb-6 relative z-10">
-                                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                                    AI Editing
-                                </h3>
                                 <p className="text-gray-600">
                                     Upload your video and see the magic happen
                                 </p>
@@ -268,17 +297,23 @@ const HomeHeroSection = () => {
                                 
                                 <div 
                                     onClick={() => fileInputRef.current?.click()}
+                                    onDragEnter={handleDragEnter}
+                                    onDragLeave={handleDragLeave}
+                                    onDragOver={handleDragOver}
+                                    onDrop={handleDrop}
                                     className={`
                                         border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
                                         transition-all duration-300 group relative overflow-hidden
                                         ${selectedFile ? 
                                             'border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50 shadow-inner' : 
-                                            'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:shadow-lg'
+                                            isDragOver ?
+                                                'border-blue-500 bg-gradient-to-br from-blue-100 to-purple-100 shadow-lg scale-105' :
+                                                'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:shadow-lg'
                                         }
                                     `}
                                 >
                                     {/* Animated background for hover */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                    <div className={`absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDragOver ? 'opacity-100' : ''}`}></div>
                                     
                                     {selectedFile ? (
                                         <div className="flex flex-col items-center gap-3 relative z-10">
