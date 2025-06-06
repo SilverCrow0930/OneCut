@@ -124,18 +124,39 @@ router.post(
                 })
             }
 
-            // 2) Insert new project using the public.users.id
-            const projectName = generateDefaultName()
+            // 2) Extract project data from request
+            const {
+                name,
+                processing_status,
+                processing_type,
+                processing_progress,
+                processing_message,
+                processing_data,
+                ...otherFields
+            } = req.body
+
+            const projectName = name || generateDefaultName()
+            
+            // 3) Insert new project using the public.users.id
+            const insertData = {
+                user_id: profile.id,
+                name: projectName,
+                thumbnail_url: null,
+                duration: 0,
+                is_public: false,
+                // Include processing fields if provided
+                ...(processing_status && { processing_status }),
+                ...(processing_type && { processing_type }),
+                ...(processing_progress !== undefined && { processing_progress }),
+                ...(processing_message && { processing_message }),
+                ...(processing_data && { processing_data }),
+                ...otherFields
+            }
+
             const { data, error } = await supabase
                 .from('projects')
-                .insert({
-                    user_id: profile.id,
-                    name: projectName,
-                    thumbnail_url: null,
-                    duration: 0,
-                    is_public: false,
-                })
-                .select('id')
+                .insert(insertData)
+                .select('*')
                 .single()
 
             if (error || !data) {
@@ -145,10 +166,8 @@ router.post(
                 })
             }
 
-            // 3) Redirect browser to the editor URL
-            return res.status(201).json({
-                id: data.id
-            })
+            // 4) Return the full project data
+            return res.status(201).json(data)
         }
         catch (err) {
             next(err)

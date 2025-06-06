@@ -136,7 +136,11 @@ const HomeHeroSection = () => {
         setIsUploading(true)
 
         try {
-            // 1. Create new project
+            // Determine video format based on duration
+            const videoFormat = getVideoFormat(targetDuration)
+            const formatName = videoFormat === 'short_vertical' ? 'Short' : 'Long'
+            
+            // 1. Create new project with processing status
             const projectResponse = await fetch(apiPath('projects'), {
                 method: 'POST',
                 headers: {
@@ -144,8 +148,17 @@ const HomeHeroSection = () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    name: `Autocut - ${selectedFile.name}`,
-                    description: `AI editing for ${contentTypes.find(t => t.id === contentType)?.label}`
+                    name: `Quickclips - ${selectedFile.name}`,
+                    processing_status: 'queued',
+                    processing_type: 'quickclips',
+                    processing_progress: 0,
+                    processing_message: 'Preparing for processing...',
+                    processing_data: {
+                        contentType,
+                        videoFormat: targetDuration < 120 ? 'short' : 'long',
+                        targetDuration,
+                        filename: selectedFile.name
+                    }
                 })
             })
 
@@ -172,22 +185,35 @@ const HomeHeroSection = () => {
                 throw new Error('Failed to upload file')
             }
 
-            // 3. Prepare Autocut settings
-            const autocutSettings = {
-                targetDuration,
-                contentType,
-                videoFormat: getVideoFormat(targetDuration), // Auto-determine format based on duration
-                filename: selectedFile.name,
-                hasFile: true // Mark that file has been uploaded
+            const uploadResult = await uploadResponse.json()
+            const fileUri = uploadResult.gcsUri || uploadResult.uri
+
+            // 3. Start background processing job
+            const jobResponse = await fetch(apiPath('quickclips/start'), {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    projectId: project.id,
+                    fileUri,
+                    mimeType: selectedFile.type,
+                    contentType,
+                    targetDuration
+                })
+            })
+
+            if (!jobResponse.ok) {
+                throw new Error('Failed to start processing job')
             }
 
-            // 4. Navigate to editor and auto-select Autocut tool
-            const settingsParam = encodeURIComponent(JSON.stringify(autocutSettings))
-            router.push(`/projects/${project.id}?tool=Autocut&settings=${settingsParam}`)
+            // 4. Navigate to projects page to show processing status
+            router.push(`/projects?highlight=${project.id}`)
 
         } catch (error) {
-            console.error('Error starting autocut:', error)
-            alert('Upload failed, please try again')
+            console.error('Error starting quickclips:', error)
+            alert('Failed to start processing, please try again')
         } finally {
             setIsUploading(false)
         }
@@ -405,10 +431,10 @@ const HomeHeroSection = () => {
                                     <div className="flex items-center gap-4">
                                         <div className="flex-1 text-center">
                                             <div className="text-sm font-medium text-gray-900 mb-2">
-                                                {getFormatInfo(targetDuration).format}
+                                                {targetDuration < 120 ? 'Short Vertical' : 'Long Horizontal'}
                                             </div>
                                             <div className="text-lg font-bold text-blue-600">
-                                                {getFormatInfo(targetDuration).aspectRatio}
+                                                {targetDuration < 120 ? '9:16' : '16:9'}
                                             </div>
                                         </div>
                                         <div className="flex-1 flex justify-center">
@@ -486,12 +512,12 @@ const HomeHeroSection = () => {
                                     {isUploading ? (
                                         <>
                                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                            Processing...
+                                            Uploading...
                                         </>
                                     ) : (
                                         <>
                                             <Zap className="w-5 h-5" />
-                                            Start AI Editing
+                                            Create Quick Clips
                                         </>
                                     )}
                                 </span>
@@ -502,7 +528,7 @@ const HomeHeroSection = () => {
                                 {user ? (
                                     <span className="flex items-center justify-center gap-1">
                                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                        Your video will be processed immediately
+                                        Processing starts immediately in background
                                     </span>
                                 ) : (
                                     'Sign in required to process video'

@@ -13,6 +13,19 @@ CREATE TABLE IF NOT EXISTS public.projects (
   thumbnail_url  text,
   duration       integer,
   is_public      boolean      NOT NULL DEFAULT false,
+  
+  -- Async processing fields
+  processing_status text       DEFAULT 'idle', -- 'idle', 'queued', 'processing', 'completed', 'failed'
+  processing_type   text,                      -- 'quickclips', 'autocut', etc.
+  processing_job_id text,                      -- Background job ID for tracking
+  processing_progress integer  DEFAULT 0,      -- 0-100 progress percentage
+  processing_message text,                     -- Current processing message
+  processing_error  text,                      -- Error message if failed
+  processing_data   jsonb,                     -- Metadata: content type, format, etc.
+  processing_result jsonb,                     -- Final results: clips, analysis, etc.
+  processing_started_at timestamptz,           -- When processing began
+  processing_completed_at timestamptz,         -- When processing finished
+  
   created_at     timestamptz  NOT NULL DEFAULT now(),
   updated_at     timestamptz  NOT NULL DEFAULT now()
 );
@@ -76,3 +89,11 @@ CREATE POLICY projects_delete_own
 -- 8. Index to speed up lookups by user
 CREATE INDEX IF NOT EXISTS idx_projects_user_id
   ON public.projects(user_id);
+
+-- 9. Index for processing status queries
+CREATE INDEX IF NOT EXISTS idx_projects_processing_status
+  ON public.projects(processing_status, processing_type);
+
+-- 10. Index for job ID lookups
+CREATE INDEX IF NOT EXISTS idx_projects_job_id
+  ON public.projects(processing_job_id);
