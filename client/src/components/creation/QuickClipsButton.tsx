@@ -1,11 +1,13 @@
-import React, { useState, useRef } from 'react'
-import { Zap, Upload, Clock, Users, BookOpen, Mic, Video, X } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { Zap, Upload, Clock, Users, BookOpen, Mic, Video, Download, Play, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useQuickClips, QuickClip } from '@/contexts/QuickClipsContext'
 import { apiPath } from '@/lib/config'
+import { useRouter } from 'next/navigation'
 
 const QuickClipsButton = () => {
     const { user, session, signIn } = useAuth()
+    const { sendQuickClipsRequest, onQuickClipsResponse, onQuickClipsState } = useQuickClips()
     const router = useRouter()
     const fileInputRef = useRef<HTMLInputElement>(null)
     
@@ -13,8 +15,13 @@ const QuickClipsButton = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60)
     const [contentType, setContentType] = useState('talking_video')
-    const [isDragOver, setIsDragOver] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
+    const [processingProgress, setProcessingProgress] = useState(0)
+    const [processingMessage, setProcessingMessage] = useState('')
+    const [generatedClips, setGeneratedClips] = useState<QuickClip[]>([])
+    const [isDragOver, setIsDragOver] = useState(false)
+    const [isUploading, setIsUploading] = useState(false)
+    const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
     
     const contentTypes = [
@@ -54,6 +61,34 @@ const QuickClipsButton = () => {
         const closestInterval = getClosestInterval(value)
         setTargetDuration(closestInterval)
     }
+
+    // WebSocket event listeners
+    useEffect(() => {
+        onQuickClipsState((state) => {
+            console.log('QuickClips state update:', state)
+            setProcessingProgress(state.progress)
+            setProcessingMessage(state.message)
+            
+            if (state.state === 'error') {
+                setError(state.message)
+                setIsProcessing(false)
+            } else if (state.state === 'completed') {
+                setIsProcessing(false)
+            }
+        })
+
+        onQuickClipsResponse((response) => {
+            console.log('QuickClips response:', response)
+            
+            if (response.success && response.clips) {
+                setGeneratedClips(response.clips)
+                setIsProcessing(false)
+            } else {
+                setError(response.error || 'Processing failed')
+                setIsProcessing(false)
+            }
+        })
+    }, [onQuickClipsState, onQuickClipsResponse])
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
@@ -98,23 +133,47 @@ const QuickClipsButton = () => {
         const formData = new FormData()
         formData.append('file', file)
 
-        const response = await fetch(apiPath('assets/upload-to-gcs'), {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${session?.access_token}`
-            },
-            body: formData
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest()
+            
+            xhr.upload.addEventListener('progress', (event) => {
+                if (event.lengthComputable) {
+                    const progress = (event.loaded / event.total) * 100
+                    setUploadProgress(progress)
+                }
+            })
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText)
+                        resolve(response.gsUri)
+                    } catch (error) {
+                        reject(new Error('Failed to parse upload response'))
+                    }
+                } else {
+                    reject(new Error(`Upload failed with status ${xhr.status}`))
+                }
+            })
+
+            xhr.addEventListener('error', () => {
+                reject(new Error('Upload failed'))
+            })
+
+            xhr.open('POST', apiPath('assets/upload-to-gcs'))
+            xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+            xhr.send(formData)
         })
-
-        if (!response.ok) {
-            throw new Error(`Upload failed with status ${response.status}`)
-        }
-
-        const result = await response.json()
-        return result.gsUri
     }
 
-    const createQuickClipsProject = async (fileUri: string, filename: string) => {
+    const createProject = async (filename: string, contentType: string): Promise<string> => {
+        const contentTypeLabels: Record<string, string> = {
+            'podcast': 'Podcast',
+            'professional_meeting': 'Meeting',
+            'educational_video': 'Tutorial',
+            'talking_video': 'Talking Video'
+        }
+
         const response = await fetch(apiPath('projects'), {
             method: 'POST',
             headers: {
@@ -122,15 +181,17 @@ const QuickClipsButton = () => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                name: `Quick Clips - ${filename}`,
-                project_type: 'quickclips',
+                name: `AI Clips - ${filename}`,
+                type: 'quickclips',
                 processing_status: 'processing',
-                processing_progress: 0,
-                processing_message: 'Starting AI processing...',
-                original_file_uri: fileUri,
-                content_type: contentType,
-                target_duration: targetDuration,
-                video_format: getVideoFormat(targetDuration)
+                processing_message: 'Starting AI analysis...',
+                quickclips_data: {
+                    clips: [],
+                    contentType,
+                    targetDuration,
+                    videoFormat: getVideoFormat(targetDuration),
+                    originalFilename: filename
+                }
             })
         })
 
@@ -138,25 +199,33 @@ const QuickClipsButton = () => {
             throw new Error('Failed to create project')
         }
 
-        return await response.json()
+        const project = await response.json()
+        return project.id
     }
 
-    const startBackgroundProcessing = async (projectId: string, fileUri: string) => {
-        // Call background processing endpoint
-        await fetch(apiPath('quickclips/process'), {
-            method: 'POST',
+    const updateProjectStatus = async (projectId: string, status: string, message: string, clips?: QuickClip[]) => {
+        const updateData: any = {
+            processing_status: status,
+            processing_message: message
+        }
+
+        if (clips) {
+            updateData.quickclips_data = {
+                clips,
+                contentType,
+                targetDuration,
+                videoFormat: getVideoFormat(targetDuration),
+                originalFilename: selectedFile?.name || 'Unknown'
+            }
+        }
+
+        await fetch(apiPath(`projects/${projectId}`), {
+            method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${session?.access_token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                projectId,
-                fileUri,
-                mimeType: selectedFile?.type,
-                contentType,
-                targetDuration,
-                videoFormat: getVideoFormat(targetDuration)
-            })
+            body: JSON.stringify(updateData)
         })
     }
 
@@ -171,32 +240,60 @@ const QuickClipsButton = () => {
             return
         }
 
+        setIsUploading(true)
         setIsProcessing(true)
+        setProcessingProgress(0)
         setError(null)
 
         try {
-            // 1. Upload file to GCS
-            const fileUri = await uploadFileToGCS(selectedFile)
-
-            // 2. Create QuickClips project
-            const project = await createQuickClipsProject(fileUri, selectedFile.name)
-
-            // 3. Start background processing (fire and forget)
-            await startBackgroundProcessing(project.id, fileUri)
-
-            // 4. Close modal and redirect to projects page
+            // 1. Create project immediately
+            const projectId = await createProject(selectedFile.name, contentType)
+            
+            // 2. Close modal and redirect to projects page
             setIsModalOpen(false)
             router.push('/creation')
 
-            // Show success message (you could use a toast notification here)
-            alert(`QuickClips processing started! We'll email you when "${project.name}" is ready.`)
+            // 3. Upload file to GCS
+            const fileUri = await uploadFileToGCS(selectedFile)
+            setIsUploading(false)
+
+            // 4. Update project status
+            await updateProjectStatus(projectId, 'processing', 'Uploading complete, analyzing video...')
+
+            // 5. Send to QuickClips processing with project ID
+            sendQuickClipsRequest({
+                fileUri,
+                mimeType: selectedFile.type,
+                contentType,
+                targetDuration,
+                videoFormat: getVideoFormat(targetDuration),
+                projectId  // Include project ID for updates
+            })
 
         } catch (error) {
-            console.error('Error starting QuickClips:', error)
-            setError(error instanceof Error ? error.message : 'Failed to start processing')
-        } finally {
+            console.error('Error processing video:', error)
+            setError(error instanceof Error ? error.message : 'Upload failed')
+            setIsUploading(false)
             setIsProcessing(false)
         }
+    }
+
+    const handleDownload = (clip: QuickClip) => {
+        // TODO: Implement actual download when backend provides real URLs
+        console.log('Downloading clip:', clip)
+        // For now, just open a new tab with the preview
+        window.open(clip.previewUrl, '_blank')
+    }
+
+    const handleReset = () => {
+        setSelectedFile(null)
+        setGeneratedClips([])
+        setProcessingProgress(0)
+        setProcessingMessage('')
+        setIsProcessing(false)
+        setIsUploading(false)
+        setUploadProgress(0)
+        setError(null)
     }
 
     return (
@@ -221,12 +318,12 @@ const QuickClipsButton = () => {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-900">Quick AI Clips</h2>
-                                <p className="text-gray-600">Start processing - we'll notify you when ready!</p>
+                                <p className="text-gray-600">Upload video and we'll process it in the background</p>
                             </div>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -244,6 +341,7 @@ const QuickClipsButton = () => {
                                 </div>
                             )}
 
+                            {/* Upload View */}
                             <div className="space-y-6">
                                 {/* Upload Area */}
                                 <div>
@@ -330,7 +428,7 @@ const QuickClipsButton = () => {
                                                 max="1800"
                                                 value={targetDuration}
                                                 onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-                                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                                             />
                                             <div className="flex justify-between text-xs text-gray-500">
                                                 <span>20s</span>
@@ -346,10 +444,10 @@ const QuickClipsButton = () => {
                                     </div>
                                 </div>
 
-                                {/* Start Button */}
+                                {/* Generate Button */}
                                 <button
                                     onClick={handleStartProcessing}
-                                    disabled={!selectedFile || isProcessing}
+                                    disabled={!selectedFile || isProcessing || isUploading}
                                     className="
                                         w-full bg-gradient-to-r from-emerald-600 to-teal-600 
                                         hover:from-emerald-700 hover:to-teal-700
@@ -362,28 +460,14 @@ const QuickClipsButton = () => {
                                     "
                                 >
                                     <span className="flex items-center justify-center gap-2">
-                                        {isProcessing ? (
-                                            <>
-                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                Starting...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Zap className="w-5 h-5" />
-                                                Start AI Processing
-                                            </>
-                                        )}
+                                        <Zap className="w-5 h-5" />
+                                        Start Background Processing
                                     </span>
                                 </button>
 
-                                <div className="text-center space-y-2">
-                                    <p className="text-sm text-gray-600">
-                                        Processing happens in the background - you can close this and do other things!
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                        📧 We'll email you when your clips are ready
-                                    </p>
-                                </div>
+                                <p className="text-xs text-gray-500 text-center">
+                                    Processing will continue in the background. You can navigate away and check progress later!
+                                </p>
                             </div>
                         </div>
                     </div>

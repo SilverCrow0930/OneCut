@@ -14,8 +14,37 @@ CREATE TABLE IF NOT EXISTS public.projects (
   duration       integer,
   is_public      boolean      NOT NULL DEFAULT false,
   created_at     timestamptz  NOT NULL DEFAULT now(),
-  updated_at     timestamptz  NOT NULL DEFAULT now()
+  updated_at     timestamptz  NOT NULL DEFAULT now(),
+  -- QuickClips fields
+  type           text         DEFAULT 'project' CHECK (type IN ('project', 'quickclips')),
+  processing_status text      DEFAULT 'idle' CHECK (processing_status IN ('idle', 'processing', 'completed', 'error')),
+  processing_message text,
+  quickclips_data jsonb
 );
+
+-- Add new columns to existing table if they don't exist
+DO $$ 
+BEGIN
+  -- Add type column if it doesn't exist
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'type') THEN
+    ALTER TABLE public.projects ADD COLUMN type text DEFAULT 'project' CHECK (type IN ('project', 'quickclips'));
+  END IF;
+
+  -- Add processing_status column if it doesn't exist
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'processing_status') THEN
+    ALTER TABLE public.projects ADD COLUMN processing_status text DEFAULT 'idle' CHECK (processing_status IN ('idle', 'processing', 'completed', 'error'));
+  END IF;
+
+  -- Add processing_message column if it doesn't exist
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'processing_message') THEN
+    ALTER TABLE public.projects ADD COLUMN processing_message text;
+  END IF;
+
+  -- Add quickclips_data column if it doesn't exist
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'quickclips_data') THEN
+    ALTER TABLE public.projects ADD COLUMN quickclips_data jsonb;
+  END IF;
+END $$;
 
 -- 3. Create or replace trigger function to auto-stamp updated_at
 CREATE OR REPLACE FUNCTION public.update_timestamp()
@@ -76,3 +105,7 @@ CREATE POLICY projects_delete_own
 -- 8. Index to speed up lookups by user
 CREATE INDEX IF NOT EXISTS idx_projects_user_id
   ON public.projects(user_id);
+
+-- 9. Index for processing status queries
+CREATE INDEX IF NOT EXISTS idx_projects_processing_status
+  ON public.projects(processing_status) WHERE processing_status != 'idle';

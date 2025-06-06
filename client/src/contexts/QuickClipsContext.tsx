@@ -8,6 +8,7 @@ interface QuickClipsEvent {
     contentType?: string;
     targetDuration?: number;
     videoFormat?: string;
+    projectId?: string;
 }
 
 interface QuickClip {
