@@ -10,7 +10,6 @@ export default function ProcessingQuickClips() {
     const { session } = useAuth()
     const [processingProjects, setProcessingProjects] = useState<Project[]>([])
     const [loading, setLoading] = useState(true)
-    const [allProjects, setAllProjects] = useState<Project[]>([]) // Debug: store all projects
 
     useEffect(() => {
         if (!session?.access_token) {
@@ -30,29 +29,27 @@ export default function ProcessingQuickClips() {
                 
                 if (res.ok) {
                     const allProjectsData: Project[] = await res.json()
-                    console.log('🔍 All projects loaded:', allProjectsData)
-                    setAllProjects(allProjectsData) // Debug: store all projects
                     
-                    const quickClipsProjects = allProjectsData.filter(p => 
-                        p.type === 'quickclips' && 
-                        (p.processing_status === 'processing' || p.processing_status === 'completed')
+                    // Show any project that is processing or recently completed QuickClips
+                    const relevantProjects = allProjectsData.filter(p => 
+                        (p.processing_status === 'processing') ||
+                        (p.type === 'quickclips' && p.processing_status === 'completed') ||
+                        (p.name?.includes('AI Clips') && (p.processing_status === 'processing' || p.processing_status === 'completed'))
                     )
-                    console.log('🎬 QuickClips projects found:', quickClipsProjects)
-                    setProcessingProjects(quickClipsProjects)
+                    
+                    setProcessingProjects(relevantProjects)
 
                     // Set up polling if there are processing projects
-                    const hasActiveProcessing = quickClipsProjects.some(p => p.processing_status === 'processing')
+                    const hasActiveProcessing = relevantProjects.some(p => p.processing_status === 'processing')
                     if (hasActiveProcessing && !intervalId) {
                         intervalId = setInterval(loadProcessingProjects, 2000) // Poll every 2 seconds
                     } else if (!hasActiveProcessing && intervalId) {
                         clearInterval(intervalId)
                         intervalId = null
                     }
-                } else {
-                    console.error('❌ Failed to load projects:', res.status, res.statusText)
                 }
             } catch (error) {
-                console.error('❌ Error loading processing projects:', error)
+                console.error('Error loading processing projects:', error)
             } finally {
                 setLoading(false)
             }
@@ -69,8 +66,28 @@ export default function ProcessingQuickClips() {
 
     const handleProjectClick = (project: Project) => {
         if (project.processing_status === 'completed') {
-            router.push(`/projects/${project.id}/quickclips`)
+            // Check if it's a QuickClips project
+            if (project.type === 'quickclips' || project.name?.includes('AI Clips')) {
+                router.push(`/projects/${project.id}/quickclips`)
+            } else {
+                router.push(`/projects/${project.id}`)
+            }
         }
+    }
+
+    const getProcessingPercentage = (project: Project) => {
+        if (project.processing_status === 'completed') return 100
+        if (project.processing_status === 'error') return 0
+        
+        // Simulate progress based on time elapsed
+        const createdTime = new Date(project.created_at).getTime()
+        const now = Date.now()
+        const elapsed = now - createdTime
+        
+        // Assume 90 seconds for full processing, cap at 95% until actually complete
+        const estimatedDuration = 90000 // 90 seconds
+        const progress = Math.min(95, Math.floor((elapsed / estimatedDuration) * 100))
+        return Math.max(5, progress) // At least 5%
     }
 
     const getStatusIcon = (status: string) => {
@@ -99,22 +116,22 @@ export default function ProcessingQuickClips() {
         }
     }
 
-    const getStatusText = (status: string) => {
-        switch (status) {
+    const getStatusText = (project: Project) => {
+        switch (project.processing_status) {
             case 'processing':
-                return 'Processing...'
+                const percentage = getProcessingPercentage(project)
+                return `Processing... ${percentage}%`
             case 'completed':
                 return 'Ready to View'
             case 'error':
-                return 'Failed'
+                return 'Processing Failed'
             default:
-                return 'Unknown'
+                return 'Unknown Status'
         }
     }
 
-    // Debug: Always show the section when we have session to debug
-    if (!session?.access_token) {
-        return null
+    const isQuickClipsProject = (project: Project) => {
+        return project.type === 'quickclips' || project.name?.includes('AI Clips')
     }
 
     if (loading) {
@@ -137,44 +154,8 @@ export default function ProcessingQuickClips() {
         )
     }
 
-    // Debug: Show debug info when no processing projects
     if (processingProjects.length === 0) {
-        return (
-            <div className="mb-12">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                        <Zap className="w-5 h-5 text-gray-600" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-900">AI Clips Processing</h2>
-                    <div className="flex-1 h-px bg-gradient-to-r from-gray-300 to-transparent"></div>
-                </div>
-                <div className="p-6 rounded-xl border-2 bg-yellow-50 border-yellow-200">
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600 mb-2">
-                            🔍 Debug: No processing projects found
-                        </p>
-                        <p className="text-xs text-gray-500 mb-4">
-                            Total projects: {allProjects.length} | 
-                            QuickClips projects: {allProjects.filter(p => p.type === 'quickclips').length} |
-                            Processing projects: {allProjects.filter(p => p.processing_status === 'processing').length}
-                        </p>
-                        {allProjects.length > 0 && (
-                            <details className="text-left">
-                                <summary className="cursor-pointer text-xs text-blue-600">Show all projects (debug)</summary>
-                                <pre className="text-xs bg-gray-100 p-2 rounded mt-2 overflow-auto">
-                                    {JSON.stringify(allProjects.map(p => ({
-                                        id: p.id,
-                                        name: p.name,
-                                        type: p.type,
-                                        processing_status: p.processing_status
-                                    })), null, 2)}
-                                </pre>
-                            </details>
-                        )}
-                    </div>
-                </div>
-            </div>
-        )
+        return null
     }
 
     return (
@@ -188,88 +169,104 @@ export default function ProcessingQuickClips() {
             </div>
 
             <div className="grid gap-4">
-                {processingProjects.map((project) => (
-                    <div
-                        key={project.id}
-                        onClick={() => handleProjectClick(project)}
-                        className={`
-                            p-6 rounded-xl border-2 transition-all duration-300
-                            ${getStatusColor(project.processing_status || 'idle')}
-                            ${project.processing_status === 'completed' ? 'transform hover:scale-[1.02]' : ''}
-                        `}
-                    >
-                        <div className="flex items-center gap-4">
-                            {/* Icon */}
-                            <div className="flex-shrink-0">
-                                {getStatusIcon(project.processing_status || 'idle')}
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <h3 className="font-semibold text-gray-900 truncate">
-                                        {project.name}
-                                    </h3>
-                                    <span className="text-sm font-medium">
-                                        {getStatusText(project.processing_status || 'idle')}
-                                    </span>
+                {processingProjects.map((project) => {
+                    const percentage = getProcessingPercentage(project)
+                    return (
+                        <div
+                            key={project.id}
+                            onClick={() => handleProjectClick(project)}
+                            className={`
+                                p-6 rounded-xl border-2 transition-all duration-300
+                                ${getStatusColor(project.processing_status || 'idle')}
+                                ${project.processing_status === 'completed' ? 'transform hover:scale-[1.02]' : ''}
+                            `}
+                        >
+                            <div className="flex items-center gap-4">
+                                {/* Icon */}
+                                <div className="flex-shrink-0">
+                                    {getStatusIcon(project.processing_status || 'idle')}
                                 </div>
-                                
-                                {project.processing_message && (
-                                    <p className="text-sm text-gray-600 mb-2">
-                                        {project.processing_message}
-                                    </p>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <h3 className="font-semibold text-gray-900 truncate">
+                                            {project.name}
+                                        </h3>
+                                        <span className="text-sm font-medium">
+                                            {getStatusText(project)}
+                                        </span>
+                                        {isQuickClipsProject(project) && (
+                                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                                <Zap className="w-3 h-3" />
+                                                AI Clips
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {project.processing_message && (
+                                        <p className="text-sm text-gray-600 mb-2">
+                                            {project.processing_message}
+                                        </p>
+                                    )}
+
+                                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                                        <div className="flex items-center gap-1">
+                                            <Video className="w-3 h-3" />
+                                            <span>{project.quickclips_data?.contentType || 'Video'} content</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            <span>Started {new Date(project.created_at).toLocaleTimeString()}</span>
+                                        </div>
+                                        {project.processing_status === 'completed' && project.quickclips_data?.clips && (
+                                            <div className="flex items-center gap-1">
+                                                <Zap className="w-3 h-3" />
+                                                <span>{project.quickclips_data.clips.length} clips ready</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Action */}
+                                {project.processing_status === 'completed' && (
+                                    <div className="flex-shrink-0">
+                                        <div className="flex items-center gap-2 text-sm font-medium text-green-700">
+                                            <span>View {isQuickClipsProject(project) ? 'Clips' : 'Project'}</span>
+                                            <ArrowRight className="w-4 h-4" />
+                                        </div>
+                                    </div>
                                 )}
 
-                                <div className="flex items-center gap-4 text-xs text-gray-500">
-                                    <div className="flex items-center gap-1">
-                                        <Video className="w-3 h-3" />
-                                        <span>{project.quickclips_data?.contentType || 'Unknown'} content</span>
+                                {/* Progress indicator for processing */}
+                                {project.processing_status === 'processing' && (
+                                    <div className="flex-shrink-0 text-right">
+                                        <div className="text-lg font-bold text-blue-600">{percentage}%</div>
+                                        <div className="w-8 h-8 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mt-1"></div>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        <span>Started {new Date(project.created_at).toLocaleTimeString()}</span>
-                                    </div>
-                                    {project.processing_status === 'completed' && project.quickclips_data?.clips && (
-                                        <div className="flex items-center gap-1">
-                                            <Zap className="w-3 h-3" />
-                                            <span>{project.quickclips_data.clips.length} clips ready</span>
-                                        </div>
-                                    )}
-                                </div>
+                                )}
                             </div>
 
-                            {/* Action */}
-                            {project.processing_status === 'completed' && (
-                                <div className="flex-shrink-0">
-                                    <div className="flex items-center gap-2 text-sm font-medium text-green-700">
-                                        <span>View Clips</span>
-                                        <ArrowRight className="w-4 h-4" />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Progress indicator for processing */}
+                            {/* Progress bar for processing */}
                             {project.processing_status === 'processing' && (
-                                <div className="flex-shrink-0">
-                                    <div className="w-8 h-8 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+                                <div className="mt-4">
+                                    <div className="bg-blue-200 rounded-full h-3">
+                                        <div 
+                                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-1000 relative overflow-hidden"
+                                            style={{ width: `${percentage}%` }}
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>Processing...</span>
+                                        <span>{percentage}% complete</span>
+                                    </div>
                                 </div>
                             )}
                         </div>
-
-                        {/* Progress bar for processing */}
-                        {project.processing_status === 'processing' && (
-                            <div className="mt-4">
-                                <div className="bg-blue-200 rounded-full h-2">
-                                    <div 
-                                        className="bg-blue-600 h-2 rounded-full transition-all duration-500 animate-pulse"
-                                        style={{ width: '60%' }} // Could be dynamic based on actual progress
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                ))}
+                    )
+                })}
             </div>
 
             {/* Help text */}
