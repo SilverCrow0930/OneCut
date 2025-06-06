@@ -236,23 +236,6 @@ export default function ProcessingQuickClips() {
                     </div>
                 ))}
             </div>
-
-            {/* Help text */}
-            <div className="mt-4 text-center">
-                <p className="text-sm text-gray-600">
-                    {processingProjects.some(p => p.processing_status === 'processing') ? (
-                        <>
-                            <Bot className="w-4 h-4 inline mr-1" />
-                            AI is working on your clips in the background. You can navigate away and come back later.
-                        </>
-                    ) : (
-                        <>
-                            <CheckCircle className="w-4 h-4 inline mr-1" />
-                            Your clips are ready! Click on a project above to view and download.
-                        </>
-                    )}
-                </p>
-            </div>
         </div>
     )
 } 

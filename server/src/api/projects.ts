@@ -362,18 +362,28 @@ router.put(
         try {
             const { projectId } = req.params
             const { user } = req as AuthenticatedRequest
-            const uid = user.id
             const { tracks, clips } = req.body as {
                 tracks: Array<{ id: string; project_id?: string; index: number; type: string }>
                 clips: Array<Partial<Record<keyof Clip, any>> & { id: string; track_id: string }>
             }
 
-            // 1) Ownership check
+            // 1) Find your app-profile ID
+            const { data: profile, error: profErr } = await supabase
+                .from('users')
+                .select('id')
+                .eq('auth_id', user.id)
+                .single()
+            if (profErr || !profile) {
+                console.error('Profile lookup failed:', profErr)
+                return res.status(500).json({ error: 'Could not load user profile' })
+            }
+
+            // 2) Ownership check against the profile.id
             const { data: project, error: projectErr } = await supabase
                 .from('projects')
                 .select('id')
                 .eq('id', projectId)
-                .eq('user_id', uid)
+                .eq('user_id', profile.id)
                 .single()
 
             if (projectErr || !project) {

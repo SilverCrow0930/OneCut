@@ -16,23 +16,23 @@ CREATE TABLE IF NOT EXISTS public.projects (
   created_at     timestamptz  NOT NULL DEFAULT now(),
   updated_at     timestamptz  NOT NULL DEFAULT now(),
   -- QuickClips fields
-  type           text         DEFAULT 'project' CHECK (type IN ('project', 'quickclips')),
-  processing_status text      DEFAULT 'idle' CHECK (processing_status IN ('idle', 'processing', 'completed', 'error')),
+  type           text         DEFAULT 'project',
+  processing_status text      DEFAULT 'idle',
   processing_message text,
   quickclips_data jsonb
 );
 
--- Add new columns to existing table if they don't exist
+-- Add new columns to existing table if they don't exist (NO CHECK CONSTRAINTS)
 DO $$ 
 BEGIN
   -- Add type column if it doesn't exist
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'type') THEN
-    ALTER TABLE public.projects ADD COLUMN type text DEFAULT 'project' CHECK (type IN ('project', 'quickclips'));
+    ALTER TABLE public.projects ADD COLUMN type text DEFAULT 'project';
   END IF;
 
   -- Add processing_status column if it doesn't exist
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'processing_status') THEN
-    ALTER TABLE public.projects ADD COLUMN processing_status text DEFAULT 'idle' CHECK (processing_status IN ('idle', 'processing', 'completed', 'error'));
+    ALTER TABLE public.projects ADD COLUMN processing_status text DEFAULT 'idle';
   END IF;
 
   -- Add processing_message column if it doesn't exist
@@ -43,6 +43,20 @@ BEGIN
   -- Add quickclips_data column if it doesn't exist
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'quickclips_data') THEN
     ALTER TABLE public.projects ADD COLUMN quickclips_data jsonb;
+  END IF;
+END $$;
+
+-- Drop any existing CHECK constraints that might be causing issues
+DO $$
+BEGIN
+  -- Remove type constraint if it exists
+  IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'projects_type_check') THEN
+    ALTER TABLE public.projects DROP CONSTRAINT projects_type_check;
+  END IF;
+  
+  -- Remove processing_status constraint if it exists
+  IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'projects_processing_status_check') THEN
+    ALTER TABLE public.projects DROP CONSTRAINT projects_processing_status_check;
   END IF;
 END $$;
 
@@ -108,4 +122,4 @@ CREATE INDEX IF NOT EXISTS idx_projects_user_id
 
 -- 9. Index for processing status queries
 CREATE INDEX IF NOT EXISTS idx_projects_processing_status
-  ON public.projects(processing_status) WHERE processing_status != 'idle';
+  ON public.projects(processing_status) WHERE processing_status IS NOT NULL;
