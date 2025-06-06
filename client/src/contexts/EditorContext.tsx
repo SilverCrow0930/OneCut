@@ -74,7 +74,7 @@ export function useEditor() {
 
 
 export function EditorProvider({ children }: { children: ReactNode }) {
-    const { projectId } = useParams<{ projectId: string }>()
+    const { id: projectId } = useParams<{ id: string }>()
     const { session } = useAuth()
 
     // 1) Project metadata
