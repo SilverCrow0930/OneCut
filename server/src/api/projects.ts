@@ -124,18 +124,44 @@ router.post(
                 })
             }
 
-            // 2) Insert new project using the public.users.id
-            const projectName = generateDefaultName()
+            // 2) Prepare project data - use request body if provided, otherwise defaults
+            const {
+                name,
+                type = 'project',
+                processing_status = 'idle',
+                processing_message,
+                quickclips_data,
+                thumbnail_url = null,
+                duration = 0,
+                is_public = false
+            } = req.body
+
+            const projectName = name || generateDefaultName()
+            
+            const projectData = {
+                user_id: profile.id,
+                name: projectName,
+                type,
+                processing_status,
+                processing_message,
+                quickclips_data,
+                thumbnail_url,
+                duration,
+                is_public,
+            }
+
+            // Remove undefined values to avoid database errors
+            Object.keys(projectData).forEach(key => {
+                if (projectData[key as keyof typeof projectData] === undefined) {
+                    delete projectData[key as keyof typeof projectData]
+                }
+            })
+
+            // 3) Insert new project using the public.users.id
             const { data, error } = await supabase
                 .from('projects')
-                .insert({
-                    user_id: profile.id,
-                    name: projectName,
-                    thumbnail_url: null,
-                    duration: 0,
-                    is_public: false,
-                })
-                .select('id')
+                .insert(projectData)
+                .select('*')
                 .single()
 
             if (error || !data) {
@@ -145,10 +171,8 @@ router.post(
                 })
             }
 
-            // 3) Redirect browser to the editor URL
-            return res.status(201).json({
-                id: data.id
-            })
+            // 4) Return the created project
+            return res.status(201).json(data)
         }
         catch (err) {
             next(err)
