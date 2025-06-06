@@ -2,7 +2,7 @@
 
 import ProjectsList from "@/components/creation/ProjectsList";
 import ProjectsHeader from "@/components/creation/ProjectsHeader";
-import QuickClipsStatus from "@/components/creation/QuickClipsStatus";
+import ProcessingQuickClips from "@/components/creation/ProcessingQuickClips";
 import HomeNavbar from "@/components/home/HomeNavbar";
 
 export default function CreatePage() {
@@ -18,10 +18,8 @@ export default function CreatePage() {
                     <ProjectsHeader />
                 </div>
 
-                {/* QuickClips Status Section */}
-                <div className="mb-12">
-                    <QuickClipsStatus />
-                </div>
+                {/* Processing QuickClips Section */}
+                <ProcessingQuickClips />
 
                 {/* Projects Grid */}
                 <ProjectsList />
