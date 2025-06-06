@@ -51,23 +51,30 @@ export const setupWebSocket = (server: any) => {
         const io = new Server(server, {
             cors: {
                 origin: (origin, callback) => {
-                    // Allow requests with no origin
-                    if (!origin) return callback(null, true);
+                    console.log('[WebSocket CORS] Checking origin:', origin || 'no-origin');
+                    
+                    // Allow requests with no origin (like mobile apps or server-to-server)
+                    if (!origin) {
+                        console.log('[WebSocket CORS] ✓ Allowing request with no origin');
+                        return callback(null, true);
+                    }
                     
                     if (allowedOrigins.indexOf(origin) !== -1) {
+                        console.log('[WebSocket CORS] ✓ Origin allowed:', origin);
                         callback(null, true);
                     } else {
-                        console.error('[WebSocket CORS] Request blocked for origin:', origin);
+                        console.error('[WebSocket CORS] ❌ Origin blocked:', origin);
                         console.error('[WebSocket CORS] Allowed origins:', allowedOrigins);
                         callback(new Error('Not allowed by CORS'));
                     }
                 },
                 methods: ["GET", "POST", "OPTIONS"],
                 credentials: true,
-                allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+                allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+                optionsSuccessStatus: 200
             },
             maxHttpBufferSize: 1e8,
-            transports: ['websocket', 'polling'], // Add polling as fallback
+            transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket
             allowEIO3: true,
             path: '/socket.io/',
             serveClient: false,

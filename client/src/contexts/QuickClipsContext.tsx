@@ -54,20 +54,21 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         console.log('Initializing QuickClips WebSocket connection to:', API_URL);
         
-        // Initialize socket connection
+        // Initialize socket connection with polling fallback
         const newSocket = io(API_URL, {
-            transports: ['websocket'],
+            transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket if possible
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: Infinity,
+            reconnectionAttempts: 10, // Reduced from Infinity
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             randomizationFactor: 0.5,
-            timeout: 60000,
+            timeout: 20000, // Reduced timeout
             autoConnect: true,
-            forceNew: true,
-            upgrade: false,
-            rememberUpgrade: false
+            forceNew: false, // Changed to false
+            upgrade: true, // Allow transport upgrades
+            rememberUpgrade: true, // Remember successful upgrades
+            withCredentials: true // Include credentials for CORS
         });
 
         // Log connection events
