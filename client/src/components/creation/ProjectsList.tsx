@@ -40,7 +40,7 @@ export default function ProjectsList() {
                 if (!cancelled) {
                     setProjects(data)
                     
-                    // Set up polling for processing projects
+                    // Set up polling for processing projects (reduced frequency)
                     const hasProcessingProjects = data.some(p => 
                         p.type === 'quickclips' && p.processing_status === 'processing'
                     )
@@ -48,7 +48,7 @@ export default function ProjectsList() {
                     if (hasProcessingProjects && !intervalId) {
                         intervalId = setInterval(() => {
                             load()
-                        }, 3000) // Poll every 3 seconds for processing projects
+                        }, 15000) // Poll every 15 seconds instead of 3 for processing projects
                     } else if (!hasProcessingProjects && intervalId) {
                         clearInterval(intervalId)
                         intervalId = null

@@ -40,10 +40,10 @@ export default function ProcessingQuickClips() {
                     console.log('🎬 QuickClips projects found:', quickClipsProjects)
                     setProcessingProjects(quickClipsProjects)
 
-                    // Set up polling if there are processing projects
+                    // Set up polling if there are processing projects (reduced frequency)
                     const hasActiveProcessing = quickClipsProjects.some(p => p.processing_status === 'processing')
                     if (hasActiveProcessing && !intervalId) {
-                        intervalId = setInterval(loadProcessingProjects, 2000) // Poll every 2 seconds
+                        intervalId = setInterval(loadProcessingProjects, 10000) // Poll every 10 seconds instead of 2
                     } else if (!hasActiveProcessing && intervalId) {
                         clearInterval(intervalId)
                         intervalId = null
@@ -115,8 +115,13 @@ export default function ProcessingQuickClips() {
         }
     }
 
-    // Debug: Always show the section when we have session to debug
+    // Only show when we have session and there are QuickClips projects
     if (!session?.access_token) {
+        return null
+    }
+
+    // Hide section if no QuickClips projects exist at all
+    if (!loading && processingProjects.length === 0 && allProjects.filter(p => p.type === 'quickclips').length === 0) {
         return null
     }
 

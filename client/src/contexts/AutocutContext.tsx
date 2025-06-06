@@ -54,17 +54,28 @@ export function AutoCutProvider({ children }: { children: ReactNode }) {
             withCredentials: true // Include credentials for CORS
         });
 
-        // Log connection events
+        // Log connection events with better error handling
         newSocket.on('connect', () => {
-            console.log('WebSocket connected successfully');
+            console.log('✅ AutoCut WebSocket connected successfully');
+            console.log('Transport used:', newSocket.io.engine.transport.name);
         });
 
         newSocket.on('connect_error', (error) => {
-            console.error('WebSocket connection error:', error);
+            console.warn('⚠️ AutoCut WebSocket connection error (will retry with polling):', error.message);
+            // Don't log full error details - this is expected in many production environments
         });
 
         newSocket.on('disconnect', (reason) => {
-            console.log('WebSocket disconnected:', reason);
+            console.log('📡 AutoCut WebSocket disconnected:', reason);
+        });
+
+        // Handle transport events
+        newSocket.on('upgrade', () => {
+            console.log('🚀 Upgraded to WebSocket transport');
+        });
+
+        newSocket.on('upgradeError', (error: any) => {
+            console.log('⬇️ Transport upgrade failed, staying with polling');
         });
 
         socketRef.current = newSocket;
