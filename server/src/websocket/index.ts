@@ -47,6 +47,7 @@ export const setupWebSocket = (server: any) => {
         
         console.log('[WebSocket] Environment:', process.env.NODE_ENV)
         console.log('[WebSocket] Allowed origins:', allowedOrigins)
+        console.log('[WebSocket] Transport strategy: polling-first for production reliability')
         
         const io = new Server(server, {
             cors: {

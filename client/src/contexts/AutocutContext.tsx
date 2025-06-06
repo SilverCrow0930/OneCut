@@ -37,45 +37,33 @@ export function AutoCutProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         console.log('Initializing WebSocket connection to:', API_URL);
-        // Initialize socket connection with polling fallback
+        // Initialize socket connection with polling only (more reliable in production)
         const newSocket = io(API_URL, {
-            transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket if possible
+            transports: ['polling'], // Use only polling to avoid WebSocket connection errors
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: 10, // Reduced from Infinity
+            reconnectionAttempts: 10,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             randomizationFactor: 0.5,
-            timeout: 20000, // Reduced timeout
+            timeout: 20000,
             autoConnect: true,
-            forceNew: false, // Changed to false
-            upgrade: true, // Allow transport upgrades
-            rememberUpgrade: true, // Remember successful upgrades
-            withCredentials: true // Include credentials for CORS
+            forceNew: false,
+            upgrade: false, // Disable upgrades to prevent WebSocket attempts
+            withCredentials: true
         });
 
-        // Log connection events with better error handling
+        // Log connection events
         newSocket.on('connect', () => {
-            console.log('✅ AutoCut WebSocket connected successfully');
-            console.log('Transport used:', newSocket.io.engine.transport.name);
+            console.log('✅ AutoCut connected successfully via polling');
         });
 
         newSocket.on('connect_error', (error) => {
-            console.warn('⚠️ AutoCut WebSocket connection error (will retry with polling):', error.message);
-            // Don't log full error details - this is expected in many production environments
+            console.warn('⚠️ AutoCut connection error:', error.message);
         });
 
         newSocket.on('disconnect', (reason) => {
-            console.log('📡 AutoCut WebSocket disconnected:', reason);
-        });
-
-        // Handle transport events
-        newSocket.on('upgrade', () => {
-            console.log('🚀 Upgraded to WebSocket transport');
-        });
-
-        newSocket.on('upgradeError', (error: any) => {
-            console.log('⬇️ Transport upgrade failed, staying with polling');
+            console.log('📡 AutoCut disconnected:', reason);
         });
 
         socketRef.current = newSocket;
