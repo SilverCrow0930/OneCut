@@ -99,7 +99,7 @@ app.get('/health', (req, res) => {
 })
 
 // Add a CORS test endpoint that doesn't require auth
-app.get('/api/v1/cors-test', (req, res) => {
+app.get('/cors-test', (req, res) => {
     res.json({ 
         message: 'CORS working', 
         origin: req.headers.origin || 'no-origin',
@@ -108,7 +108,7 @@ app.get('/api/v1/cors-test', (req, res) => {
 })
 
 // Add a database test endpoint
-app.get('/api/v1/db-test', async (req, res) => {
+app.get('/db-test', async (req, res) => {
     try {
         const { supabase } = await import('./config/supabaseClient.js')
         
@@ -141,7 +141,7 @@ app.get('/api/v1/db-test', async (req, res) => {
 })
 
 // Add a project deletion test endpoint
-app.get('/api/v1/delete-test/:projectId', async (req, res) => {
+app.get('/delete-test/:projectId', async (req, res) => {
     try {
         const { supabase } = await import('./config/supabaseClient.js')
         const { projectId } = req.params
@@ -179,16 +179,10 @@ app.get('/api/v1/delete-test/:projectId', async (req, res) => {
     }
 })
 
-// protect everything under /api except the test endpoint
+// protect everything under /api/v1 with authentication
 app.use(
     '/api/v1',
-    (req, res, next) => {
-        // Skip auth for cors-test endpoint
-        if (req.path === '/cors-test') {
-            return next()
-        }
-        return authenticate(req, res, next)
-    },
+    authenticate,
     updateLastLogin,
     apiRouter
 )
