@@ -421,25 +421,8 @@ const HomeHeroSection = () => {
                                             <div className="font-medium">20s</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="font-medium">90s</div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="font-medium">2m</div>
-                                            <div className="text-gray-400">Switch</div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="font-medium">10m</div>
-                                        </div>
-                                        <div className="text-center">
                                             <div className="font-medium">30m</div>
                                         </div>
-                                    </div>
-                                    
-                                    {/* Display current interval */}
-                                    <div className="text-center mt-2">
-                                        <span className="text-xs text-gray-600">
-                                            Available intervals: {timeIntervals.map(t => formatDuration(t)).join(', ')}
-                                        </span>
                                     </div>
                                 </div>
                             </div>

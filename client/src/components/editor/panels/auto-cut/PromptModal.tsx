@@ -345,13 +345,6 @@ export const PromptModal: React.FC<PromptModalProps> = ({
                                 <div className="font-medium">30m</div>
                             </div>
                         </div>
-                        
-                        {/* Display current interval */}
-                        <div className="text-center mt-2">
-                            <span className="text-xs text-gray-600">
-                                Available intervals: {timeIntervals.map(t => formatDuration(t)).join(', ')}
-                            </span>
-                        </div>
                     </div>
                 </div>
 
