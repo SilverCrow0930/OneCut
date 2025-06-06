@@ -14,6 +14,9 @@ const HomeHeroSection = () => {
     const [contentType, setContentType] = useState('talking_video')
     const [isUploading, setIsUploading] = useState(false)
     
+    // Specific time intervals in seconds
+    const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
+    
     const contentTypes = [
         { id: 'podcast', label: 'Podcast', icon: Mic },
         { id: 'professional_meeting', label: 'Meeting', icon: Users },
@@ -30,16 +33,12 @@ const HomeHeroSection = () => {
         if (durationSeconds < 120) {
             return {
                 format: 'Short Vertical',
-                aspectRatio: '9:16',
-                platforms: ['TikTok', 'Instagram Reels', 'YouTube Shorts'],
-                description: 'Perfect for viral, engaging content'
+                aspectRatio: '9:16'
             }
         } else {
             return {
                 format: 'Long Horizontal', 
-                aspectRatio: '16:9',
-                platforms: ['YouTube', 'LinkedIn', 'Professional'],
-                description: 'Ideal for comprehensive, educational content'
+                aspectRatio: '16:9'
             }
         }
     }
@@ -56,6 +55,18 @@ const HomeHeroSection = () => {
             const minutes = Math.floor((seconds % 3600) / 60)
             return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
         }
+    }
+
+    // Find the closest interval value
+    const getClosestInterval = (value: number) => {
+        return timeIntervals.reduce((prev, curr) => 
+            Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+        )
+    }
+
+    const handleDurationChange = (value: number) => {
+        const closestInterval = getClosestInterval(value)
+        setTargetDuration(closestInterval)
     }
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -355,36 +366,24 @@ const HomeHeroSection = () => {
                                 </div>
                                 
                                 {/* Format indicator */}
-                                <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-sm font-medium text-gray-900">
-                                                    {getFormatInfo(targetDuration).format}
-                                                </span>
-                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                                                    {getFormatInfo(targetDuration).aspectRatio}
-                                                </span>
+                                <div className="mb-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex-1 text-center">
+                                            <div className="text-sm font-medium text-gray-900 mb-2">
+                                                {getFormatInfo(targetDuration).format}
                                             </div>
-                                            <p className="text-xs text-gray-600 mb-1">
-                                                {getFormatInfo(targetDuration).description}
-                                            </p>
-                                            <div className="flex flex-wrap gap-1">
-                                                {getFormatInfo(targetDuration).platforms.map(platform => (
-                                                    <span key={platform} className="text-xs bg-white text-gray-600 px-2 py-1 rounded-full border">
-                                                        {platform}
-                                                    </span>
-                                                ))}
+                                            <div className="text-lg font-bold text-blue-600">
+                                                {getFormatInfo(targetDuration).aspectRatio}
                                             </div>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="flex-1 flex justify-center">
                                             {targetDuration < 120 ? (
-                                                <div className="w-8 h-12 bg-gradient-to-b from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                                                    <Smartphone className="w-4 h-4 text-white" />
+                                                <div className="w-16 h-28 bg-gradient-to-b from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg">
+                                                    <Smartphone className="w-6 h-6 text-white" />
                                                 </div>
                                             ) : (
-                                                <div className="w-12 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                                                    <Monitor className="w-4 h-4 text-white" />
+                                                <div className="w-28 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg">
+                                                    <Monitor className="w-6 h-6 text-white" />
                                                 </div>
                                             )}
                                         </div>
@@ -394,11 +393,10 @@ const HomeHeroSection = () => {
                                 <div className="relative">
                                     <input
                                         type="range"
-                                        min="30"
+                                        min="20"
                                         max="1800"
-                                        step="30"
                                         value={targetDuration}
-                                        onChange={(e) => setTargetDuration(parseInt(e.target.value))}
+                                        onChange={(e) => handleDurationChange(parseInt(e.target.value))}
                                         className="
                                             w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
                                             [&::-webkit-slider-thumb]:appearance-none 
@@ -416,19 +414,32 @@ const HomeHeroSection = () => {
                                             [&::-webkit-slider-thumb]:transition-transform
                                         "
                                     />
+                                    
+                                    {/* Time interval markers */}
                                     <div className="flex justify-between text-xs text-gray-500 mt-2">
                                         <div className="text-center">
-                                            <div className="font-medium">30s</div>
-                                            <div className="text-gray-400">Short</div>
+                                            <div className="font-medium">20s</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="font-medium">2min</div>
-                                            <div className="text-gray-400">Format Switch</div>
+                                            <div className="font-medium">90s</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="font-medium">30min</div>
-                                            <div className="text-gray-400">Long</div>
+                                            <div className="font-medium">2m</div>
+                                            <div className="text-gray-400">Switch</div>
                                         </div>
+                                        <div className="text-center">
+                                            <div className="font-medium">10m</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-medium">30m</div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Display current interval */}
+                                    <div className="text-center mt-2">
+                                        <span className="text-xs text-gray-600">
+                                            Available intervals: {timeIntervals.map(t => formatDuration(t)).join(', ')}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

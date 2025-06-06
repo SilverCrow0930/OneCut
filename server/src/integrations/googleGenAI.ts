@@ -454,7 +454,7 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
         } else if (videoFormat === 'long_horizontal') {
             selectedSystemInstruction += `
             
-            IMPORTANT: You are creating LONG HORIZONTAL content (2-10 minutes, 16:9 aspect ratio) for platforms like YouTube, LinkedIn, and professional contexts.
+            IMPORTANT: You are creating LONG HORIZONTAL content (2-10 minutes, 16:9 aspect ratio) for platforms like YouTube, and professional contexts.
             
             LONG HORIZONTAL PRIORITIES:
             - Complete narrative arcs (2-10 minutes)
