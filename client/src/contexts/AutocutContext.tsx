@@ -7,6 +7,8 @@ interface AutoCutEvent {
     fileUri: string;
     mimeType: string;
     contentType?: string;
+    videoFormat?: string;
+    targetDuration?: number;
 }
 
 interface AutoCutResponse {

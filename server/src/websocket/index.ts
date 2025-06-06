@@ -176,18 +176,20 @@ export const setupWebSocket = (server: any) => {
                 prompt: string,
                 fileUri: string,
                 mimeType: string,
-                contentType?: string
+                contentType?: string,
+                videoFormat?: string
             }) => {
                 const processStartTime = Date.now();
                 console.log('=== AUTOCUT PROCESS STARTED ===');
-                console.log('Request details:', {
-                    promptLength: data.prompt?.length,
-                    fileUri: data.fileUri,
-                    mimeType: data.mimeType,
-                    contentType: data.contentType,
-                    timestamp: new Date().toISOString(),
-                    socketId: socket.id
-                });
+                                    console.log('Request details:', {
+                        promptLength: data.prompt?.length,
+                        fileUri: data.fileUri,
+                        mimeType: data.mimeType,
+                        contentType: data.contentType,
+                        videoFormat: data.videoFormat,
+                        timestamp: new Date().toISOString(),
+                        socketId: socket.id
+                    });
 
                 try {
                     // Send initial state
@@ -269,7 +271,8 @@ export const setupWebSocket = (server: any) => {
                         data.prompt,
                         signedUrl,
                         data.mimeType,
-                        data.contentType
+                        data.contentType,
+                        data.videoFormat
                     );
                     console.log('✓ Received response from Gemini:', {
                         duration: `${((Date.now() - modelStartTime) / 1000).toFixed(2)}s`,

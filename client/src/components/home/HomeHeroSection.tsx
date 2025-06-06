@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
-import { Play, Sparkles, Zap, Clock, Upload, Video, Users, BookOpen, Mic } from 'lucide-react'
+import { Play, Sparkles, Zap, Clock, Upload, Video, Users, BookOpen, Mic, Smartphone, Monitor } from 'lucide-react'
 
 const HomeHeroSection = () => {
     const router = useRouter()
@@ -10,16 +10,53 @@ const HomeHeroSection = () => {
     const fileInputRef = useRef<HTMLInputElement>(null)
     
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
-    const [targetDuration, setTargetDuration] = useState(10) // Default 10 minutes
-    const [contentType, setContentType] = useState('meeting')
+    const [targetDuration, setTargetDuration] = useState(60) // Default 60 seconds (1 minute)
+    const [contentType, setContentType] = useState('talking_video')
     const [isUploading, setIsUploading] = useState(false)
     
     const contentTypes = [
-        { id: 'meeting', label: 'Meeting', icon: Users },
-        { id: 'interview', label: 'Interview', icon: Users },
-        { id: 'tutorial', label: 'Tutorial', icon: BookOpen },
-        { id: 'podcast', label: 'Podcast', icon: Mic }
+        { id: 'podcast', label: 'Podcast', icon: Mic },
+        { id: 'professional_meeting', label: 'Meeting', icon: Users },
+        { id: 'educational_video', label: 'Tutorial', icon: BookOpen },
+        { id: 'talking_video', label: 'Talking Video', icon: Video }
     ]
+
+    // Automatically determine video format based on duration
+    const getVideoFormat = (durationSeconds: number) => {
+        return durationSeconds < 120 ? 'short_vertical' : 'long_horizontal'
+    }
+
+    const getFormatInfo = (durationSeconds: number) => {
+        if (durationSeconds < 120) {
+            return {
+                format: 'Short Vertical',
+                aspectRatio: '9:16',
+                platforms: ['TikTok', 'Instagram Reels', 'YouTube Shorts'],
+                description: 'Perfect for viral, engaging content'
+            }
+        } else {
+            return {
+                format: 'Long Horizontal', 
+                aspectRatio: '16:9',
+                platforms: ['YouTube', 'LinkedIn', 'Professional'],
+                description: 'Ideal for comprehensive, educational content'
+            }
+        }
+    }
+
+    const formatDuration = (seconds: number) => {
+        if (seconds < 60) {
+            return `${seconds}s`
+        } else if (seconds < 3600) {
+            const minutes = Math.floor(seconds / 60)
+            const remainingSeconds = seconds % 60
+            return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
+        } else {
+            const hours = Math.floor(seconds / 3600)
+            const minutes = Math.floor((seconds % 3600) / 60)
+            return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
+        }
+    }
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
@@ -96,6 +133,7 @@ const HomeHeroSection = () => {
             const autocutSettings = {
                 targetDuration,
                 contentType,
+                videoFormat: getVideoFormat(targetDuration), // Auto-determine format based on duration
                 filename: selectedFile.name,
                 hasFile: true // Mark that file has been uploaded
             }
@@ -200,7 +238,7 @@ const HomeHeroSection = () => {
                             {/* Upload Header */}
                             <div className="text-center mb-6 relative z-10">
                                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                                    Autocut
+                                    AI Editing
                                 </h3>
                                 <p className="text-gray-600">
                                     Upload your video and see the magic happen
@@ -312,15 +350,53 @@ const HomeHeroSection = () => {
                                         <Clock className="w-4 h-4 text-white" />
                                     </div>
                                     <label className="text-sm font-semibold text-gray-700">
-                                        Target: {targetDuration} minutes
+                                        Target: {formatDuration(targetDuration)}
                                     </label>
+                                </div>
+                                
+                                {/* Format indicator */}
+                                <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-sm font-medium text-gray-900">
+                                                    {getFormatInfo(targetDuration).format}
+                                                </span>
+                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                                                    {getFormatInfo(targetDuration).aspectRatio}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-gray-600 mb-1">
+                                                {getFormatInfo(targetDuration).description}
+                                            </p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {getFormatInfo(targetDuration).platforms.map(platform => (
+                                                    <span key={platform} className="text-xs bg-white text-gray-600 px-2 py-1 rounded-full border">
+                                                        {platform}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            {targetDuration < 120 ? (
+                                                <div className="w-8 h-12 bg-gradient-to-b from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                                                    <Smartphone className="w-4 h-4 text-white" />
+                                                </div>
+                                            ) : (
+                                                <div className="w-12 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                                                    <Monitor className="w-4 h-4 text-white" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <div className="relative">
                                     <input
                                         type="range"
-                                        min="5"
-                                        max="30"
+                                        min="30"
+                                        max="1800"
+                                        step="30"
                                         value={targetDuration}
                                         onChange={(e) => setTargetDuration(parseInt(e.target.value))}
                                         className="
@@ -341,8 +417,18 @@ const HomeHeroSection = () => {
                                         "
                                     />
                                     <div className="flex justify-between text-xs text-gray-500 mt-2">
-                                        <span className="font-medium">5 min</span>
-                                        <span className="font-medium">30 min</span>
+                                        <div className="text-center">
+                                            <div className="font-medium">30s</div>
+                                            <div className="text-gray-400">Short</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-medium">2min</div>
+                                            <div className="text-gray-400">Format Switch</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-medium">30min</div>
+                                            <div className="text-gray-400">Long</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

@@ -389,7 +389,7 @@ const waitForFileActive = async (fileId: string, delayMs = 5000) => {
     throw new Error(`File processing timed out after ${maxAttempts} attempts (${(maxAttempts * delayMs / 1000).toFixed(1)}s)`);
 }
 
-export const generateContent = async (prompt: string, signedUrl: string, mimeType: string, contentType?: string) => {
+export const generateContent = async (prompt: string, signedUrl: string, mimeType: string, contentType?: string, videoFormat?: string) => {
     // If signedUrl is empty, this is a chat request
     if (!signedUrl) {
         try {
@@ -424,15 +424,56 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
         promptLength: prompt.length,
         mimeType,
         signedUrlLength: signedUrl.length,
-        contentType
+        contentType,
+        videoFormat
     });
 
-    // Select appropriate system instruction based on content type
-    const selectedSystemInstruction = contentType && CONTENT_TYPE_INSTRUCTIONS[contentType as keyof typeof CONTENT_TYPE_INSTRUCTIONS] 
-        ? CONTENT_TYPE_INSTRUCTIONS[contentType as keyof typeof CONTENT_TYPE_INSTRUCTIONS]
-        : systemInstruction;
+    // Select appropriate system instruction based on content type and video format
+    let selectedSystemInstruction = systemInstruction;
+    
+    if (contentType && CONTENT_TYPE_INSTRUCTIONS[contentType as keyof typeof CONTENT_TYPE_INSTRUCTIONS]) {
+        selectedSystemInstruction = CONTENT_TYPE_INSTRUCTIONS[contentType as keyof typeof CONTENT_TYPE_INSTRUCTIONS];
+        
+        // Enhance the instruction based on video format
+        if (videoFormat === 'short_vertical') {
+            selectedSystemInstruction += `
+            
+            IMPORTANT: You are creating SHORT VERTICAL content (15-90 seconds, 9:16 aspect ratio) for platforms like TikTok, Instagram Reels, and YouTube Shorts.
+            
+            SHORT VERTICAL PRIORITIES:
+            - HOOK in first 3 seconds is CRITICAL
+            - Maximum 90 seconds duration per clip
+            - High viral potential (score 7+ preferred)
+            - Strong emotional impact
+            - Immediately engaging content
+            - Clear, punchy messaging
+            - Visual appeal for mobile viewing
+            
+            Focus on creating clips that will stop scrolling and drive engagement.
+            `;
+        } else if (videoFormat === 'long_horizontal') {
+            selectedSystemInstruction += `
+            
+            IMPORTANT: You are creating LONG HORIZONTAL content (2-10 minutes, 16:9 aspect ratio) for platforms like YouTube, LinkedIn, and professional contexts.
+            
+            LONG HORIZONTAL PRIORITIES:
+            - Complete narrative arcs (2-10 minutes)
+            - Educational or professional value
+            - Context and depth over quick hooks
+            - Suitable for desktop/laptop viewing
+            - Comprehensive coverage of topics
+            - Professional presentation quality
+            - Longer attention spans expected
+            
+            Focus on creating substantial, valuable content segments that provide complete value.
+            `;
+        }
+    }
 
-    console.log('Using system instruction for content type:', contentType || 'general');
+    console.log('Using system instruction for:', {
+        contentType: contentType || 'general',
+        videoFormat: videoFormat || 'default'
+    });
 
     try {
         // Download the video file

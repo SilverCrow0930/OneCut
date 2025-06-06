@@ -332,6 +332,8 @@ const AutoCutToolPanel = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [prompt, setPrompt] = useState('');
     const [contentType, setContentType] = useState<string>('');
+    const [videoFormat, setVideoFormat] = useState<string>('short_vertical');
+    const [targetDuration, setTargetDuration] = useState<number>(60);
     const [lastPrompt, setLastPrompt] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -378,6 +380,12 @@ const AutoCutToolPanel = () => {
                     
                     setPrompt(generatedPrompt);
                     setContentType(settings.contentType);
+                    if (settings.videoFormat) {
+                        setVideoFormat(settings.videoFormat);
+                    }
+                    if (settings.targetDuration) {
+                        setTargetDuration(settings.targetDuration);
+                    }
                     
                     // If coming from home page with file, auto-select the most recent asset
                     if (settings.hasFile && assets && assets.length > 0) {
@@ -669,6 +677,8 @@ const AutoCutToolPanel = () => {
             sendAutoCutRequest({
                 prompt,
                 contentType,
+                videoFormat,
+                targetDuration,
                 fileUri: `gs://${process.env.NEXT_PUBLIC_GCS_BUCKET_NAME}/${assetData.object_key}`,
                 mimeType: selectedFile.type
             });
@@ -704,6 +714,8 @@ const AutoCutToolPanel = () => {
         setSelectedFile(null);
         setPrompt('');
         setContentType('');
+        setVideoFormat('short_vertical');
+        setTargetDuration(60);
         setError(null);
         // Reset all states to go back to upload view
         setUploadedAsset(null);
@@ -721,6 +733,8 @@ const AutoCutToolPanel = () => {
         setUploadedAsset(null);
         setPrompt('');
         setContentType('');
+        setVideoFormat('short_vertical');
+        setTargetDuration(60);
         setLastPrompt('');
         setError(null);
         setProcessingState('idle');
@@ -1027,6 +1041,10 @@ const AutoCutToolPanel = () => {
                 onPromptChange={setPrompt}
                 contentType={contentType}
                 onContentTypeChange={setContentType}
+                videoFormat={videoFormat}
+                onVideoFormatChange={setVideoFormat}
+                targetDuration={targetDuration}
+                onTargetDurationChange={setTargetDuration}
                 onSubmit={handlePromptSubmit}
                 isUploading={isUploading}
                 error={error}
