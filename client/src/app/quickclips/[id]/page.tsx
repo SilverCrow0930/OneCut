@@ -22,6 +22,8 @@ export default function QuickClipsPage() {
         if (!session?.access_token || !projectId) return
 
         async function loadProject() {
+            if (!session) return
+            
             try {
                 const response = await fetch(apiPath(`projects/${projectId}`), {
                     headers: {
