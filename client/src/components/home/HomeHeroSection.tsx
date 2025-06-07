@@ -209,7 +209,14 @@ const HomeHeroSection = () => {
                 throw new Error('Failed to start processing job')
             }
 
-            // 4. Navigate to projects page to show processing status
+            // 4. Show success message and navigate to projects page
+            const projectName = selectedFile.name.split('.')[0]
+            const formatInfo = getFormatInfo(targetDuration)
+            
+            // Optional: Show success toast/notification here
+            console.log(`QuickClips project "${projectName}" started! Processing ${formatInfo.format} format (${formatInfo.aspectRatio})`)
+            
+            // Navigate to projects page to show processing status
             router.push(`/projects?highlight=${project.id}`)
 
         } catch (error) {

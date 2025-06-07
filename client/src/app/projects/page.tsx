@@ -18,7 +18,8 @@ import {
     Calendar,
     Zap,
     ArrowLeft,
-    RefreshCw
+    RefreshCw,
+    Share
 } from 'lucide-react'
 
 // Processing status component
@@ -215,9 +216,11 @@ const ProjectCard = ({ project, isHighlighted, onViewClips }: {
     )
 }
 
-// Clips modal component
+// Enhanced clips modal component with video description and better actions
 const ClipsModal = ({ project, onClose }: { project: Project, onClose: () => void }) => {
+    const router = useRouter()
     const clips = project.processing_result?.clips || []
+    const description = project.processing_result?.description || ''
 
     const handleDownload = (clip: any) => {
         if (clip.downloadUrl && clip.downloadUrl !== '#') {
@@ -225,57 +228,137 @@ const ClipsModal = ({ project, onClose }: { project: Project, onClose: () => voi
         }
     }
 
+    const handleShare = (clip: any) => {
+        if (navigator.share) {
+            navigator.share({
+                title: clip.title,
+                text: clip.description,
+                url: clip.downloadUrl
+            })
+        } else {
+            // Fallback to copying URL to clipboard
+            navigator.clipboard.writeText(clip.downloadUrl)
+            alert('Link copied to clipboard!')
+        }
+    }
+
+    const handleEdit = () => {
+        router.push(`/projects/${project.id}`)
+        onClose()
+    }
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
                 {/* Header */}
                 <div className="p-6 border-b border-gray-200">
                     <div className="flex items-center justify-between">
-                        <div>
+                        <div className="flex-1">
                             <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                                Generated Clips
+                                Quick Clips Preview
                             </h2>
-                            <p className="text-gray-600">
+                            <p className="text-gray-600 mb-3">
                                 {clips.length} clips from {project.name}
                             </p>
+                            
+                            {/* Video Description */}
+                            {description && (
+                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-4">
+                                    <div className="flex items-start gap-3">
+                                        <Sparkles className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 mb-1">AI Video Summary</h3>
+                                            <p className="text-sm text-gray-700 leading-relaxed">{description}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
+                        
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                            className="p-2 hover:bg-gray-100 rounded-xl transition-colors ml-4"
                         >
                             <ArrowLeft className="w-6 h-6" />
                         </button>
                     </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-3 mt-4">
+                        <button
+                            onClick={handleEdit}
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors"
+                        >
+                            <Eye className="w-4 h-4" />
+                            Edit Project
+                        </button>
+                        
+                        <button
+                            onClick={() => handleShare(clips[0])}
+                            disabled={!clips[0]?.downloadUrl || clips[0]?.downloadUrl === '#'}
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-xl transition-colors"
+                        >
+                            <FileVideo className="w-4 h-4" />
+                            Share First Clip
+                        </button>
+                        
+                        <div className="text-sm text-gray-500">
+                            Low quality previews • Full quality available for download
+                        </div>
+                    </div>
                 </div>
 
                 {/* Clips Grid */}
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
                     <div className="grid gap-4">
                         {clips.map((clip: any, index: number) => (
                             <div key={index} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                                 <div className="flex items-start gap-4">
-                                    {/* Thumbnail */}
-                                    <div className="w-32 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                    {/* Thumbnail Preview */}
+                                    <div className="w-40 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative group cursor-pointer">
                                         <img 
                                             src={clip.thumbnailUrl} 
                                             alt={clip.title}
                                             className="w-full h-full object-cover"
                                         />
+                                        <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Play className="w-8 h-8 text-white" />
+                                        </div>
+                                        <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                                            {Math.round(clip.duration)}s
+                                        </div>
                                     </div>
 
                                     {/* Content */}
                                     <div className="flex-1">
-                                        <h3 className="font-semibold text-gray-900 mb-2">
-                                            {clip.title}
-                                        </h3>
+                                        <div className="flex items-start justify-between mb-2">
+                                            <h3 className="font-semibold text-gray-900">
+                                                {clip.title}
+                                            </h3>
+                                            <div className="flex items-center gap-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                                <Sparkles className="w-3 h-3" />
+                                                {clip.significance || '8.5'}/10
+                                            </div>
+                                        </div>
+                                        
                                         <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                                             {clip.description}
                                         </p>
-                                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                                            <span>Duration: {Math.round(clip.duration)}s</span>
-                                            <span>Score: {clip.viral_score}/10</span>
-                                            <span className="capitalize">{clip.category}</span>
+                                        
+                                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
+                                                {Math.floor(clip.start_time / 60)}:{(clip.start_time % 60).toString().padStart(2, '0')} - {Math.floor(clip.end_time / 60)}:{(clip.end_time % 60).toString().padStart(2, '0')}
+                                            </span>
+                                            <span className="capitalize">{clip.narrative_role || 'highlight'}</span>
                                         </div>
+
+                                        {/* Transition Note */}
+                                        {clip.transition_note && (
+                                            <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded italic">
+                                                💡 {clip.transition_note}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Actions */}
@@ -283,10 +366,19 @@ const ClipsModal = ({ project, onClose }: { project: Project, onClose: () => voi
                                         <button
                                             onClick={() => handleDownload(clip)}
                                             disabled={!clip.downloadUrl || clip.downloadUrl === '#'}
-                                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white text-sm px-3 py-1 rounded-lg transition-colors"
+                                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white text-sm px-3 py-2 rounded-lg transition-colors"
                                         >
                                             <Download className="w-3 h-3" />
                                             Download
+                                        </button>
+                                        
+                                        <button
+                                            onClick={() => handleShare(clip)}
+                                            disabled={!clip.downloadUrl || clip.downloadUrl === '#'}
+                                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white text-sm px-3 py-2 rounded-lg transition-colors"
+                                        >
+                                            <FileVideo className="w-3 h-3" />
+                                            Share
                                         </button>
                                     </div>
                                 </div>

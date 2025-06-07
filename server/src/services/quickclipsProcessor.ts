@@ -229,7 +229,7 @@ Remember: The goal is meaningful content extraction that creates a coherent high
         const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
         console.log(`[QuickClips] Raw AI response:`, responseText.substring(0, 500))
         
-        // Parse JSON response with multiple strategies
+        // Parse JSON response with enhanced strategies
         let clips = []
         
         // Strategy 1: Direct JSON parse
@@ -237,26 +237,66 @@ Remember: The goal is meaningful content extraction that creates a coherent high
             const cleanedResponse = responseText.trim()
             clips = JSON.parse(cleanedResponse)
         } catch (e) {
-            // Strategy 2: Extract JSON array
-            const jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/)
+            console.log(`[QuickClips] Direct parse failed, trying extraction strategies...`)
+            
+            // Strategy 2: Extract JSON array with flexible patterns
+            let jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/g)
             if (jsonMatch) {
-                clips = JSON.parse(jsonMatch[0])
-            } else {
-                // Strategy 3: Look for individual JSON objects and combine
-                const objectMatches = responseText.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g)
+                try {
+                    clips = JSON.parse(jsonMatch[0])
+                } catch (parseError) {
+                    console.log(`[QuickClips] Array extraction failed, trying object collection...`)
+                }
+            }
+            
+            // Strategy 3: Look for individual complete JSON objects
+            if (!clips.length) {
+                const objectPattern = /\{\s*"title"[\s\S]*?"end_time"\s*:\s*\d+[\s\S]*?\}/g
+                const objectMatches = responseText.match(objectPattern)
+                
                 if (objectMatches) {
                     clips = objectMatches.map(match => {
                         try {
                             return JSON.parse(match)
                         } catch (e) {
+                            console.warn(`[QuickClips] Failed to parse object: ${match.substring(0, 100)}...`)
                             return null
                         }
                     }).filter(Boolean)
                 }
+            }
+            
+            // Strategy 4: Manual field extraction as last resort
+            if (!clips.length) {
+                console.log(`[QuickClips] Attempting manual field extraction...`)
+                const titleMatches = responseText.match(/"title"\s*:\s*"([^"]+)"/g)
+                const startMatches = responseText.match(/"start_time"\s*:\s*(\d+)/g)
+                const endMatches = responseText.match(/"end_time"\s*:\s*(\d+)/g)
+                const descMatches = responseText.match(/"description"\s*:\s*"([^"]+)"/g)
                 
-                if (clips.length === 0) {
-                    throw new Error('No valid JSON found in response')
+                if (titleMatches && startMatches && endMatches && titleMatches.length === startMatches.length) {
+                    for (let i = 0; i < titleMatches.length; i++) {
+                        const titleMatch = titleMatches[i].match(/"title"\s*:\s*"([^"]+)"/)
+                        const startMatch = startMatches[i].match(/(\d+)/)
+                        const endMatch = endMatches[i].match(/(\d+)/)
+                        
+                        if (titleMatch && startMatch && endMatch) {
+                            clips.push({
+                                title: titleMatch[1],
+                                start_time: parseInt(startMatch[1]),
+                                end_time: parseInt(endMatch[1]),
+                                description: descMatches?.[i]?.match(/"description"\s*:\s*"([^"]+)"/)?.[1] || 'Generated clip',
+                                significance: 8.0,
+                                narrative_role: 'supporting',
+                                transition_note: ''
+                            })
+                        }
+                    }
                 }
+            }
+            
+            if (clips.length === 0) {
+                throw new Error(`Failed to parse model output: No valid clips found in response. Response preview: ${responseText.substring(0, 200)}...`)
             }
         }
         
@@ -296,6 +336,103 @@ Remember: The goal is meaningful content extraction that creates a coherent high
     } catch (error) {
         console.error('[QuickClips] AI generation failed:', error)
         throw error
+    }
+}
+
+// Generate video description using AI
+async function generateVideoDescription(signedUrl: string, mimeType: string, job: QuickclipsJob, clips: any[]): Promise<string> {
+    const { GoogleGenAI, createUserContent, createPartFromUri } = await import('@google/genai')
+    
+    const ai = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY
+    })
+    
+    const contentConfig = CONTENT_CONFIGS[job.contentType as keyof typeof CONTENT_CONFIGS]
+    const formatConfig = FORMAT_CONFIGS[job.videoFormat]
+    
+    const clipSummary = clips.map(clip => `- ${clip.title}: ${clip.description} (${clip.start_time}s-${clip.end_time}s)`).join('\n')
+    
+    const prompt = `You are an expert content analyzer. Based on the video content and the key segments extracted, write a compelling description for this video.
+
+CONTENT TYPE: ${contentConfig.name}
+VIDEO FORMAT: ${formatConfig.name} (${formatConfig.aspectRatio})
+CONTENT CHARACTERISTICS: ${contentConfig.characteristics}
+
+EXTRACTED SEGMENTS:
+${clipSummary}
+
+TASK: Write a 2-3 sentence description that:
+1. Captures the main theme or message of the video
+2. Highlights what makes it valuable to viewers
+3. Uses engaging language appropriate for the content type
+4. Mentions key topics or insights covered
+
+The description should be concise but compelling, making someone want to watch the clips.
+
+Return ONLY the description text, no extra formatting or quotes.`
+
+    try {
+        // Download and upload file to Gemini
+        const fileResponse = await fetch(signedUrl)
+        if (!fileResponse.ok) {
+            throw new Error(`Failed to download video: ${fileResponse.status}`)
+        }
+        
+        const buffer = await fileResponse.arrayBuffer()
+        const blob = new Blob([buffer], { type: mimeType })
+        
+        const uploadedFile = await ai.files.upload({
+            file: blob,
+            config: { mimeType }
+        })
+        
+        if (!uploadedFile.name) {
+            throw new Error('File upload failed - no file name returned')
+        }
+        
+        // Wait for file processing
+        let file = await ai.files.get({ name: uploadedFile.name })
+        while (file.state === 'PROCESSING') {
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            file = await ai.files.get({ name: uploadedFile.name })
+        }
+        
+        if (file.state === 'FAILED') {
+            throw new Error('File processing failed')
+        }
+        
+        // Generate content
+        const content = createUserContent([
+            prompt,
+            createPartFromUri(uploadedFile.uri || '', mimeType)
+        ])
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.0-flash-exp',
+            contents: [content],
+            config: {
+                maxOutputTokens: 200,
+                temperature: 0.7,
+                topP: 0.9,
+            }
+        })
+        
+        const description = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+        
+        if (!description) {
+            // Fallback description based on clips
+            const mainTopics = clips.slice(0, 3).map(c => c.title).join(', ')
+            return `This ${contentConfig.name.toLowerCase()} covers ${mainTopics} and other key insights in ${clips.length} highlight segments.`
+        }
+        
+        return description
+        
+    } catch (error) {
+        console.error('[QuickClips] Video description generation failed:', error)
+        
+        // Fallback description
+        const mainTopics = clips.slice(0, 3).map(c => c.title).join(', ')
+        return `This ${contentConfig.name.toLowerCase()} covers ${mainTopics} and other key insights in ${clips.length} highlight segments.`
     }
 }
 
@@ -435,14 +572,24 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         // Step 3: Generate clips using dedicated AI function
         const clips = await generateQuickClips(signedUrl, job.mimeType, job)
         
-        job.progress = 70
-        job.message = 'Extracting video segments...'
+        job.progress = 60
+        job.message = 'Generating video description...'
         await updateProjectStatus(job.projectId, {
-            processing_progress: 70,
+            processing_progress: 60,
             processing_message: job.message
         })
         
-        // Step 4: Process video clips (extract segments)
+        // Step 4: Generate video description
+        const videoDescription = await generateVideoDescription(signedUrl, job.mimeType, job, clips)
+        
+        job.progress = 75
+        job.message = 'Extracting video segments...'
+        await updateProjectStatus(job.projectId, {
+            processing_progress: 75,
+            processing_message: job.message
+        })
+        
+        // Step 5: Process video clips (extract segments)
         const processedClips = await extractVideoClips(signedUrl, clips, job)
         
         job.progress = 95
@@ -469,7 +616,8 @@ async function processQuickclipsJob(job: QuickclipsJob) {
                 processingTime: Date.now() - job.createdAt.getTime(),
                 videoFormat: job.videoFormat,
                 contentType: job.contentType,
-                approach: 'narrative_coherence'
+                approach: 'narrative_coherence',
+                description: videoDescription
             },
             processing_completed_at: completedAt
         })
