@@ -15,7 +15,7 @@ const HomeHeroSection = () => {
     const [isUploading, setIsUploading] = useState(false)
     const [isDragOver, setIsDragOver] = useState(false)
     
-    // Specific time intervals in seconds
+    // Specific time intervals in seconds (20s to 30m)
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
     
     const contentTypes = [
@@ -157,7 +157,8 @@ const HomeHeroSection = () => {
                         contentType,
                         videoFormat: targetDuration < 120 ? 'short' : 'long',
                         targetDuration,
-                        filename: selectedFile.name
+                        filename: selectedFile.name,
+                        durationRange: targetDuration < 120 ? '< 2 minutes' : '2-30 minutes'
                     }
                 })
             })
@@ -430,8 +431,11 @@ const HomeHeroSection = () => {
                                 <div className="mb-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
                                     <div className="flex items-center gap-4">
                                         <div className="flex-1 text-center">
-                                            <div className="text-sm font-medium text-gray-900 mb-2">
+                                            <div className="text-sm font-medium text-gray-900 mb-1">
                                                 {targetDuration < 120 ? 'Short Vertical' : 'Long Horizontal'}
+                                            </div>
+                                            <div className="text-xs text-gray-600 mb-2">
+                                                {targetDuration < 120 ? '< 2 minutes' : '2-30 minutes'}
                                             </div>
                                             <div className="text-lg font-bold text-blue-600">
                                                 {targetDuration < 120 ? '9:16' : '16:9'}
