@@ -60,24 +60,8 @@ export const setupWebSocket = (server: HttpServer) => {
         
         const io = new Server(server, {
             cors: {
-                origin: (origin, callback) => {
-                    if (!origin || allowedOrigins.includes(origin)) {
-                        callback(null, true)
-                    } else {
-                        console.log('[WebSocket] Rejected origin:', origin)
-                        callback(new Error('Not allowed by CORS'))
-                    }
-                },
-                methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-                allowedHeaders: [
-                    'Content-Type',
-                    'Authorization',
-                    'X-Requested-With',
-                    'Accept',
-                    'Origin',
-                    'Access-Control-Request-Method',
-                    'Access-Control-Request-Headers'
-                ],
+                origin: allowedOrigins,
+                methods: ["GET", "POST"],
                 credentials: true
             },
             maxHttpBufferSize: 1e8,

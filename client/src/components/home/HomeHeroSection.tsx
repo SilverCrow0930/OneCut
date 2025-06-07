@@ -136,10 +136,6 @@ const HomeHeroSection = () => {
         setIsUploading(true)
 
         try {
-            // Determine video format based on duration
-            const videoFormat = getVideoFormat(targetDuration)
-            const formatName = videoFormat === 'short_vertical' ? 'Short' : 'Long'
-            
             // 1. Create new project with processing status
             const projectResponse = await fetch(apiPath('projects'), {
                 method: 'POST',
@@ -164,7 +160,9 @@ const HomeHeroSection = () => {
             })
 
             if (!projectResponse.ok) {
-                throw new Error('Failed to create project')
+                const errorData = await projectResponse.json().catch(() => null)
+                const errorMessage = errorData?.error || await projectResponse.text() || 'Failed to create project'
+                throw new Error(errorMessage)
             }
 
             const project = await projectResponse.json()
@@ -183,7 +181,9 @@ const HomeHeroSection = () => {
             })
 
             if (!uploadResponse.ok) {
-                throw new Error('Failed to upload file')
+                const errorData = await uploadResponse.json().catch(() => null)
+                const errorMessage = errorData?.error || await uploadResponse.text() || 'Failed to upload file'
+                throw new Error(errorMessage)
             }
 
             const uploadResult = await uploadResponse.json()
@@ -200,28 +200,27 @@ const HomeHeroSection = () => {
                     projectId: project.id,
                     fileUri,
                     mimeType: selectedFile.type,
-                contentType,
+                    contentType,
                     targetDuration
                 })
             })
 
             if (!jobResponse.ok) {
-                throw new Error('Failed to start processing job')
+                const errorData = await jobResponse.json().catch(() => null)
+                const errorMessage = errorData?.error || await jobResponse.text() || 'Failed to start processing job'
+                throw new Error(errorMessage)
             }
 
             // 4. Show success message and navigate to projects page
             const projectName = selectedFile.name.split('.')[0]
             const formatInfo = getFormatInfo(targetDuration)
             
-            // Optional: Show success toast/notification here
-            console.log(`QuickClips project "${projectName}" started! Processing ${formatInfo.format} format (${formatInfo.aspectRatio})`)
-            
             // Navigate to projects page to show processing status
             router.push(`/projects?highlight=${project.id}`)
 
         } catch (error) {
             console.error('Error starting quickclips:', error)
-            alert('Failed to start processing, please try again')
+            alert(error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.')
         } finally {
             setIsUploading(false)
         }
