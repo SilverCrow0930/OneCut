@@ -116,9 +116,30 @@ router.get('/status/:jobId', async (req: Request, res: Response, next: NextFunct
             })
         }
 
+        // If completed, get clips and description from project processing_result
+        let clips = null
+        let description = null
+        
+        if (job.status === 'completed') {
+            try {
+                const { data: project } = await supabase
+                    .from('projects')
+                    .select('processing_result')
+                    .eq('id', job.projectId)
+                    .single()
+                
+                if (project?.processing_result) {
+                    clips = project.processing_result.clips || null
+                    description = project.processing_result.description || null
+                }
+            } catch (error) {
+                console.warn('[Quickclips API] Could not fetch project result:', error)
+            }
+        }
+
         res.json({
             success: true,
-            job: {
+            ...({
                 id: job.id,
                 projectId: job.projectId,
                 status: job.status,
@@ -127,8 +148,10 @@ router.get('/status/:jobId', async (req: Request, res: Response, next: NextFunct
                 error: job.error,
                 createdAt: job.createdAt,
                 contentType: job.contentType,
-                videoFormat: job.videoFormat
-            }
+                videoFormat: job.videoFormat,
+                ...(clips && { clips }),
+                ...(description && { description })
+            })
         })
 
     } catch (error) {

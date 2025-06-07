@@ -355,19 +355,19 @@ export const PromptModal: React.FC<PromptModalProps> = ({
                         {CONTENT_TYPES.map((type) => {
                             const Icon = type.icon;
                             return (
-                                <button
-                                    key={type.type}
-                                    onClick={() => onContentTypeChange?.(contentType === type.type ? '' : type.type)}
-                                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
-                                        contentType === type.type
-                                            ? 'border-blue-500 bg-blue-50 shadow-md'
-                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                    disabled={isUploading}
-                                >
-                                    <div className="flex items-start gap-3">
+                            <button
+                                key={type.type}
+                                onClick={() => onContentTypeChange?.(contentType === type.type ? '' : type.type)}
+                                className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                                    contentType === type.type
+                                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
+                                disabled={isUploading}
+                            >
+                                <div className="flex items-start gap-3">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-2xl flex-shrink-0">{type.emoji}</span>
+                                    <span className="text-2xl flex-shrink-0">{type.emoji}</span>
                                             <div className={`p-1 rounded-lg ${
                                                 type.processingMethod === 'audio-primary' ? 'bg-green-100' :
                                                 type.processingMethod === 'visual-audio' ? 'bg-yellow-100' : 'bg-purple-100'
@@ -378,9 +378,9 @@ export const PromptModal: React.FC<PromptModalProps> = ({
                                                 }`} />
                                             </div>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-semibold text-gray-900">{type.name}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-semibold text-gray-900">{type.name}</span>
                                                 <span className={`text-xs px-2 py-1 rounded-full ${
                                                     type.processingMethod === 'audio-primary' ? 'bg-green-100 text-green-700' :
                                                     type.processingMethod === 'visual-audio' ? 'bg-yellow-100 text-yellow-700' : 'bg-purple-100 text-purple-700'
@@ -388,11 +388,11 @@ export const PromptModal: React.FC<PromptModalProps> = ({
                                                     {type.processingMethod === 'audio-primary' ? 'Audio Focus' :
                                                      type.processingMethod === 'visual-audio' ? 'Visual + Audio' : 'Visual Focus'}
                                                 </span>
-                                                {contentType === type.type && (
-                                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                )}
-                                            </div>
-                                            <p className="text-sm text-gray-600 mb-1">{type.description}</p>
+                                            {contentType === type.type && (
+                                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-gray-600 mb-1">{type.description}</p>
                                             <p className="text-xs text-gray-500 italic mb-2">{type.examples}</p>
                                             <div className="flex flex-wrap gap-1">
                                                 {type.characteristics.map(char => (
@@ -401,9 +401,9 @@ export const PromptModal: React.FC<PromptModalProps> = ({
                                                     </span>
                                                 ))}
                                             </div>
-                                        </div>
                                     </div>
-                                </button>
+                                </div>
+                            </button>
                             );
                         })}
                     </div>
@@ -412,14 +412,14 @@ export const PromptModal: React.FC<PromptModalProps> = ({
                 {/* Smart Prompt Generation */}
                 {selectedContentType && (
                     <div className="mb-4">
-                        <button
+                                <button
                             onClick={generateSmartPrompt}
                             className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 transition-colors"
-                            disabled={isUploading}
-                        >
+                                    disabled={isUploading}
+                                >
                             <Zap className="w-4 h-4" />
                             Generate smart prompt for {selectedContentType.name} → {currentFormat.format}
-                        </button>
+                                </button>
                     </div>
                 )}
 

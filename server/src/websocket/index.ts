@@ -181,15 +181,15 @@ export const setupWebSocket = (server: any) => {
             }) => {
                 const processStartTime = Date.now();
                 console.log('=== AUTOCUT PROCESS STARTED ===');
-                                    console.log('Request details:', {
-                        promptLength: data.prompt?.length,
-                        fileUri: data.fileUri,
-                        mimeType: data.mimeType,
-                        contentType: data.contentType,
+                console.log('Request details:', {
+                    promptLength: data.prompt?.length,
+                    fileUri: data.fileUri,
+                    mimeType: data.mimeType,
+                    contentType: data.contentType,
                         videoFormat: data.videoFormat,
-                        timestamp: new Date().toISOString(),
-                        socketId: socket.id
-                    });
+                    timestamp: new Date().toISOString(),
+                    socketId: socket.id
+                });
 
                 try {
                     // Send initial state

@@ -5,7 +5,7 @@ import { EditorProvider } from '@/contexts/EditorContext'
 import { AssetsProvider } from '@/contexts/AssetsContext'
 import { PlaybackProvider } from '@/contexts/PlaybackContext'
 import { ZoomProvider } from '@/contexts/ZoomContext'
-import { AutoCutProvider } from '@/contexts/AutocutContext'
+
 import { AudioProvider } from '@/contexts/AudioContext'
 
 interface LayoutProps {
@@ -14,18 +14,16 @@ interface LayoutProps {
 
 export default function ProjectLayout({ children }: LayoutProps) {
     return (
-        <AutoCutProvider>
-            <EditorProvider>
-                <AssetsProvider>
-                    <AudioProvider>
-                        <PlaybackProvider>
-                            <ZoomProvider>
-                                {children}
-                            </ZoomProvider>
-                        </PlaybackProvider>
-                    </AudioProvider>
-                </AssetsProvider>
-            </EditorProvider>
-        </AutoCutProvider>
+        <EditorProvider>
+            <AssetsProvider>
+                <AudioProvider>
+                    <PlaybackProvider>
+                        <ZoomProvider>
+                            {children}
+                        </ZoomProvider>
+                    </PlaybackProvider>
+                </AudioProvider>
+            </AssetsProvider>
+        </EditorProvider>
     )
 }
