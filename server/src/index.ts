@@ -36,14 +36,43 @@ console.log('[CORS] Environment:', NODE_ENV)
 console.log('[CORS] Allowed origins:', allowedOrigins)
 
 const corsOptions = {
-    origin: allowedOrigins,
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true)
+        } else {
+            console.log('[CORS] Rejected origin:', origin)
+            callback(new Error('Not allowed by CORS'))
+        }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'Access-Control-Request-Method',
+        'Access-Control-Request-Headers'
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 }
+
+// Apply CORS before other middleware
 app.use(cors(corsOptions))
-app.use(helmet())
+
+// Security middleware
+app.use(helmet({
+    crossOriginResourcePolicy: {
+        policy: 'cross-origin'
+    },
+    crossOriginOpenerPolicy: {
+        policy: 'same-origin-allow-popups'
+    }
+}))
+
 app.use(express.json())
 app.use(bodyParser.json())
 
