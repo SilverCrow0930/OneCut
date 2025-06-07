@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
@@ -299,12 +299,12 @@ const ClipsModal = ({ project, onClose }: { project: Project, onClose: () => voi
     )
 }
 
-// Main projects page
-export default function ProjectsPage() {
+// Main projects page component
+function ProjectsPageContent() {
     const { user, session, signIn } = useAuth()
     const router = useRouter()
     const searchParams = useSearchParams()
-    const highlightId = searchParams.get('highlight')
+    const highlightId = searchParams?.get('highlight')
 
     const [projects, setProjects] = useState<Project[]>([])
     const [loading, setLoading] = useState(true)
@@ -479,4 +479,37 @@ export default function ProjectsPage() {
             )}
         </div>
     )
-} 
+}
+
+// Wrapper component to prevent SSR issues
+export default function ProjectsPage() {
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    if (!mounted) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <ProjectsPageContent />
+        </Suspense>
+    )
+}
