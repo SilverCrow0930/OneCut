@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { TrackType } from '@/types/editor'
+import { DEFAULT_MEDIA_DURATIONS } from '@/lib/constants'
 
 export default function EmptyTimeline() {
     const [isDragOver, setIsDragOver] = useState(false)
@@ -57,7 +58,7 @@ export default function EmptyTimeline() {
 
         // Handle external assets (Pexels/stickers)
         if (payload.type === 'external_asset') {
-            console.log('Handling external asset on empty timeline:', payload)
+            console.log('Handling external asset in EmptyTimeline:', payload)
 
             // Extract the correct URL based on asset type and source
             let mediaUrl = ''
@@ -71,9 +72,12 @@ export default function EmptyTimeline() {
             } else if (payload.assetType === 'video') {
                 // Pexels video - get the first available video file
                 mediaUrl = payload.asset.video_files?.[0]?.link || payload.asset.url
+            } else if (payload.assetType === 'audio') {
+                // Audio file
+                mediaUrl = payload.asset.url
             }
 
-            console.log('Extracted media URL for empty timeline:', mediaUrl)
+            console.log('Extracted media URL:', mediaUrl)
 
             if (!mediaUrl) {
                 console.error('Could not extract media URL from external asset:', payload.asset)
@@ -86,17 +90,19 @@ export default function EmptyTimeline() {
                 url: mediaUrl,
                 name: payload.asset.title || payload.asset.alt || `External ${payload.assetType}`,
                 mime_type: payload.assetType === 'video' ? 'video/mp4' : 
+                          payload.assetType === 'audio' ? 'audio/mp3' :
                           (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
-                duration: payload.assetType === 'video' ? 10000 : 
-                         (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 3000 : 5000, // 3s for GIFs, 5s for images
+                duration: payload.assetType === 'video' ? DEFAULT_MEDIA_DURATIONS.VIDEO : 
+                         payload.assetType === 'audio' ? DEFAULT_MEDIA_DURATIONS.AUDIO :
+                         (payload.asset.isSticker || mediaUrl.includes('.gif')) ? DEFAULT_MEDIA_DURATIONS.GIF : DEFAULT_MEDIA_DURATIONS.IMAGE,
                 isExternal: true,
                 originalData: payload.asset
             }
 
-            console.log('Created external asset for empty timeline:', externalAsset)
+            console.log('Created external asset:', externalAsset)
 
             // 2) CREATE TRACK
-            const trackType: TrackType = payload.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+            const trackType: TrackType = payload.assetType === 'audio' ? 'audio' : 'video'
             const newTrack = {
                 id: uuid(),
                 projectId: projectId!,
@@ -105,22 +111,20 @@ export default function EmptyTimeline() {
                 createdAt: new Date().toISOString(),
             }
 
-            console.log('Creating external track in EmptyTimeline:', newTrack)
+            console.log('Creating track:', newTrack)
 
             executeCommand({
                 type: 'ADD_TRACK',
-                payload: {
-                    track: newTrack
-                }
+                payload: { track: newTrack }
             })
 
             // 3) CREATE CLIP in that track
-            const dur = externalAsset.duration
+            const dur = externalAsset.duration || DEFAULT_MEDIA_DURATIONS.IMAGE // Fallback to image duration if none specified
             const newClip = {
                 id: uuid(),
                 trackId: newTrack.id,
                 assetId: externalAsset.id,
-                type: trackType,
+                type: payload.assetType === 'audio' ? 'audio' : 'video',
                 sourceStartMs: 0,
                 sourceEndMs: dur,
                 timelineStartMs: 0,
@@ -128,37 +132,47 @@ export default function EmptyTimeline() {
                 assetDurationMs: dur,
                 volume: 1,
                 speed: 1,
-                properties: {
-                    externalAsset: externalAsset // Store external asset data in properties
+                properties: payload.assetType === 'image' ? {
+                    crop: {
+                        width: 320,  // Default 16:9 aspect ratio
+                        height: 180,
+                        left: 0,
+                        top: 0
+                    },
+                    mediaPos: {
+                        x: 0,
+                        y: 0
+                    },
+                    mediaScale: 1
+                } : {
+                    externalAsset: externalAsset
                 },
                 createdAt: new Date().toISOString(),
             }
 
-            console.log('Creating external clip in EmptyTimeline:', newClip)
+            console.log('Creating clip:', newClip)
 
             executeCommand({
                 type: 'ADD_CLIP',
-                payload: {
-                    clip: newClip
-                }
+                payload: { clip: newClip }
             })
             return
         }
 
         // Handle regular uploaded assets
         if (!payload.assetId) {
-            console.log('No assetId found in EmptyTimeline payload')
+            console.log('No assetId found in payload')
             return
         }
 
-        console.log('Looking for asset in EmptyTimeline:', payload.assetId)
+        console.log('Looking for asset:', payload.assetId)
         const asset = assets.find(a => a.id === payload.assetId)
         if (!asset) {
-            console.error('Asset not found in EmptyTimeline:', payload.assetId)
+            console.error('Asset not found:', payload.assetId)
             return
         }
 
-        console.log('Found asset in EmptyTimeline:', asset)
+        console.log('Found asset:', asset)
 
         // 2) CREATE TRACK
         const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
@@ -170,22 +184,20 @@ export default function EmptyTimeline() {
             createdAt: new Date().toISOString(),
         }
 
-        console.log('Creating track in EmptyTimeline:', newTrack)
+        console.log('Creating track:', newTrack)
 
         executeCommand({
             type: 'ADD_TRACK',
-            payload: {
-                track: newTrack
-            }
+            payload: { track: newTrack }
         })
 
         // 3) CREATE CLIP in that track
-        const dur = asset.duration ? Math.floor(asset.duration) : 0 // Duration is already in ms
+        const dur = asset.duration ? Math.floor(asset.duration) : DEFAULT_MEDIA_DURATIONS.IMAGE // Fallback to image duration if none specified
         const newClip = {
             id: uuid(),
             trackId: newTrack.id,
             assetId: asset.id,
-            type: trackType,
+            type: asset.mime_type.startsWith('audio/') ? 'audio' : 'video',
             sourceStartMs: 0,
             sourceEndMs: dur,
             timelineStartMs: 0,
@@ -209,13 +221,11 @@ export default function EmptyTimeline() {
             createdAt: new Date().toISOString(),
         }
 
-        console.log('Creating clip in EmptyTimeline:', newClip)
+        console.log('Creating clip:', newClip)
 
         executeCommand({
             type: 'ADD_CLIP',
-            payload: {
-                clip: newClip
-            }
+            payload: { clip: newClip }
         })
     }
 
@@ -246,45 +256,4 @@ export default function EmptyTimeline() {
                         ${isDragOver ?
                             'text-cyan-400' :
                             ''}
-                    `}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-                    />
-                </svg>
-            </div>
-            <h3 className={`text-xl font-medium mb-2 transition-colors duration-500 ${isDragOver ? 'text-cyan-600' : ''}`}>
-                Your timeline is empty
-            </h3>
-
-            <div className={`
-                flex items-center gap-2 text-sm
-                transition-colors duration-500
-                ${isDragOver ? 'text-cyan-400' : 'text-gray-400'}
-            `}>
-                <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                    />
-                </svg>
-                <span>Drag media here to get started</span>
-            </div>
-        </div>
-    )
-}
+                    `

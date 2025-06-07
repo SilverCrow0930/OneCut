@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import ClipItem from './ClipItem'
-import { getTimeScale } from '@/lib/constants'
+import { getTimeScale, DEFAULT_MEDIA_DURATIONS } from '@/lib/constants'
 import { useZoom } from '@/contexts/ZoomContext'
 import type { Track, Clip } from '@/types/editor'
 import { X } from 'lucide-react'
@@ -67,10 +67,12 @@ export default function TrackRow({
             let trackType: 'audio' | 'video' = 'video'
             
             if (payload.type === 'external_asset') {
-                trackType = payload.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+                // External assets: audio goes to audio track, everything else to video
+                trackType = payload.assetType === 'audio' ? 'audio' : 'video'
             } else if (payload.assetId) {
                 const asset = assets.find(a => a.id === payload.assetId)
                 if (asset) {
+                    // Local assets: audio files go to audio track, everything else to video
                     trackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
                 }
             }
@@ -111,6 +113,9 @@ export default function TrackRow({
             } else if (payload.assetType === 'video') {
                 // Pexels video - get the first available video file
                 mediaUrl = payload.asset.video_files?.[0]?.link || payload.asset.url
+            } else if (payload.assetType === 'audio') {
+                // Audio file
+                mediaUrl = payload.asset.url
             }
 
             console.log('Extracted media URL for track:', mediaUrl)
@@ -126,9 +131,11 @@ export default function TrackRow({
                 url: mediaUrl,
                 name: payload.asset.title || payload.asset.alt || `External ${payload.assetType}`,
                 mime_type: payload.assetType === 'video' ? 'video/mp4' : 
+                          payload.assetType === 'audio' ? 'audio/mp3' :
                           (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
-                duration: payload.assetType === 'video' ? 10000 : 
-                         (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 3000 : 5000, // 3s for GIFs, 5s for images
+                duration: payload.assetType === 'video' ? DEFAULT_MEDIA_DURATIONS.VIDEO : 
+                         payload.assetType === 'audio' ? DEFAULT_MEDIA_DURATIONS.AUDIO :
+                         (payload.asset.isSticker || mediaUrl.includes('.gif')) ? DEFAULT_MEDIA_DURATIONS.GIF : DEFAULT_MEDIA_DURATIONS.IMAGE,
                 isExternal: true,
                 originalData: payload.asset
             }
@@ -153,12 +160,12 @@ export default function TrackRow({
             console.log('Creating external clip in TrackRow at time:', startMs)
 
             // build new clip
-            const dur = externalAsset.duration
+            const dur = externalAsset.duration || DEFAULT_MEDIA_DURATIONS.IMAGE // Fallback to image duration if none specified
             const newClip: Clip = {
                 id: uuid(),
                 trackId: track.id,
                 assetId: externalAsset.id,
-                type: payload.assetType === 'video' ? 'video' : 'video', // Images also go on video tracks
+                type: payload.assetType === 'audio' ? 'audio' : 'video', // Audio goes to audio track, everything else to video
                 sourceStartMs: 0,
                 sourceEndMs: dur,
                 timelineStartMs: startMs,
@@ -166,7 +173,19 @@ export default function TrackRow({
                 assetDurationMs: dur,
                 volume: 1,
                 speed: 1,
-                properties: {
+                properties: payload.assetType === 'image' ? {
+                    crop: {
+                        width: 320,  // Default 16:9 aspect ratio
+                        height: 180,
+                        left: 0,
+                        top: 0
+                    },
+                    mediaPos: {
+                        x: 0,
+                        y: 0
+                    },
+                    mediaScale: 1
+                } : {
                     externalAsset: externalAsset // Store external asset data in properties
                 },
                 createdAt: new Date().toISOString(),
@@ -275,7 +294,8 @@ export default function TrackRow({
             id: uuid(),
             trackId: track.id,
             assetId: asset.id,
-            type: asset.mime_type.startsWith('audio/') ? 'audio' : 'video',
+            type: asset.mime_type.startsWith('audio/') ? 'audio' : 
+                  asset.mime_type.startsWith('image/') ? 'image' : 'video',
             sourceStartMs: 0,
             sourceEndMs: dur,
             timelineStartMs: startMs,
