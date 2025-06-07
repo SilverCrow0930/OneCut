@@ -235,29 +235,22 @@ export default function EmptyTimeline() {
 
     return (
         <div
-            className={`
-                w-full h-full flex flex-col items-center justify-center text-gray-500
-                transition-all duration-500
-                ${isDragOver ?
-                    'bg-cyan-50/50' :
-                    ''}
-            `}
+            className={`w-full h-full flex flex-col items-center justify-center text-gray-500 transition-all duration-500 ${
+                isDragOver ? 'bg-cyan-50/50' : ''
+            }`}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
         >
-            <div className={`
-                mb-4 p-2 rounded-2xl
-                transition-all duration-500
-                ${isDragOver ?
-                    'bg-white shadow-lg scale-105' :
-                    ''}
-            `}>
-                <svg
-                    className={`
-                        w-16 h-16 transition-colors duration-500 
-                        ${isDragOver ?
-                            'text-cyan-400' :
-                            ''}
-                    `
+            <div
+                className={`mb-4 p-2 rounded-2xl transition-all duration-500 ${
+                    isDragOver ? 'bg-white shadow-lg scale-105' : ''
+                }`}
+            >
+                <p className="text-lg font-medium">Drop media here to start</p>
+                <p className="text-sm opacity-75">Drag and drop video, audio, or image files</p>
+            </div>
+        </div>
+    )
+}
