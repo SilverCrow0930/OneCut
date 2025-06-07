@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { useParams } from 'next/navigation'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
-import { TrackType } from '@/types/editor'
+import { TrackType, ClipType } from '@/types/editor'
 import { DEFAULT_MEDIA_DURATIONS } from '@/lib/constants'
 
 export default function EmptyTimeline() {
@@ -120,11 +120,13 @@ export default function EmptyTimeline() {
 
             // 3) CREATE CLIP in that track
             const dur = externalAsset.duration || DEFAULT_MEDIA_DURATIONS.IMAGE // Fallback to image duration if none specified
+            const clipType: ClipType = payload.assetType === 'audio' ? 'audio' :
+                                      payload.assetType === 'video' ? 'video' : 'image'
             const newClip = {
                 id: uuid(),
                 trackId: newTrack.id,
                 assetId: externalAsset.id,
-                type: payload.assetType === 'audio' ? 'audio' : 'video',
+                type: clipType,
                 sourceStartMs: 0,
                 sourceEndMs: dur,
                 timelineStartMs: 0,
@@ -193,11 +195,13 @@ export default function EmptyTimeline() {
 
         // 3) CREATE CLIP in that track
         const dur = asset.duration ? Math.floor(asset.duration) : DEFAULT_MEDIA_DURATIONS.IMAGE // Fallback to image duration if none specified
+        const clipType: ClipType = asset.mime_type.startsWith('audio/') ? 'audio' :
+                                  asset.mime_type.startsWith('video/') ? 'video' : 'image'
         const newClip = {
             id: uuid(),
             trackId: newTrack.id,
             assetId: asset.id,
-            type: asset.mime_type.startsWith('audio/') ? 'audio' : 'video',
+            type: clipType,
             sourceStartMs: 0,
             sourceEndMs: dur,
             timelineStartMs: 0,

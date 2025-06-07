@@ -5,7 +5,7 @@ import { useAssets } from '@/contexts/AssetsContext'
 import ClipItem from './ClipItem'
 import { getTimeScale, DEFAULT_MEDIA_DURATIONS } from '@/lib/constants'
 import { useZoom } from '@/contexts/ZoomContext'
-import type { Track, Clip } from '@/types/editor'
+import type { Track, Clip, TrackType, ClipType } from '@/types/editor'
 import { X } from 'lucide-react'
 
 export default function TrackRow({
@@ -161,11 +161,13 @@ export default function TrackRow({
 
             // build new clip
             const dur = externalAsset.duration || DEFAULT_MEDIA_DURATIONS.IMAGE // Fallback to image duration if none specified
+            const clipType: ClipType = payload.assetType === 'audio' ? 'audio' :
+                                      payload.assetType === 'video' ? 'video' : 'image'
             const newClip: Clip = {
                 id: uuid(),
                 trackId: track.id,
                 assetId: externalAsset.id,
-                type: payload.assetType === 'audio' ? 'audio' : 'video', // Audio goes to audio track, everything else to video
+                type: clipType,
                 sourceStartMs: 0,
                 sourceEndMs: dur,
                 timelineStartMs: startMs,
@@ -186,7 +188,7 @@ export default function TrackRow({
                     },
                     mediaScale: 1
                 } : {
-                    externalAsset: externalAsset // Store external asset data in properties
+                    externalAsset: externalAsset
                 },
                 createdAt: new Date().toISOString(),
             }
