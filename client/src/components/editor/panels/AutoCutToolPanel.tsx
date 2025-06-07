@@ -370,9 +370,8 @@ const AutoCutToolPanel = () => {
                         className="hidden"
                     />
                             <UploadButton
-                            onClick={() => fileInputRef.current?.click()}
-                            isUploading={false}
-                        />
+                                onClick={() => fileInputRef.current?.click()}
+                            />
                         <p className="text-sm text-gray-500 text-center max-w-48">
                             Upload video to automatically extract the best clips using AI
                         </p>
@@ -488,7 +487,6 @@ const AutoCutToolPanel = () => {
                                         className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                         style={{ width: `${uploadProgress}%` }}
                                     />
-                                </div>
                         </div>
                     )}
                     
