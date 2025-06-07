@@ -362,19 +362,22 @@ const AutoCutToolPanel = () => {
                 {!selectedFile && !uploadedAsset && !currentJob ? (
                     /* Upload State */
                     <div className="flex flex-col items-center justify-center h-full space-y-4">
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileUpload}
-                        accept="video/*"
-                        className="hidden"
-                    />
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                            accept="video/*"
+                            className="hidden"
+                        />
+                        <div>
                             <UploadButton
                                 onClick={() => fileInputRef.current?.click()}
+                                isUploading={isUploading}
                             />
-                        <p className="text-sm text-gray-500 text-center max-w-48">
-                            Upload video to automatically extract the best clips using AI
-                        </p>
+                            <p className="text-sm text-gray-500 text-center max-w-48">
+                                Upload video to automatically extract the best clips using AI
+                            </p>
+                        </div>
                     </div>
                 ) : showConfig ? (
                     /* Configuration State */
@@ -391,9 +394,9 @@ const AutoCutToolPanel = () => {
                                         <p className="text-xs text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(1)} MB</p>
                                     </div>
                                 </div>
-                        </div>
-                    )}
-                    
+                            </div>
+                        )}
+                        
                         {/* Content Type */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Content Type</label>
@@ -487,9 +490,10 @@ const AutoCutToolPanel = () => {
                                         className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                         style={{ width: `${uploadProgress}%` }}
                                     />
-                        </div>
-                    )}
-                    
+                                </div>
+                            </div>
+                        )}
+                        
                         {error && (
                             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                                 <p className="text-sm text-red-800">{error}</p>
@@ -497,115 +501,23 @@ const AutoCutToolPanel = () => {
                         )}
                     </div>
                 ) : (
-                    /* Processing/Results State */
+                    /* Processing State */
                     <div className="space-y-4">
-                        {uploadedAsset && (
-                            <VideoDetailsSection
-                                asset={{
-                                    id: uploadedAsset.id,
-                                    name: selectedFile?.name || 'Video',
-                                    mime_type: uploadedAsset.mime_type,
-                                    duration: uploadedAsset.duration,
-                                    created_at: new Date().toISOString(),
-                                    thumbnail_url: null,
-                                    file_size: selectedFile?.size || 0,
-                                }}
-                            />
-                        )}
-
-                        {/* Processing Status */}
-                        {currentJob && (
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                                <div className="flex items-center gap-3 mb-3">
-                                    {getStatusIcon()}
-                                    <div>
-                                        <h4 className="font-medium text-gray-900">
-                                            {currentJob.status === 'queued' && 'Queued for Processing'}
-                                            {currentJob.status === 'processing' && 'AI Processing Video'}
-                                            {currentJob.status === 'completed' && 'Processing Complete!'}
-                                            {currentJob.status === 'failed' && 'Processing Failed'}
-                                        </h4>
-                                        <p className="text-sm text-gray-600">{currentJob.message}</p>
-                                    </div>
-                                </div>
-
-                                {/* Progress Bar */}
-                                {['queued', 'processing'].includes(currentJob.status) && (
-                                    <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                                        <div
-                                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                            style={{ width: `${currentJob.progress || 0}%` }}
-                                        />
-                                                                    </div>
-                                                                )}
-
-                                {/* Video Description */}
-                                {currentJob.status === 'completed' && currentJob.description && (
-                                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                                        <h5 className="font-medium text-blue-900 mb-1">AI Video Summary</h5>
-                                        <p className="text-sm text-blue-800">{currentJob.description}</p>
-                                                                    </div>
-                                                                )}
-
-                                {/* Clips Preview */}
-                                {currentJob.status === 'completed' && currentJob.clips && currentJob.clips.length > 0 && (
-                                    <div className="mt-4 space-y-2">
-                                        <h5 className="font-medium text-gray-900">Generated Clips</h5>
-                                        <div className="max-h-48 overflow-y-auto space-y-2">
-                                            {currentJob.clips.map((clip, index) => (
-                                                <div key={index} className="p-3 bg-white rounded-lg border">
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="flex-1">
-                                                            <h6 className="font-medium text-sm text-gray-900 mb-1">
-                                                                {clip.title}
-                                                            </h6>
-                                                            <p className="text-xs text-gray-600 mb-2">
-                                                                {clip.description}
-                                                            </p>
-                                                            <div className="flex items-center gap-3 text-xs text-gray-500">
-                                                                <span>{Math.floor(clip.start_time / 60)}:{(clip.start_time % 60).toString().padStart(2, '0')} - {Math.floor(clip.end_time / 60)}:{(clip.end_time % 60).toString().padStart(2, '0')}</span>
-                                                                <span>{Math.round(clip.duration)}s</span>
-                                                                <span>⭐ {clip.significance || 'N/A'}/10</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Error Message */}
-                                {currentJob.status === 'failed' && currentJob.error && (
-                                    <div className="mt-3 p-3 bg-red-50 rounded-lg">
-                                        <p className="text-sm text-red-800">{currentJob.error}</p>
-                                    </div>
-                                )}
-
-                                {/* Success Actions */}
-                                {currentJob.status === 'completed' && (
-                                    <div className="flex gap-2 mt-4">
-                                        <button
-                                            onClick={() => {
-                                                if (currentJob.clips) {
-                                                    handleClipsReady(currentJob.clips)
-                                                }
-                                            }}
-                                            className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
-                                        >
-                                            <Play className="w-4 h-4" />
-                                            Add to Timeline
-                                        </button>
-                                        <span className="flex items-center gap-1 text-sm text-gray-600 px-3 py-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                            {currentJob.clips?.length || 0} clips ready
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        </div>
-                    )}
+                        {/* Video Details */}
+                        <VideoDetailsSection
+                            isExpanded={true}
+                            setIsExpanded={() => {}}
+                            processingState={currentJob?.status || 'idle'}
+                            selectedFile={selectedFile}
+                            uploadedAsset={uploadedAsset}
+                            prompt=""
+                            lastPrompt=""
+                            assets={assets}
+                            showThoughts={false}
+                            showResponse={false}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     )

@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import AssetThumbnail from '../upload/AssetThumbnail';
-import { Asset } from '@/contexts/AssetsContext'; // Assuming Asset type is exported or defined here
+
+// Define the Asset type to match the uploadedAsset structure
+interface Asset {
+    id: string;
+    mime_type: string;
+    duration: number | null;
+    name?: string;
+}
 
 interface VideoDetailsSectionProps {
     isExpanded: boolean;
     setIsExpanded: (expanded: boolean) => void;
-    processingState: 'idle' | 'starting' | 'generatingurl' | 'analyzing' | 'completed' | 'error';
+    processingState: 'idle' | 'starting' | 'queued' | 'processing' | 'generatingurl' | 'analyzing' | 'completed' | 'failed' | 'error';
     selectedFile: File | null;
-    uploadedAsset: { id: string; mime_type: string; duration: number | null; } | null;
+    uploadedAsset: Asset | null;
     prompt: string;
     lastPrompt: string;
-    assets: Asset[]; // Assuming assets type is Asset[]
+    assets: Asset[];
     showThoughts: boolean;
     showResponse: boolean;
 }

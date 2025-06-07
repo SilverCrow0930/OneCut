@@ -3,11 +3,13 @@ import { Upload, Video } from 'lucide-react';
 
 interface UploadButtonProps {
     onClick: () => void;
+    isUploading?: boolean;
 }
 
-export const UploadButton: React.FC<UploadButtonProps> = ({ onClick }) => (
+export const UploadButton: React.FC<UploadButtonProps> = ({ onClick, isUploading = false }) => (
     <button
         onClick={onClick}
+        disabled={isUploading}
         className="
             group relative w-full h-16 px-6 rounded-xl
             font-medium text-white
@@ -18,6 +20,7 @@ export const UploadButton: React.FC<UploadButtonProps> = ({ onClick }) => (
             flex items-center justify-center gap-3
             active:scale-[0.98]
             overflow-hidden
+            disabled:opacity-50 disabled:cursor-not-allowed
         "
     >
         {/* Animated background effect */}
@@ -27,9 +30,13 @@ export const UploadButton: React.FC<UploadButtonProps> = ({ onClick }) => (
         {/* Content */}
         <div className="relative flex items-center gap-3">
             <div className="p-2 rounded-lg transition-colors">
-                <Video className="w-5 h-5" />
+                {isUploading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                    <Video className="w-5 h-5" />
+                )}
             </div>
-            <span className="text-base">Upload Video</span>
+            <span className="text-base">{isUploading ? 'Uploading...' : 'Upload Video'}</span>
         </div>
     </button>
 ); 
