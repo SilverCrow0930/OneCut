@@ -208,6 +208,7 @@ const AutoCutToolPanel = () => {
             }
 
             const jobData = await jobResponse.json()
+            if (!projectId) throw new Error('Project ID is required')
             setCurrentJob({
                 id: jobData.jobId,
                 projectId,
@@ -361,14 +362,14 @@ const AutoCutToolPanel = () => {
                 {!selectedFile && !uploadedAsset && !currentJob ? (
                     /* Upload State */
                     <div className="flex flex-col items-center justify-center h-full space-y-4">
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                            accept="video/*"
-                            className="hidden"
-                        />
-                        <UploadButton
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        accept="video/*"
+                        className="hidden"
+                    />
+                            <UploadButton
                             onClick={() => fileInputRef.current?.click()}
                             isUploading={false}
                         />
@@ -391,9 +392,9 @@ const AutoCutToolPanel = () => {
                                         <p className="text-xs text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(1)} MB</p>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-
+                        </div>
+                    )}
+                    
                         {/* Content Type */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Content Type</label>
@@ -488,9 +489,9 @@ const AutoCutToolPanel = () => {
                                         style={{ width: `${uploadProgress}%` }}
                                     />
                                 </div>
-                            </div>
-                        )}
-
+                        </div>
+                    )}
+                    
                         {error && (
                             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                                 <p className="text-sm text-red-800">{error}</p>
@@ -537,16 +538,16 @@ const AutoCutToolPanel = () => {
                                             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                             style={{ width: `${currentJob.progress || 0}%` }}
                                         />
-                                    </div>
-                                )}
+                                                                    </div>
+                                                                )}
 
                                 {/* Video Description */}
                                 {currentJob.status === 'completed' && currentJob.description && (
                                     <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                                         <h5 className="font-medium text-blue-900 mb-1">AI Video Summary</h5>
                                         <p className="text-sm text-blue-800">{currentJob.description}</p>
-                                    </div>
-                                )}
+                                                                    </div>
+                                                                )}
 
                                 {/* Clips Preview */}
                                 {currentJob.status === 'completed' && currentJob.clips && currentJob.clips.length > 0 && (
@@ -605,8 +606,8 @@ const AutoCutToolPanel = () => {
                                 )}
                             </div>
                         )}
-                    </div>
-                )}
+                        </div>
+                    )}
             </div>
         </div>
     )

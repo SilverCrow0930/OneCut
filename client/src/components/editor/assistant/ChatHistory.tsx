@@ -60,8 +60,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state }) => {
             {chatMessages.length === 0 && state === 'idle' && (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                     <div className="flex flex-col items-center gap-4">
-                        {/* Cute emoji/icon */}
-                        <div className="text-6xl">🐹</div>
                         
                         {/* Welcome text */}
                         <div className="flex flex-col gap-2">
