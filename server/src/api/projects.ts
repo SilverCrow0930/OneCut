@@ -139,11 +139,11 @@ router.post(
             
             // 3) Insert new project using the public.users.id
             const insertData = {
-                user_id: profile.id,
-                name: projectName,
-                thumbnail_url: null,
-                duration: 0,
-                is_public: false,
+                    user_id: profile.id,
+                    name: projectName,
+                    thumbnail_url: null,
+                    duration: 0,
+                    is_public: false,
                 // Include processing fields if provided
                 ...(processing_status && { processing_status }),
                 ...(processing_type && { processing_type }),

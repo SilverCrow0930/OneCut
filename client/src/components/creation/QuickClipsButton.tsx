@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Zap, Upload, Clock, Users, BookOpen, Mic, Video, Download, Play, X } from 'lucide-react'
+import { Zap, Upload, Clock, Users, BookOpen, Mic, Video, Download, Play, X, Edit, Sparkles } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useQuickClips, QuickClip } from '@/contexts/QuickClipsContext'
 import { apiPath } from '@/lib/config'
+import { useRouter } from 'next/navigation'
 
 const QuickClipsButton = () => {
     const { user, session, signIn } = useAuth()
     const { sendQuickClipsRequest, onQuickClipsResponse, onQuickClipsState } = useQuickClips()
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const router = useRouter()
     
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -181,12 +183,41 @@ const QuickClipsButton = () => {
         setError(null)
 
         try {
-            // Upload file to GCS
+            // 1. Create new project
+            const projectResponse = await fetch(apiPath('projects'), {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: `QuickClips - ${selectedFile.name}`,
+                    processing_status: 'queued',
+                    processing_type: 'quickclips',
+                    processing_progress: 0,
+                    processing_message: 'Preparing for processing...',
+                    processing_data: {
+                        contentType,
+                        videoFormat: getVideoFormat(targetDuration),
+                        targetDuration,
+                        filename: selectedFile.name
+                    }
+                })
+            })
+
+            if (!projectResponse.ok) {
+                throw new Error('Failed to create project')
+            }
+
+            const project = await projectResponse.json()
+
+            // 2. Upload file to GCS
             const fileUri = await uploadFileToGCS(selectedFile)
             setIsUploading(false)
 
-            // Send to QuickClips processing
+            // 3. Send to QuickClips processing with project ID
             sendQuickClipsRequest({
+                projectId: project.id,
                 fileUri,
                 mimeType: selectedFile.type,
                 contentType,
@@ -218,6 +249,11 @@ const QuickClipsButton = () => {
         setIsUploading(false)
         setUploadProgress(0)
         setError(null)
+    }
+
+    const handleEditInTimeline = (clip: QuickClip) => {
+        // Create a new project with this clip
+        router.push(`/editor/new?clip=${clip.id}&start=${clip.start_time}&end=${clip.end_time}&url=${encodeURIComponent(clip.previewUrl)}`)
     }
 
     return (
@@ -282,39 +318,65 @@ const QuickClipsButton = () => {
 
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {generatedClips.map((clip) => (
-                                            <div key={clip.id} className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-shadow">
-                                                <div className="relative mb-3">
+                                            <div key={clip.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300">
+                                                {/* Thumbnail Section */}
+                                                <div className="relative group">
                                                     <img
                                                         src={clip.thumbnail}
                                                         alt={clip.title}
-                                                        className="w-full h-32 object-cover rounded-lg"
+                                                        className="w-full h-48 object-cover"
                                                     />
-                                                    <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                                                    {/* Preview Overlay */}
+                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <button 
+                                                            onClick={() => window.open(clip.previewUrl, '_blank')}
+                                                            className="bg-white/20 hover:bg-white/30 rounded-full p-3 backdrop-blur-sm transition-all transform hover:scale-110"
+                                                        >
+                                                            <Play className="w-6 h-6 text-white" />
+                                                        </button>
+                                                    </div>
+                                                    {/* Duration Badge */}
+                                                    <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
                                                         {formatDuration(clip.duration)}
                                                     </div>
-                                                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-emerald-500 text-white text-xs px-2 py-1 rounded">
-                                                        <Zap className="w-3 h-3" />
+                                                    {/* Viral Score */}
+                                                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+                                                        <Sparkles className="w-3 h-3" />
                                                         <span>{clip.viral_score}</span>
                                                     </div>
                                                 </div>
-                                                
-                                                <h4 className="font-medium text-gray-900 mb-2">{clip.title}</h4>
-                                                <p className="text-xs text-gray-600 mb-3">{clip.description}</p>
-                                                
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => handleDownload(clip)}
-                                                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-                                                    >
-                                                        <Download className="w-4 h-4" />
-                                                        Download
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => window.open(clip.previewUrl, '_blank')}
-                                                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                                                    >
-                                                        <Play className="w-4 h-4" />
-                                                    </button>
+
+                                                {/* Content Section */}
+                                                <div className="p-4">
+                                                    <h4 className="font-medium text-gray-900 mb-1 line-clamp-2">{clip.title}</h4>
+                                                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{clip.description}</p>
+                                                    
+                                                    {/* Action Buttons */}
+                                                    <div className="space-y-2">
+                                                        <button
+                                                            onClick={() => handleDownload(clip)}
+                                                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-sm font-medium rounded-lg transition-all duration-300"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                            Download Clip
+                                                        </button>
+                                                        <div className="flex gap-2">
+                                                            <button 
+                                                                onClick={() => handleEditInTimeline(clip)}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-sm font-medium rounded-lg transition-all duration-300"
+                                                            >
+                                                                <Edit className="w-4 h-4" />
+                                                                Edit
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => window.open(clip.previewUrl, '_blank')}
+                                                                className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-all duration-300"
+                                                            >
+                                                                <Play className="w-4 h-4" />
+                                                                Preview
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

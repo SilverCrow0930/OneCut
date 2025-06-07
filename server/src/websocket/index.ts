@@ -2,6 +2,10 @@ import { Server, Socket } from 'socket.io';
 import { generativeModel } from '../integrations/vertexAI.js';
 import { generateContent } from '../integrations/googleGenAI.js';
 import { bucket } from '../integrations/googleStorage.js';
+import { Server as HttpServer } from 'http';
+import { Storage } from '@google-cloud/storage';
+import { queueQuickclipsJob } from '../services/quickclipsProcessor.js';
+import { supabase } from '../config/supabaseClient.js';
 
 const googleSearchRetrievalTool = {
     googleSearchRetrieval: {
@@ -9,7 +13,14 @@ const googleSearchRetrievalTool = {
     },
 };
 
-export const setupWebSocket = (server: any) => {
+// Initialize GCS bucket
+const storage = new Storage({
+    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    keyFilename: process.env.GOOGLE_CLOUD_KEY_FILE,
+});
+const bucket = storage.bucket(process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'lemona-edit-assets');
+
+export const setupWebSocket = (server: HttpServer) => {
     try {
         console.log('[WebSocket] Starting WebSocket setup...');
 
@@ -332,13 +343,14 @@ export const setupWebSocket = (server: any) => {
                 }
             });
 
-            // New QuickClips handler - OpusClip style workflow
+            // QuickClips handler
             socket.on('quickclips', async (data: {
                 fileUri: string,
                 mimeType: string,
                 contentType?: string,
                 targetDuration?: number,
-                videoFormat?: string
+                videoFormat?: string,
+                projectId?: string
             }) => {
                 const processStartTime = Date.now();
                 console.log('=== QUICKCLIPS PROCESS STARTED ===');
@@ -367,158 +379,41 @@ export const setupWebSocket = (server: any) => {
                     if (!data.mimeType?.trim()) {
                         throw new Error('MIME type is required');
                     }
+                    if (!data.projectId?.trim()) {
+                        throw new Error('Project ID is required');
+                    }
 
                     // Extract object key from GCS URI
                     const gsUri = data.fileUri;
                     if (!gsUri.startsWith('gs://')) {
                         throw new Error('Invalid GCS URI format');
                     }
-                    const objectKey = gsUri.replace('gs://lemona-edit-assets/', '');
 
-                    // Verify file exists
-                    console.log('Checking if file exists in GCS...');
-                    const file = bucket.file(objectKey);
-                    const [exists] = await file.exists();
-                    if (!exists) {
-                        throw new Error(`File not found in GCS: ${objectKey}`);
+                    // Get user ID from socket session
+                    const { data: profile, error: profileError } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('auth_id', socket.handshake.auth.userId)
+                        .single();
+
+                    if (profileError || !profile) {
+                        throw new Error('User not found');
                     }
 
-                    socket.emit('quickclips_state', {
-                        state: 'analyzing',
-                        message: 'Analyzing video content...',
-                        progress: 20
-                    });
-
-                    // Generate signed URL
-                    const [signedUrl] = await bucket
-                        .file(objectKey)
-                        .getSignedUrl({
-                            action: 'read',
-                            expires: Date.now() + 24 * 60 * 60 * 1000,
-                        });
-
-                    socket.emit('quickclips_state', {
-                        state: 'generating',
-                        message: 'AI is creating clips...',
-                        progress: 40
-                    });
-
-                    // Generate prompt based on content type and format
-                    const contentTypePrompts = {
-                        'podcast': 'Extract the most engaging and shareable moments from this podcast',
-                        'professional_meeting': 'Identify key decisions, insights, and action items from this meeting',
-                        'educational_video': 'Find the most valuable learning moments and key takeaways',
-                        'talking_video': 'Extract the most engaging, quotable, and shareable moments'
-                    };
-
-                    const basePrompt = contentTypePrompts[data.contentType as keyof typeof contentTypePrompts] || contentTypePrompts['talking_video'];
-                    const formatInstruction = data.videoFormat === 'short_vertical' 
-                        ? 'Create 3-5 viral-ready clips (15-90 seconds each) optimized for mobile viewing.'
-                        : 'Create 2-4 substantial clips (2-5 minutes each) with complete context.';
-
-                    const fullPrompt = `${basePrompt}. ${formatInstruction} 
-
-                    Return ONLY a JSON array of clips, no other text. Each clip should have:
-                    {
-                        "title": "Descriptive title",
-                        "start_time": start_seconds,
-                        "end_time": end_seconds,
-                        "viral_score": score_0_to_10,
-                        "description": "Why this moment is valuable"
-                    }
-
-                    Target approximately ${data.targetDuration || 60} seconds total across all clips.`;
-
-                    // Get AI analysis
-                    const modelResponse = await generateContent(
-                        fullPrompt,
-                        signedUrl,
+                    // Queue the job for processing
+                    const jobId = await queueQuickclipsJob(
+                        data.projectId,
+                        data.fileUri,
                         data.mimeType,
-                        data.contentType,
-                        data.videoFormat
+                        data.contentType || 'talking_video',
+                        data.targetDuration || 60,
+                        profile.id
                     );
 
-                    socket.emit('quickclips_state', {
-                        state: 'processing',
-                        message: 'Creating video files...',
-                        progress: 70
-                    });
+                    console.log(`[WebSocket] QuickClips job ${jobId} queued for processing`);
 
-                    // Parse AI response to extract clips
-                    let clips;
-                    try {
-                        const responseText = modelResponse.textOutput?.text || '';
-                        console.log('AI Response:', responseText);
-                        
-                        // Try to extract JSON from the response
-                        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-                        if (jsonMatch) {
-                            clips = JSON.parse(jsonMatch[0]);
-                        } else {
-                            throw new Error('No valid JSON found in AI response');
-                        }
-                    } catch (parseError) {
-                        console.error('Failed to parse AI response:', parseError);
-                        // Fallback to mock clips if AI parsing fails
-                        clips = [
-                            {
-                                title: 'Key Highlights',
-                                start_time: 30,
-                                end_time: 75,
-                                viral_score: 8.5,
-                                description: 'Most engaging moment from the content'
-                            },
-                            {
-                                title: 'Best Insights',
-                                start_time: 120,
-                                end_time: 180,
-                                viral_score: 9.0,
-                                description: 'Valuable insights and takeaways'
-                            }
-                        ];
-                    }
-
-                    socket.emit('quickclips_state', {
-                        state: 'finalizing',
-                        message: 'Finalizing clips...',
-                        progress: 90
-                    });
-
-                    // TODO: In a real implementation, you would:
-                    // 1. Use FFmpeg to extract video segments based on start/end times
-                    // 2. Upload the processed clips to GCS
-                    // 3. Generate signed download URLs
-                    // 4. Create thumbnails for each clip
-
-                    // For now, simulate the final clips with mock download URLs
-                    const processedClips = clips.map((clip: any, index: number) => ({
-                        id: `clip_${Date.now()}_${index}`,
-                        title: clip.title,
-                        duration: clip.end_time - clip.start_time,
-                        start_time: clip.start_time,
-                        end_time: clip.end_time,
-                        viral_score: clip.viral_score,
-                        description: clip.description,
-                        thumbnail: `https://picsum.photos/320/180?random=${index + 1}`, // Mock thumbnail
-                        downloadUrl: '#', // TODO: Real download URL from processed clip
-                        previewUrl: signedUrl // For now, use original video URL for preview
-                    }));
-
-                    socket.emit('quickclips_state', {
-                        state: 'completed',
-                        message: 'Clips ready for download!',
-                        progress: 100
-                    });
-
-                    // Send the final result
-                    socket.emit('quickclips_response', {
-                        success: true,
-                        clips: processedClips,
-                        processingTime: Date.now() - processStartTime
-                    });
-
-                    console.log('=== QUICKCLIPS PROCESS COMPLETED ===');
-                    console.log(`Generated ${processedClips.length} clips in ${((Date.now() - processStartTime) / 1000).toFixed(2)}s`);
+                    // Job is now queued and will be processed by the quickclipsProcessor service
+                    // The service will handle all state updates and final response through the project's processing_status
 
                 } catch (error) {
                     console.error('=== QUICKCLIPS PROCESS FAILED ===');

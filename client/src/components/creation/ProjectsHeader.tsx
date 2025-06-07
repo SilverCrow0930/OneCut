@@ -19,7 +19,7 @@ const ProjectsHeader = () => {
             <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="flex flex-col sm:flex-row gap-4">
                     <QuickClipsButton />
-                    <CreateProjectButton />
+                <CreateProjectButton />
                 </div>
                 <p className="text-sm text-gray-500">
                     or browse your existing projects below

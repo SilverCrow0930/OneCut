@@ -200,7 +200,7 @@ const HomeHeroSection = () => {
                     projectId: project.id,
                     fileUri,
                     mimeType: selectedFile.type,
-                    contentType,
+                contentType,
                     targetDuration
                 })
             })
@@ -342,7 +342,7 @@ const HomeHeroSection = () => {
                                             'border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50 shadow-inner' : 
                                             isDragOver ?
                                                 'border-blue-500 bg-gradient-to-br from-blue-100 to-purple-100 shadow-lg scale-105' :
-                                                'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:shadow-lg'
+                                            'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:shadow-lg'
                                         }
                                     `}
                                 >

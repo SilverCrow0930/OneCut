@@ -14,16 +14,16 @@ interface LayoutProps {
 
 export default function ProjectLayout({ children }: LayoutProps) {
     return (
-        <EditorProvider>
-            <AssetsProvider>
-                <AudioProvider>
-                    <PlaybackProvider>
-                        <ZoomProvider>
-                            {children}
-                        </ZoomProvider>
-                    </PlaybackProvider>
-                </AudioProvider>
-            </AssetsProvider>
-        </EditorProvider>
+            <EditorProvider>
+                <AssetsProvider>
+                    <AudioProvider>
+                        <PlaybackProvider>
+                            <ZoomProvider>
+                                {children}
+                            </ZoomProvider>
+                        </PlaybackProvider>
+                    </AudioProvider>
+                </AssetsProvider>
+            </EditorProvider>
     )
 }

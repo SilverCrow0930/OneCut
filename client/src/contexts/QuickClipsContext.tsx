@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { API_URL } from '@/lib/config';
 
 interface QuickClipsEvent {
+    projectId: string;
     fileUri: string;
     mimeType: string;
     contentType?: string;
