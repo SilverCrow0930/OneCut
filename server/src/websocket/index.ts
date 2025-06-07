@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { generativeModel } from '../integrations/vertexAI.js';
 import { generateContent } from '../integrations/googleGenAI.js';
-import { bucket } from '../integrations/googleStorage.js';
+import { bucket as gcsStorageBucket } from '../integrations/googleStorage.js';
 import { Server as HttpServer } from 'http';
 import { Storage } from '@google-cloud/storage';
 import { queueQuickclipsJob } from '../services/quickclipsProcessor.js';
@@ -38,7 +38,7 @@ export const setupWebSocket = (server: HttpServer) => {
             console.log('[WebSocket] ✓ generateContent loaded');
         }
 
-        if (!bucket) {
+        if (!gcsStorageBucket) {
             console.error('[WebSocket] ERROR: bucket not available');
         } else {
             console.log('[WebSocket] ✓ bucket loaded');
@@ -238,7 +238,7 @@ export const setupWebSocket = (server: HttpServer) => {
 
                     // Verify the file exists in GCS
                     console.log('Checking if file exists in GCS...');
-                    const file = bucket.file(objectKey);
+                    const file = gcsStorageBucket.file(objectKey);
                     const [exists] = await file.exists();
                     if (!exists) {
                         throw new Error(`File not found in GCS: ${objectKey}`);
@@ -254,7 +254,7 @@ export const setupWebSocket = (server: HttpServer) => {
                     // Get a signed URL for the video file
                     console.log('Generating signed URL...');
                     const urlStartTime = Date.now();
-                    const [signedUrl] = await bucket
+                    const [signedUrl] = await gcsStorageBucket
                         .file(objectKey)
                         .getSignedUrl({
                             action: 'read',
