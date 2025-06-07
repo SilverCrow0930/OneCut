@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, ReactNode, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { API_URL } from '@/lib/config';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface QuickClipsEvent {
     projectId: string;
@@ -49,11 +50,22 @@ const QuickClipsContext = createContext<QuickClipsContextType | undefined>(undef
 export function QuickClipsProvider({ children }: { children: ReactNode }) {
     const [socket, setSocket] = useState<Socket | null>(null);
     const socketRef = useRef<Socket | null>(null);
+    const { user, session } = useAuth();
 
     useEffect(() => {
+        if (!session?.access_token) {
+            // If no auth token, disconnect existing socket
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+                setSocket(null);
+            }
+            return;
+        }
+
         console.log('Initializing QuickClips WebSocket connection to:', API_URL);
         
-        // Initialize socket connection
+        // Initialize socket connection with auth token
         const newSocket = io(API_URL, {
             transports: ['websocket'],
             path: '/socket.io/',
@@ -66,7 +78,11 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
             autoConnect: true,
             forceNew: true,
             upgrade: false,
-            rememberUpgrade: false
+            rememberUpgrade: false,
+            auth: {
+                userId: user?.id,
+                token: session.access_token
+            }
         });
 
         // Log connection events
@@ -85,14 +101,14 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
         socketRef.current = newSocket;
         setSocket(newSocket);
 
-        // Cleanup on unmount
+        // Cleanup on unmount or when auth changes
         return () => {
             console.log('Cleaning up QuickClips WebSocket connection');
             if (newSocket) {
                 newSocket.disconnect();
             }
         };
-    }, []);
+    }, [session?.access_token, user?.id]); // Reconnect when auth changes
 
     const sendQuickClipsRequest = (data: QuickClipsEvent) => {
         if (socket) {

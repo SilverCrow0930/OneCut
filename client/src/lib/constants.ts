@@ -115,11 +115,3 @@ export const getTimeScale = (zoomLevel: number) => BASE_TIME_SCALE * zoomLevel
 // If there is a zoom level array or max zoom constant, increase it to allow higher zooms (e.g., 400%)
 // Example (add or update as needed):
 export const MAX_ZOOM_LEVEL = 10; // 1000%
-
-// Default durations for media types (in milliseconds)
-export const DEFAULT_MEDIA_DURATIONS = {
-    IMAGE: 5000,      // 5 seconds for static images
-    GIF: 3000,        // 3 seconds for GIFs and stickers
-    VIDEO: 10000,     // 10 seconds for video clips
-    AUDIO: null       // Audio uses its actual duration
-} as const
