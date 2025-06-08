@@ -170,4 +170,4 @@ export const setupWebSocket = async (httpServer: HttpServer) => {
         // Re-throw the error so the server knows there's a problem
         throw new Error(`WebSocket setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-};
+}; 
