@@ -652,83 +652,143 @@ async function extractVideoClips(videoUrl: string, clips: any[], job: Quickclips
             // Create temporary output file
             const outputPath = path.join(tempDir, `clip_${job.id}_${i}.mp4`)
             
-            // Use FFmpeg to extract clip
+            // Use FFmpeg to extract clip with improved settings
             await new Promise<void>((resolve, reject) => {
                 ffmpeg(videoUrl)
                     .seekInput(clip.start_time)
                     .duration(clip.end_time - clip.start_time)
+                    .outputOptions([
+                        '-c:v libx264', // Use H.264 codec
+                        '-preset fast', // Faster encoding
+                        '-crf 23', // Good quality/size balance
+                        '-c:a aac', // AAC audio codec
+                        '-b:a 128k', // Audio bitrate
+                        '-movflags +faststart', // Enable fast start for web playback
+                        job.videoFormat === 'short' 
+                            ? '-vf scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2' // 9:16 with padding
+                            : '-vf scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2' // 16:9 with padding
+                    ])
                     .output(outputPath)
-                    .videoCodec('libx264')
-                    .audioCodec('aac')
-                    .size(job.videoFormat === 'short' ? '720x1280' : '1920x1080')
-                    .on('end', () => resolve())
-                    .on('error', (err) => reject(err))
+                    .on('start', (command) => {
+                        console.log(`[FFmpeg] Running command: ${command}`)
+                    })
+                    .on('progress', (progress) => {
+                        console.log(`[FFmpeg] Processing clip ${i + 1}/${clips.length}: ${Math.round(progress.percent || 0)}%`)
+                    })
+                    .on('end', () => {
+                        console.log(`[FFmpeg] Finished processing clip ${i + 1}/${clips.length}`)
+                        resolve()
+                    })
+                    .on('error', (err) => {
+                        console.error(`[FFmpeg] Error processing clip ${i + 1}/${clips.length}:`, err)
+                        reject(err)
+                    })
                     .run()
             })
             
-            // Upload clip to GCS
-            const clipFileName = `clips/${job.projectId}/clip_${i}_${Date.now()}.mp4`
-            await bucket.upload(outputPath, {
-                destination: clipFileName,
-                metadata: {
-                    contentType: 'video/mp4'
+            // Upload clip to GCS with retry logic
+            let uploadAttempts = 0
+            const maxAttempts = 3
+            let uploadError = null
+            
+            while (uploadAttempts < maxAttempts) {
+                try {
+                    const clipFileName = `clips/${job.projectId}/clip_${i}_${Date.now()}.mp4`
+                    await bucket.upload(outputPath, {
+                        destination: clipFileName,
+                        metadata: {
+                            contentType: 'video/mp4',
+                            cacheControl: 'public, max-age=31536000' // Cache for 1 year
+                        }
+                    })
+                    
+                    // Generate signed URL for download with longer expiration
+                    const [downloadUrl] = await bucket.file(clipFileName).getSignedUrl({
+                        action: 'read',
+                        expires: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+                    })
+                    
+                    // Generate preview URL for streaming
+                    const [previewUrl] = await bucket.file(clipFileName).getSignedUrl({
+                        action: 'read',
+                        expires: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
+                    })
+                    
+                    // Generate thumbnail with improved quality
+                    const thumbnailPath = path.join(tempDir, `thumb_${job.id}_${i}.jpg`)
+                    await new Promise<void>((resolve, reject) => {
+                        ffmpeg(outputPath)
+                            .seekInput(1) // 1 second in
+                            .outputOptions([
+                                '-vframes 1',
+                                '-q:v 2', // High quality
+                                '-vf scale=640:-1' // Scale to 640px width
+                            ])
+                            .output(thumbnailPath)
+                            .on('end', () => resolve())
+                            .on('error', (err) => reject(err))
+                            .run()
+                    })
+                    
+                    // Upload thumbnail
+                    const thumbFileName = `clips/${job.projectId}/thumb_${i}_${Date.now()}.jpg`
+                    await bucket.upload(thumbnailPath, {
+                        destination: thumbFileName,
+                        metadata: {
+                            contentType: 'image/jpeg',
+                            cacheControl: 'public, max-age=31536000'
+                        }
+                    })
+                    
+                    const [thumbnailUrl] = await bucket.file(thumbFileName).getSignedUrl({
+                        action: 'read',
+                        expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+                    })
+                    
+                    processedClips.push({
+                        id: `clip_${job.id}_${i}`,
+                        title: clip.title,
+                        description: clip.description,
+                        start_time: clip.start_time,
+                        end_time: clip.end_time,
+                        duration: clip.end_time - clip.start_time,
+                        significance: clip.significance,
+                        narrative_role: clip.narrative_role || 'supporting',
+                        transition_note: clip.transition_note || '',
+                        downloadUrl,
+                        previewUrl,
+                        thumbnailUrl,
+                        format: job.videoFormat,
+                        aspectRatio: FORMAT_CONFIGS[job.videoFormat].aspectRatio,
+                        size: {
+                            width: job.videoFormat === 'short' ? 720 : 1920,
+                            height: job.videoFormat === 'short' ? 1280 : 1080
+                        }
+                    })
+                    
+                    // Cleanup temp files
+                    try {
+                        await fs.unlink(outputPath)
+                        await fs.unlink(thumbnailPath)
+                    } catch (cleanupError) {
+                        console.warn(`[QuickclipsProcessor] Cleanup warning for job ${job.id}:`, cleanupError)
+                    }
+                    
+                    // Break the retry loop on success
+                    break
+                    
+                } catch (error) {
+                    uploadError = error
+                    uploadAttempts++
+                    if (uploadAttempts < maxAttempts) {
+                        console.warn(`[QuickclipsProcessor] Upload attempt ${uploadAttempts} failed, retrying...`)
+                        await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempts))
+                    }
                 }
-            })
+            }
             
-            // Generate signed URL for download
-            const [downloadUrl] = await bucket.file(clipFileName).getSignedUrl({
-                action: 'read',
-                expires: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
-            })
-            
-            // Generate thumbnail (first frame)
-            const thumbnailPath = path.join(tempDir, `thumb_${job.id}_${i}.jpg`)
-            await new Promise<void>((resolve, reject) => {
-                ffmpeg(outputPath)
-                    .seekInput(1) // 1 second in
-                    .frames(1)
-                    .output(thumbnailPath)
-                    .on('end', () => resolve())
-                    .on('error', (err) => reject(err))
-                    .run()
-            })
-            
-            // Upload thumbnail
-            const thumbFileName = `clips/${job.projectId}/thumb_${i}_${Date.now()}.jpg`
-            await bucket.upload(thumbnailPath, {
-                destination: thumbFileName,
-                metadata: {
-                    contentType: 'image/jpeg'
-                }
-            })
-            
-            const [thumbnailUrl] = await bucket.file(thumbFileName).getSignedUrl({
-                action: 'read',
-                expires: Date.now() + 7 * 24 * 60 * 60 * 1000
-            })
-            
-            processedClips.push({
-                id: `clip_${job.id}_${i}`,
-                title: clip.title,
-                description: clip.description,
-                start_time: clip.start_time,
-                end_time: clip.end_time,
-                duration: clip.end_time - clip.start_time,
-                significance: clip.significance,
-                narrative_role: clip.narrative_role || 'supporting',
-                transition_note: clip.transition_note || '',
-                downloadUrl,
-                thumbnailUrl,
-                format: job.videoFormat,
-                aspectRatio: FORMAT_CONFIGS[job.videoFormat].aspectRatio
-            })
-            
-            // Cleanup temp files
-            try {
-                await fs.unlink(outputPath)
-                await fs.unlink(thumbnailPath)
-            } catch (cleanupError) {
-                console.warn(`[QuickclipsProcessor] Cleanup warning for job ${job.id}:`, cleanupError)
+            if (uploadAttempts === maxAttempts) {
+                throw uploadError || new Error('Failed to upload clip after multiple attempts')
             }
             
         } catch (clipError) {
@@ -745,10 +805,15 @@ async function extractVideoClips(videoUrl: string, clips: any[], job: Quickclips
                 significance: clip.significance,
                 narrative_role: clip.narrative_role || 'supporting',
                 downloadUrl: '#', // Placeholder
-                thumbnailUrl: `https://picsum.photos/320/180?random=${i + 1}`,
+                previewUrl: '#',
+                thumbnailUrl: `https://picsum.photos/640/360?random=${i + 1}`,
                 format: job.videoFormat,
                 aspectRatio: FORMAT_CONFIGS[job.videoFormat].aspectRatio,
-                error: 'Failed to extract video clip'
+                error: 'Failed to extract video clip',
+                size: {
+                    width: job.videoFormat === 'short' ? 720 : 1920,
+                    height: job.videoFormat === 'short' ? 1280 : 1080
+                }
             })
         }
     }

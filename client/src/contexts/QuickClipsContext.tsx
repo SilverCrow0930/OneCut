@@ -88,6 +88,9 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
                         clips: project.processing_result.clips,
                         processingTime: project.processing_result.processingTime
                     });
+
+                    // Stop polling once we have the clips
+                    stopProjectPolling();
                 }
 
                 // If failed, emit error
@@ -96,6 +99,7 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
                         success: false,
                         error: project.processing_error || 'Processing failed'
                     });
+                    stopProjectPolling();
                 }
             }
         } catch (error) {
@@ -164,6 +168,10 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
 
         newSocket.on('connect_error', (error) => {
             console.error('QuickClips WebSocket connection error:', error);
+            // Start polling as fallback on websocket error
+            if (pollingIntervalRef.current) {
+                console.log('Continuing with polling as fallback after websocket error');
+            }
         });
 
         newSocket.on('disconnect', (reason) => {
@@ -197,6 +205,8 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
             startProjectPolling(data.projectId);
         } else {
             console.error('Cannot send quickclips request: socket not connected');
+            // Start polling even if socket is not connected
+            startProjectPolling(data.projectId);
         }
     };
 
