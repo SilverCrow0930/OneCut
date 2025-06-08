@@ -7,6 +7,11 @@ import { Storage } from '@google-cloud/storage';
 import { queueQuickclipsJob } from '../services/quickclipsProcessor.js';
 import { supabase } from '../config/supabaseClient.js';
 
+// Add global type declaration
+declare global {
+    var io: Server | undefined
+}
+
 const googleSearchRetrievalTool = {
     googleSearchRetrieval: {
         disableAttribution: false,
@@ -20,33 +25,20 @@ const storage = new Storage({
 });
 const bucket = storage.bucket(process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'lemona-edit-assets');
 
-export const setupWebSocket = async (httpServer: HttpServer) => {
+export const setupWebSocket = async (httpServer: HttpServer): Promise<Server> => {
     try {
-        const productionOrigins = [
-            'https://lemona.studio', 
-            'https://www.lemona.studio', 
-            'https://lemona-app.onrender.com'
-        ];
-
-        const allowedOrigins = process.env.NODE_ENV === 'production'
-            ? [...productionOrigins, ...(process.env.ALLOWED_ORIGINS?.split(',').filter(Boolean) || [])]
-            : ['http://localhost:3000'];
-
-        console.log('[WebSocket] Environment:', process.env.NODE_ENV);
-        console.log('[WebSocket] Allowed origins:', allowedOrigins);
-
         const io = new Server(httpServer, {
             path: '/socket.io/',
             transports: ['websocket'],
             cors: {
-                origin: allowedOrigins,
+                origin: process.env.CLIENT_URL || 'http://localhost:3000',
                 methods: ['GET', 'POST'],
-                credentials: true,
-                allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
-            },
-            pingTimeout: 60000,
-            pingInterval: 25000
+                credentials: true
+            }
         });
+
+        // Store io instance in global scope for access from other modules
+        global.io = io;
 
         // Middleware to authenticate socket connections
         io.use(async (socket, next) => {
@@ -55,20 +47,13 @@ export const setupWebSocket = async (httpServer: HttpServer) => {
                 const userId = socket.handshake.auth.userId;
 
                 if (!token || !userId) {
-                    console.warn('[WebSocket] Authentication failed: Missing token or userId');
                     return next(new Error('Authentication required'));
                 }
 
                 // Verify token with Supabase
                 const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-                if (authError) {
-                    console.error('[WebSocket] Supabase auth error:', authError);
-                    return next(new Error('Invalid authentication'));
-                }
-
-                if (!user || user.id !== userId) {
-                    console.warn('[WebSocket] User mismatch or not found:', { userId, authUserId: user?.id });
+                if (authError || !user || user.id !== userId) {
                     return next(new Error('Invalid authentication'));
                 }
 

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 
 const QuickClipsButton = () => {
     const { user, session, signIn } = useAuth()
-    const { sendQuickClipsRequest, onQuickClipsResponse, onQuickClipsState, startProjectPolling, stopProjectPolling } = useQuickClips()
+    const { sendQuickClipsRequest, onQuickClipsResponse, onQuickClipsState } = useQuickClips()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
     
@@ -74,8 +74,6 @@ const QuickClipsButton = () => {
                 setIsProcessing(false)
             } else if (state.state === 'completed') {
                 setIsProcessing(false)
-                // Redirect to projects page on completion
-                router.push('/projects')
             }
         })
 
@@ -85,19 +83,12 @@ const QuickClipsButton = () => {
             if (response.success && response.clips) {
                 setGeneratedClips(response.clips)
                 setIsProcessing(false)
-                // Redirect to projects page on success
-                router.push('/projects')
             } else {
                 setError(response.error || 'Processing failed')
                 setIsProcessing(false)
             }
         })
-
-        // Cleanup
-        return () => {
-            stopProjectPolling()
-        }
-    }, [onQuickClipsState, onQuickClipsResponse, router, stopProjectPolling])
+    }, [onQuickClipsState, onQuickClipsResponse])
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
@@ -234,17 +225,11 @@ const QuickClipsButton = () => {
                 videoFormat: getVideoFormat(targetDuration)
             })
 
-            // Start polling as a fallback
-            startProjectPolling(project.id)
-
-            // Close modal
-            setIsModalOpen(false)
-
         } catch (error) {
-            console.error('Error starting quickclips:', error)
-            setError(error instanceof Error ? error.message : 'An unexpected error occurred')
-            setIsProcessing(false)
+            console.error('Error processing video:', error)
+            setError(error instanceof Error ? error.message : 'Upload failed')
             setIsUploading(false)
+            setIsProcessing(false)
         }
     }
 
