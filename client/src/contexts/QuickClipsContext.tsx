@@ -128,8 +128,8 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        if (!session?.access_token) {
-            // If no auth token, disconnect existing socket and stop polling
+        if (!session?.access_token || !user?.id) {
+            // If no auth token or user ID, disconnect existing socket and stop polling
             if (socketRef.current) {
                 socketRef.current.disconnect();
                 socketRef.current = null;
@@ -156,14 +156,19 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
             upgrade: false,
             rememberUpgrade: false,
             auth: {
-                userId: user?.id,
+                userId: user.id,
                 token: session.access_token
-            }
+            },
+            withCredentials: true
         });
 
         // Log connection events
         newSocket.on('connect', () => {
             console.log('QuickClips WebSocket connected successfully');
+            // Start polling as fallback if we were previously polling
+            if (pollingIntervalRef.current) {
+                console.log('Continuing with polling as backup after websocket reconnect');
+            }
         });
 
         newSocket.on('connect_error', (error) => {
@@ -181,6 +186,14 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
                 // The interval is still running, which means we were actively monitoring a project
                 // We'll let the polling continue as a fallback
                 console.log('Continuing with polling as fallback after websocket disconnect');
+            }
+        });
+
+        newSocket.on('error', (error) => {
+            console.error('QuickClips WebSocket error:', error);
+            // Start polling as fallback on websocket error
+            if (pollingIntervalRef.current) {
+                console.log('Continuing with polling as fallback after websocket error');
             }
         });
 

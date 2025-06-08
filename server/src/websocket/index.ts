@@ -22,14 +22,30 @@ const bucket = storage.bucket(process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'lemona
 
 export const setupWebSocket = async (httpServer: HttpServer) => {
     try {
+        const productionOrigins = [
+            'https://lemona.studio', 
+            'https://www.lemona.studio', 
+            'https://lemona-app.onrender.com'
+        ];
+
+        const allowedOrigins = process.env.NODE_ENV === 'production'
+            ? [...productionOrigins, ...(process.env.ALLOWED_ORIGINS?.split(',').filter(Boolean) || [])]
+            : ['http://localhost:3000'];
+
+        console.log('[WebSocket] Environment:', process.env.NODE_ENV);
+        console.log('[WebSocket] Allowed origins:', allowedOrigins);
+
         const io = new Server(httpServer, {
             path: '/socket.io/',
             transports: ['websocket'],
             cors: {
-                origin: process.env.CLIENT_URL || 'http://localhost:3000',
+                origin: allowedOrigins,
                 methods: ['GET', 'POST'],
-                credentials: true
-            }
+                credentials: true,
+                allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+            },
+            pingTimeout: 60000,
+            pingInterval: 25000
         });
 
         // Middleware to authenticate socket connections
@@ -39,13 +55,20 @@ export const setupWebSocket = async (httpServer: HttpServer) => {
                 const userId = socket.handshake.auth.userId;
 
                 if (!token || !userId) {
+                    console.warn('[WebSocket] Authentication failed: Missing token or userId');
                     return next(new Error('Authentication required'));
                 }
 
                 // Verify token with Supabase
                 const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-                if (authError || !user || user.id !== userId) {
+                if (authError) {
+                    console.error('[WebSocket] Supabase auth error:', authError);
+                    return next(new Error('Invalid authentication'));
+                }
+
+                if (!user || user.id !== userId) {
+                    console.warn('[WebSocket] User mismatch or not found:', { userId, authUserId: user?.id });
                     return next(new Error('Invalid authentication'));
                 }
 
