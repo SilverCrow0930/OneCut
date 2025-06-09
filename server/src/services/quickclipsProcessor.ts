@@ -811,10 +811,9 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                             '-maxrate 4M',
                             '-bufsize 8M',
                             '-r 30',
-                            '-g 60'
+                            '-g 60',
+                            '-vf scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black'
                         ])
-                        .size('1920x1080')
-                        .autopad()
                         .on('end', () => resolve())
                         .on('error', (err) => reject(err))
                         .run()
@@ -955,10 +954,9 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                             '-maxrate 4M',
                             '-bufsize 8M',
                             '-r 30',
-                            '-g 60'
+                            '-g 60',
+                            '-vf scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2:black'
                         ])
-                        .size('720x1280')
-                        .autopad()
                         .on('start', (command) => {
                             console.log(`[QuickclipsProcessor] FFmpeg command for clip ${i}:`, command)
                         })
