@@ -365,7 +365,7 @@ const QuickClipsButton = () => {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <div>
@@ -542,60 +542,97 @@ const QuickClipsButton = () => {
                                         </div>
                                     </div>
 
-                                    {/* Settings */}
-                                    <div className="grid md:grid-cols-2 gap-6">
-                                        {/* Target Duration */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                                    {/* Target Duration Settings */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Clock className="w-5 h-5 text-blue-600" />
+                                            <label className="text-sm font-semibold text-gray-700">
                                                 Target Length: {formatDuration(targetDuration)}
                                             </label>
-                                            <div className="space-y-3">
-                                                <input
-                                                    type="range"
-                                                    min="20"
-                                                    max="1800"
-                                                    value={targetDuration}
-                                                    onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-                                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                                                />
-                                                <div className="flex justify-between text-xs text-gray-500">
-                                                    <span>20s</span>
-                                                    <span>30m</span>
+                                        </div>
+                                        
+                                        {/* Format indicator */}
+                                        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div>
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                        {getVideoFormat(targetDuration) === 'short_vertical' ? 'Short Vertical' : 'Long Horizontal'}
+                                                    </div>
+                                                    <div className="text-xs text-gray-600 mt-1">
+                                                        {targetDuration < 120 ? '< 2 minutes' : '2-30 minutes'}
+                                                    </div>
+                                                    <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-1">
+                                                        {getVideoFormat(targetDuration) === 'short_vertical' ? '9:16' : '16:9'}
+                                                    </div>
                                                 </div>
-                                                <div className="text-center">
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm">
-                                                        <Clock className="w-4 h-4" />
-                                                        {getVideoFormat(targetDuration) === 'short_vertical' ? 'Vertical (9:16)' : 'Horizontal (16:9)'}
-                                                    </span>
+                                                <div className="text-4xl">
+                                                    {getVideoFormat(targetDuration) === 'short_vertical' ? '📱' : '💻'}
                                                 </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Slider */}
+                                        <div className="space-y-3">
+                                            <input
+                                                type="range"
+                                                min="20"
+                                                max="1800"
+                                                value={targetDuration}
+                                                onChange={(e) => handleDurationChange(parseInt(e.target.value))}
+                                                className="
+                                                    w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
+                                                    [&::-webkit-slider-thumb]:appearance-none 
+                                                    [&::-webkit-slider-thumb]:w-6 
+                                                    [&::-webkit-slider-thumb]:h-6 
+                                                    [&::-webkit-slider-thumb]:rounded-full 
+                                                    [&::-webkit-slider-thumb]:bg-gradient-to-r
+                                                    [&::-webkit-slider-thumb]:from-blue-500
+                                                    [&::-webkit-slider-thumb]:to-purple-500
+                                                    [&::-webkit-slider-thumb]:border-3
+                                                    [&::-webkit-slider-thumb]:border-white
+                                                    [&::-webkit-slider-thumb]:shadow-lg
+                                                    [&::-webkit-slider-thumb]:cursor-pointer
+                                                    [&::-webkit-slider-thumb]:hover:scale-110
+                                                    [&::-webkit-slider-thumb]:transition-transform
+                                                "
+                                            />
+                                            <div className="flex justify-between text-xs text-gray-500">
+                                                <span className="font-medium">20s</span>
+                                                <span className="font-medium">30m</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Generate Button */}
-                                    <button
-                                        onClick={handleStartProcessing}
-                                        disabled={!selectedFile || isProcessing || isUploading}
-                                        className="
-                                            w-full bg-gradient-to-r from-emerald-600 to-teal-600 
-                                            hover:from-emerald-700 hover:to-teal-700
-                                            disabled:from-gray-400 disabled:to-gray-500
-                                            text-white font-bold text-lg
-                                            px-6 py-4 rounded-xl 
-                                            transition-all duration-300 shadow-lg hover:shadow-xl 
-                                            disabled:cursor-not-allowed 
-                                            transform hover:scale-105 active:scale-95
-                                        "
-                                    >
-                                        <span className="flex items-center justify-center gap-2">
-                                            <Zap className="w-5 h-5" />
-                                            Generate AI Clips
-                                        </span>
-                                    </button>
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={handleStartProcessing}
+                                            disabled={!selectedFile || isProcessing || isUploading}
+                                            className="
+                                                w-full bg-gradient-to-r from-emerald-600 to-teal-600 
+                                                hover:from-emerald-700 hover:to-teal-700
+                                                disabled:from-gray-400 disabled:to-gray-500
+                                                text-white font-bold text-lg
+                                                px-6 py-4 rounded-2xl 
+                                                transition-all duration-300 shadow-lg hover:shadow-xl 
+                                                disabled:cursor-not-allowed 
+                                                transform hover:scale-105 active:scale-95
+                                                relative overflow-hidden group
+                                            "
+                                        >
+                                            {/* Button glow effect */}
+                                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-2xl"></div>
+                                            
+                                            <span className="relative z-10 flex items-center justify-center gap-2">
+                                                <Zap className="w-5 h-5" />
+                                                Generate AI Clips
+                                            </span>
+                                        </button>
 
-                                    <p className="text-xs text-gray-500 text-center">
-                                        Get instant downloadable clips in minutes - no timeline editing required!
-                                    </p>
+                                        <p className="text-xs text-gray-500 text-center mt-3">
+                                            Get instant downloadable clips in minutes - no timeline editing required!
+                                        </p>
+                                    </div>
                                 </div>
                             )}
                         </div>
