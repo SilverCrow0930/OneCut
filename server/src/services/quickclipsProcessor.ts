@@ -109,7 +109,7 @@ const FORMAT_CONFIGS = {
         name: 'Short Format',
         aspectRatio: '9:16',
         maxDuration: 120, // < 2 minutes
-        segmentCount: { min: 2, max: 4, target: 2 },
+        segmentCount: { min: 2, max: 10 },
         segmentLength: { min: 30, max: 90, target: 45 },
         totalDuration: { tolerance: 15 }, // ±15 seconds acceptable
         approach: 'Create a concise narrative arc with clear beginning, development, and conclusion. Each segment should build upon the previous one.'
@@ -118,10 +118,10 @@ const FORMAT_CONFIGS = {
         name: 'Long Format', 
         aspectRatio: '16:9',
         maxDuration: 1800, // 30 minutes
-        segmentCount: { min: 3, max: 10, target: 6 },
-        segmentLength: { min: 60, max: 300, target: 150 },
-        totalDuration: { tolerance: 60 },
-        approach: 'Develop a comprehensive narrative that explores themes in depth while maintaining viewer engagement throughout. Segments will be combined into a single cohesive video.'
+        segmentCount: { min: 2, max: 20 },
+        segmentLength: null, // No strict length requirements - trust AI
+        totalDuration: null, // No strict duration requirements - trust AI
+        approach: 'Develop a comprehensive narrative that explores themes in depth while maintaining viewer engagement throughout. Segments will be combined into a single cohesive video. Focus on natural content breaks and meaningful storytelling.'
     }
 }
 
@@ -133,7 +133,12 @@ async function generateQuickClips(signedUrl: string, mimeType: string, job: Quic
         apiKey: process.env.GEMINI_API_KEY
     })
     
-    const contentConfig = CONTENT_CONFIGS[job.contentType as keyof typeof CONTENT_CONFIGS]
+    // Handle custom content types with fallback
+    const contentConfig = CONTENT_CONFIGS[job.contentType as keyof typeof CONTENT_CONFIGS] || {
+        name: job.contentType,
+        approach: `Focus on the most engaging and meaningful segments that capture the essence of this ${job.contentType} content`,
+        characteristics: `content-specific elements, key messages, and engaging moments typical of ${job.contentType}`
+    }
     const formatConfig = FORMAT_CONFIGS[job.videoFormat]
     
     const prompt = `You are an expert video editor trained to extract the most meaningful and coherent segments from long-form videos. Your goal is to select sequences that best represent the overall narrative, emotion, or information in the source material.
@@ -142,24 +147,37 @@ CONTENT TYPE: ${contentConfig.name}
 EDITORIAL APPROACH: ${contentConfig.approach}
 CONTENT CHARACTERISTICS: ${contentConfig.characteristics}
 
-SEGMENT GUIDELINES (STRICT):
-- Target total duration: ${job.targetDuration} seconds (±${formatConfig.totalDuration.tolerance}s)
+SEGMENT GUIDELINES:
+- Target total duration: ~${job.targetDuration} seconds${formatConfig.totalDuration ? ` (±${formatConfig.totalDuration.tolerance}s)` : ' (flexible)'}
 - For ${formatConfig.name}:
-  * Number of segments: ${formatConfig.segmentCount.target} (min ${formatConfig.segmentCount.min}, max ${formatConfig.segmentCount.max})
-  * Segment length: ${formatConfig.segmentLength.target}s (${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s)
+  * Number of segments: ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max} segments (choose what works best for the content)
+  * Segment length: ${formatConfig.segmentLength ? `${formatConfig.segmentLength.target}s (${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s)` : 'variable - based on natural content breaks'}
   * Aspect ratio: ${formatConfig.aspectRatio}
   * ${job.videoFormat === 'long' ? 'Segments will be combined into a single video' : 'Each segment will be a standalone clip'}
+  * MINIMUM: Each segment must be at least 5 seconds (anything shorter will be filtered out)
 
-CRITICAL REQUIREMENTS:
-1. TOTAL DURATION MUST BE WITHIN RANGE: ${job.targetDuration - formatConfig.totalDuration.tolerance} to ${job.targetDuration + formatConfig.totalDuration.tolerance} seconds
-2. Each segment MUST be between ${formatConfig.segmentLength.min} and ${formatConfig.segmentLength.max} seconds
-3. Number of segments MUST be between ${formatConfig.segmentCount.min} and ${formatConfig.segmentCount.max}
-4. Segments MUST flow naturally when combined (no jarring transitions)
+${job.videoFormat === 'long' ? `
+LONG FORMAT APPROACH:
+- Focus on natural content breaks and meaningful story progression
+- Each segment should represent a complete thought or topic
+- Segments can vary in length based on content (anywhere from 30 seconds to several minutes)
+- Prioritize narrative flow over exact timing constraints
+- The combined video should tell a complete, engaging story
+- Aim for approximately ${job.targetDuration} seconds total, but content quality is more important than exact timing
+- Minimum 15 seconds per segment to ensure usability
+` : `
+SHORT FORMAT APPROACH:
+- Target segments between ${formatConfig.segmentLength!.min} and ${formatConfig.segmentLength!.max} seconds (flexible - we'll accept what you generate)
+- Target total duration ${job.targetDuration - formatConfig.totalDuration!.tolerance} to ${job.targetDuration + formatConfig.totalDuration!.tolerance} seconds (flexible)
+- Focus on high-impact, standalone moments
+- Minimum 5 seconds per segment to ensure usability
+- Content quality is more important than exact timing
+`}
 
 DECISION PRIORITY:
-1. Target duration compliance (STRICT)
-2. Narrative coherence and natural story breaks
-3. Segment completeness (don't cut mid-thought)
+1. ${job.videoFormat === 'long' ? 'Narrative coherence and natural story breaks' : 'Target duration compliance (STRICT)'}
+2. ${job.videoFormat === 'long' ? 'Content completeness and meaningful segments' : 'Narrative coherence and natural story breaks'}
+3. ${job.videoFormat === 'long' ? 'Approximate target duration' : 'Segment completeness (don\'t cut mid-thought)'}
 4. Platform optimization
 
 OUTPUT FORMAT:
@@ -332,33 +350,60 @@ Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 
         if (clips.length === 0) {
             throw new Error('No valid clips extracted')
         }
+
+        // Filter out clips that are too short to be useful (under 5 seconds)
+        const originalLength = clips.length
+        clips = clips.filter(clip => {
+            const duration = clip.end_time - clip.start_time
+            if (duration < 5) {
+                console.warn(`[QuickClips] Filtering out clip "${clip.title}" - too short (${duration}s)`)
+                return false
+            }
+            return true
+        })
+
+        if (clips.length === 0) {
+            throw new Error('All clips were too short (under 5 seconds)')
+        }
+
+        if (clips.length !== originalLength) {
+            console.log(`[QuickClips] Filtered ${originalLength - clips.length} clips that were too short`)
+        }
         
         // Sort chronologically
         clips.sort((a, b) => a.start_time - b.start_time)
 
         // Validate segment count
         if (clips.length < formatConfig.segmentCount.min || clips.length > formatConfig.segmentCount.max) {
-            throw new Error(`Invalid number of segments: ${clips.length}. Expected ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max}`)
+            console.warn(`[QuickClips] Warning: ${clips.length} segments generated, expected ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max}. Continuing anyway.`)
         }
 
-        // Validate segment lengths
-        for (const clip of clips) {
-            const duration = clip.end_time - clip.start_time
-            if (duration < formatConfig.segmentLength.min || duration > formatConfig.segmentLength.max) {
-                throw new Error(`Invalid segment duration: ${duration}s. Expected ${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s`)
+        // Validate segment lengths - only for short format (warn but don't fail)
+        if (job.videoFormat === 'short' && formatConfig.segmentLength) {
+            for (let i = 0; i < clips.length; i++) {
+                const clip = clips[i]
+                const duration = clip.end_time - clip.start_time
+                if (duration < formatConfig.segmentLength.min || duration > formatConfig.segmentLength.max) {
+                    console.warn(`[QuickClips] Warning: Segment ${i+1} duration ${duration}s is outside expected range ${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s. Continuing anyway.`)
+                }
             }
         }
 
-        // Calculate total duration and validate against target
+        // Calculate total duration and validate against target - only for short format (warn but don't fail)
         const totalDuration = clips.reduce((acc, clip) => acc + (clip.end_time - clip.start_time), 0)
-        const targetWithTolerance = {
-            min: job.targetDuration - formatConfig.totalDuration.tolerance,
-            max: job.targetDuration + formatConfig.totalDuration.tolerance
+        
+        if (job.videoFormat === 'short' && formatConfig.totalDuration) {
+            const targetWithTolerance = {
+                min: job.targetDuration - formatConfig.totalDuration.tolerance,
+                max: job.targetDuration + formatConfig.totalDuration.tolerance
+            }
+
+            if (totalDuration < targetWithTolerance.min || totalDuration > targetWithTolerance.max) {
+                console.warn(`[QuickClips] Warning: Total duration ${totalDuration}s is outside target range ${targetWithTolerance.min}-${targetWithTolerance.max}s. Continuing anyway.`)
+            }
         }
 
-        if (totalDuration < targetWithTolerance.min || totalDuration > targetWithTolerance.max) {
-            throw new Error(`Total duration ${totalDuration}s outside target range ${targetWithTolerance.min}-${targetWithTolerance.max}s`)
-        }
+        console.log(`[QuickClips] Successfully extracted ${clips.length} ${job.videoFormat === 'long' ? 'segments for combination' : 'narrative segments'} with total duration ${totalDuration}s`)
 
         return clips
         
@@ -376,7 +421,12 @@ async function generateVideoDescription(signedUrl: string, mimeType: string, job
         apiKey: process.env.GEMINI_API_KEY
     })
     
-    const contentConfig = CONTENT_CONFIGS[job.contentType as keyof typeof CONTENT_CONFIGS]
+    // Handle custom content types with fallback
+    const contentConfig = CONTENT_CONFIGS[job.contentType as keyof typeof CONTENT_CONFIGS] || {
+        name: job.contentType,
+        approach: `Focus on the most engaging and meaningful segments that capture the essence of this ${job.contentType} content`,
+        characteristics: `content-specific elements, key messages, and engaging moments typical of ${job.contentType}`
+    }
     const formatConfig = FORMAT_CONFIGS[job.videoFormat]
     
     const clipSummary = clips.map(clip => `- ${clip.title}: ${clip.description} (${clip.start_time}s-${clip.end_time}s)`).join('\n')

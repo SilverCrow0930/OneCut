@@ -1,10 +1,16 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ProjectsList from "@/components/creation/ProjectsList";
 import ProjectsHeader from "@/components/creation/ProjectsHeader";
 import HomeNavbar from "@/components/home/HomeNavbar";
 
 export default function CreatePage() {
+    const searchParams = useSearchParams()
+    const highlightProjectId = searchParams.get('highlight')
+    const defaultTab = searchParams.get('tab') as 'all' | 'quickclips' || 'all'
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
             {/* Navigation */}
@@ -18,7 +24,10 @@ export default function CreatePage() {
                 </div>
 
                 {/* Projects Grid */}
-                <ProjectsList />
+                <ProjectsList 
+                    defaultTab={defaultTab}
+                    highlightProjectId={highlightProjectId || undefined}
+                />
             </main>
         </div>
     )
