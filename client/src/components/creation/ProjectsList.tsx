@@ -174,15 +174,35 @@ export default function ProjectsList() {
     }
 
     const handleProjectClick = (projectId: string) => {
+        if (showMenu) {
+            setShowMenu(null)
+            return
+        }
+        
         const project = projects.find(p => p.id === projectId)
         
-        // For QuickClips projects that are completed, navigate to clips view
-        if (project?.processing_type === 'quickclips' && project?.processing_status === 'completed') {
-            router.push(`/creation/quickclips/${projectId}`)
-        } else {
-            // For regular projects or processing QuickClips, navigate to editor
-            router.push(`/editor/${projectId}`)
+        // Special handling for QuickClips projects
+        if (project?.processing_type === 'quickclips') {
+            if (project.processing_status === 'completed' && project.processing_result?.clips) {
+                // Show clips modal or navigate to clips view
+                router.push(`/creation/quickclips/${projectId}`)
+                return
+            }
         }
+        
+        router.push(`/projects/${projectId}`)
+    }
+
+    const handleViewClips = (e: React.MouseEvent, projectId: string) => {
+        e.preventDefault()
+        e.stopPropagation()
+        console.log('View Clips clicked for project:', projectId)
+        
+        // Close the menu
+        setShowMenu(null)
+        
+        // Navigate to QuickClips view
+        router.push(`/creation/quickclips/${projectId}`)
     }
 
     if (!session) {
@@ -295,8 +315,8 @@ export default function ProjectsList() {
                             onProjectClick={handleProjectClick}
                             onMenuClick={handleMenuClick}
                             onDelete={handleDelete}
+                            onViewClips={handleViewClips}
                             showMenu={showMenu}
-                            router={router}
                         />
                     ))}
                 </div>
@@ -312,8 +332,8 @@ interface ProjectCardProps {
     onProjectClick: (projectId: string) => void
     onMenuClick: (e: React.MouseEvent, projectId: string) => void
     onDelete: (e: React.MouseEvent, project: Project) => void
+    onViewClips: (e: React.MouseEvent, projectId: string) => void
     showMenu: string | null
-    router: any
 }
 
 function ProjectCard({ 
@@ -322,8 +342,8 @@ function ProjectCard({
     onProjectClick, 
     onMenuClick, 
     onDelete, 
-    showMenu,
-    router
+    onViewClips, 
+    showMenu 
 }: ProjectCardProps) {
     const isQuickClips = project.processing_type === 'quickclips'
     const isProcessing = project.processing_status === 'processing' || project.processing_status === 'queued'
@@ -437,9 +457,8 @@ function ProjectCard({
                                 {isQuickClips && isCompleted && (
                                     <button
                                         onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            router.push(`/creation/quickclips/${project.id}`)
+                                            console.log('View Clips button clicked')
+                                            onViewClips(e, project.id)
                                         }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
                                     >

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Zap, Upload, Clock, Users, BookOpen, Mic, Video, Download, Play, X, Edit, Sparkles } from 'lucide-react'
+import { Zap, Upload, Clock, Video, Download, Play, X, Edit, Sparkles } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -29,8 +29,6 @@ const QuickClipsButton = () => {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60)
-    const [contentType, setContentType] = useState('talking_video')
-    const [customContentType, setCustomContentType] = useState('')
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingProgress, setProcessingProgress] = useState(0)
     const [processingMessage, setProcessingMessage] = useState('')
@@ -40,12 +38,7 @@ const QuickClipsButton = () => {
     const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
     
-    const contentTypes = [
-        { id: 'talking_video', label: 'Talking Video', icon: Video },
-        { id: 'professional_meeting', label: 'Meeting', icon: Users },
-        { id: 'educational_video', label: 'Tutorial', icon: BookOpen },
-        { id: 'custom', label: 'Custom', icon: Mic }
-    ]
+
 
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
 
@@ -128,18 +121,10 @@ const QuickClipsButton = () => {
             return
         }
 
-        // Validate custom content type if selected
-        if (contentType === 'custom' && !customContentType.trim()) {
-            alert('Please enter a custom content type')
-            return
-        }
-
         setIsUploading(true)
         setIsProcessing(true)
         setProcessingProgress(0)
         setError(null)
-
-        const finalContentType = contentType === 'custom' ? customContentType.trim() : contentType
 
         try {
             // 1. Create new project
@@ -156,7 +141,7 @@ const QuickClipsButton = () => {
                     processing_progress: 0,
                     processing_message: 'Preparing for processing...',
                     processing_data: {
-                        contentType: finalContentType,
+                        contentType: 'talking_video',
                         videoFormat: getVideoFormat(targetDuration),
                         targetDuration,
                         filename: selectedFile.name
@@ -221,7 +206,7 @@ const QuickClipsButton = () => {
                 projectId: project.id,
                 fileUri,
                 mimeType: selectedFile.type,
-                contentType: finalContentType,
+                contentType: 'talking_video',
                 targetDuration: parseInt(String(targetDuration))
             })
             
@@ -238,13 +223,13 @@ const QuickClipsButton = () => {
                             'Authorization': `Bearer ${session?.access_token}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({
-                            projectId: project.id,
-                            fileUri,
-                            mimeType: selectedFile.type,
-                            contentType: finalContentType,
-                            targetDuration: parseInt(String(targetDuration))
-                        })
+                                            body: JSON.stringify({
+                        projectId: project.id,
+                        fileUri,
+                        mimeType: selectedFile.type,
+                        contentType: 'talking_video',
+                        targetDuration: parseInt(String(targetDuration))
+                    })
                     })
                     break; // Success, exit retry loop
                 } catch (fetchError) {
@@ -285,7 +270,7 @@ const QuickClipsButton = () => {
                         projectId: project.id,
                         fileUri,
                         mimeType: selectedFile.type,
-                        contentType: finalContentType,
+                        contentType: 'talking_video',
                         targetDuration: parseInt(String(targetDuration))
                     }
                 })
@@ -558,49 +543,7 @@ const QuickClipsButton = () => {
                                     </div>
 
                                     {/* Settings */}
-                                    <div className="space-y-6">
-                                        {/* Content Type */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-3">Content Type</label>
-                                            <div className="space-y-2">
-                                                {contentTypes.map((type) => {
-                                                    const Icon = type.icon
-                                                    return (
-                                                        <button
-                                                            key={type.id}
-                                                            onClick={() => setContentType(type.id)}
-                                                            className={`
-                                                                w-full flex items-center gap-3 p-3 rounded-lg border text-sm text-left
-                                                                ${contentType === type.id ? 
-                                                                    'border-emerald-500 bg-emerald-50 text-emerald-700' : 
-                                                                    'border-gray-200 hover:border-emerald-300'
-                                                                }
-                                                            `}
-                                                        >
-                                                            <Icon className="w-4 h-4 flex-shrink-0" />
-                                                            <span className="font-medium">{type.label}</span>
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
-                                            
-                                            {/* Custom Content Type Input */}
-                                            {contentType === 'custom' && (
-                                                <div className="mt-3">
-                                                    <input
-                                                        type="text"
-                                                        value={customContentType}
-                                                        onChange={(e) => setCustomContentType(e.target.value)}
-                                                        placeholder="e.g., cooking show, interview, product review..."
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-                                                    />
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        Describe your content type to help AI understand your video
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-
+                                    <div className="grid md:grid-cols-2 gap-6">
                                         {/* Target Duration */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -613,14 +556,14 @@ const QuickClipsButton = () => {
                                                     max="1800"
                                                     value={targetDuration}
                                                     onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-                                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                                                 />
                                                 <div className="flex justify-between text-xs text-gray-500">
                                                     <span>20s</span>
                                                     <span>30m</span>
                                                 </div>
                                                 <div className="text-center">
-                                                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full text-sm">
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm">
                                                         <Clock className="w-4 h-4" />
                                                         {getVideoFormat(targetDuration) === 'short_vertical' ? 'Vertical (9:16)' : 'Horizontal (16:9)'}
                                                     </span>

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
-import { Play, Sparkles, Zap, Clock, Upload, Video, Users, BookOpen, Mic, Smartphone, Monitor } from 'lucide-react'
+import { Play, Sparkles, Zap, Clock, Upload, Video } from 'lucide-react'
 
 const HomeHeroSection = () => {
     const router = useRouter()
@@ -11,20 +11,13 @@ const HomeHeroSection = () => {
     
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60) // Default 60 seconds (1 minute)
-    const [contentType, setContentType] = useState('talking_video')
-    const [customContentType, setCustomContentType] = useState('')
     const [isUploading, setIsUploading] = useState(false)
     const [isDragOver, setIsDragOver] = useState(false)
     
     // Specific time intervals in seconds (20s to 30m)
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
     
-    const contentTypes = [
-        { id: 'talking_video', label: 'Talking Video', icon: Video },
-        { id: 'professional_meeting', label: 'Meeting', icon: Users },
-        { id: 'educational_video', label: 'Tutorial', icon: BookOpen },
-        { id: 'custom', label: 'Custom', icon: Mic }
-    ]
+
 
     // Automatically determine video format based on duration
     const getVideoFormat = (durationSeconds: number) => {
@@ -134,15 +127,7 @@ const HomeHeroSection = () => {
             return
         }
 
-        // Validate custom content type if selected
-        if (contentType === 'custom' && !customContentType.trim()) {
-            alert('Please enter a custom content type')
-            return
-        }
-
         setIsUploading(true)
-
-        const finalContentType = contentType === 'custom' ? customContentType.trim() : contentType
 
         try {
             // 1. Create new project with processing status
@@ -159,7 +144,7 @@ const HomeHeroSection = () => {
                     processing_progress: 0,
                     processing_message: 'Preparing for processing...',
                     processing_data: {
-                        contentType: finalContentType,
+                        contentType: 'talking_video',
                         videoFormat: targetDuration < 120 ? 'short' : 'long',
                         targetDuration,
                         filename: selectedFile.name,
@@ -223,7 +208,7 @@ const HomeHeroSection = () => {
                 projectId: project.id,
                 fileUri,
                 mimeType: selectedFile.type,
-                contentType: finalContentType,
+                contentType: 'talking_video',
                 targetDuration: parseInt(String(targetDuration))
             })
             
@@ -244,7 +229,7 @@ const HomeHeroSection = () => {
                             projectId: project.id,
                             fileUri,
                             mimeType: selectedFile.type,
-                            contentType: finalContentType,
+                            contentType: 'talking_video',
                             targetDuration: parseInt(String(targetDuration))
                         })
                     })
@@ -288,7 +273,7 @@ const HomeHeroSection = () => {
                         projectId: project.id,
                         fileUri,
                         mimeType: selectedFile.type,
-                        contentType: finalContentType,
+                        contentType: 'talking_video',
                         targetDuration: parseInt(String(targetDuration))
                     }
                 })
@@ -307,7 +292,7 @@ const HomeHeroSection = () => {
     }
 
     return (
-        <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16 pb-12">
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-24 pb-20">
             {/* Background Elements */}
             <div className="absolute inset-0 overflow-hidden">
                 <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
@@ -315,17 +300,17 @@ const HomeHeroSection = () => {
             </div>
 
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid lg:grid-cols-2 gap-8 items-center">
+                <div className="grid lg:grid-cols-2 gap-12 items-center">
                     {/* Left Column - Content */}
                     <div className="text-center lg:text-left">
                         {/* Badge */}
-                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200 rounded-full px-4 py-2 mb-4">
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200 rounded-full px-4 py-2 mb-6">
                             <Sparkles className="w-4 h-4 text-blue-600" />
                             <span className="text-sm font-medium text-blue-700">AI-Powered Video Creation</span>
                         </div>
 
                         {/* Main Headline */}
-                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 leading-tight">
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                             Transform 
                             <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"> Hours </span>
                             into 
@@ -333,12 +318,12 @@ const HomeHeroSection = () => {
                         </h1>
 
                         {/* Subtitle */}
-                        <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto lg:mx-0">
+                        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
                             Turn your long-form content into engaging videos with AI. Perfect for podcasters, educators, and content creators who want to save time and reach more audiences.
                         </p>
 
                         {/* Key Benefits */}
-                        <div className="flex flex-wrap justify-center lg:justify-start gap-4 mb-6">
+                        <div className="flex flex-wrap justify-center lg:justify-start gap-6 mb-8">
                             <div className="flex items-center gap-2">
                                 <Zap className="w-5 h-5 text-emerald-500" />
                                 <span className="text-gray-700 font-medium">10x Faster Editing</span>
@@ -373,7 +358,7 @@ const HomeHeroSection = () => {
 
                     {/* Right Column - Upload Interface */}
                     <div className="relative">
-                        <div className="bg-white rounded-3xl p-6 shadow-2xl border border-gray-200 relative overflow-hidden">
+                        <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 relative overflow-hidden">
                             {/* Background Pattern */}
                             <div className="absolute inset-0 opacity-5">
                                 <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-xl"></div>
@@ -381,14 +366,14 @@ const HomeHeroSection = () => {
                             </div>
 
                             {/* Upload Header */}
-                            <div className="text-center mb-4 relative z-10">
-                                <p className="text-gray-600 text-sm">
+                            <div className="text-center mb-6 relative z-10">
+                                <p className="text-gray-600">
                                     Upload your video and see the magic happen
                                 </p>
                             </div>
 
                             {/* Upload Area */}
-                            <div className="mb-4 relative z-10">
+                            <div className="mb-6 relative z-10">
                                 <input
                                     type="file"
                                     ref={fileInputRef}
@@ -404,7 +389,7 @@ const HomeHeroSection = () => {
                                     onDragOver={handleDragOver}
                                     onDrop={handleDrop}
                                     className={`
-                                        border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer
+                                        border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
                                         transition-all duration-300 group relative overflow-hidden
                                         ${selectedFile ? 
                                             'border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50 shadow-inner' : 
@@ -463,53 +448,9 @@ const HomeHeroSection = () => {
                                 </div>
                             </div>
 
-                            {/* Content Type Selection */}
-                            <div className="mb-4 relative z-10">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Content Type</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {contentTypes.map((type) => {
-                                        const Icon = type.icon
-                                        return (
-                                            <button
-                                                key={type.id}
-                                                onClick={() => setContentType(type.id)}
-                                                className={`
-                                                    flex items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 text-sm group
-                                                    ${contentType === type.id ? 
-                                                        'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 text-blue-700 shadow-md' : 
-                                                        'border-gray-200 hover:border-blue-300 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:shadow-sm'
-                                                    }
-                                                `}
-                                            >
-                                                <div className={`p-1 rounded-lg ${contentType === type.id ? 'bg-blue-500' : 'bg-gray-300 group-hover:bg-blue-400'} transition-colors duration-200`}>
-                                                    <Icon className={`w-3 h-3 ${contentType === type.id ? 'text-white' : 'text-white'}`} />
-                                                </div>
-                                                <span className="font-medium">{type.label}</span>
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                                
-                                {/* Custom Content Type Input */}
-                                {contentType === 'custom' && (
-                                    <div className="mt-3">
-                                        <input
-                                            type="text"
-                                            value={customContentType}
-                                            onChange={(e) => setCustomContentType(e.target.value)}
-                                            placeholder="e.g., cooking show, interview, product review..."
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Describe your content type to help AI understand your video
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-
                             {/* Target Duration */}
-                            <div className="mb-4 relative z-10">
-                                <div className="flex items-center gap-2 mb-2">
+                            <div className="mb-6 relative z-10">
+                                <div className="flex items-center gap-2 mb-3">
                                     <div className="p-1 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg">
                                         <Clock className="w-4 h-4 text-white" />
                                     </div>
@@ -519,7 +460,7 @@ const HomeHeroSection = () => {
                                 </div>
                                 
                                 {/* Format indicator */}
-                                <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
+                                <div className="mb-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
                                     <div className="flex items-center gap-4">
                                         <div className="flex-1 text-center">
                                             <div className="text-sm font-medium text-gray-900 mb-1">
@@ -535,11 +476,11 @@ const HomeHeroSection = () => {
                                         <div className="flex-1 flex justify-center">
                                             {targetDuration < 120 ? (
                                                 <div className="w-16 h-28 bg-gradient-to-b from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg">
-                                                    <Smartphone className="w-6 h-6 text-white" />
+                                                    <span className="text-2xl">📱</span>
                                                 </div>
                                             ) : (
                                                 <div className="w-28 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg">
-                                                    <Monitor className="w-6 h-6 text-white" />
+                                                    <span className="text-2xl">💻</span>
                                                 </div>
                                             )}
                                         </div>

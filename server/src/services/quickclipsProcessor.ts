@@ -79,30 +79,6 @@ interface FFmpegProgress {
 const jobQueue = new Map<string, QuickclipsJob>()
 const activeJobs = new Set<string>()
 
-// Content type configurations
-const CONTENT_CONFIGS = {
-    podcast: {
-        name: 'Podcast',
-        approach: 'Focus on key insights, compelling stories, emotional moments, and quotable statements that capture the essence of the conversation',
-        characteristics: 'dialogue-driven, conversational flow, key ideas and revelations'
-    },
-    professional_meeting: {
-        name: 'Professional Meeting', 
-        approach: 'Extract decisions, action items, key discussions, and important announcements that represent the meeting\'s core outcomes',
-        characteristics: 'business context, decisions, actionable information'
-    },
-    educational_video: {
-        name: 'Educational Video',
-        approach: 'Select clear explanations, demonstrations, key concepts, and learning moments that maintain educational continuity',
-        characteristics: 'instructional flow, concept building, clear explanations'
-    },
-    talking_video: {
-        name: 'Talking Video',
-        approach: 'Choose meaningful statements, personal stories, insights, and expressive moments that convey the speaker\'s main message',
-        characteristics: 'personal expression, key messages, emotional authenticity'
-    }
-}
-
 // Video format configurations with flexible bounds
 const FORMAT_CONFIGS = {
     short: {
@@ -133,19 +109,11 @@ async function generateQuickClips(signedUrl: string, mimeType: string, job: Quic
         apiKey: process.env.GEMINI_API_KEY
     })
     
-    // Handle custom content types with fallback
-    const contentConfig = CONTENT_CONFIGS[job.contentType as keyof typeof CONTENT_CONFIGS] || {
-        name: job.contentType,
-        approach: `Focus on the most engaging and meaningful segments that capture the essence of this ${job.contentType} content`,
-        characteristics: `content-specific elements, key messages, and engaging moments typical of ${job.contentType}`
-    }
     const formatConfig = FORMAT_CONFIGS[job.videoFormat]
     
     const prompt = `You are an expert video editor trained to extract the most meaningful and coherent segments from long-form videos. Your goal is to select sequences that best represent the overall narrative, emotion, or information in the source material.
 
-CONTENT TYPE: ${contentConfig.name}
-EDITORIAL APPROACH: ${contentConfig.approach}
-CONTENT CHARACTERISTICS: ${contentConfig.characteristics}
+EDITORIAL APPROACH: Focus on the most engaging and meaningful segments that capture the essence of the video content. Look for key insights, compelling stories, emotional moments, clear explanations, and quotable statements.
 
 SEGMENT GUIDELINES:
 - Target total duration: ~${job.targetDuration} seconds${formatConfig.totalDuration ? ` (±${formatConfig.totalDuration.tolerance}s)` : ' (flexible)'}
@@ -203,7 +171,7 @@ FIELD REQUIREMENTS:
 - NO overlapping timestamps
 - Order segments chronologically (by start_time)
 
-Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 'long' ? 'a single cohesive video' : 'standalone clips'} that ${contentConfig.approach}`
+Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 'long' ? 'a single cohesive video' : 'standalone clips'} that capture the most engaging and meaningful content from the source material.`
 
     try {
         // Download and upload file to Gemini
@@ -421,21 +389,13 @@ async function generateVideoDescription(signedUrl: string, mimeType: string, job
         apiKey: process.env.GEMINI_API_KEY
     })
     
-    // Handle custom content types with fallback
-    const contentConfig = CONTENT_CONFIGS[job.contentType as keyof typeof CONTENT_CONFIGS] || {
-        name: job.contentType,
-        approach: `Focus on the most engaging and meaningful segments that capture the essence of this ${job.contentType} content`,
-        characteristics: `content-specific elements, key messages, and engaging moments typical of ${job.contentType}`
-    }
     const formatConfig = FORMAT_CONFIGS[job.videoFormat]
     
     const clipSummary = clips.map(clip => `- ${clip.title}: ${clip.description} (${clip.start_time}s-${clip.end_time}s)`).join('\n')
     
     const prompt = `You are an expert content analyzer. Based on the video content and the key segments extracted, write a compelling description for this video.
 
-CONTENT TYPE: ${contentConfig.name}
 VIDEO FORMAT: ${formatConfig.name} (${formatConfig.aspectRatio})
-CONTENT CHARACTERISTICS: ${contentConfig.characteristics}
 
 EXTRACTED SEGMENTS:
 ${clipSummary}
@@ -501,7 +461,7 @@ Return ONLY the description text, no extra formatting or quotes.`
         if (!description) {
             // Fallback description based on clips
             const mainTopics = clips.slice(0, 3).map(c => c.title).join(', ')
-            return `This ${contentConfig.name.toLowerCase()} covers ${mainTopics} and other key insights in ${clips.length} highlight segments.`
+            return `This ${formatConfig.name.toLowerCase()} covers ${mainTopics} and other key insights in ${clips.length} highlight segments.`
         }
         
         return description
@@ -511,7 +471,7 @@ Return ONLY the description text, no extra formatting or quotes.`
         
         // Fallback description
         const mainTopics = clips.slice(0, 3).map(c => c.title).join(', ')
-        return `This ${contentConfig.name.toLowerCase()} covers ${mainTopics} and other key insights in ${clips.length} highlight segments.`
+        return `This ${formatConfig.name.toLowerCase()} covers ${mainTopics} and other key insights in ${clips.length} highlight segments.`
     }
 }
 

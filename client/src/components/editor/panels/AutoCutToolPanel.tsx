@@ -25,24 +25,8 @@ interface QuickClipsJob {
     description?: string
 }
 
-interface ContentType {
-    id: string
-    name: string
-    icon: string
-    description: string
-}
-
-const CONTENT_TYPES: ContentType[] = [
-    { id: 'talking_video', name: 'Talking Video', icon: '💬', description: 'Speech-focused video' },
-    { id: 'professional_meeting', name: 'Meeting', icon: '💼', description: 'Business content' },
-    { id: 'educational_video', name: 'Tutorial', icon: '🎓', description: 'Learning content' },
-    { id: 'custom', name: 'Custom', icon: '🎙️', description: 'Custom content type' }
-]
-
 const AutoCutToolPanel = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
-    const [contentType, setContentType] = useState<string>('talking_video')
-    const [customContentType, setCustomContentType] = useState<string>('')
     const [targetDuration, setTargetDuration] = useState<number>(120) // 2 minutes default
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
@@ -143,16 +127,8 @@ const AutoCutToolPanel = () => {
     const handleStartProcessing = async () => {
         if (!selectedFile || !session) return
 
-        // Validate custom content type if selected
-        if (contentType === 'custom' && !customContentType.trim()) {
-            setError('Please enter a custom content type')
-            return
-        }
-
         setIsUploading(true)
         setError(null)
-
-        const finalContentType = contentType === 'custom' ? customContentType.trim() : contentType
 
         try {
             // 1. Upload file
@@ -219,7 +195,7 @@ const AutoCutToolPanel = () => {
                             projectId: projectId || '',
                             fileUri,
                             mimeType: selectedFile.type,
-                            contentType: finalContentType,
+                            contentType: 'talking_video',
                             targetDuration
                         })
                     })
@@ -448,48 +424,6 @@ const AutoCutToolPanel = () => {
                         </div>
                     )}
                     
-                        {/* Content Type */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Content Type</label>
-                            <div className="grid grid-cols-1 gap-2">
-                                {CONTENT_TYPES.map((type) => (
-                                    <button
-                                        key={type.id}
-                                        onClick={() => setContentType(type.id)}
-                                        className={`p-3 rounded-lg border-2 text-left transition-all ${
-                                            contentType === type.id
-                                                ? 'border-blue-500 bg-blue-50 text-blue-900'
-                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-lg">{type.icon}</span>
-                                            <div>
-                                                <div className="font-medium text-sm">{type.name}</div>
-                                                <div className="text-xs text-gray-500">{type.description}</div>
-                                            </div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                            
-                            {/* Custom Content Type Input */}
-                            {contentType === 'custom' && (
-                                <div className="mt-3">
-                                    <input
-                                        type="text"
-                                        value={customContentType}
-                                        onChange={(e) => setCustomContentType(e.target.value)}
-                                        placeholder="e.g., cooking show, interview, product review..."
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Describe your content type to help AI understand your video
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
                         {/* Target Duration */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
