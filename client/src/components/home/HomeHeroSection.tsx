@@ -319,7 +319,7 @@ const HomeHeroSection = () => {
 
                         {/* Subtitle */}
                         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                            The first AI-native video editor that creates quick clips of any length from your content. Lemona understands your video's context and automatically extracts the most engaging moments, giving you complete creative control over your AI-generated highlights.
+                            Transform any video into captivating clips with Lemona's AI magic. Whether it's a 30-minute podcast or a 2-hour workshop, our AI understands context and crafts perfect highlights. Edit with ease using our AI-native tools designed for modern creators.
                         </p>
 
                         {/* Key Benefits */}
