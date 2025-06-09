@@ -558,11 +558,11 @@ const QuickClipsButton = () => {
                                     </div>
 
                                     {/* Settings */}
-                                    <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-6">
                                         {/* Content Type */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-3">Content Type</label>
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="space-y-2">
                                                 {contentTypes.map((type) => {
                                                     const Icon = type.icon
                                                     return (
@@ -570,15 +570,15 @@ const QuickClipsButton = () => {
                                                             key={type.id}
                                                             onClick={() => setContentType(type.id)}
                                                             className={`
-                                                                flex items-center gap-2 p-3 rounded-lg border text-sm
+                                                                w-full flex items-center gap-3 p-3 rounded-lg border text-sm text-left
                                                                 ${contentType === type.id ? 
                                                                     'border-emerald-500 bg-emerald-50 text-emerald-700' : 
                                                                     'border-gray-200 hover:border-emerald-300'
                                                                 }
                                                             `}
                                                         >
-                                                            <Icon className="w-4 h-4" />
-                                                            <span>{type.label}</span>
+                                                            <Icon className="w-4 h-4 flex-shrink-0" />
+                                                            <span className="font-medium">{type.label}</span>
                                                         </button>
                                                     )
                                                 })}
@@ -613,14 +613,14 @@ const QuickClipsButton = () => {
                                                     max="1800"
                                                     value={targetDuration}
                                                     onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-                                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                                                 />
                                                 <div className="flex justify-between text-xs text-gray-500">
                                                     <span>20s</span>
                                                     <span>30m</span>
                                                 </div>
                                                 <div className="text-center">
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm">
+                                                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full text-sm">
                                                         <Clock className="w-4 h-4" />
                                                         {getVideoFormat(targetDuration) === 'short_vertical' ? 'Vertical (9:16)' : 'Horizontal (16:9)'}
                                                     </span>

@@ -174,23 +174,15 @@ export default function ProjectsList() {
     }
 
     const handleProjectClick = (projectId: string) => {
-        if (showMenu) {
-            setShowMenu(null)
-            return
-        }
-        
         const project = projects.find(p => p.id === projectId)
         
-        // Special handling for QuickClips projects
-        if (project?.processing_type === 'quickclips') {
-            if (project.processing_status === 'completed' && project.processing_result?.clips) {
-                // Show clips modal or navigate to clips view
-                router.push(`/creation/quickclips/${projectId}`)
-                return
-            }
+        // For QuickClips projects that are completed, navigate to clips view
+        if (project?.processing_type === 'quickclips' && project?.processing_status === 'completed') {
+            router.push(`/creation/quickclips/${projectId}`)
+        } else {
+            // For regular projects or processing QuickClips, navigate to editor
+            router.push(`/editor/${projectId}`)
         }
-        
-        router.push(`/projects/${projectId}`)
     }
 
     if (!session) {
@@ -304,6 +296,7 @@ export default function ProjectsList() {
                             onMenuClick={handleMenuClick}
                             onDelete={handleDelete}
                             showMenu={showMenu}
+                            router={router}
                         />
                     ))}
                 </div>
@@ -320,6 +313,7 @@ interface ProjectCardProps {
     onMenuClick: (e: React.MouseEvent, projectId: string) => void
     onDelete: (e: React.MouseEvent, project: Project) => void
     showMenu: string | null
+    router: any
 }
 
 function ProjectCard({ 
@@ -328,7 +322,8 @@ function ProjectCard({
     onProjectClick, 
     onMenuClick, 
     onDelete, 
-    showMenu 
+    showMenu,
+    router
 }: ProjectCardProps) {
     const isQuickClips = project.processing_type === 'quickclips'
     const isProcessing = project.processing_status === 'processing' || project.processing_status === 'queued'
@@ -439,19 +434,17 @@ function ProjectCard({
                         {/* Dropdown menu */}
                         {showMenu === project.id && (
                             <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
-                                {isQuickClips && isCompleted && clipCount > 0 && (
+                                {isQuickClips && isCompleted && (
                                     <button
                                         onClick={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()
-                                            console.log('View Clips clicked for project:', project.id)
-                                            // Directly navigate to clips view
-                                            window.location.href = `/creation/quickclips/${project.id}`
+                                            router.push(`/creation/quickclips/${project.id}`)
                                         }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
                                     >
                                         <Eye className="w-4 h-4" />
-                                        View Clips ({clipCount})
+                                        View Clips
                                     </button>
                                 )}
                                 <button

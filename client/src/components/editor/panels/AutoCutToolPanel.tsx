@@ -420,18 +420,12 @@ const AutoCutToolPanel = () => {
                         accept="video/*"
                         className="hidden"
                     />
-                        <div className="text-center space-y-4">
-                            <div className="flex items-center justify-center gap-2 mb-4">
-                                <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg">
-                                    <Brain className="w-5 h-5 text-white" />
-                                </div>
-                                <h3 className="text-lg font-semibold text-gray-900">AI QuickClips</h3>
-                            </div>
+                        <div>
                             <UploadButton
                                 onClick={() => fileInputRef.current?.click()}
                                 isUploading={isUploading}
                             />
-                            <p className="text-sm text-gray-500 text-center max-w-48 leading-relaxed">
+                            <p className="text-sm text-gray-500 text-center max-w-48">
                                 Upload video to automatically extract the best clips using AI
                             </p>
                         </div>
