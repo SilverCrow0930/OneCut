@@ -92,9 +92,45 @@ export default function QuickClipsViewPage() {
         window.open(clip.previewUrl, '_blank')
     }
 
-    const handleEdit = (clip: QuickClip) => {
-        // Navigate to editor with this clip
-        router.push(`/editor/new?clipId=${clip.id}&start=${clip.start_time}&end=${clip.end_time}&url=${encodeURIComponent(clip.previewUrl)}`)
+    const handleEdit = async (clip: QuickClip) => {
+        if (!session?.access_token) {
+            return
+        }
+
+        try {
+            // Create a new project for editing this clip
+            const response = await fetch(apiPath('projects'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    name: `Edit: ${clip.title}`,
+                    initial_clip_data: {
+                        clipId: clip.id,
+                        start_time: clip.start_time,
+                        end_time: clip.end_time,
+                        videoUrl: clip.previewUrl,
+                        title: clip.title,
+                        description: clip.description
+                    }
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to create project for editing')
+            }
+
+            const project = await response.json()
+            
+            // Navigate to the new project with clip data in URL params
+            router.push(`/projects/${project.id}?clipId=${clip.id}&start=${clip.start_time}&end=${clip.end_time}&url=${encodeURIComponent(clip.previewUrl)}`)
+            
+        } catch (error) {
+            console.error('Failed to create edit project:', error)
+            alert('Failed to create project for editing. Please try again.')
+        }
     }
 
     if (loading) {

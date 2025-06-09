@@ -338,9 +338,46 @@ const QuickClipsButton = () => {
         setError(null)
     }
 
-    const handleEditInTimeline = (clip: QuickClip) => {
-        // Create a new project with this clip
-        router.push(`/editor/new?clip=${clip.id}&start=${clip.start_time}&end=${clip.end_time}&url=${encodeURIComponent(clip.previewUrl)}`)
+    const handleEditInTimeline = async (clip: QuickClip) => {
+        if (!user || !session) {
+            signIn()
+            return
+        }
+
+        try {
+            // Create a new project for editing this clip
+            const response = await fetch(apiPath('projects'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    name: `Edit: ${clip.title}`,
+                    initial_clip_data: {
+                        clipId: clip.id,
+                        start_time: clip.start_time,
+                        end_time: clip.end_time,
+                        videoUrl: clip.previewUrl,
+                        title: clip.title,
+                        description: clip.description
+                    }
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to create project for editing')
+            }
+
+            const project = await response.json()
+            
+            // Navigate to the new project with clip data in URL params
+            router.push(`/projects/${project.id}?clipId=${clip.id}&start=${clip.start_time}&end=${clip.end_time}&url=${encodeURIComponent(clip.previewUrl)}`)
+            
+        } catch (error) {
+            console.error('Failed to create edit project:', error)
+            alert('Failed to create project for editing. Please try again.')
+        }
     }
 
     return (
@@ -370,7 +407,7 @@ const QuickClipsButton = () => {
                         <div className="flex items-start justify-between px-8 py-6 border-b border-gray-200">
                             <div className="text-left">
                                 <h2 className="text-2xl font-bold text-gray-900">Quick AI Clips</h2>
-                                <p className="text-gray-600 mt-1">Get instant downloadable clips from your video</p>
+                                <p className="text-gray-600 mt-1">Transform Hours into Highlights</p>
                             </div>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -629,9 +666,6 @@ const QuickClipsButton = () => {
                                             </span>
                                         </button>
 
-                                        <p className="text-xs text-gray-500 text-left mt-3">
-                                            Get instant downloadable clips in minutes - no timeline editing required!
-                                        </p>
                                     </div>
                                 </div>
                             )}
