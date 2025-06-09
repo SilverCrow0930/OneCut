@@ -306,7 +306,7 @@ const HomeHeroSection = () => {
                         {/* Badge */}
                         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200 rounded-full px-4 py-2 mb-6">
                             <Sparkles className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-700">AI-Powered Video Creation</span>
+                            <span className="text-sm font-medium text-blue-700">AI Video Creation</span>
                         </div>
 
                         {/* Main Headline */}
@@ -319,7 +319,7 @@ const HomeHeroSection = () => {
 
                         {/* Subtitle */}
                         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                            Turn your long-form content into engaging videos with AI. Perfect for podcasters, educators, and content creators who want to save time and reach more audiences.
+                            The first AI-native video editor that creates quick clips of any length from your content. Lemona understands your video's context and automatically extracts the most engaging moments, giving you complete creative control over your AI-generated highlights.
                         </p>
 
                         {/* Key Benefits */}
