@@ -109,7 +109,7 @@ const FORMAT_CONFIGS = {
         name: 'Short Format',
         aspectRatio: '9:16',
         maxDuration: 120, // < 2 minutes
-        segmentCount: { min: 1, max: 4, target: 2 },
+        segmentCount: { min: 2, max: 4, target: 2 },
         segmentLength: { min: 30, max: 90, target: 45 },
         totalDuration: { tolerance: 15 }, // ±15 seconds acceptable
         approach: 'Create a concise narrative arc with clear beginning, development, and conclusion. Each segment should build upon the previous one.'
@@ -119,11 +119,10 @@ const FORMAT_CONFIGS = {
         aspectRatio: '16:9',
         maxDuration: 1800, // 30 minutes
         segmentCount: { min: 3, max: 10, target: 6 },
-        segmentLength: { min: 30, max: 300, target: 150 },
+        segmentLength: { min: 60, max: 300, target: 150 },
         totalDuration: { tolerance: 60 },
-        approach: 'Develop a comprehensive narrative that explores themes in depth while maintaining viewer engagement throughout. For longer content (15+ minutes), consider more segments to maintain pacing.'
+        approach: 'Develop a comprehensive narrative that explores themes in depth while maintaining viewer engagement throughout. Segments will be combined into a single cohesive video.'
     }
-    
 }
 
 // Dedicated AI function for QuickClips with improved narrative-focused prompt
@@ -143,52 +142,25 @@ CONTENT TYPE: ${contentConfig.name}
 EDITORIAL APPROACH: ${contentConfig.approach}
 CONTENT CHARACTERISTICS: ${contentConfig.characteristics}
 
-SEGMENT GUIDELINES (flexible):
-- Aim for ${formatConfig.segmentCount.target} segments, but use ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max} if the content naturally suggests it
-- Target ~${formatConfig.segmentLength.target} seconds per segment, range: ${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max} seconds
-- Total duration target: ~${job.targetDuration} seconds (±${formatConfig.totalDuration.tolerance}s acceptable)
-- Aspect ratio: ${formatConfig.aspectRatio}
-- Narrative approach: ${formatConfig.approach}
+SEGMENT GUIDELINES (STRICT):
+- Target total duration: ${job.targetDuration} seconds (±${formatConfig.totalDuration.tolerance}s)
+- For ${formatConfig.name}:
+  * Number of segments: ${formatConfig.segmentCount.target} (min ${formatConfig.segmentCount.min}, max ${formatConfig.segmentCount.max})
+  * Segment length: ${formatConfig.segmentLength.target}s (${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s)
+  * Aspect ratio: ${formatConfig.aspectRatio}
+  * ${job.videoFormat === 'long' ? 'Segments will be combined into a single video' : 'Each segment will be a standalone clip'}
+
+CRITICAL REQUIREMENTS:
+1. TOTAL DURATION MUST BE WITHIN RANGE: ${job.targetDuration - formatConfig.totalDuration.tolerance} to ${job.targetDuration + formatConfig.totalDuration.tolerance} seconds
+2. Each segment MUST be between ${formatConfig.segmentLength.min} and ${formatConfig.segmentLength.max} seconds
+3. Number of segments MUST be between ${formatConfig.segmentCount.min} and ${formatConfig.segmentCount.max}
+4. Segments MUST flow naturally when combined (no jarring transitions)
 
 DECISION PRIORITY:
-1. Narrative coherence and natural story breaks
-2. Segment completeness (don't cut mid-thought)
-3. Target duration and count guidelines
+1. Target duration compliance (STRICT)
+2. Narrative coherence and natural story breaks
+3. Segment completeness (don't cut mid-thought)
 4. Platform optimization
-
-If the content naturally suggests fewer segments with stronger narrative value, choose quality over hitting exact counts.
-
-CORE EDITORIAL PRINCIPLES:
-
-1. NARRATIVE COHERENCE
-   - Segments should tell a complete, flowing story when combined
-   - Maintain logical progression from one segment to the next
-   - Ensure each segment contributes to the overall narrative arc
-   - Preserve the natural rhythm and pacing of the content
-
-2. MEANINGFUL CONTENT SELECTION
-   - Prioritize segments with emotional weight, core ideas, or significant moments
-   - Choose content that carries the speaker's main message or intent
-   - Include moments of genuine expression, insight, or revelation
-   - Select segments that are intelligible without needing the full context
-
-3. SMOOTH TRANSITIONS
-   - Avoid abrupt topic changes or jarring jump cuts
-   - Look for natural pause points or topic transitions
-   - Consider how segments will flow when edited together
-   - Maintain conversational or presentation rhythm where possible
-
-4. CONTEXT PRESERVATION
-   - Each segment should make sense as a standalone piece
-   - Include sufficient setup for complex ideas or stories
-   - Preserve important context that makes statements meaningful
-   - Avoid cutting mid-sentence or mid-thought
-
-ANALYSIS GUIDELINES:
-- Use both audio content (speech, dialogue, key phrases) and visual cues (expressions, gestures, screen content)
-- Pay attention to speaker emphasis, tone changes, and emotional peaks
-- Identify natural story beats, topic transitions, and conclusion points
-- Consider the overall message and choose segments that best support it
 
 OUTPUT FORMAT:
 Return ONLY a valid JSON array with NO additional text:
@@ -202,27 +174,18 @@ Return ONLY a valid JSON array with NO additional text:
     "description": "Speaker introduces main theme with personal anecdote",
     "narrative_role": "introduction",
     "transition_note": "Natural pause before topic shift"
-  },
-  {
-    "title": "Core Insight Development", 
-    "start_time": 87,
-    "end_time": 162,
-    "significance": 9.1,
-    "description": "Key concept explained with supporting examples",
-    "narrative_role": "development",
-    "transition_note": "Builds on previous point about..."
   }
 ]
 
 FIELD REQUIREMENTS:
 - start_time, end_time: exact timestamps in seconds
-- significance: 1-10 score based on importance to overall message (not viral potential)
+- significance: 1-10 score based on importance to overall message
 - narrative_role: introduction, development, climax, resolution, supporting
 - transition_note: how this segment connects to the narrative flow
 - NO overlapping timestamps
 - Order segments chronologically (by start_time)
 
-Remember: The goal is meaningful content extraction that creates a coherent highlight reel, not viral moments or disconnected clips.`
+Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 'long' ? 'a single cohesive video' : 'standalone clips'} that ${contentConfig.approach}`
 
     try {
         // Download and upload file to Gemini
@@ -370,8 +333,21 @@ Remember: The goal is meaningful content extraction that creates a coherent high
             throw new Error('No valid clips extracted')
         }
         
-        // Sort chronologically (by start_time) to maintain narrative flow
+        // Sort chronologically
         clips.sort((a, b) => a.start_time - b.start_time)
+
+        // Validate segment count
+        if (clips.length < formatConfig.segmentCount.min || clips.length > formatConfig.segmentCount.max) {
+            throw new Error(`Invalid number of segments: ${clips.length}. Expected ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max}`)
+        }
+
+        // Validate segment lengths
+        for (const clip of clips) {
+            const duration = clip.end_time - clip.start_time
+            if (duration < formatConfig.segmentLength.min || duration > formatConfig.segmentLength.max) {
+                throw new Error(`Invalid segment duration: ${duration}s. Expected ${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s`)
+            }
+        }
 
         // Calculate total duration and validate against target
         const totalDuration = clips.reduce((acc, clip) => acc + (clip.end_time - clip.start_time), 0)
@@ -381,37 +357,9 @@ Remember: The goal is meaningful content extraction that creates a coherent high
         }
 
         if (totalDuration < targetWithTolerance.min || totalDuration > targetWithTolerance.max) {
-            console.warn(`[QuickClips] Total duration ${totalDuration}s outside target range ${targetWithTolerance.min}-${targetWithTolerance.max}s. Adjusting clips...`)
-            
-            // If duration is too short, extend clips proportionally
-            if (totalDuration < targetWithTolerance.min) {
-                const scale = job.targetDuration / totalDuration
-                clips = clips.map(clip => {
-                    const duration = clip.end_time - clip.start_time
-                    const newDuration = Math.round(duration * scale)
-                    return {
-                        ...clip,
-                        end_time: clip.start_time + newDuration
-                    }
-                })
-            }
-            
-            // If duration is too long, trim clips proportionally
-            if (totalDuration > targetWithTolerance.max) {
-                const scale = job.targetDuration / totalDuration
-                clips = clips.map(clip => {
-                    const duration = clip.end_time - clip.start_time
-                    const newDuration = Math.round(duration * scale)
-                    return {
-                        ...clip,
-                        end_time: clip.start_time + newDuration
-                    }
-                })
-            }
+            throw new Error(`Total duration ${totalDuration}s outside target range ${targetWithTolerance.min}-${targetWithTolerance.max}s`)
         }
-        
-        console.log(`[QuickClips] Successfully extracted ${clips.length} narrative segments with total duration ${totalDuration}s`)
-        
+
         return clips
         
     } catch (error) {
@@ -781,85 +729,90 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
         console.error('[QuickclipsProcessor] Source URL validation failed:', error)
         throw new Error('Could not access source video')
     }
-    
-    for (let i = 0; i < clips.length; i++) {
-        const clip = clips[i]
-        
-        // Validate clip timing
-        if (typeof clip.start_time !== 'number' || typeof clip.end_time !== 'number') {
-            throw new Error(`Invalid clip timing for clip ${i}`)
-        }
-        
-        const clipDuration = clip.end_time - clip.start_time
-        if (clipDuration <= 0) {
-            throw new Error(`Invalid clip duration for clip ${i}: ${clipDuration}s`)
-        }
-        
+
+    // For long format, we'll combine all segments into one video
+    if (job.videoFormat === 'long') {
         try {
-            // Create temporary output file
-            const outputPath = path.join(tempDir, `clip_${job.id}_${i}.mp4`)
-            
-            // Use FFmpeg to extract clip with proper encoding settings
+            // First extract all segments
+            const segmentFiles: string[] = []
+            const segmentList = path.join(tempDir, `segments_${job.id}.txt`)
+
+            for (let i = 0; i < clips.length; i++) {
+                const clip = clips[i]
+                const clipDuration = clip.end_time - clip.start_time
+                
+                // Extract segment
+                const segmentPath = path.join(tempDir, `segment_${job.id}_${i}.mp4`)
+                segmentFiles.push(segmentPath)
+
+                await new Promise<void>((resolve, reject) => {
+                    ffmpeg(videoUrl)
+                        .seekInput(clip.start_time)
+                        .duration(clipDuration)
+                        .output(segmentPath)
+                        .videoCodec('libx264')
+                        .audioCodec('aac')
+                        .outputOptions([
+                            '-pix_fmt yuv420p',
+                            '-preset fast',
+                            '-movflags +faststart',
+                            '-profile:v main',
+                            '-crf 23',
+                            '-maxrate 4M',
+                            '-bufsize 8M',
+                            '-r 30',
+                            '-g 60'
+                        ])
+                        .size('1920x1080')
+                        .autopad()
+                        .on('end', () => resolve())
+                        .on('error', (err) => reject(err))
+                        .run()
+                })
+            }
+
+            // Create concat file
+            const concatContent = segmentFiles.map(f => `file '${f}'`).join('\n')
+            await fs.writeFile(segmentList, concatContent)
+
+            // Combine all segments
+            const outputPath = path.join(tempDir, `combined_${job.id}.mp4`)
             await new Promise<void>((resolve, reject) => {
-                ffmpeg(videoUrl)
-                    .seekInput(clip.start_time)
-                    .duration(clipDuration)
+                ffmpeg()
+                    .input(segmentList)
+                    .inputOptions(['-f concat', '-safe 0'])
                     .output(outputPath)
-                    .videoCodec('libx264')
-                    .audioCodec('aac')
                     .outputOptions([
-                        '-pix_fmt yuv420p', // Ensure compatibility
-                        '-preset fast', // Faster encoding
-                        '-movflags +faststart', // Enable streaming
-                        '-profile:v main', // Wider device compatibility
-                        '-crf 23', // Balance quality and size
-                        '-maxrate 4M', // Maximum bitrate
-                        '-bufsize 8M', // Buffer size
-                        '-r 30', // Frame rate
-                        '-g 60', // Keyframe interval
+                        '-c copy',
+                        '-movflags +faststart'
                     ])
-                    .size(job.videoFormat === 'short' ? '720x1280' : '1920x1080')
-                    .autopad() // Add padding to maintain aspect ratio
-                    .on('start', (command) => {
-                        console.log(`[QuickclipsProcessor] FFmpeg command for clip ${i}:`, command)
-                    })
-                    .on('progress', (progress: FFmpegProgress) => {
-                        const percent = progress.percent ?? 0
-                        console.log(`[QuickclipsProcessor] Processing clip ${i}: ${Math.round(percent)}%`)
-                    })
                     .on('end', () => resolve())
                     .on('error', (err) => reject(err))
                     .run()
             })
-            
-            // Verify the output file exists and has content
-            const stats = await fs.stat(outputPath)
-            if (stats.size === 0) {
-                throw new Error('Generated clip is empty')
-            }
 
-            // Upload clip to GCS
-            const clipFileName = `clips/${job.projectId}/clip_${i}_${Date.now()}.mp4`
+            // Upload combined video
+            const clipFileName = `clips/${job.projectId}/long_${Date.now()}.mp4`
             await bucket.upload(outputPath, {
                 destination: clipFileName,
                 metadata: {
                     contentType: 'video/mp4',
-                    cacheControl: 'public, max-age=31536000' // Cache for 1 year
+                    cacheControl: 'public, max-age=31536000'
                 }
             })
-            
-            // Generate signed URL for download
+
+            // Generate signed URL
             const [downloadUrl] = await bucket.file(clipFileName).getSignedUrl({
                 action: 'read',
-                expires: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
+                expires: Date.now() + 7 * 24 * 60 * 60 * 1000
             })
-            
-            // Generate thumbnail (first frame)
-            const thumbnailPath = path.join(tempDir, `thumb_${job.id}_${i}.jpg`)
+
+            // Generate thumbnail
+            const thumbnailPath = path.join(tempDir, `thumb_${job.id}.jpg`)
             await new Promise<void>((resolve, reject) => {
                 ffmpeg(outputPath)
                     .screenshots({
-                        timestamps: ['1'], // 1 second in
+                        timestamps: ['1'],
                         filename: path.basename(thumbnailPath),
                         folder: path.dirname(thumbnailPath),
                         size: '640x360'
@@ -867,9 +820,9 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                     .on('end', () => resolve())
                     .on('error', (err) => reject(err))
             })
-            
+
             // Upload thumbnail
-            const thumbFileName = `clips/${job.projectId}/thumb_${i}_${Date.now()}.jpg`
+            const thumbFileName = `clips/${job.projectId}/thumb_${Date.now()}.jpg`
             await bucket.upload(thumbnailPath, {
                 destination: thumbFileName,
                 metadata: {
@@ -877,40 +830,177 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                     cacheControl: 'public, max-age=31536000'
                 }
             })
-            
+
             const [thumbnailUrl] = await bucket.file(thumbFileName).getSignedUrl({
                 action: 'read',
                 expires: Date.now() + 7 * 24 * 60 * 60 * 1000
             })
-            
+
+            // Calculate total duration
+            const totalDuration = clips.reduce((acc, clip) => acc + (clip.end_time - clip.start_time), 0)
+
+            // Add combined clip to results
             processedClips.push({
-                id: `clip_${job.id}_${i}`,
-                title: clip.title,
-                description: clip.description,
-                start_time: clip.start_time,
-                end_time: clip.end_time,
-                duration: clipDuration,
-                significance: clip.significance || 7.0,
-                narrative_role: clip.narrative_role || 'supporting',
-                transition_note: clip.transition_note || '',
+                id: `long_${job.id}`,
+                title: 'Combined Long-Form Video',
+                description: clips.map(c => c.title).join(' → '),
+                start_time: clips[0].start_time,
+                end_time: clips[clips.length - 1].end_time,
+                duration: totalDuration,
+                significance: 9.0,
+                narrative_role: 'complete',
+                transition_note: 'Combined segments for long-form viewing',
                 downloadUrl,
-                previewUrl: downloadUrl, // Use same URL for preview
+                previewUrl: downloadUrl,
                 thumbnailUrl,
                 format: job.videoFormat,
                 aspectRatio: FORMAT_CONFIGS[job.videoFormat].aspectRatio
             })
+
+            // Cleanup
+            await Promise.all([
+                ...segmentFiles.map(f => fs.unlink(f)),
+                fs.unlink(segmentList),
+                fs.unlink(outputPath),
+                fs.unlink(thumbnailPath)
+            ].map(p => p.catch(e => console.warn('Cleanup error:', e))))
+
+        } catch (error) {
+            console.error('[QuickclipsProcessor] Failed to combine segments:', error)
+            throw error
+        }
+    } else {
+        // Original short-format processing
+        for (let i = 0; i < clips.length; i++) {
+            const clip = clips[i]
             
-            // Cleanup temp files
-            try {
-                await fs.unlink(outputPath)
-                await fs.unlink(thumbnailPath)
-            } catch (cleanupError) {
-                console.warn(`[QuickclipsProcessor] Cleanup warning for job ${job.id}:`, cleanupError)
+            // Validate clip timing
+            if (typeof clip.start_time !== 'number' || typeof clip.end_time !== 'number') {
+                throw new Error(`Invalid clip timing for clip ${i}`)
             }
             
-        } catch (clipError) {
-            console.error(`[QuickclipsProcessor] Failed to process clip ${i} for job ${job.id}:`, clipError)
-            throw clipError // Re-throw to handle in parent function
+            const clipDuration = clip.end_time - clip.start_time
+            if (clipDuration <= 0) {
+                throw new Error(`Invalid clip duration for clip ${i}: ${clipDuration}s`)
+            }
+            
+            try {
+                // Create temporary output file
+                const outputPath = path.join(tempDir, `clip_${job.id}_${i}.mp4`)
+                
+                // Use FFmpeg to extract clip with proper encoding settings
+                await new Promise<void>((resolve, reject) => {
+                    ffmpeg(videoUrl)
+                        .seekInput(clip.start_time)
+                        .duration(clipDuration)
+                        .output(outputPath)
+                        .videoCodec('libx264')
+                        .audioCodec('aac')
+                        .outputOptions([
+                            '-pix_fmt yuv420p',
+                            '-preset fast',
+                            '-movflags +faststart',
+                            '-profile:v main',
+                            '-crf 23',
+                            '-maxrate 4M',
+                            '-bufsize 8M',
+                            '-r 30',
+                            '-g 60'
+                        ])
+                        .size('720x1280')
+                        .autopad()
+                        .on('start', (command) => {
+                            console.log(`[QuickclipsProcessor] FFmpeg command for clip ${i}:`, command)
+                        })
+                        .on('progress', (progress: FFmpegProgress) => {
+                            const percent = progress.percent ?? 0
+                            console.log(`[QuickclipsProcessor] Processing clip ${i}: ${Math.round(percent)}%`)
+                        })
+                        .on('end', () => resolve())
+                        .on('error', (err) => reject(err))
+                        .run()
+                })
+                
+                // Verify the output file exists and has content
+                const stats = await fs.stat(outputPath)
+                if (stats.size === 0) {
+                    throw new Error('Generated clip is empty')
+                }
+
+                // Upload clip to GCS
+                const clipFileName = `clips/${job.projectId}/clip_${i}_${Date.now()}.mp4`
+                await bucket.upload(outputPath, {
+                    destination: clipFileName,
+                    metadata: {
+                        contentType: 'video/mp4',
+                        cacheControl: 'public, max-age=31536000'
+                    }
+                })
+                
+                // Generate signed URL for download
+                const [downloadUrl] = await bucket.file(clipFileName).getSignedUrl({
+                    action: 'read',
+                    expires: Date.now() + 7 * 24 * 60 * 60 * 1000
+                })
+                
+                // Generate thumbnail
+                const thumbnailPath = path.join(tempDir, `thumb_${job.id}_${i}.jpg`)
+                await new Promise<void>((resolve, reject) => {
+                    ffmpeg(outputPath)
+                        .screenshots({
+                            timestamps: ['1'],
+                            filename: path.basename(thumbnailPath),
+                            folder: path.dirname(thumbnailPath),
+                            size: '640x360'
+                        })
+                        .on('end', () => resolve())
+                        .on('error', (err) => reject(err))
+                })
+                
+                // Upload thumbnail
+                const thumbFileName = `clips/${job.projectId}/thumb_${i}_${Date.now()}.jpg`
+                await bucket.upload(thumbnailPath, {
+                    destination: thumbFileName,
+                    metadata: {
+                        contentType: 'image/jpeg',
+                        cacheControl: 'public, max-age=31536000'
+                    }
+                })
+                
+                const [thumbnailUrl] = await bucket.file(thumbFileName).getSignedUrl({
+                    action: 'read',
+                    expires: Date.now() + 7 * 24 * 60 * 60 * 1000
+                })
+                
+                processedClips.push({
+                    id: `clip_${job.id}_${i}`,
+                    title: clip.title,
+                    description: clip.description,
+                    start_time: clip.start_time,
+                    end_time: clip.end_time,
+                    duration: clipDuration,
+                    significance: clip.significance || 7.0,
+                    narrative_role: clip.narrative_role || 'supporting',
+                    transition_note: clip.transition_note || '',
+                    downloadUrl,
+                    previewUrl: downloadUrl,
+                    thumbnailUrl,
+                    format: job.videoFormat,
+                    aspectRatio: FORMAT_CONFIGS[job.videoFormat].aspectRatio
+                })
+                
+                // Cleanup temp files
+                try {
+                    await fs.unlink(outputPath)
+                    await fs.unlink(thumbnailPath)
+                } catch (cleanupError) {
+                    console.warn(`[QuickclipsProcessor] Cleanup warning for job ${job.id}:`, cleanupError)
+                }
+                
+            } catch (clipError) {
+                console.error(`[QuickclipsProcessor] Failed to process clip ${i} for job ${job.id}:`, clipError)
+                throw clipError
+            }
         }
     }
     
