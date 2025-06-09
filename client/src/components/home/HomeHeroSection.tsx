@@ -319,7 +319,7 @@ const HomeHeroSection = () => {
 
                         {/* Subtitle */}
                         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                            Transform any video into captivating clips with Lemona's AI magic. Whether it's a 30-minute podcast or a 2-hour workshop, our AI understands context and crafts perfect highlights. Edit with ease using our AI-native tools designed for modern creators.
+                            Turn your long-form content into engaging videos with AI. Perfect for professionals, educators, and content creators who want to save time and reach more audiences.
                         </p>
 
                         {/* Key Benefits */}
