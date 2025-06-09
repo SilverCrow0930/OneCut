@@ -183,7 +183,7 @@ const QuickClipsButton = () => {
             formData.append('file', selectedFile)
             formData.append('projectId', project.id)
 
-            const uploadResponse = await fetch(apiPath('assets/upload'), {
+            const uploadResponse = await fetch(apiPath('assets/upload-to-gcs'), {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${session?.access_token}`,
@@ -204,7 +204,15 @@ const QuickClipsButton = () => {
             }
 
             const uploadResult = await uploadResponse.json()
-            const fileUri = uploadResult.gcsUri || uploadResult.uri
+            console.log('Upload response:', uploadResult)
+            
+            const fileUri = uploadResult.gsUri
+            console.log('Extracted fileUri:', fileUri)
+            
+            if (!fileUri) {
+                console.error('No gsUri found in upload response. Available fields:', Object.keys(uploadResult))
+                throw new Error('File upload did not return a valid GCS URI')
+            }
 
             setIsUploading(false)
 
