@@ -311,30 +311,29 @@ const HomeHeroSection = () => {
 
                         {/* Main Headline */}
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                            Transform 
-                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"> Hours </span>
-                            into 
-                            <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent"> Highlights</span>
+                            The First 
+                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"> AI-Native </span>
+                            Video Editor
                         </h1>
 
                         {/* Subtitle */}
                         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                            Turn your long-form content into engaging videos with AI. Perfect for podcasters, educators, and content creators who want to save time and reach more audiences.
+                            Create stunning QuickClips from <strong>any video</strong> - any genre, any length. From 10-second TikToks to 2-hour documentaries, our AI finds the magic moments you never knew existed.
                         </p>
 
                         {/* Key Benefits */}
                         <div className="flex flex-wrap justify-center lg:justify-start gap-6 mb-8">
                             <div className="flex items-center gap-2">
-                                <Zap className="w-5 h-5 text-emerald-500" />
-                                <span className="text-gray-700 font-medium">10x Faster Editing</span>
+                                <Video className="w-5 h-5 text-emerald-500" />
+                                <span className="text-gray-700 font-medium">Any Genre, Any Length</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-blue-500" />
-                                <span className="text-gray-700 font-medium">Hours to Minutes</span>
+                                <Sparkles className="w-5 h-5 text-blue-500" />
+                                <span className="text-gray-700 font-medium">AI-Native Editor</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-purple-500" />
-                                <span className="text-gray-700 font-medium">AI-Powered</span>
+                                <Zap className="w-5 h-5 text-purple-500" />
+                                <span className="text-gray-700 font-medium">Instant Magic Moments</span>
                             </div>
                         </div>
 
@@ -368,7 +367,7 @@ const HomeHeroSection = () => {
                             {/* Upload Header */}
                             <div className="text-center mb-6 relative z-10">
                                 <p className="text-gray-600">
-                                    Upload your video and see the magic happen
+                                    Upload <strong>any video</strong> - gaming, cooking, tutorials, vlogs, anything!
                                 </p>
                             </div>
 
@@ -475,9 +474,9 @@ const HomeHeroSection = () => {
                                         </div>
                                         <div className="flex-1 flex justify-center">
                                             {targetDuration < 120 ? (
-                                                <span className="text-5xl">📱</span>
+                                                <span className="text-6xl">📱</span>
                                             ) : (
-                                                <span className="text-5xl">💻</span>
+                                                <span className="text-6xl">💻</span>
                                             )}
                                         </div>
                                     </div>
