@@ -367,14 +367,14 @@ const QuickClipsButton = () => {
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <div className="flex-1 text-center">
+                        <div className="flex items-start justify-between p-6 border-b border-gray-200">
+                            <div className="text-left">
                                 <h2 className="text-2xl font-bold text-gray-900">Quick AI Clips</h2>
-                                <p className="text-gray-600">Get instant downloadable clips from your video</p>
+                                <p className="text-gray-600 mt-1">Get instant downloadable clips from your video</p>
                             </div>
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors ml-4"
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -533,11 +533,11 @@ const QuickClipsButton = () => {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div>
-                                                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                                    <p className="text-lg text-gray-600 mb-2">Drop your video here</p>
-                                                    <p className="text-sm text-gray-500">or click to browse</p>
-                                                </div>
+                                                                                                        <div className="text-center">
+                                                            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                                            <p className="text-lg text-gray-600 mb-2">Drop your video here</p>
+                                                            <p className="text-sm text-gray-500">or click to browse</p>
+                                                        </div>
                                             )}
                                         </div>
                                     </div>
@@ -554,7 +554,7 @@ const QuickClipsButton = () => {
                                         {/* Format indicator */}
                                         <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
                                             <div className="flex items-center justify-between gap-4">
-                                                <div className="flex-1 text-center">
+                                                <div className="text-left">
                                                     <div className="text-sm font-medium text-gray-900">
                                                         {getVideoFormat(targetDuration) === 'short_vertical' ? 'Short Vertical' : 'Long Horizontal'}
                                                     </div>
@@ -629,7 +629,7 @@ const QuickClipsButton = () => {
                                             </span>
                                         </button>
 
-                                        <p className="text-xs text-gray-500 text-center mt-3">
+                                        <p className="text-xs text-gray-500 text-left mt-3">
                                             Get instant downloadable clips in minutes - no timeline editing required!
                                         </p>
                                     </div>
