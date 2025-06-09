@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from "react";
 import ProjectsList from "@/components/creation/ProjectsList";
 import ProjectsHeader from "@/components/creation/ProjectsHeader";
 import HomeNavbar from "@/components/home/HomeNavbar";
@@ -18,7 +19,16 @@ export default function CreatePage() {
                 </div>
 
                 {/* Projects Grid */}
-                <ProjectsList />
+                <Suspense fallback={
+                    <div className="flex items-center justify-center py-12">
+                        <div className="flex items-center space-x-3 text-gray-600">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                            <span>Loading projects...</span>
+                        </div>
+                    </div>
+                }>
+                    <ProjectsList />
+                </Suspense>
             </main>
         </div>
     )
