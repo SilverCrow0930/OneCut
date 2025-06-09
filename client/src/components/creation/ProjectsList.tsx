@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Project } from '@/types/projects'
 import { formatSecondsAsTimestamp } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Clock, Play, Folder, MoreHorizontal, Download, Copy, Trash2, Zap, Video, Eye } from 'lucide-react'
+import { Clock, Play, Folder, MoreHorizontal, Trash2, Zap, Video, Eye } from 'lucide-react'
 
 type ProjectFilter = 'all' | 'quickclips'
 
@@ -131,54 +131,12 @@ export default function ProjectsList() {
         setShowMenu(showMenu === projectId ? null : projectId)
     }
 
-    const handleDownload = async (e: React.MouseEvent, project: Project) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setShowMenu(null)
-        // TODO: Implement download functionality
-        console.log('Download project:', project.id)
-        alert('Download functionality coming soon!')
-    }
-
-    const handleDuplicate = async (e: React.MouseEvent, project: Project) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setShowMenu(null)
-        
-        if (!session?.access_token) return
-
-        try {
-            const response = await fetch(apiPath(`projects/${project.id}/duplicate`), {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-            
-            if (!response.ok) {
-                throw new Error('Failed to duplicate project')
-            }
-            
-            // Refresh the projects list
-            window.location.reload()
-        } catch (error) {
-            console.error('Error duplicating project:', error)
-            alert('Failed to duplicate project')
-        }
-    }
-
     const handleDelete = async (e: React.MouseEvent, project: Project) => {
         console.log('Delete button clicked for project:', project.name, project.id)
         e.preventDefault()
         e.stopPropagation()
         setShowMenu(null)
         
-        if (!confirm(`Are you sure you want to delete "${project.name || 'Untitled Project'}"? This action cannot be undone.`)) {
-            console.log('Delete cancelled by user')
-            return
-        }
-
         if (!session?.access_token) {
             console.log('No session token available')
             return
@@ -344,8 +302,6 @@ export default function ProjectsList() {
                             isHighlighted={project.id === highlightedProjectId}
                             onProjectClick={handleProjectClick}
                             onMenuClick={handleMenuClick}
-                            onDownload={handleDownload}
-                            onDuplicate={handleDuplicate}
                             onDelete={handleDelete}
                             showMenu={showMenu}
                         />
@@ -362,8 +318,6 @@ interface ProjectCardProps {
     isHighlighted: boolean
     onProjectClick: (projectId: string) => void
     onMenuClick: (e: React.MouseEvent, projectId: string) => void
-    onDownload: (e: React.MouseEvent, project: Project) => void
-    onDuplicate: (e: React.MouseEvent, project: Project) => void
     onDelete: (e: React.MouseEvent, project: Project) => void
     showMenu: string | null
 }
@@ -373,8 +327,6 @@ function ProjectCard({
     isHighlighted, 
     onProjectClick, 
     onMenuClick, 
-    onDownload, 
-    onDuplicate, 
     onDelete, 
     showMenu 
 }: ProjectCardProps) {
@@ -500,20 +452,6 @@ function ProjectCard({
                                         View Clips
                                     </button>
                                 )}
-                                <button
-                                    onClick={(e) => onDownload(e, project)}
-                                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
-                                >
-                                    <Download className="w-4 h-4" />
-                                    Download
-                                </button>
-                                <button
-                                    onClick={(e) => onDuplicate(e, project)}
-                                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
-                                >
-                                    <Copy className="w-4 h-4" />
-                                    Duplicate
-                                </button>
                                 <button
                                     type="button"
                                     onMouseDown={(e) => {
