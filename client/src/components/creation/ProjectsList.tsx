@@ -471,20 +471,8 @@ function ProjectCard({
                     {/* Three-dot menu button - only visible on hover */}
                     <div 
                         className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
-                        onMouseDown={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                        }}
-                        onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                        }}
                     >
                         <button
-                            onMouseDown={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                            }}
                             onClick={(e) => onMenuClick(e, project.id)}
                             className="w-9 h-9 bg-white/95 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
                         >
@@ -503,6 +491,7 @@ function ProjectCard({
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation()
+                                            console.log('View Clips clicked')
                                             setShowMenu(null)
                                             onProjectClick(project.id)
                                         }}
@@ -515,6 +504,7 @@ function ProjectCard({
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation()
+                                        console.log('Download clicked')
                                         onDownload(e, project)
                                     }}
                                     className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
@@ -525,6 +515,7 @@ function ProjectCard({
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation()
+                                        console.log('Duplicate clicked')
                                         onDuplicate(e, project)
                                     }}
                                     className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
@@ -535,6 +526,7 @@ function ProjectCard({
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation()
+                                        console.log('Delete clicked for project:', project.name)
                                         onDelete(e, project)
                                     }}
                                     className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
