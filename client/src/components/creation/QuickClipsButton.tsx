@@ -367,7 +367,7 @@ const QuickClipsButton = () => {
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         {/* Header */}
-                        <div className="flex items-start justify-between p-6 border-b border-gray-200">
+                        <div className="flex items-start justify-between px-8 py-6 border-b border-gray-200">
                             <div className="text-left">
                                 <h2 className="text-2xl font-bold text-gray-900">Quick AI Clips</h2>
                                 <p className="text-gray-600 mt-1">Get instant downloadable clips from your video</p>
@@ -380,10 +380,10 @@ const QuickClipsButton = () => {
                             </button>
                         </div>
 
-                        <div className="p-6">
+                        <div className="px-8 py-6">
                             {/* Error Message */}
                             {error && (
-                                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
                                     <p className="text-red-800 text-sm">{error}</p>
                                 </div>
                             )}
