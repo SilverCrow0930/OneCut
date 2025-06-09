@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import HomeHeroSection from "@/components/home/HomeHeroSection";
-import HomeSocialProof from "@/components/home/HomeSocialProof";
 import HomeHowItWorks from "@/components/home/HomeHowItWorks";
 import HomeNavbar from "@/components/home/HomeNavbar";
 import ConfidentialityButton from "@/components/layout/ConfidentialityButton";
@@ -41,9 +40,6 @@ export default function Home() {
 
         {/* How It Works */}
         <HomeHowItWorks />
-
-        {/* Social Proof */}
-        <HomeSocialProof />
 
         {/* Final CTA */}
         <HomeCTA />

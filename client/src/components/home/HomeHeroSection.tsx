@@ -326,30 +326,29 @@ const HomeHeroSection = () => {
 
                         {/* Main Headline */}
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                            Transform 
-                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"> Hours </span>
-                            into 
-                            <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent"> Highlights</span>
+                            Turn Long Videos into
+                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"> Viral Clips </span>
+                            with AI
                         </h1>
 
                         {/* Subtitle */}
-                        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                            Turn your long-form content into engaging videos with AI. Perfect for podcasters, educators, and content creators who want to save time and reach more audiences.
+                        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                            Upload your video and get instant, downloadable clips optimized for social media. No editing skills required - just smart AI that finds your best moments.
                         </p>
 
                         {/* Key Benefits */}
-                        <div className="flex flex-wrap justify-center lg:justify-start gap-6 mb-8">
-                            <div className="flex items-center gap-2">
-                                <Zap className="w-5 h-5 text-emerald-500" />
-                                <span className="text-gray-700 font-medium">10x Faster Editing</span>
+                        <div className="flex flex-wrap justify-center lg:justify-start gap-4 mb-8">
+                            <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200">
+                                <Zap className="w-4 h-4 text-emerald-500" />
+                                <span className="text-gray-700 font-medium text-sm">10x Faster</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-blue-500" />
-                                <span className="text-gray-700 font-medium">Hours to Minutes</span>
+                            <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200">
+                                <Clock className="w-4 h-4 text-blue-500" />
+                                <span className="text-gray-700 font-medium text-sm">Instant Results</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-purple-500" />
-                                <span className="text-gray-700 font-medium">AI-Powered</span>
+                            <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200">
+                                <Sparkles className="w-4 h-4 text-purple-500" />
+                                <span className="text-gray-700 font-medium text-sm">AI-Powered</span>
                             </div>
                         </div>
 
@@ -369,17 +368,6 @@ const HomeHeroSection = () => {
                                 Watch Demo
                             </button>
                         </div>
-
-                        {/* Trust Indicators */}
-                        <div className="mt-8 pt-8 border-t border-gray-200">
-                            <p className="text-sm text-gray-500 mb-4">Trusted by content creators worldwide</p>
-                            <div className="flex items-center justify-center lg:justify-start gap-8 opacity-60">
-                                <div className="text-2xl font-bold text-gray-400">5K+</div>
-                                <div className="text-sm text-gray-500">Creators</div>
-                                <div className="text-2xl font-bold text-gray-400">10K+</div>
-                                <div className="text-sm text-gray-500">Videos Created</div>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Right Column - Upload Interface */}
@@ -393,8 +381,14 @@ const HomeHeroSection = () => {
 
                             {/* Upload Header */}
                             <div className="text-center mb-6 relative z-10">
-                                <p className="text-gray-600">
-                                    Upload your video and see the magic happen
+                                <div className="flex items-center justify-center gap-2 mb-3">
+                                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
+                                        <Zap className="w-5 h-5 text-white" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900">Quick AI Clips</h3>
+                                </div>
+                                <p className="text-gray-600 text-sm">
+                                    Upload your video and get instant clips optimized for social media
                                 </p>
                             </div>
 
@@ -415,13 +409,13 @@ const HomeHeroSection = () => {
                                     onDragOver={handleDragOver}
                                     onDrop={handleDrop}
                                     className={`
-                                        border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
+                                        border-2 border-dashed rounded-xl p-6 text-center cursor-pointer
                                         transition-all duration-300 group relative overflow-hidden
                                         ${selectedFile ? 
-                                            'border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50 shadow-inner' : 
+                                            'border-blue-400 bg-blue-50' : 
                                             isDragOver ?
-                                                'border-blue-500 bg-gradient-to-br from-blue-100 to-purple-100 shadow-lg scale-105' :
-                                            'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:shadow-lg'
+                                                'border-blue-500 bg-blue-50 scale-105' :
+                                            'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
                                         }
                                     `}
                                 >
@@ -431,43 +425,41 @@ const HomeHeroSection = () => {
                                     {selectedFile ? (
                                         <div className="flex flex-col items-center gap-3 relative z-10">
                                             <div className="relative">
-                                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                                                    <Video className="w-8 h-8 text-white" />
+                                                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                                    <Video className="w-6 h-6 text-white" />
                                                 </div>
-                                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                                                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                     </svg>
                                                 </div>
                                             </div>
                                             <div className="text-center">
-                                                <p className="font-semibold text-blue-800 mb-1">
+                                                <p className="font-semibold text-blue-800 mb-1 text-sm">
                                                     {selectedFile.name}
                                                 </p>
-                                                <p className="text-sm text-blue-600">
+                                                <p className="text-xs text-blue-600">
                                                     Click to change file
                                                 </p>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="relative z-10">
-                                            <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                                <Upload className="w-8 h-8 text-gray-500 group-hover:text-blue-600 transition-colors duration-300" />
+                                            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform duration-300">
+                                                <Upload className="w-6 h-6 text-gray-500 group-hover:text-blue-600 transition-colors duration-300" />
                                             </div>
-                                            <p className="font-semibold text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300">
+                                            <p className="font-semibold text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300 text-sm">
                                                 Drop your video here
                                             </p>
-                                            <p className="text-sm text-gray-500 mb-3">
+                                            <p className="text-xs text-gray-500 mb-3">
                                                 or click to browse
                                             </p>
-                                            <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+                                            <div className="flex items-center justify-center gap-3 text-xs text-gray-400">
                                                 <span>MP4</span>
                                                 <span>•</span>
                                                 <span>MOV</span>
                                                 <span>•</span>
                                                 <span>AVI</span>
-                                                <span>•</span>
-                                                <span>Up to 2GB</span>
                                             </div>
                                         </div>
                                     )}

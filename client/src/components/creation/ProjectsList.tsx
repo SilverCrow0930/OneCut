@@ -439,17 +439,19 @@ function ProjectCard({
                         {/* Dropdown menu */}
                         {showMenu === project.id && (
                             <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
-                                {isQuickClips && isCompleted && (
+                                {isQuickClips && isCompleted && clipCount > 0 && (
                                     <button
                                         onClick={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()
-                                            onProjectClick(project.id)
+                                            console.log('View Clips clicked for project:', project.id)
+                                            // Directly navigate to clips view
+                                            window.location.href = `/creation/quickclips/${project.id}`
                                         }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
                                     >
                                         <Eye className="w-4 h-4" />
-                                        View Clips
+                                        View Clips ({clipCount})
                                     </button>
                                 )}
                                 <button
