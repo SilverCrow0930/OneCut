@@ -173,29 +173,49 @@ export default function ProjectsList() {
         e.stopPropagation()
         setShowMenu(null)
         
+        console.log('Delete button clicked for project:', project.id, project.name)
+        
         if (!confirm(`Are you sure you want to delete "${project.name || 'Untitled Project'}"? This action cannot be undone.`)) {
             return
         }
 
-        if (!session?.access_token) return
+        if (!session?.access_token) {
+            console.error('No access token available')
+            alert('You must be logged in to delete projects')
+            return
+        }
 
         try {
-            const response = await fetch(apiPath(`projects/${project.id}`), {
+            const url = apiPath(`projects/${project.id}`)
+            console.log('Making DELETE request to:', url)
+            
+            const response = await fetch(url, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`
                 }
             })
             
+            console.log('Delete response status:', response.status)
+            
             if (!response.ok) {
-                throw new Error('Failed to delete project')
+                let errorMessage = 'Failed to delete project'
+                try {
+                    const errorData = await response.json()
+                    errorMessage = errorData.error || errorMessage
+                } catch (e) {
+                    errorMessage = response.statusText || errorMessage
+                }
+                throw new Error(errorMessage)
             }
             
+            console.log('Project deleted successfully, updating local state')
             // Remove from local state
             setProjects(prev => prev.filter(p => p.id !== project.id))
+            
         } catch (error) {
             console.error('Error deleting project:', error)
-            alert('Failed to delete project')
+            alert(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
     }
 
@@ -332,6 +352,7 @@ export default function ProjectsList() {
                             onDuplicate={handleDuplicate}
                             onDelete={handleDelete}
                             showMenu={showMenu}
+                            setShowMenu={setShowMenu}
                         />
                     ))}
                 </div>
@@ -350,6 +371,7 @@ interface ProjectCardProps {
     onDuplicate: (e: React.MouseEvent, project: Project) => void
     onDelete: (e: React.MouseEvent, project: Project) => void
     showMenu: string | null
+    setShowMenu: (menu: string | null) => void
 }
 
 function ProjectCard({ 
@@ -360,7 +382,8 @@ function ProjectCard({
     onDownload, 
     onDuplicate, 
     onDelete, 
-    showMenu 
+    showMenu,
+    setShowMenu
 }: ProjectCardProps) {
     const isQuickClips = project.processing_type === 'quickclips'
     const isProcessing = project.processing_status === 'processing' || project.processing_status === 'queued'
@@ -472,20 +495,15 @@ function ProjectCard({
                         {showMenu === project.id && (
                             <div 
                                 className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
-                                onMouseDown={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                }}
                                 onClick={(e) => {
-                                    e.preventDefault()
                                     e.stopPropagation()
                                 }}
                             >
                                 {isQuickClips && isCompleted && (
                                     <button
                                         onClick={(e) => {
-                                            e.preventDefault()
                                             e.stopPropagation()
+                                            setShowMenu(null)
                                             onProjectClick(project.id)
                                         }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
@@ -495,21 +513,30 @@ function ProjectCard({
                                     </button>
                                 )}
                                 <button
-                                    onClick={(e) => onDownload(e, project)}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        onDownload(e, project)
+                                    }}
                                     className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
                                 >
                                     <Download className="w-4 h-4" />
                                     Download
                                 </button>
                                 <button
-                                    onClick={(e) => onDuplicate(e, project)}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        onDuplicate(e, project)
+                                    }}
                                     className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
                                 >
                                     <Copy className="w-4 h-4" />
                                     Duplicate
                                 </button>
                                 <button
-                                    onClick={(e) => onDelete(e, project)}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        onDelete(e, project)
+                                    }}
                                     className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
                                 >
                                     <Trash2 className="w-4 h-4" />

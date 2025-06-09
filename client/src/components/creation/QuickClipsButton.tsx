@@ -167,7 +167,15 @@ const QuickClipsButton = () => {
             })
 
             if (!projectResponse.ok) {
-                throw new Error('Failed to create project')
+                let errorMessage = 'Failed to create project'
+                try {
+                    const errorData = await projectResponse.json()
+                    errorMessage = errorData?.error || errorMessage
+                } catch (e) {
+                    // If JSON parsing fails, use the status text or generic message
+                    errorMessage = projectResponse.statusText || errorMessage
+                }
+                throw new Error(errorMessage)
             }
 
             const project = await projectResponse.json()
@@ -186,7 +194,15 @@ const QuickClipsButton = () => {
             })
 
             if (!uploadResponse.ok) {
-                throw new Error('Failed to upload file')
+                let errorMessage = 'Failed to upload file'
+                try {
+                    const errorData = await uploadResponse.json()
+                    errorMessage = errorData?.error || errorMessage
+                } catch (e) {
+                    // If JSON parsing fails, use the status text or generic message
+                    errorMessage = uploadResponse.statusText || errorMessage
+                }
+                throw new Error(errorMessage)
             }
 
             const uploadResult = await uploadResponse.json()
@@ -211,7 +227,15 @@ const QuickClipsButton = () => {
             })
 
             if (!jobResponse.ok) {
-                throw new Error('Failed to start processing')
+                let errorMessage = 'Failed to start processing'
+                try {
+                    const errorData = await jobResponse.json()
+                    errorMessage = errorData?.error || errorMessage
+                } catch (e) {
+                    // If JSON parsing fails, use the status text or generic message
+                    errorMessage = jobResponse.statusText || errorMessage
+                }
+                throw new Error(errorMessage)
             }
 
             const jobData = await jobResponse.json()

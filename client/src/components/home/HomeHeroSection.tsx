@@ -169,8 +169,14 @@ const HomeHeroSection = () => {
             })
 
             if (!projectResponse.ok) {
-                const errorData = await projectResponse.json().catch(() => null)
-                const errorMessage = errorData?.error || await projectResponse.text() || 'Failed to create project'
+                let errorMessage = 'Failed to create project'
+                try {
+                    const errorData = await projectResponse.json()
+                    errorMessage = errorData?.error || errorMessage
+                } catch (e) {
+                    // If JSON parsing fails, use the status text or generic message
+                    errorMessage = projectResponse.statusText || errorMessage
+                }
                 throw new Error(errorMessage)
             }
 
@@ -190,8 +196,14 @@ const HomeHeroSection = () => {
             })
 
             if (!uploadResponse.ok) {
-                const errorData = await uploadResponse.json().catch(() => null)
-                const errorMessage = errorData?.error || await uploadResponse.text() || 'Failed to upload file'
+                let errorMessage = 'Failed to upload file'
+                try {
+                    const errorData = await uploadResponse.json()
+                    errorMessage = errorData?.error || errorMessage
+                } catch (e) {
+                    // If JSON parsing fails, use the status text or generic message
+                    errorMessage = uploadResponse.statusText || errorMessage
+                }
                 throw new Error(errorMessage)
             }
 
@@ -215,8 +227,14 @@ const HomeHeroSection = () => {
             })
 
             if (!jobResponse.ok) {
-                const errorData = await jobResponse.json().catch(() => null)
-                const errorMessage = errorData?.error || await jobResponse.text() || 'Failed to start processing job'
+                let errorMessage = 'Failed to start processing job'
+                try {
+                    const errorData = await jobResponse.json()
+                    errorMessage = errorData?.error || errorMessage
+                } catch (e) {
+                    // If JSON parsing fails, use the status text or generic message
+                    errorMessage = jobResponse.statusText || errorMessage
+                }
                 throw new Error(errorMessage)
             }
 
