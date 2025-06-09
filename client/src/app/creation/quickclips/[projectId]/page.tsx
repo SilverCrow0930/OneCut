@@ -53,7 +53,7 @@ export default function QuickClipsViewPage() {
             try {
                 const response = await fetch(apiPath(`projects/${projectId}`), {
                     headers: {
-                        'Authorization': `Bearer ${session.access_token}`
+                        'Authorization': `Bearer ${session?.access_token}`
                     }
                 })
 
