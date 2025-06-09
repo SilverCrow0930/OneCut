@@ -182,8 +182,14 @@ const UnifiedQuickClips = ({ mode, onSuccess, showAsButton = true }: UnifiedQuic
             })
 
             if (!projectResponse.ok) {
-                const errorData = await projectResponse.json().catch(() => null)
-                const errorMessage = errorData?.error || await projectResponse.text() || 'Failed to create project'
+                let errorMessage = 'Failed to create project'
+                try {
+                    const errorData = await projectResponse.json()
+                    errorMessage = errorData?.error || errorMessage
+                } catch {
+                    // If JSON parsing fails, use default message
+                    errorMessage = `Failed to create project (${projectResponse.status})`
+                }
                 throw new Error(errorMessage)
             }
 
@@ -209,8 +215,14 @@ const UnifiedQuickClips = ({ mode, onSuccess, showAsButton = true }: UnifiedQuic
             })
 
             if (!uploadResponse.ok) {
-                const errorData = await uploadResponse.json().catch(() => null)
-                const errorMessage = errorData?.error || await uploadResponse.text() || 'Failed to upload file'
+                let errorMessage = 'Failed to upload file'
+                try {
+                    const errorData = await uploadResponse.json()
+                    errorMessage = errorData?.error || errorMessage
+                } catch {
+                    // If JSON parsing fails, use default message
+                    errorMessage = `Failed to upload file (${uploadResponse.status})`
+                }
                 throw new Error(errorMessage)
             }
 
@@ -240,8 +252,14 @@ const UnifiedQuickClips = ({ mode, onSuccess, showAsButton = true }: UnifiedQuic
             })
 
             if (!jobResponse.ok) {
-                const errorData = await jobResponse.json().catch(() => null)
-                const errorMessage = errorData?.error || await jobResponse.text() || 'Failed to start processing job'
+                let errorMessage = 'Failed to start processing job'
+                try {
+                    const errorData = await jobResponse.json()
+                    errorMessage = errorData?.error || errorMessage
+                } catch {
+                    // If JSON parsing fails, use default message
+                    errorMessage = `Failed to start processing job (${jobResponse.status})`
+                }
                 throw new Error(errorMessage)
             }
 
