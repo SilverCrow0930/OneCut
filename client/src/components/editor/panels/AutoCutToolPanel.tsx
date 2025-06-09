@@ -11,7 +11,6 @@ import { v4 as uuid } from 'uuid'
 import { useParams } from 'next/navigation'
 import { TrackType } from '@/types/editor'
 import PanelHeader from './PanelHeader'
-import UnifiedQuickClips from '@/components/shared/UnifiedQuickClips'
 
 type ProcessingState = 'idle' | 'starting' | 'queued' | 'processing' | 'completed' | 'failed'
 
@@ -369,14 +368,181 @@ const AutoCutToolPanel = () => {
 
             {/* Content */}
             <div className="flex-1 overflow-hidden">
-                <UnifiedQuickClips 
-                    mode="panel" 
-                    onSuccess={(projectId) => {
-                        // Handle successful project creation
-                        console.log('QuickClips project created:', projectId)
-                        // Optionally refresh assets or show success message
-                    }}
-                />
+                {!selectedFile && !uploadedAsset && !currentJob ? (
+                    /* Upload State */
+                    <div className="flex flex-col items-center justify-center h-full space-y-4">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        accept="video/*"
+                        className="hidden"
+                    />
+                        <div>
+                            <UploadButton
+                                onClick={() => fileInputRef.current?.click()}
+                                isUploading={isUploading}
+                            />
+                            <p className="text-sm text-gray-500 text-center max-w-48">
+                                Upload video to automatically extract the best clips using AI
+                            </p>
+                        </div>
+                    </div>
+                ) : showConfig ? (
+                    /* Configuration State */
+                    <div className="space-y-4">
+                        {selectedFile && (
+                            <div className="p-3 bg-gray-50 rounded-lg">
+                                <h4 className="font-medium text-gray-900 mb-2">Selected Video</h4>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        📹
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+                                        <p className="text-xs text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(1)} MB</p>
+                                    </div>
+                                </div>
+                        </div>
+                    )}
+                    
+                        {/* Content Type */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Content Type</label>
+                            <div className="grid grid-cols-1 gap-2">
+                                {CONTENT_TYPES.map((type) => (
+                                    <button
+                                        key={type.id}
+                                        onClick={() => setContentType(type.id)}
+                                        className={`p-3 rounded-lg border-2 text-left transition-all ${
+                                            contentType === type.id
+                                                ? 'border-blue-500 bg-blue-50 text-blue-900'
+                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-lg">{type.icon}</span>
+                                            <div>
+                                                <div className="font-medium text-sm">{type.name}</div>
+                                                <div className="text-xs text-gray-500">{type.description}</div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            {/* Custom Content Type Input */}
+                            {contentType === 'custom' && (
+                                <div className="mt-3">
+                                    <input
+                                        type="text"
+                                        value={customContentType}
+                                        onChange={(e) => setCustomContentType(e.target.value)}
+                                        placeholder="e.g., cooking show, interview, product review..."
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Describe your content type to help AI understand your video
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Target Duration */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Target Duration: {formatDuration(targetDuration)}
+                            </label>
+                            
+                            <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
+                                <div className="flex items-center gap-3 text-sm">
+                                    <span>{getFormatInfo(targetDuration).icon}</span>
+                                    <span className="font-medium">{getFormatInfo(targetDuration).format} Format</span>
+                                    <span className="text-gray-600">({getFormatInfo(targetDuration).aspectRatio})</span>
+                                </div>
+                            </div>
+
+                            <input
+                                type="range"
+                                min="20"
+                                max="600"
+                                value={targetDuration}
+                                onChange={(e) => setTargetDuration(parseInt(e.target.value))}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            />
+                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>20s</span>
+                                <span>10m</span>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-4">
+                            <button
+                                onClick={() => setShowConfig(false)}
+                                className="flex-1 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleStartProcessing}
+                                disabled={isUploading}
+                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                            >
+                                {isUploading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Uploading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-4 h-4" />
+                                        Start Processing
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Upload Progress */}
+                        {isUploading && (
+                            <div className="mt-4">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-gray-600">Uploading...</span>
+                                    <span className="text-sm text-gray-500">{uploadProgress}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div
+                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        
+                        {error && (
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p className="text-sm text-red-800">{error}</p>
+                        </div>
+                    )}
+                </div>
+                ) : (
+                    /* Processing State */
+                    <div className="space-y-4">
+                        {/* Video Details */}
+                        <VideoDetailsSection
+                            isExpanded={true}
+                            setIsExpanded={() => {}}
+                            processingState={currentJob?.status || 'idle'}
+                            selectedFile={selectedFile}
+                            uploadedAsset={uploadedAsset}
+                            prompt=""
+                            lastPrompt=""
+                            assets={assets}
+                            showThoughts={false}
+                            showResponse={false}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     )

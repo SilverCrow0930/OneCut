@@ -11,8 +11,8 @@ const validateQuickclipsRequest = [
     body('projectId').isUUID().withMessage('Valid project ID is required'),
     body('fileUri').isString().trim().notEmpty().withMessage('File URI is required'),
     body('mimeType').isString().trim().notEmpty().withMessage('MIME type is required'),
-    body('contentType').isIn(['podcast', 'professional_meeting', 'educational_video', 'talking_video'])
-        .withMessage('Valid content type is required'),
+    body('contentType').isString().trim().notEmpty()
+        .withMessage('Content type is required'),
     body('targetDuration').isInt({ min: 20, max: 1800 })
         .withMessage('Target duration must be between 20 seconds and 30 minutes')
 ]
