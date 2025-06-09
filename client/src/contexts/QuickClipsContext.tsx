@@ -63,6 +63,12 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
             return;
         }
 
+        // Skip WebSocket connection if in production or if API_URL is not available
+        if (process.env.NODE_ENV === 'production' || !API_URL) {
+            console.log('Skipping QuickClips WebSocket in production - using REST API only');
+            return;
+        }
+
         console.log('Initializing QuickClips WebSocket connection to:', API_URL);
         
         // Initialize socket connection with auth token
@@ -70,11 +76,11 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
             transports: ['websocket'],
             path: '/socket.io/',
             reconnection: true,
-            reconnectionAttempts: Infinity,
+            reconnectionAttempts: 5, // Reduced from Infinity
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             randomizationFactor: 0.5,
-            timeout: 60000,
+            timeout: 30000, // Reduced from 60000
             autoConnect: true,
             forceNew: true,
             upgrade: false,
@@ -91,7 +97,8 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
         });
 
         newSocket.on('connect_error', (error) => {
-            console.error('QuickClips WebSocket connection error:', error);
+            console.warn('QuickClips WebSocket connection error:', error);
+            // Don't throw or crash - just log and continue without WebSocket
         });
 
         newSocket.on('disconnect', (reason) => {
@@ -112,22 +119,26 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
 
     const sendQuickClipsRequest = (data: QuickClipsEvent) => {
         if (socket) {
-            console.log('Sending quickclips request:', data);
+            console.log('Sending quickclips request via WebSocket:', data);
             socket.emit('quickclips', data);
         } else {
-            console.error('Cannot send quickclips request: socket not connected');
+            console.log('WebSocket not available - QuickClips will use REST API only');
         }
     };
 
     const onQuickClipsResponse = (callback: (response: QuickClipsResponse) => void) => {
         if (socket) {
             socket.on('quickclips_response', callback);
+        } else {
+            console.log('WebSocket not available for QuickClips responses');
         }
     };
 
     const onQuickClipsState = (callback: (state: QuickClipsState) => void) => {
         if (socket) {
             socket.on('quickclips_state', callback);
+        } else {
+            console.log('WebSocket not available for QuickClips state updates');
         }
     };
 

@@ -225,20 +225,42 @@ const QuickClipsButton = () => {
                 targetDuration: parseInt(String(targetDuration))
             })
             
-            const jobResponse = await fetch(apiPath('quickclips/start'), {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    projectId: project.id,
-                    fileUri,
-                    mimeType: selectedFile.type,
-                    contentType: finalContentType,
-                    targetDuration: parseInt(String(targetDuration))
-                })
-            })
+            let jobResponse;
+            const maxRetries = 3;
+            let lastError;
+            
+            // Retry logic for network issues
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    jobResponse = await fetch(apiPath('quickclips/start'), {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${session?.access_token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            projectId: project.id,
+                            fileUri,
+                            mimeType: selectedFile.type,
+                            contentType: finalContentType,
+                            targetDuration: parseInt(String(targetDuration))
+                        })
+                    })
+                    break; // Success, exit retry loop
+                } catch (fetchError) {
+                    lastError = fetchError;
+                    if (attempt === maxRetries) {
+                        throw new Error(`Network error after ${maxRetries} attempts: ${fetchError instanceof Error ? fetchError.message : 'Connection failed'}`)
+                    }
+                    console.warn(`QuickClips request attempt ${attempt} failed, retrying...`)
+                    // Wait before retry (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+                }
+            }
+            
+            if (!jobResponse) {
+                throw lastError || new Error('Failed to make request')
+            }
 
             if (!jobResponse.ok) {
                 let errorMessage = 'Failed to start processing'

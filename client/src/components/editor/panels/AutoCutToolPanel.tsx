@@ -182,13 +182,18 @@ const AutoCutToolPanel = () => {
                     reject(new Error('Upload failed'))
                 })
 
-                xhr.open('POST', apiPath('assets/upload'))
+                xhr.open('POST', apiPath('assets/upload-to-gcs'))
                 xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`)
                 xhr.send(formData)
             })
 
             const uploadResult = await uploadPromise
-            const fileUri = uploadResult.gcsUri || uploadResult.uri
+            const fileUri = uploadResult.gsUri
+            
+            if (!fileUri) {
+                console.error('No gsUri found in upload response. Available fields:', Object.keys(uploadResult))
+                throw new Error('File upload did not return a valid GCS URI')
+            }
 
             setUploadedAsset({
                 id: uploadResult.id,
@@ -197,23 +202,60 @@ const AutoCutToolPanel = () => {
             })
 
             // 2. Start QuickClips processing
-            const jobResponse = await fetch(apiPath('quickclips/start'), {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    projectId: projectId || '',
-                    fileUri,
-                    mimeType: selectedFile.type,
-                    contentType: finalContentType,
-                    targetDuration
-                })
-            })
+            let jobResponse;
+            const maxRetries = 3;
+            let lastError;
+            
+            // Retry logic for network issues
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    jobResponse = await fetch(apiPath('quickclips/start'), {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${session.access_token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            projectId: projectId || '',
+                            fileUri,
+                            mimeType: selectedFile.type,
+                            contentType: finalContentType,
+                            targetDuration
+                        })
+                    })
+                    break; // Success, exit retry loop
+                } catch (fetchError) {
+                    lastError = fetchError;
+                    if (attempt === maxRetries) {
+                        throw new Error(`Network error after ${maxRetries} attempts: ${fetchError instanceof Error ? fetchError.message : 'Connection failed'}`)
+                    }
+                    console.warn(`QuickClips request attempt ${attempt} failed, retrying...`)
+                    // Wait before retry (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+                }
+            }
+            
+            if (!jobResponse) {
+                throw lastError || new Error('Failed to make request')
+            }
 
             if (!jobResponse.ok) {
-                throw new Error('Failed to start processing')
+                let errorMessage = 'Failed to start processing'
+                try {
+                    const errorData = await jobResponse.json()
+                    console.error('QuickClips API Error Details:', errorData)
+                    
+                    if (errorData.errors && Array.isArray(errorData.errors)) {
+                        // Validation errors - show specific messages
+                        const validationMessages = errorData.errors.map((err: any) => err.msg || err.message).join(', ')
+                        errorMessage = `Validation error: ${validationMessages}`
+                    } else {
+                        errorMessage = errorData?.error || errorData?.message || errorMessage
+                    }
+                } catch (e) {
+                    errorMessage = jobResponse.statusText || errorMessage
+                }
+                throw new Error(errorMessage)
             }
 
             const jobData = await jobResponse.json()
