@@ -475,13 +475,9 @@ const HomeHeroSection = () => {
                                         </div>
                                         <div className="flex-1 flex justify-center">
                                             {targetDuration < 120 ? (
-                                                <div className="w-16 h-28 bg-gradient-to-b from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg">
-                                                    <span className="text-2xl">📱</span>
-                                                </div>
+                                                <span className="text-3xl">📱</span>
                                             ) : (
-                                                <div className="w-28 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg">
-                                                    <span className="text-2xl">💻</span>
-                                                </div>
+                                                <span className="text-3xl">💻</span>
                                             )}
                                         </div>
                                     </div>
