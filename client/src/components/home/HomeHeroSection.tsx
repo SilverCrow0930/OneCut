@@ -475,9 +475,9 @@ const HomeHeroSection = () => {
                                         </div>
                                         <div className="flex-1 flex justify-center">
                                             {targetDuration < 120 ? (
-                                                <span className="text-3xl">📱</span>
+                                                <span className="text-5xl">📱</span>
                                             ) : (
-                                                <span className="text-3xl">💻</span>
+                                                <span className="text-5xl">💻</span>
                                             )}
                                         </div>
                                     </div>
