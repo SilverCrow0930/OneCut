@@ -299,7 +299,7 @@ const HomeHeroSection = () => {
                 <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-emerald-400/20 to-blue-400/20 rounded-full blur-3xl"></div>
             </div>
 
-            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                     {/* Left Column - Content */}
                     <div className="text-center lg:text-left">
@@ -311,29 +311,30 @@ const HomeHeroSection = () => {
 
                         {/* Main Headline */}
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                            The First 
-                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"> AI-Native </span>
-                            Video Editor
+                            Transform 
+                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"> Hours </span>
+                            into 
+                            <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent"> Highlights</span>
                         </h1>
 
                         {/* Subtitle */}
                         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                            Create stunning QuickClips from <strong>any video</strong> - any genre, any length. From 10-second TikToks to 2-hour documentaries, our AI finds the magic moments you never knew existed.
+                            Turn your long-form content into engaging videos with AI. Perfect for podcasters, educators, and content creators who want to save time and reach more audiences.
                         </p>
 
                         {/* Key Benefits */}
                         <div className="flex flex-wrap justify-center lg:justify-start gap-6 mb-8">
                             <div className="flex items-center gap-2">
-                                <Video className="w-5 h-5 text-emerald-500" />
-                                <span className="text-gray-700 font-medium">Any Genre, Any Length</span>
+                                <Zap className="w-5 h-5 text-emerald-500" />
+                                <span className="text-gray-700 font-medium">10x Faster Editing</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-blue-500" />
-                                <span className="text-gray-700 font-medium">AI-Native Editor</span>
+                                <Clock className="w-5 h-5 text-blue-500" />
+                                <span className="text-gray-700 font-medium">Hours to Minutes</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Zap className="w-5 h-5 text-purple-500" />
-                                <span className="text-gray-700 font-medium">Instant Magic Moments</span>
+                                <Sparkles className="w-5 h-5 text-purple-500" />
+                                <span className="text-gray-700 font-medium">AI-Powered</span>
                             </div>
                         </div>
 
@@ -367,7 +368,7 @@ const HomeHeroSection = () => {
                             {/* Upload Header */}
                             <div className="text-center mb-6 relative z-10">
                                 <p className="text-gray-600">
-                                    Upload <strong>any video</strong> - gaming, cooking, tutorials, vlogs, anything!
+                                    Upload your video and see the magic happen
                                 </p>
                             </div>
 
