@@ -486,15 +486,7 @@ function ProjectCard({
                         
                         {/* Dropdown menu */}
                         {showMenu === project.id && (
-                            <div 
-                                className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
-                                onMouseDown={(e) => {
-                                    e.stopPropagation()
-                                }}
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                }}
-                            >
+                            <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
                                 {isQuickClips && isCompleted && (
                                     <button
                                         onClick={(e) => {
@@ -523,13 +515,13 @@ function ProjectCard({
                                     Duplicate
                                 </button>
                                 <button
-                                    onClick={(e) => {
-                                        console.log('Delete button onClick fired')
-                                        onDelete(e, project)
-                                    }}
+                                    type="button"
                                     onMouseDown={(e) => {
-                                        console.log('Delete button onMouseDown fired')
+                                        console.log('DIRECT DELETE MOUSEDOWN - calling onDelete directly')
+                                        e.preventDefault()
                                         e.stopPropagation()
+                                        // Call delete directly on mousedown to bypass any click issues
+                                        onDelete(e, project)
                                     }}
                                     className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
                                 >
