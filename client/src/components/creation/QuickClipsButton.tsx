@@ -117,8 +117,6 @@ const QuickClipsButton = () => {
         }
     }
 
-
-
     const handleStartProcessing = async () => {
         if (!user) {
             signIn()
@@ -211,6 +209,14 @@ const QuickClipsButton = () => {
             setIsUploading(false)
 
             // 3. Start QuickClips processing
+            console.log('Starting QuickClips with data:', {
+                projectId: project.id,
+                fileUri,
+                mimeType: selectedFile.type,
+                contentType: finalContentType,
+                targetDuration: parseInt(String(targetDuration))
+            })
+            
             const jobResponse = await fetch(apiPath('quickclips/start'), {
                 method: 'POST',
                 headers: {
@@ -222,7 +228,7 @@ const QuickClipsButton = () => {
                     fileUri,
                     mimeType: selectedFile.type,
                     contentType: finalContentType,
-                    targetDuration
+                    targetDuration: parseInt(String(targetDuration))
                 })
             })
 
@@ -230,11 +236,29 @@ const QuickClipsButton = () => {
                 let errorMessage = 'Failed to start processing'
                 try {
                     const errorData = await jobResponse.json()
-                    errorMessage = errorData?.error || errorMessage
+                    console.error('QuickClips API Error Details:', errorData)
+                    
+                    if (errorData.errors && Array.isArray(errorData.errors)) {
+                        // Validation errors - show specific messages
+                        const validationMessages = errorData.errors.map((err: any) => err.msg || err.message).join(', ')
+                        errorMessage = `Validation error: ${validationMessages}`
+                    } else {
+                        errorMessage = errorData?.error || errorData?.message || errorMessage
+                    }
                 } catch (e) {
-                    // If JSON parsing fails, use the status text or generic message
                     errorMessage = jobResponse.statusText || errorMessage
                 }
+                console.error('Full error context:', {
+                    status: jobResponse.status,
+                    statusText: jobResponse.statusText,
+                    requestData: {
+                        projectId: project.id,
+                        fileUri,
+                        mimeType: selectedFile.type,
+                        contentType: finalContentType,
+                        targetDuration: parseInt(String(targetDuration))
+                    }
+                })
                 throw new Error(errorMessage)
             }
 
