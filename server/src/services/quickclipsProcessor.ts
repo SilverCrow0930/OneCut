@@ -37,6 +37,44 @@ interface QuickclipsJob {
     userId: string
 }
 
+// Clip interface
+interface ProcessedClip {
+    id: string;
+    title: string;
+    description: string;
+    start_time: number;
+    end_time: number;
+    duration: number;
+    significance: number;
+    narrative_role: string;
+    transition_note: string;
+    downloadUrl: string;
+    previewUrl: string;
+    thumbnailUrl: string;
+    format: string;
+    aspectRatio: string;
+}
+
+interface AIGeneratedClip {
+    title: string;
+    description: string;
+    start_time: number;
+    end_time: number;
+    significance?: number;
+    narrative_role?: string;
+    transition_note?: string;
+}
+
+// FFmpeg progress interface
+interface FFmpegProgress {
+    frames: number;
+    currentFps: number;
+    currentKbps: number;
+    targetSize: number;
+    timemark: string;
+    percent?: number;
+}
+
 // In-memory job queue (in production, use Redis or similar)
 const jobQueue = new Map<string, QuickclipsJob>()
 const activeJobs = new Set<string>()
@@ -72,7 +110,7 @@ const FORMAT_CONFIGS = {
         aspectRatio: '9:16',
         maxDuration: 120, // < 2 minutes
         segmentCount: { min: 1, max: 4, target: 2 },
-        segmentLength: { min: 15, max: 60, target: 30 },
+        segmentLength: { min: 30, max: 90, target: 45 },
         totalDuration: { tolerance: 15 }, // ±15 seconds acceptable
         approach: 'Create a concise narrative arc with clear beginning, development, and conclusion. Each segment should build upon the previous one.'
     },
@@ -334,8 +372,45 @@ Remember: The goal is meaningful content extraction that creates a coherent high
         
         // Sort chronologically (by start_time) to maintain narrative flow
         clips.sort((a, b) => a.start_time - b.start_time)
+
+        // Calculate total duration and validate against target
+        const totalDuration = clips.reduce((acc, clip) => acc + (clip.end_time - clip.start_time), 0)
+        const targetWithTolerance = {
+            min: job.targetDuration - formatConfig.totalDuration.tolerance,
+            max: job.targetDuration + formatConfig.totalDuration.tolerance
+        }
+
+        if (totalDuration < targetWithTolerance.min || totalDuration > targetWithTolerance.max) {
+            console.warn(`[QuickClips] Total duration ${totalDuration}s outside target range ${targetWithTolerance.min}-${targetWithTolerance.max}s. Adjusting clips...`)
+            
+            // If duration is too short, extend clips proportionally
+            if (totalDuration < targetWithTolerance.min) {
+                const scale = job.targetDuration / totalDuration
+                clips = clips.map(clip => {
+                    const duration = clip.end_time - clip.start_time
+                    const newDuration = Math.round(duration * scale)
+                    return {
+                        ...clip,
+                        end_time: clip.start_time + newDuration
+                    }
+                })
+            }
+            
+            // If duration is too long, trim clips proportionally
+            if (totalDuration > targetWithTolerance.max) {
+                const scale = job.targetDuration / totalDuration
+                clips = clips.map(clip => {
+                    const duration = clip.end_time - clip.start_time
+                    const newDuration = Math.round(duration * scale)
+                    return {
+                        ...clip,
+                        end_time: clip.start_time + newDuration
+                    }
+                })
+            }
+        }
         
-        console.log(`[QuickClips] Successfully extracted ${clips.length} narrative segments`)
+        console.log(`[QuickClips] Successfully extracted ${clips.length} narrative segments with total duration ${totalDuration}s`)
         
         return clips
         
@@ -692,37 +767,84 @@ async function processQuickclipsJob(job: QuickclipsJob) {
 }
 
 // Extract video clips using FFmpeg
-async function extractVideoClips(videoUrl: string, clips: any[], job: QuickclipsJob): Promise<any[]> {
-    const processedClips = []
+async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job: QuickclipsJob): Promise<ProcessedClip[]> {
+    const processedClips: ProcessedClip[] = []
     const tempDir = os.tmpdir()
+    
+    // Verify URL is still valid
+    try {
+        const response = await fetch(videoUrl, { method: 'HEAD' })
+        if (!response.ok) {
+            throw new Error('Source video URL is no longer valid')
+        }
+    } catch (error) {
+        console.error('[QuickclipsProcessor] Source URL validation failed:', error)
+        throw new Error('Could not access source video')
+    }
     
     for (let i = 0; i < clips.length; i++) {
         const clip = clips[i]
+        
+        // Validate clip timing
+        if (typeof clip.start_time !== 'number' || typeof clip.end_time !== 'number') {
+            throw new Error(`Invalid clip timing for clip ${i}`)
+        }
+        
+        const clipDuration = clip.end_time - clip.start_time
+        if (clipDuration <= 0) {
+            throw new Error(`Invalid clip duration for clip ${i}: ${clipDuration}s`)
+        }
         
         try {
             // Create temporary output file
             const outputPath = path.join(tempDir, `clip_${job.id}_${i}.mp4`)
             
-            // Use FFmpeg to extract clip
+            // Use FFmpeg to extract clip with proper encoding settings
             await new Promise<void>((resolve, reject) => {
                 ffmpeg(videoUrl)
                     .seekInput(clip.start_time)
-                    .duration(clip.end_time - clip.start_time)
+                    .duration(clipDuration)
                     .output(outputPath)
                     .videoCodec('libx264')
                     .audioCodec('aac')
+                    .outputOptions([
+                        '-pix_fmt yuv420p', // Ensure compatibility
+                        '-preset fast', // Faster encoding
+                        '-movflags +faststart', // Enable streaming
+                        '-profile:v main', // Wider device compatibility
+                        '-crf 23', // Balance quality and size
+                        '-maxrate 4M', // Maximum bitrate
+                        '-bufsize 8M', // Buffer size
+                        '-r 30', // Frame rate
+                        '-g 60', // Keyframe interval
+                    ])
                     .size(job.videoFormat === 'short' ? '720x1280' : '1920x1080')
+                    .autopad() // Add padding to maintain aspect ratio
+                    .on('start', (command) => {
+                        console.log(`[QuickclipsProcessor] FFmpeg command for clip ${i}:`, command)
+                    })
+                    .on('progress', (progress: FFmpegProgress) => {
+                        const percent = progress.percent ?? 0
+                        console.log(`[QuickclipsProcessor] Processing clip ${i}: ${Math.round(percent)}%`)
+                    })
                     .on('end', () => resolve())
                     .on('error', (err) => reject(err))
                     .run()
             })
             
+            // Verify the output file exists and has content
+            const stats = await fs.stat(outputPath)
+            if (stats.size === 0) {
+                throw new Error('Generated clip is empty')
+            }
+
             // Upload clip to GCS
             const clipFileName = `clips/${job.projectId}/clip_${i}_${Date.now()}.mp4`
             await bucket.upload(outputPath, {
                 destination: clipFileName,
                 metadata: {
-                    contentType: 'video/mp4'
+                    contentType: 'video/mp4',
+                    cacheControl: 'public, max-age=31536000' // Cache for 1 year
                 }
             })
             
@@ -736,12 +858,14 @@ async function extractVideoClips(videoUrl: string, clips: any[], job: Quickclips
             const thumbnailPath = path.join(tempDir, `thumb_${job.id}_${i}.jpg`)
             await new Promise<void>((resolve, reject) => {
                 ffmpeg(outputPath)
-                    .seekInput(1) // 1 second in
-                    .frames(1)
-                    .output(thumbnailPath)
+                    .screenshots({
+                        timestamps: ['1'], // 1 second in
+                        filename: path.basename(thumbnailPath),
+                        folder: path.dirname(thumbnailPath),
+                        size: '640x360'
+                    })
                     .on('end', () => resolve())
                     .on('error', (err) => reject(err))
-                    .run()
             })
             
             // Upload thumbnail
@@ -749,7 +873,8 @@ async function extractVideoClips(videoUrl: string, clips: any[], job: Quickclips
             await bucket.upload(thumbnailPath, {
                 destination: thumbFileName,
                 metadata: {
-                    contentType: 'image/jpeg'
+                    contentType: 'image/jpeg',
+                    cacheControl: 'public, max-age=31536000'
                 }
             })
             
@@ -764,11 +889,12 @@ async function extractVideoClips(videoUrl: string, clips: any[], job: Quickclips
                 description: clip.description,
                 start_time: clip.start_time,
                 end_time: clip.end_time,
-                duration: clip.end_time - clip.start_time,
-                significance: clip.significance,
+                duration: clipDuration,
+                significance: clip.significance || 7.0,
                 narrative_role: clip.narrative_role || 'supporting',
                 transition_note: clip.transition_note || '',
                 downloadUrl,
+                previewUrl: downloadUrl, // Use same URL for preview
                 thumbnailUrl,
                 format: job.videoFormat,
                 aspectRatio: FORMAT_CONFIGS[job.videoFormat].aspectRatio
@@ -784,23 +910,7 @@ async function extractVideoClips(videoUrl: string, clips: any[], job: Quickclips
             
         } catch (clipError) {
             console.error(`[QuickclipsProcessor] Failed to process clip ${i} for job ${job.id}:`, clipError)
-            
-            // Add placeholder clip for failed extractions
-            processedClips.push({
-                id: `clip_${job.id}_${i}`,
-                title: clip.title,
-                description: clip.description,
-                start_time: clip.start_time,
-                end_time: clip.end_time,
-                duration: clip.end_time - clip.start_time,
-                significance: clip.significance,
-                narrative_role: clip.narrative_role || 'supporting',
-                downloadUrl: '#', // Placeholder
-                thumbnailUrl: `https://picsum.photos/320/180?random=${i + 1}`,
-                format: job.videoFormat,
-                aspectRatio: FORMAT_CONFIGS[job.videoFormat].aspectRatio,
-                error: 'Failed to extract video clip'
-            })
+            throw clipError // Re-throw to handle in parent function
         }
     }
     
