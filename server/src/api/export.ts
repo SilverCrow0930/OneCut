@@ -147,34 +147,82 @@ const validateExportRequest = [
 ]
 
 async function fetchAssetUrl(assetId: string): Promise<string> {
-    const { data: asset, error } = await supabase
-        .from('assets')
-        .select('object_key')
-        .eq('id', assetId)
-        .single()
-
-    if (error || !asset) {
-        throw new Error(`Asset ${assetId} not found`)
-    }
-
-    const [url] = await bucket.file(asset.object_key).getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 60 * 60 * 1000
-    })
+    console.log(`[Asset] Fetching URL for asset: ${assetId}`)
     
-    return url
+    try {
+        const { data: asset, error } = await supabase
+            .from('assets')
+            .select('object_key')
+            .eq('id', assetId)
+            .single()
+
+        if (error) {
+            console.error(`[Asset] Database error for ${assetId}:`, error)
+            throw new Error(`Database error for asset ${assetId}: ${error.message}`)
+        }
+
+        if (!asset) {
+            console.error(`[Asset] Asset not found: ${assetId}`)
+            throw new Error(`Asset ${assetId} not found in database`)
+        }
+
+        console.log(`[Asset] Found asset ${assetId}, object_key: ${asset.object_key}`)
+
+        const [url] = await bucket.file(asset.object_key).getSignedUrl({
+            action: 'read',
+            expires: Date.now() + 60 * 60 * 1000
+        })
+        
+        console.log(`[Asset] Generated signed URL for ${assetId}`)
+        return url
+        
+    } catch (error) {
+        console.error(`[Asset] Failed to fetch URL for ${assetId}:`, error)
+        throw error
+    }
 }
 
 async function downloadAsset(url: string, filename: string): Promise<string> {
-    const response = await fetch(url)
-    if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`)
-    }
+    console.log(`[Download] Starting download: ${filename}`)
+    console.log(`[Download] URL: ${url.substring(0, 100)}...`)
     
-    const buffer = await response.arrayBuffer()
-    const filePath = path.join(TEMP_DIR, filename)
-    await fs.writeFile(filePath, Buffer.from(buffer))
-    return filePath
+    // Add timeout to prevent hanging
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+    
+    try {
+        const response = await fetch(url, { 
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Lemona-Server/1.0'
+            }
+        })
+        
+        clearTimeout(timeoutId)
+        
+        if (!response.ok) {
+            throw new Error(`Download failed: ${response.status} ${response.statusText}`)
+        }
+        
+        console.log(`[Download] Response OK for ${filename}, size: ${response.headers.get('content-length')} bytes`)
+        
+        const buffer = await response.arrayBuffer()
+        const filePath = path.join(TEMP_DIR, filename)
+        await fs.writeFile(filePath, Buffer.from(buffer))
+        
+        console.log(`[Download] Saved ${filename} to ${filePath}`)
+        return filePath
+        
+    } catch (error) {
+        clearTimeout(timeoutId)
+        console.error(`[Download] Failed to download ${filename}:`, error)
+        
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error(`Download timeout after 30 seconds for ${filename}`)
+        }
+        
+        throw new Error(`Download failed for ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
 }
 
 function convertToTimelineElements(clips: TimelineClip[]): TimelineElement[] {
@@ -508,6 +556,8 @@ async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: 
     const job = exportJobs.get(jobId)
     if (!job) return
 
+    let downloadedAssets = new Map<string, string>()
+
     try {
         job.status = 'processing'
         job.progress = 5
@@ -522,30 +572,48 @@ async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: 
         )
 
         // Download assets
-        const downloadedAssets = new Map<string, string>()
+        console.log(`[Export ${jobId}] Starting asset downloads for ${validElements.length} elements`)
+        
+        if (validElements.length === 0) {
+            console.log(`[Export ${jobId}] No valid elements found for export`)
+            throw new Error('No valid media elements found for export')
+        }
+        
         for (let i = 0; i < validElements.length; i++) {
             const element = validElements[i]
             if (!element.assetId) continue
+
+            console.log(`[Export ${jobId}] Processing asset ${i + 1}/${validElements.length}: ${element.assetId}`)
 
             try {
                 let assetUrl: string
                 if (element.assetId.startsWith('external_')) {
                     assetUrl = element.properties?.externalAsset?.url || ''
                     if (!assetUrl) throw new Error(`External asset missing URL`)
+                    console.log(`[Export ${jobId}] External asset URL: ${assetUrl.substring(0, 100)}...`)
                 } else {
+                    console.log(`[Export ${jobId}] Fetching internal asset URL for: ${element.assetId}`)
                     assetUrl = await fetchAssetUrl(element.assetId)
                 }
 
                 const ext = path.extname(assetUrl.split('?')[0]) || '.mp4'
                 const filename = `${jobId}_${i}${ext}`
+                
+                console.log(`[Export ${jobId}] Downloading ${filename}...`)
                 const filePath = await downloadAsset(assetUrl, filename)
                 
                 downloadedAssets.set(element.assetId, filePath)
                 job.progress = 5 + Math.round(((i + 1) / validElements.length) * 30)
+                
+                console.log(`[Export ${jobId}] Asset ${i + 1}/${validElements.length} downloaded successfully. Progress: ${job.progress}%`)
+                
             } catch (error) {
-                throw new Error(`Asset ${element.assetId}: ${error}`)
+                console.error(`[Export ${jobId}] Failed to download asset ${element.assetId}:`, error)
+                throw new Error(`Asset download failed for ${element.assetId}: ${error instanceof Error ? error.message : 'Unknown error'}`)
             }
         }
+        
+        console.log(`[Export ${jobId}] All assets downloaded successfully`)
 
         job.progress = 35
 
@@ -585,8 +653,23 @@ async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: 
         }
 
     } catch (error) {
+        console.error(`[Export ${jobId}] Export failed:`, error)
+        
         job.status = 'failed'
+        job.progress = 0
         job.error = error instanceof Error ? error.message : 'Unknown error'
+        
+        console.log(`[Export ${jobId}] Job marked as failed with error: ${job.error}`)
+        
+        // Clean up any downloaded assets
+        for (const filePath of downloadedAssets.values()) {
+            try { 
+                await fs.unlink(filePath)
+                console.log(`[Export ${jobId}] Cleaned up file: ${filePath}`)
+            } catch (cleanupError) {
+                console.warn(`[Export ${jobId}] Failed to cleanup file: ${filePath}`, cleanupError)
+            }
+        }
     }
 }
 
