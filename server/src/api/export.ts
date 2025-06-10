@@ -304,9 +304,16 @@ class ProfessionalVideoExporter {
         )
 
         const uniqueAssets = [...new Set(mediaElements.map(e => this.downloadedAssets.get(e.assetId!)!))]
-        uniqueAssets.forEach(assetPath => command.input(assetPath))
+        
+        console.log(`[Export ${this.jobId}] Adding ${uniqueAssets.length} unique assets as inputs`)
+        uniqueAssets.forEach((assetPath, index) => {
+            console.log(`[Export ${this.jobId}] Input ${index}: ${assetPath}`)
+            command.input(assetPath)
+        })
 
-        // Black background
+        // Black background at the end
+        const backgroundIndex = uniqueAssets.length
+        console.log(`[Export ${this.jobId}] Adding black background as input ${backgroundIndex}`)
         command.input(`color=c=black:s=${this.outputSettings.width}x${this.outputSettings.height}:r=${this.outputSettings.fps}`)
                .inputFormat('lavfi')
                .duration(this.totalDurationMs / 1000)
@@ -316,9 +323,13 @@ class ProfessionalVideoExporter {
         const filters: string[] = []
         const inputMapping = this.createInputMapping()
         
+        console.log(`[Export ${this.jobId}] Building filter graph with ${this.elements.length} elements`)
+        
         const videoTracks = this.processVideoTracks(filters, inputMapping)
         const audioTracks = this.processAudioTracks(filters, inputMapping)
         const textOverlays = this.processTextOverlays(filters)
+        
+        console.log(`[Export ${this.jobId}] Generated ${videoTracks.length} video tracks, ${audioTracks.length} audio tracks, ${textOverlays.length} text overlays`)
         
         this.compositeVideoLayers(filters, videoTracks, textOverlays)
         this.mixAudioTracks(filters, audioTracks)
@@ -499,12 +510,21 @@ class ProfessionalVideoExporter {
     }
 
     private compositeVideoLayers(filters: string[], videoTracks: string[], textOverlays: string[]): void {
-        const backgroundIndex = this.downloadedAssets.size
+        // Calculate correct background index - it's the number of unique assets
+        const uniqueAssets = [...new Set(
+            this.elements
+                .filter(e => e.assetId && this.downloadedAssets.has(e.assetId))
+                .map(e => this.downloadedAssets.get(e.assetId!)!)
+        )]
+        const backgroundIndex = uniqueAssets.length
+        
+        console.log(`[Export ${this.jobId}] Background input index: ${backgroundIndex}`)
         let currentOutput = `[${backgroundIndex}:v]`
         
         // Overlay video tracks
         videoTracks.forEach((track, index) => {
             const overlayOutput = index === videoTracks.length - 1 && textOverlays.length === 0 ? 'video_final' : `overlay_${index}`
+            console.log(`[Export ${this.jobId}] Overlaying: ${currentOutput}${track}overlay[${overlayOutput}]`)
             filters.push(`${currentOutput}${track}overlay[${overlayOutput}]`)
             currentOutput = `[${overlayOutput}]`
         })
@@ -544,10 +564,13 @@ class ProfessionalVideoExporter {
                 .map(e => this.downloadedAssets.get(e.assetId!)!)
         )]
         
+        console.log(`[Export ${this.jobId}] Creating input mapping for ${uniqueAssets.length} assets`)
         uniqueAssets.forEach((assetPath, index) => {
+            console.log(`[Export ${this.jobId}] Mapping ${assetPath} -> input ${index}`)
             mapping.set(assetPath, index)
         })
         
+        console.log(`[Export ${this.jobId}] Input mapping created successfully`)
         return mapping
     }
 }
