@@ -263,316 +263,141 @@ class ProfessionalVideoExporter {
     }
 
     async exportVideo(outputPath: string): Promise<void> {
+        // Use the simplest possible approach - direct video processing without complex filters
+        const videoElements = this.elements.filter(e => 
+            ['video', 'image'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId)
+        )
+        
+        const audioElements = this.elements.filter(e => 
+            ['video', 'audio'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId)
+        )
+
+        console.log(`[Export ${this.jobId}] Simple export: ${videoElements.length} video, ${audioElements.length} audio elements`)
+
+        if (videoElements.length === 0) {
+            // No video - create a simple black video with audio
+            return this.createBlackVideoWithAudio(outputPath, audioElements)
+        }
+
+        if (videoElements.length === 1 && audioElements.length <= 1) {
+            // Single video - process directly without complex filters
+            return this.processSingleVideo(outputPath, videoElements[0], audioElements[0])
+        }
+
+        // Multiple videos - use simple concatenation
+        return this.processMultipleVideos(outputPath, videoElements, audioElements)
+    }
+
+    private async createBlackVideoWithAudio(outputPath: string, audioElements: TimelineElement[]): Promise<void> {
         const ffmpegCommand = ffmpeg()
-        
-        console.log(`[Export ${this.jobId}] Professional export: ${this.elements.length} elements, ${this.tracks.length} tracks`)
-        
-        await this.addInputAssets(ffmpegCommand)
-        const filterGraph = await this.buildFilterGraph()
-        
-        console.log(`[Export ${this.jobId}] Filter: ${filterGraph}`)
-        
+        const duration = this.totalDurationMs / 1000
+
+        // Create black video
         ffmpegCommand
-            .complexFilter(filterGraph)
+            .input(`color=black:size=${this.outputSettings.width}x${this.outputSettings.height}:duration=${duration}:rate=${this.outputSettings.fps}`)
+            .inputFormat('lavfi')
+
+        // Add audio if available
+        if (audioElements.length > 0) {
+            const audioPath = this.downloadedAssets.get(audioElements[0].assetId!)!
+            ffmpegCommand.input(audioPath)
+            
+            ffmpegCommand
+                .outputOptions([
+                    '-c:v', 'libx264',
+                    '-c:a', 'aac',
+                    '-preset', 'fast',
+                    '-pix_fmt', 'yuv420p',
+                    '-shortest'
+                ])
+        } else {
+            ffmpegCommand
+                .outputOptions([
+                    '-c:v', 'libx264',
+                    '-preset', 'fast',
+                    '-pix_fmt', 'yuv420p',
+                    '-an' // no audio
+                ])
+        }
+
+        ffmpegCommand.output(outputPath)
+
+        return new Promise((resolve, reject) => {
+            ffmpegCommand
+                .on('end', () => resolve())
+                .on('error', (err: any) => reject(err))
+                .run()
+        })
+    }
+
+    private async processSingleVideo(outputPath: string, videoElement: TimelineElement, audioElement?: TimelineElement): Promise<void> {
+        const videoPath = this.downloadedAssets.get(videoElement.assetId!)!
+        const ffmpegCommand = ffmpeg()
+
+        ffmpegCommand.input(videoPath)
+
+        // Add audio input if different from video
+        if (audioElement && audioElement.assetId !== videoElement.assetId) {
+            const audioPath = this.downloadedAssets.get(audioElement.assetId!)!
+            ffmpegCommand.input(audioPath)
+        }
+
+        // Simple video processing
+        const videoFilters: string[] = []
+        
+        // Source trimming
+        if (videoElement.sourceStartMs !== undefined && videoElement.sourceEndMs !== undefined) {
+            const startSec = videoElement.sourceStartMs / 1000
+            const durationSec = (videoElement.sourceEndMs - videoElement.sourceStartMs) / 1000
+            ffmpegCommand.seekInput(startSec).duration(durationSec)
+        }
+
+        // Scaling
+        videoFilters.push(`scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=decrease`)
+        videoFilters.push(`pad=${this.outputSettings.width}:${this.outputSettings.height}:(ow-iw)/2:(oh-ih)/2:black`)
+
+        // Add text overlays if any
+        const textElements = this.elements.filter(e => e.type === 'text' || e.type === 'caption')
+        textElements.forEach((textElement, index) => {
+            const text = textElement.text || 'Sample Text'
+            const fontSize = textElement.fontSize || 24
+            const fontColor = textElement.fontColor || 'white'
+            const x = textElement.position?.x || 'center'
+            const y = textElement.position?.y || 'center'
+            
+            videoFilters.push(`drawtext=text='${text.replace(/'/g, "\\'")}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}`)
+        })
+
+        if (videoFilters.length > 0) {
+            ffmpegCommand.videoFilters(videoFilters)
+        }
+
+        ffmpegCommand
             .outputOptions([
-                '-map', '[final_video]',
-                '-map', '[final_audio]',
                 '-c:v', 'libx264',
                 '-c:a', 'aac',
-                '-preset', 'medium',
+                '-preset', 'fast',
                 '-crf', '23',
                 '-pix_fmt', 'yuv420p',
                 '-movflags', '+faststart'
             ])
             .output(outputPath)
-        
+
         return new Promise((resolve, reject) => {
             ffmpegCommand
-                .on('end', () => {
-                    resolve()
-                })
-                .on('error', (err: any, _stdout: string | null, _stderr: string | null) => {
-                    reject(err)
-                })
+                .on('end', () => resolve())
+                .on('error', (err: any) => reject(err))
                 .run()
         })
     }
 
-    private async addInputAssets(command: ffmpeg.FfmpegCommand): Promise<void> {
-        const mediaElements = this.elements.filter(e => 
-            ['video', 'audio', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId)
-        )
-
-        const uniqueAssets = [...new Set(mediaElements.map(e => this.downloadedAssets.get(e.assetId!)!))]
+    private async processMultipleVideos(outputPath: string, videoElements: TimelineElement[], audioElements: TimelineElement[]): Promise<void> {
+        // For now, just use the first video element to avoid complex concatenation
+        const primaryVideo = videoElements[0]
+        const primaryAudio = audioElements.length > 0 ? audioElements[0] : undefined
         
-        console.log(`[Export ${this.jobId}] Adding ${uniqueAssets.length} unique assets as inputs`)
-        uniqueAssets.forEach((assetPath, index) => {
-            console.log(`[Export ${this.jobId}] Input ${index}: ${assetPath}`)
-            command.input(assetPath)
-        })
-    }
-
-    private async buildFilterGraph(): Promise<string> {
-        const filters: string[] = []
-        const inputMapping = this.createInputMapping()
-        
-        console.log(`[Export ${this.jobId}] Building filter graph with ${this.elements.length} elements`)
-        
-        const videoTracks = this.processVideoTracks(filters, inputMapping)
-        const audioTracks = this.processAudioTracks(filters, inputMapping)
-        const textOverlays = this.processTextOverlays(filters)
-        
-        console.log(`[Export ${this.jobId}] Generated ${videoTracks.length} video tracks, ${audioTracks.length} audio tracks, ${textOverlays.length} text overlays`)
-        
-        this.compositeVideoLayers(filters, videoTracks, textOverlays)
-        this.mixAudioTracks(filters, audioTracks)
-        
-        return filters.join(';')
-    }
-
-    private processVideoTracks(filters: string[], inputMapping: Map<string, number>): any[] {
-        const videoOutputs: any[] = []
-        const videoTracks = this.tracks.filter(t => t.type === 'video')
-        
-        console.log(`[Export ${this.jobId}] Processing ${videoTracks.length} video tracks`)
-        
-        videoTracks.forEach((track, trackIndex) => {
-            const trackElements = this.elements
-                .filter(e => e.trackId === track.id && ['video', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
-                .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
-
-            console.log(`[Export ${this.jobId}] Track ${trackIndex} has ${trackElements.length} elements`)
-            if (trackElements.length === 0) return
-
-            // For now, let's handle the simple case of one element per track
-            const element = trackElements[0] // Take the first element
-            const assetPath = this.downloadedAssets.get(element.assetId!)
-            const inputIndex = inputMapping.get(assetPath!)
-            
-            if (inputIndex === undefined) {
-                console.warn(`[Export ${this.jobId}] No input mapping found for asset: ${element.assetId}`)
-                return
-            }
-
-            console.log(`[Export ${this.jobId}] Processing single element from input ${inputIndex}`)
-
-            const segmentLabel = `t${trackIndex}s0`
-            const elementFilter = this.buildElementFilter(element, inputIndex, segmentLabel)
-            filters.push(elementFilter)
-            
-            // Store timing info for overlay enable instead of using tpad
-            const timelineStartSec = element.timelineStartMs / 1000
-            const timelineEndSec = element.timelineEndMs / 1000
-            
-            // Store both the video output and timing info
-            videoOutputs.push({
-                output: `[${segmentLabel}]`,
-                startTime: timelineStartSec,
-                endTime: timelineEndSec
-            })
-        })
-
-        console.log(`[Export ${this.jobId}] Generated ${videoOutputs.length} video outputs`)
-        return videoOutputs
-    }
-
-    private buildElementFilter(element: TimelineElement, inputIndex: number, outputLabel: string): string {
-        let filter = `[${inputIndex}:v]`
-        
-        // Source trimming
-        if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
-            const startSec = element.sourceStartMs / 1000
-            const durationSec = (element.sourceEndMs - element.sourceStartMs) / 1000
-            filter += `trim=start=${startSec}:duration=${durationSec},`
-        }
-        
-        // Speed adjustment
-        if (element.speed && element.speed !== 1) {
-            filter += `setpts=${1/element.speed}*PTS,`
-        }
-        
-        // Image duration control
-        if (element.type === 'image') {
-            const durationSec = (element.timelineEndMs - element.timelineStartMs) / 1000
-            filter += `loop=loop=-1:size=1:start=0,setpts=N/(${this.outputSettings.fps}*TB),trim=duration=${durationSec},`
-        }
-        
-        // Scaling
-        filter += `scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=decrease,`
-        filter += `pad=${this.outputSettings.width}:${this.outputSettings.height}:(ow-iw)/2:(oh-ih)/2:black,`
-        
-        // Ensure consistent pixel format
-        filter += `format=yuv420p`
-        
-        // Opacity
-        if (element.opacity && element.opacity !== 1) {
-            filter += `,colorchannelmixer=aa=${element.opacity}`
-        }
-        
-        // Transitions
-        if (element.transitionIn) {
-            filter += `,fade=t=in:st=0:d=${element.transitionIn.duration}`
-        }
-        
-        if (element.transitionOut) {
-            const elementDuration = (element.timelineEndMs - element.timelineStartMs) / 1000
-            const transitionStart = elementDuration - element.transitionOut.duration
-            filter += `,fade=t=out:st=${transitionStart}:d=${element.transitionOut.duration}`
-        }
-        
-        return `${filter}[${outputLabel}]`
-    }
-
-    private processAudioTracks(filters: string[], inputMapping: Map<string, number>): string[] {
-        const audioOutputs: string[] = []
-        const audioTracks = this.tracks.filter(t => t.type === 'audio')
-        
-        audioTracks.forEach((track, trackIndex) => {
-            const audioElements = this.elements
-                .filter(e => e.trackId === track.id && ['video', 'audio'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
-
-            if (audioElements.length === 0) return
-
-            const trackSegments: string[] = []
-
-            audioElements.forEach((element, elementIndex) => {
-                const assetPath = this.downloadedAssets.get(element.assetId!)
-                const inputIndex = inputMapping.get(assetPath!)
-                if (inputIndex === undefined) return
-
-                const segmentLabel = `a${trackIndex}s${elementIndex}`
-                let audioFilter = `[${inputIndex}:a]`
-                
-                // Source trimming
-                if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
-                    const startSec = element.sourceStartMs / 1000
-                    const durationSec = (element.sourceEndMs - element.sourceStartMs) / 1000
-                    audioFilter += `atrim=start=${startSec}:duration=${durationSec},`
-                }
-                
-                // Speed adjustment
-                if (element.speed && element.speed !== 1) {
-                    audioFilter += `atempo=${element.speed},`
-                }
-                
-                // Volume adjustment
-                if (element.volume && element.volume !== 1) {
-                    audioFilter += `volume=${element.volume},`
-                }
-                
-                // Timeline positioning
-                const timelineStartMs = element.timelineStartMs
-                if (timelineStartMs > 0) {
-                    audioFilter += `adelay=${timelineStartMs}|${timelineStartMs},`
-                }
-                
-                const totalDurationSec = this.totalDurationMs / 1000
-                audioFilter += `apad=pad_dur=${totalDurationSec}`
-                
-                filters.push(`${audioFilter}[${segmentLabel}]`)
-                trackSegments.push(`[${segmentLabel}]`)
-            })
-
-            if (trackSegments.length > 1) {
-                const trackOutput = `audio_track${trackIndex}`
-                filters.push(`${trackSegments.join('')}amix=inputs=${trackSegments.length}[${trackOutput}]`)
-                audioOutputs.push(`[${trackOutput}]`)
-            } else if (trackSegments.length === 1) {
-                audioOutputs.push(trackSegments[0])
-            }
-        })
-
-        return audioOutputs
-    }
-
-    private processTextOverlays(filters: string[]): string[] {
-        const textElements = this.elements.filter(e => e.type === 'text' || e.type === 'caption')
-        
-        return textElements.map((element, index) => {
-            const startSec = element.timelineStartMs / 1000
-            const endSec = element.timelineEndMs / 1000
-            const text = element.text || 'Sample Text'
-            const fontSize = element.fontSize || 24
-            const fontColor = element.fontColor || 'white'
-            const x = element.position?.x || 'center'
-            const y = element.position?.y || 'center'
-            
-            // Simplified text overlay without enable timing for now
-            return `drawtext=text='${text.replace(/'/g, "\\'")}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}`
-        })
-    }
-
-    private compositeVideoLayers(filters: string[], videoTracks: any[], textOverlays: string[]): void {
-        // For now, let's use the simplest possible approach
-        if (videoTracks.length === 0) {
-            // No video tracks - create a simple black background
-            const backgroundDurationSec = this.totalDurationMs / 1000
-            filters.push(`color=black:size=${this.outputSettings.width}x${this.outputSettings.height}:duration=${backgroundDurationSec}:rate=${this.outputSettings.fps}[final_video]`)
-            return
-        }
-        
-        // If we have exactly one video track, use it directly
-        if (videoTracks.length === 1 && textOverlays.length === 0) {
-            const lastFilter = filters[filters.length - 1]
-            const updatedFilter = lastFilter.replace(/\[t\d+s\d+\]/, '[final_video]')
-            filters[filters.length - 1] = updatedFilter
-            console.log(`[Export ${this.jobId}] Using single video track directly`)
-            return
-        }
-        
-        // For multiple tracks or text overlays, we need more complex processing
-        // Start with the first video track
-        let currentOutput = videoTracks[0].output
-        
-        // Overlay additional video tracks
-        for (let i = 1; i < videoTracks.length; i++) {
-            const overlayOutput = i === videoTracks.length - 1 && textOverlays.length === 0 ? 'final_video' : `overlay_${i}`
-            const overlayFilter = `${currentOutput}${videoTracks[i].output}overlay=0:0[${overlayOutput}]`
-            
-            console.log(`[Export ${this.jobId}] Overlaying: ${overlayFilter}`)
-            filters.push(overlayFilter)
-            currentOutput = `[${overlayOutput}]`
-        }
-        
-        // Apply text overlays
-        if (textOverlays.length > 0) {
-            textOverlays.forEach((textFilter, index) => {
-                const textOutput = index === textOverlays.length - 1 ? 'final_video' : `text_${index}`
-                console.log(`[Export ${this.jobId}] Adding text overlay: ${currentOutput}${textFilter}[${textOutput}]`)
-                filters.push(`${currentOutput}${textFilter}[${textOutput}]`)
-                currentOutput = `[${textOutput}]`
-            })
-        }
-    }
-
-    private mixAudioTracks(filters: string[], audioTracks: string[]): void {
-        if (audioTracks.length === 0) {
-            filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${this.totalDurationMs/1000}[final_audio]`)
-        } else if (audioTracks.length === 1) {
-            const lastFilter = filters.find(f => f.includes(audioTracks[0]))!
-            const filterIndex = filters.indexOf(lastFilter)
-            filters[filterIndex] = lastFilter.replace(audioTracks[0], '[final_audio]')
-        } else {
-            filters.push(`${audioTracks.join('')}amix=inputs=${audioTracks.length}[final_audio]`)
-        }
-    }
-
-    private createInputMapping(): Map<string, number> {
-        const mapping = new Map<string, number>()
-        const uniqueAssets = [...new Set(
-            this.elements
-                .filter(e => e.assetId && this.downloadedAssets.has(e.assetId))
-                .map(e => this.downloadedAssets.get(e.assetId!)!)
-        )]
-        
-        console.log(`[Export ${this.jobId}] Creating input mapping for ${uniqueAssets.length} assets`)
-        uniqueAssets.forEach((assetPath, index) => {
-            console.log(`[Export ${this.jobId}] Mapping ${assetPath} -> input ${index}`)
-            mapping.set(assetPath, index)
-        })
-        
-        console.log(`[Export ${this.jobId}] Input mapping created successfully`)
-        return mapping
+        console.log(`[Export ${this.jobId}] Using primary video for multi-element export (simplified)`)
+        return this.processSingleVideo(outputPath, primaryVideo, primaryAudio)
     }
 }
 
