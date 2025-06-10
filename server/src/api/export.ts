@@ -150,11 +150,11 @@ async function fetchAssetUrl(assetId: string): Promise<string> {
     console.log(`[Asset] Fetching URL for asset: ${assetId}`)
     
     try {
-        const { data: asset, error } = await supabase
-            .from('assets')
-            .select('object_key')
-            .eq('id', assetId)
-            .single()
+    const { data: asset, error } = await supabase
+        .from('assets')
+        .select('object_key')
+        .eq('id', assetId)
+        .single()
 
         if (error) {
             console.error(`[Asset] Database error for ${assetId}:`, error)
@@ -168,13 +168,13 @@ async function fetchAssetUrl(assetId: string): Promise<string> {
 
         console.log(`[Asset] Found asset ${assetId}, object_key: ${asset.object_key}`)
 
-        const [url] = await bucket.file(asset.object_key).getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 60 * 60 * 1000
-        })
-        
+    const [url] = await bucket.file(asset.object_key).getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 60 * 60 * 1000
+    })
+    
         console.log(`[Asset] Generated signed URL for ${assetId}`)
-        return url
+    return url
         
     } catch (error) {
         console.error(`[Asset] Failed to fetch URL for ${assetId}:`, error)
@@ -200,18 +200,18 @@ async function downloadAsset(url: string, filename: string): Promise<string> {
         
         clearTimeout(timeoutId)
         
-        if (!response.ok) {
+    if (!response.ok) {
             throw new Error(`Download failed: ${response.status} ${response.statusText}`)
-        }
+    }
         
         console.log(`[Download] Response OK for ${filename}, size: ${response.headers.get('content-length')} bytes`)
-        
-        const buffer = await response.arrayBuffer()
-        const filePath = path.join(TEMP_DIR, filename)
-        await fs.writeFile(filePath, Buffer.from(buffer))
+    
+    const buffer = await response.arrayBuffer()
+    const filePath = path.join(TEMP_DIR, filename)
+    await fs.writeFile(filePath, Buffer.from(buffer))
         
         console.log(`[Download] Saved ${filename} to ${filePath}`)
-        return filePath
+    return filePath
         
     } catch (error) {
         clearTimeout(timeoutId)
@@ -357,15 +357,15 @@ class ProfessionalVideoExporter {
         
         const videoElements = this.elements
             .filter(e => ['video', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
-            .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
-        
+                .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+
         console.log(`[Export ${this.jobId}] Building ${videoElements.length} video tracks`)
-        
+
         videoElements.forEach((element, index) => {
-            const assetPath = this.downloadedAssets.get(element.assetId!)
-            const inputIndex = inputMapping.get(assetPath!)
-            if (inputIndex === undefined) return
-            
+                const assetPath = this.downloadedAssets.get(element.assetId!)
+                const inputIndex = inputMapping.get(assetPath!)
+                if (inputIndex === undefined) return
+
             const trackLabel = `video_track_${index}`
             const startTime = element.timelineStartMs / 1000
             const endTime = element.timelineEndMs / 1000
@@ -373,21 +373,21 @@ class ProfessionalVideoExporter {
             
             // Build element processing filter
             let elementFilter = `[${inputIndex}:v]`
-            
-            // Source trimming
-            if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
+        
+        // Source trimming
+        if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
                 const sourceStart = element.sourceStartMs / 1000
                 const sourceDuration = (element.sourceEndMs - element.sourceStartMs) / 1000
                 elementFilter += `trim=start=${sourceStart}:duration=${sourceDuration},setpts=PTS-STARTPTS,`
-            }
-            
-            // Speed adjustment
-            if (element.speed && element.speed !== 1) {
+        }
+        
+        // Speed adjustment
+        if (element.speed && element.speed !== 1) {
                 elementFilter += `setpts=${1/element.speed}*PTS,`
-            }
-            
+        }
+        
             // Image duration handling
-            if (element.type === 'image') {
+        if (element.type === 'image') {
                 elementFilter += `loop=loop=-1:size=1:start=0,setpts=N/(${this.outputSettings.fps}*TB),trim=duration=${duration},`
             }
             
@@ -397,12 +397,12 @@ class ProfessionalVideoExporter {
             elementFilter += `format=yuv420p,fps=${this.outputSettings.fps}`
             
             // Effects
-            if (element.opacity && element.opacity !== 1) {
+        if (element.opacity && element.opacity !== 1) {
                 elementFilter += `,colorchannelmixer=aa=${element.opacity}`
-            }
-            
-            // Transitions
-            if (element.transitionIn) {
+        }
+        
+        // Transitions
+        if (element.transitionIn) {
                 const transitionDuration = element.transitionIn.duration || 0.5
                 elementFilter += `,fade=t=in:st=0:d=${transitionDuration}`
             }
@@ -491,42 +491,42 @@ class ProfessionalVideoExporter {
     private buildAudioTracks(filters: string[], inputMapping: Map<string, number>, timelineDuration: number): Array<{label: string, startTime: number, endTime: number}> {
         const audioTracks: Array<{label: string, startTime: number, endTime: number}> = []
         
-        const audioElements = this.elements
+            const audioElements = this.elements
             .filter(e => ['audio'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
             .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
-        
+
         console.log(`[Export ${this.jobId}] Building ${audioElements.length} audio tracks`)
-        
+
         audioElements.forEach((element, index) => {
-            const assetPath = this.downloadedAssets.get(element.assetId!)
-            const inputIndex = inputMapping.get(assetPath!)
-            if (inputIndex === undefined) return
-            
+                const assetPath = this.downloadedAssets.get(element.assetId!)
+                const inputIndex = inputMapping.get(assetPath!)
+                if (inputIndex === undefined) return
+
             const trackLabel = `audio_track_${index}`
             const startTime = element.timelineStartMs / 1000
             const endTime = element.timelineEndMs / 1000
             const duration = endTime - startTime
             
             // Build audio processing filter
-            let audioFilter = `[${inputIndex}:a]`
-            
-            // Source trimming
-            if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
+                let audioFilter = `[${inputIndex}:a]`
+                
+                // Source trimming
+                if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
                 const sourceStart = element.sourceStartMs / 1000
                 const sourceDuration = (element.sourceEndMs - element.sourceStartMs) / 1000
                 audioFilter += `atrim=start=${sourceStart}:duration=${sourceDuration},`
-            }
-            
-            // Speed adjustment
-            if (element.speed && element.speed !== 1) {
-                audioFilter += `atempo=${element.speed},`
-            }
-            
-            // Volume adjustment
-            if (element.volume && element.volume !== 1) {
-                audioFilter += `volume=${element.volume},`
-            }
-            
+                }
+                
+                // Speed adjustment
+                if (element.speed && element.speed !== 1) {
+                    audioFilter += `atempo=${element.speed},`
+                }
+                
+                // Volume adjustment
+                if (element.volume && element.volume !== 1) {
+                    audioFilter += `volume=${element.volume},`
+                }
+                
             // Ensure exact duration
             audioFilter += `atrim=duration=${duration},asetpts=PTS-STARTPTS`
             
