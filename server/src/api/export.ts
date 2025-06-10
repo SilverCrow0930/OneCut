@@ -310,13 +310,6 @@ class ProfessionalVideoExporter {
             console.log(`[Export ${this.jobId}] Input ${index}: ${assetPath}`)
             command.input(assetPath)
         })
-
-        // Black background at the end
-        const backgroundIndex = uniqueAssets.length
-        console.log(`[Export ${this.jobId}] Adding black background as input ${backgroundIndex}`)
-        command.input(`color=c=black:s=${this.outputSettings.width}x${this.outputSettings.height}:r=${this.outputSettings.fps}`)
-               .inputFormat('lavfi')
-               .duration(this.totalDurationMs / 1000)
     }
 
     private async buildFilterGraph(): Promise<string> {
@@ -337,8 +330,8 @@ class ProfessionalVideoExporter {
         return filters.join(';')
     }
 
-    private processVideoTracks(filters: string[], inputMapping: Map<string, number>): string[] {
-        const videoOutputs: string[] = []
+    private processVideoTracks(filters: string[], inputMapping: Map<string, number>): any[] {
+        const videoOutputs: any[] = []
         const videoTracks = this.tracks.filter(t => t.type === 'video')
         
         console.log(`[Export ${this.jobId}] Processing ${videoTracks.length} video tracks`)
@@ -367,15 +360,16 @@ class ProfessionalVideoExporter {
             const elementFilter = this.buildElementFilter(element, inputIndex, segmentLabel)
             filters.push(elementFilter)
             
-            // Add timing to position the video correctly on the timeline
+            // Store timing info for overlay enable instead of using tpad
             const timelineStartSec = element.timelineStartMs / 1000
             const timelineEndSec = element.timelineEndMs / 1000
-            const totalDurationSec = this.totalDurationMs / 1000
             
-            const timedLabel = `${segmentLabel}_timed`
-            filters.push(`[${segmentLabel}]tpad=start_duration=${timelineStartSec}:stop_duration=${totalDurationSec - timelineEndSec}[${timedLabel}]`)
-            
-            videoOutputs.push(`[${timedLabel}]`)
+            // Store both the video output and timing info
+            videoOutputs.push({
+                output: `[${segmentLabel}]`,
+                startTime: timelineStartSec,
+                endTime: timelineEndSec
+            })
         })
 
         console.log(`[Export ${this.jobId}] Generated ${videoOutputs.length} video outputs`)
@@ -507,27 +501,24 @@ class ProfessionalVideoExporter {
         })
     }
 
-    private compositeVideoLayers(filters: string[], videoTracks: string[], textOverlays: string[]): void {
-        // Calculate correct background index - it's the number of unique assets
-        const uniqueAssets = [...new Set(
-            this.elements
-                .filter(e => e.assetId && this.downloadedAssets.has(e.assetId))
-                .map(e => this.downloadedAssets.get(e.assetId!)!)
-        )]
-        const backgroundIndex = uniqueAssets.length
+    private compositeVideoLayers(filters: string[], videoTracks: any[], textOverlays: string[]): void {
+        // Generate black background using filter
+        const backgroundDurationSec = this.totalDurationMs / 1000
+        filters.push(`color=c=black:s=${this.outputSettings.width}x${this.outputSettings.height}:r=${this.outputSettings.fps}:d=${backgroundDurationSec}[background]`)
         
-        console.log(`[Export ${this.jobId}] Background input index: ${backgroundIndex}`)
-        
-        // Start with black background and ensure proper format
-        filters.push(`[${backgroundIndex}:v]format=yuv420p[background]`)
         let currentOutput = `[background]`
         
         // If we have video tracks, overlay them onto the black background
         if (videoTracks.length > 0) {
             videoTracks.forEach((track, index) => {
                 const overlayOutput = index === videoTracks.length - 1 && textOverlays.length === 0 ? 'video_composite' : `overlay_${index}`
-                console.log(`[Export ${this.jobId}] Overlaying: ${currentOutput}${track}overlay=0:0[${overlayOutput}]`)
-                filters.push(`${currentOutput}${track}overlay=0:0[${overlayOutput}]`)
+                
+                // Use overlay enable timing
+                const enableTiming = `'between(t,${track.startTime},${track.endTime})'`
+                const overlayFilter = `${currentOutput}${track.output}overlay=0:0:enable=${enableTiming}[${overlayOutput}]`
+                
+                console.log(`[Export ${this.jobId}] Overlaying: ${overlayFilter}`)
+                filters.push(overlayFilter)
                 currentOutput = `[${overlayOutput}]`
             })
         } else {
