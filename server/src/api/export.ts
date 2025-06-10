@@ -497,37 +497,41 @@ class ProfessionalVideoExporter {
             const x = element.position?.x || 'center'
             const y = element.position?.y || 'center'
             
-            return `drawtext=text='${text.replace(/'/g, "\\'")}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}:enable='between(t,${startSec},${endSec})'`
+            // Simplified text overlay without enable timing for now
+            return `drawtext=text='${text.replace(/'/g, "\\'")}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}`
         })
     }
 
     private compositeVideoLayers(filters: string[], videoTracks: any[], textOverlays: string[]): void {
-        // Generate black background using filter
-        const backgroundDurationSec = this.totalDurationMs / 1000
-        filters.push(`color=c=black:s=${this.outputSettings.width}x${this.outputSettings.height}:r=${this.outputSettings.fps}:d=${backgroundDurationSec}[background]`)
+        // For now, let's use the simplest possible approach
+        if (videoTracks.length === 0) {
+            // No video tracks - create a simple black background
+            const backgroundDurationSec = this.totalDurationMs / 1000
+            filters.push(`color=black:size=${this.outputSettings.width}x${this.outputSettings.height}:duration=${backgroundDurationSec}:rate=${this.outputSettings.fps}[final_video]`)
+            return
+        }
         
-        let currentOutput = `[background]`
+        // If we have exactly one video track, use it directly
+        if (videoTracks.length === 1 && textOverlays.length === 0) {
+            const lastFilter = filters[filters.length - 1]
+            const updatedFilter = lastFilter.replace(/\[t\d+s\d+\]/, '[final_video]')
+            filters[filters.length - 1] = updatedFilter
+            console.log(`[Export ${this.jobId}] Using single video track directly`)
+            return
+        }
         
-        // If we have video tracks, overlay them onto the black background
-        if (videoTracks.length > 0) {
-            videoTracks.forEach((track, index) => {
-                const overlayOutput = index === videoTracks.length - 1 && textOverlays.length === 0 ? 'video_composite' : `overlay_${index}`
-                
-                // Use overlay enable timing
-                const enableTiming = `'between(t,${track.startTime},${track.endTime})'`
-                const overlayFilter = `${currentOutput}${track.output}overlay=0:0:enable=${enableTiming}[${overlayOutput}]`
-                
-                console.log(`[Export ${this.jobId}] Overlaying: ${overlayFilter}`)
-                filters.push(overlayFilter)
-                currentOutput = `[${overlayOutput}]`
-            })
-        } else {
-            // No video tracks, just use the black background
-            console.log(`[Export ${this.jobId}] No video tracks, using black background only`)
-            if (textOverlays.length === 0) {
-                filters.push(`${currentOutput}copy[video_composite]`)
-                currentOutput = `[video_composite]`
-            }
+        // For multiple tracks or text overlays, we need more complex processing
+        // Start with the first video track
+        let currentOutput = videoTracks[0].output
+        
+        // Overlay additional video tracks
+        for (let i = 1; i < videoTracks.length; i++) {
+            const overlayOutput = i === videoTracks.length - 1 && textOverlays.length === 0 ? 'final_video' : `overlay_${i}`
+            const overlayFilter = `${currentOutput}${videoTracks[i].output}overlay=0:0[${overlayOutput}]`
+            
+            console.log(`[Export ${this.jobId}] Overlaying: ${overlayFilter}`)
+            filters.push(overlayFilter)
+            currentOutput = `[${overlayOutput}]`
         }
         
         // Apply text overlays
@@ -538,13 +542,6 @@ class ProfessionalVideoExporter {
                 filters.push(`${currentOutput}${textFilter}[${textOutput}]`)
                 currentOutput = `[${textOutput}]`
             })
-        } else {
-            // No text overlays, rename current output to final_video
-            if (currentOutput === '[video_composite]') {
-                filters[filters.length - 1] = filters[filters.length - 1].replace('[video_composite]', '[final_video]')
-            } else {
-                filters.push(`${currentOutput}copy[final_video]`)
-            }
         }
     }
 
@@ -817,4 +814,4 @@ router.get('/download/:jobId', async (req, res) => {
     }
 })
 
-export default router 
+export default router
