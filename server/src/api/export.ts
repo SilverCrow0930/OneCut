@@ -341,49 +341,44 @@ class ProfessionalVideoExporter {
         const videoOutputs: string[] = []
         const videoTracks = this.tracks.filter(t => t.type === 'video')
         
+        console.log(`[Export ${this.jobId}] Processing ${videoTracks.length} video tracks`)
+        
         videoTracks.forEach((track, trackIndex) => {
             const trackElements = this.elements
                 .filter(e => e.trackId === track.id && ['video', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
                 .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
 
+            console.log(`[Export ${this.jobId}] Track ${trackIndex} has ${trackElements.length} elements`)
             if (trackElements.length === 0) return
 
-            const trackSegments: string[] = []
-
-            trackElements.forEach((element, elementIndex) => {
-                const assetPath = this.downloadedAssets.get(element.assetId!)
-                const inputIndex = inputMapping.get(assetPath!)
-                if (inputIndex === undefined) return
-
-                const segmentLabel = `t${trackIndex}s${elementIndex}`
-                const elementFilter = this.buildElementFilter(element, inputIndex, segmentLabel)
-                filters.push(elementFilter)
-                
-                // Precise timeline positioning
-                const timelineStartSec = element.timelineStartMs / 1000
-                const timelineEndSec = element.timelineEndMs / 1000
-                const totalDurationSec = this.totalDurationMs / 1000
-                
-                const timedLabel = `${segmentLabel}_timed`
-                filters.push(`[${segmentLabel}]tpad=start_duration=${timelineStartSec}:stop_duration=${totalDurationSec - timelineEndSec}[${timedLabel}]`)
-                
-                trackSegments.push(`[${timedLabel}]`)
-            })
-
-            // Handle overlaps with overlay filter
-            if (trackSegments.length > 1) {
-                let currentOutput = trackSegments[0]
-                for (let i = 1; i < trackSegments.length; i++) {
-                    const overlayLabel = i === trackSegments.length - 1 ? `track${trackIndex}` : `track${trackIndex}_o${i}`
-                    filters.push(`${currentOutput}${trackSegments[i]}overlay[${overlayLabel}]`)
-                    currentOutput = `[${overlayLabel}]`
-                }
-                videoOutputs.push(currentOutput)
-            } else if (trackSegments.length === 1) {
-                videoOutputs.push(trackSegments[0])
+            // For now, let's handle the simple case of one element per track
+            const element = trackElements[0] // Take the first element
+            const assetPath = this.downloadedAssets.get(element.assetId!)
+            const inputIndex = inputMapping.get(assetPath!)
+            
+            if (inputIndex === undefined) {
+                console.warn(`[Export ${this.jobId}] No input mapping found for asset: ${element.assetId}`)
+                return
             }
+
+            console.log(`[Export ${this.jobId}] Processing single element from input ${inputIndex}`)
+
+            const segmentLabel = `t${trackIndex}s0`
+            const elementFilter = this.buildElementFilter(element, inputIndex, segmentLabel)
+            filters.push(elementFilter)
+            
+            // Add timing to position the video correctly on the timeline
+            const timelineStartSec = element.timelineStartMs / 1000
+            const timelineEndSec = element.timelineEndMs / 1000
+            const totalDurationSec = this.totalDurationMs / 1000
+            
+            const timedLabel = `${segmentLabel}_timed`
+            filters.push(`[${segmentLabel}]tpad=start_duration=${timelineStartSec}:stop_duration=${totalDurationSec - timelineEndSec}[${timedLabel}]`)
+            
+            videoOutputs.push(`[${timedLabel}]`)
         })
 
+        console.log(`[Export ${this.jobId}] Generated ${videoOutputs.length} video outputs`)
         return videoOutputs
     }
 
@@ -410,7 +405,10 @@ class ProfessionalVideoExporter {
         
         // Scaling
         filter += `scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=decrease,`
-        filter += `pad=${this.outputSettings.width}:${this.outputSettings.height}:(ow-iw)/2:(oh-ih)/2:black`
+        filter += `pad=${this.outputSettings.width}:${this.outputSettings.height}:(ow-iw)/2:(oh-ih)/2:black,`
+        
+        // Ensure consistent pixel format
+        filter += `format=yuv420p`
         
         // Opacity
         if (element.opacity && element.opacity !== 1) {
@@ -519,28 +517,43 @@ class ProfessionalVideoExporter {
         const backgroundIndex = uniqueAssets.length
         
         console.log(`[Export ${this.jobId}] Background input index: ${backgroundIndex}`)
-        let currentOutput = `[${backgroundIndex}:v]`
         
-        // Overlay video tracks
-        videoTracks.forEach((track, index) => {
-            const overlayOutput = index === videoTracks.length - 1 && textOverlays.length === 0 ? 'video_final' : `overlay_${index}`
-            console.log(`[Export ${this.jobId}] Overlaying: ${currentOutput}${track}overlay[${overlayOutput}]`)
-            filters.push(`${currentOutput}${track}overlay[${overlayOutput}]`)
-            currentOutput = `[${overlayOutput}]`
-        })
+        // Start with black background and ensure proper format
+        filters.push(`[${backgroundIndex}:v]format=yuv420p[background]`)
+        let currentOutput = `[background]`
+        
+        // If we have video tracks, overlay them onto the black background
+        if (videoTracks.length > 0) {
+            videoTracks.forEach((track, index) => {
+                const overlayOutput = index === videoTracks.length - 1 && textOverlays.length === 0 ? 'video_composite' : `overlay_${index}`
+                console.log(`[Export ${this.jobId}] Overlaying: ${currentOutput}${track}overlay=0:0[${overlayOutput}]`)
+                filters.push(`${currentOutput}${track}overlay=0:0[${overlayOutput}]`)
+                currentOutput = `[${overlayOutput}]`
+            })
+        } else {
+            // No video tracks, just use the black background
+            console.log(`[Export ${this.jobId}] No video tracks, using black background only`)
+            if (textOverlays.length === 0) {
+                filters.push(`${currentOutput}copy[video_composite]`)
+                currentOutput = `[video_composite]`
+            }
+        }
         
         // Apply text overlays
-        textOverlays.forEach((textFilter, index) => {
-            const textOutput = index === textOverlays.length - 1 ? 'final_video' : `text_${index}`
-            filters.push(`${currentOutput}${textFilter}[${textOutput}]`)
-            currentOutput = `[${textOutput}]`
-        })
-        
-        // Handle edge cases
-        if (textOverlays.length === 0 && videoTracks.length > 0) {
-            filters[filters.length - 1] = filters[filters.length - 1].replace(/\[video_final\]$/, '[final_video]')
-        } else if (videoTracks.length === 0 && textOverlays.length === 0) {
-            filters.push(`${currentOutput}copy[final_video]`)
+        if (textOverlays.length > 0) {
+            textOverlays.forEach((textFilter, index) => {
+                const textOutput = index === textOverlays.length - 1 ? 'final_video' : `text_${index}`
+                console.log(`[Export ${this.jobId}] Adding text overlay: ${currentOutput}${textFilter}[${textOutput}]`)
+                filters.push(`${currentOutput}${textFilter}[${textOutput}]`)
+                currentOutput = `[${textOutput}]`
+            })
+        } else {
+            // No text overlays, rename current output to final_video
+            if (currentOutput === '[video_composite]') {
+                filters[filters.length - 1] = filters[filters.length - 1].replace('[video_composite]', '[final_video]')
+            } else {
+                filters.push(`${currentOutput}copy[final_video]`)
+            }
         }
     }
 
