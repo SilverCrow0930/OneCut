@@ -263,99 +263,55 @@ class ExportService {
     /**
      * Download a file from URL with proper filename
      */
-    async downloadFile(url: string, filename: string): Promise<void> {
+    async downloadFile(url: string, filename: string, jobId?: string): Promise<void> {
         try {
-            // Prefer streaming download to capture progress
-            const response = await fetch(url)
+            console.log('[ExportService] Starting download for:', filename)
+            console.log('[ExportService] Download URL:', url)
 
-            if (!response.ok || !response.body) {
-                // Fallback to simple anchor download
+            // Method 1: Try direct link click first (fastest for signed URLs)
+            try {
                 const link = document.createElement('a')
                 link.href = url
                 link.download = filename
                 link.style.display = 'none'
+                link.target = '_blank' // Open in new tab if download fails
+                
                 document.body.appendChild(link)
-                link.click()
-                setTimeout(() => document.body.removeChild(link), 100)
+                
+                // Add user interaction event to bypass popup blockers
+                const clickEvent = new MouseEvent('click', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true
+                })
+                
+                link.dispatchEvent(clickEvent)
+                
+                setTimeout(() => {
+                    document.body.removeChild(link)
+                }, 100)
+                
+                console.log('[ExportService] Direct download initiated')
                 return
+                
+            } catch (directError) {
+                console.warn('[ExportService] Direct download failed, trying fetch method:', directError)
             }
 
-            const contentLength = Number(response.headers.get('Content-Length')) || 0
-            const reader = response.body.getReader()
-            const chunks: Uint8Array[] = []
-            let received = 0
-
-            while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
-                if (value) {
-                    chunks.push(value)
-                    received += value.length
-                    // Emit global custom event for progress updates (optional)
-                    const total = contentLength || undefined
-                    window.dispatchEvent(new CustomEvent('export-download-progress', {
-                        detail: {
-                            received,
-                            total
-                        }
-                    }))
-                }
-            }
-
-            const blob = new Blob(chunks, { type: 'video/mp4' })
-            const blobUrl = URL.createObjectURL(blob)
-
-            const link = document.createElement('a')
-            link.href = blobUrl
-            link.download = filename
-            link.style.display = 'none'
-            document.body.appendChild(link)
-            link.click()
-            setTimeout(() => {
-                document.body.removeChild(link)
-                URL.revokeObjectURL(blobUrl)
-            }, 100)
-
-        } catch (error) {
-            console.error('Download error:', error)
-            throw new Error('Failed to download file')
-        }
-    }
-
-    /**
-     * Streaming download with progress callback
-     */
-    async downloadFileWithProgress(url: string, filename: string, onProgress?: (percent: number) => void): Promise<void> {
-        return new Promise(async (resolve, reject) => {
+            // Method 2: Fetch and create blob (for CORS-enabled URLs)
             try {
-                const response = await fetch(url)
-                if (!response.ok || !response.body) {
-                    // Fallback to simple download
-                    await this.downloadFile(url, filename)
-                    onProgress?.(100)
-                    resolve()
-                    return
+                const response = await fetch(url, { 
+                    mode: 'cors',
+                    credentials: 'omit'
+                })
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
                 }
 
-                const contentLength = Number(response.headers.get('Content-Length')) || 0
-                const reader = response.body.getReader()
-                const chunks: Uint8Array[] = []
-                let received = 0
-
-                while (true) {
-                    const { done, value } = await reader.read()
-                    if (done) break
-                    if (value) {
-                        chunks.push(value)
-                        received += value.length
-                        if (contentLength) {
-                            const percent = Math.min(Math.round((received / contentLength) * 100), 100)
-                            onProgress?.(percent)
-                        }
-                    }
-                }
-
-                const blob = new Blob(chunks, { type: 'video/mp4' })
+                console.log('[ExportService] Fetch successful, creating blob...')
+                
+                const blob = await response.blob()
                 const blobUrl = URL.createObjectURL(blob)
 
                 const link = document.createElement('a')
@@ -364,16 +320,133 @@ class ExportService {
                 link.style.display = 'none'
                 document.body.appendChild(link)
                 link.click()
-
+                
                 setTimeout(() => {
                     document.body.removeChild(link)
                     URL.revokeObjectURL(blobUrl)
                 }, 100)
+                
+                console.log('[ExportService] Blob download completed')
+                return
+                
+            } catch (fetchError) {
+                console.warn('[ExportService] Fetch download failed:', fetchError)
+            }
 
-                onProgress?.(100)
-                resolve()
+            // Method 3: Use server proxy download (if jobId is available)
+            if (jobId) {
+                try {
+                    console.log('[ExportService] Trying server proxy download...')
+                    const proxyUrl = `${this.baseUrl}/api/v1/export/download/${jobId}`
+                    
+                    const link = document.createElement('a')
+                    link.href = proxyUrl
+                    link.download = filename
+                    link.style.display = 'none'
+                    
+                    document.body.appendChild(link)
+                    link.click()
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(link)
+                    }, 100)
+                    
+                    console.log('[ExportService] Server proxy download initiated')
+                    return
+                    
+                } catch (proxyError) {
+                    console.warn('[ExportService] Server proxy download failed:', proxyError)
+                }
+            }
+
+            // Method 4: Open in new window as final fallback
+            console.log('[ExportService] Using fallback: opening in new window')
+            const newWindow = window.open(url, '_blank')
+            if (!newWindow) {
+                throw new Error('Download failed - popup blocker may be enabled. Please allow popups and try again.')
+            }
+
+        } catch (error) {
+            console.error('[ExportService] All download methods failed:', error)
+            throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+    }
+
+    /**
+     * Streaming download with progress callback
+     */
+    async downloadFileWithProgress(url: string, filename: string, onProgress?: (percent: number) => void, jobId?: string): Promise<void> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                console.log('[ExportService] Starting progress download for:', filename)
+                
+                // Try to fetch with progress tracking first
+                try {
+                    const response = await fetch(url, { 
+                        mode: 'cors',
+                        credentials: 'omit'
+                    })
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+                    }
+
+                    if (!response.body) {
+                        throw new Error('Response body not available for streaming')
+                    }
+
+                    const contentLength = Number(response.headers.get('Content-Length')) || 0
+                    const reader = response.body.getReader()
+                    const chunks: Uint8Array[] = []
+                    let received = 0
+
+                    console.log('[ExportService] Content length:', contentLength)
+                    onProgress?.(0)
+
+                    while (true) {
+                        const { done, value } = await reader.read()
+                        if (done) break
+                        if (value) {
+                            chunks.push(value)
+                            received += value.length
+                            if (contentLength > 0) {
+                                const percent = Math.min(Math.round((received / contentLength) * 100), 100)
+                                onProgress?.(percent)
+                            }
+                        }
+                    }
+
+                    console.log('[ExportService] Download completed, creating blob...')
+                    const blob = new Blob(chunks, { type: 'video/mp4' })
+                    const blobUrl = URL.createObjectURL(blob)
+
+                    const link = document.createElement('a')
+                    link.href = blobUrl
+                    link.download = filename
+                    link.style.display = 'none'
+                    document.body.appendChild(link)
+                    link.click()
+
+                    setTimeout(() => {
+                        document.body.removeChild(link)
+                        URL.revokeObjectURL(blobUrl)
+                    }, 100)
+
+                    onProgress?.(100)
+                    console.log('[ExportService] Progress download completed successfully')
+                    resolve()
+                    
+                } catch (streamError) {
+                    console.warn('[ExportService] Streaming download failed, falling back to simple download:', streamError)
+                    
+                    // Fallback to simple download without progress
+                    await this.downloadFile(url, filename, jobId)
+                    onProgress?.(100)
+                    resolve()
+                }
 
             } catch (error) {
+                console.error('[ExportService] Progress download failed:', error)
                 reject(error)
             }
         })

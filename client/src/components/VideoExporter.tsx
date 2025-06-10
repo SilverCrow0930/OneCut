@@ -116,8 +116,12 @@ export class VideoExporter {
                         
                         // Download the file
                         if (job.downloadUrl) {
-                            this.downloadFile(job.downloadUrl)
-                            resolve()
+                            try {
+                                await this.downloadFile(job.downloadUrl)
+                                resolve()
+                            } catch (downloadError) {
+                                reject(downloadError)
+                            }
                         } else {
                             reject(new Error('Export completed but no download URL provided'))
                         }
@@ -162,23 +166,17 @@ export class VideoExporter {
         return data.job
     }
 
-    private downloadFile(downloadUrl: string): void {
+    private async downloadFile(downloadUrl: string): Promise<void> {
         try {
             console.log('[VideoExporter] Starting download...')
             
-            const a = document.createElement('a')
-            a.href = downloadUrl
-            a.download = `video-export-${this.exportType}-${Date.now()}.mp4`
-            a.style.display = 'none'
+            const filename = `video-export-${this.exportType}-${Date.now()}.mp4`
             
-            document.body.appendChild(a)
-            a.click()
+            // Use the improved download method from exportService
+            const { exportService } = await import('../services/export')
+            await exportService.downloadFile(downloadUrl, filename)
             
-            setTimeout(() => {
-                document.body.removeChild(a)
-            }, 100)
-            
-            console.log('[VideoExporter] Download initiated successfully')
+            console.log('[VideoExporter] Download completed successfully')
             
         } catch (error) {
             console.error('[VideoExporter] Download failed:', error)

@@ -112,7 +112,7 @@ const ShareButton = () => {
                                 // Update status to downloading
                                 setExportProgress(100)
                                 setExportStatus('downloading')
-                                // Use streaming download with progress
+                                // Use streaming download with progress, pass jobId for fallback
                                 await exportService.downloadFileWithProgress(
                                     status.job.downloadUrl,
                                     `video-export-${selectedExportType}-${Date.now()}.mp4`,
@@ -120,7 +120,8 @@ const ShareButton = () => {
                                         // Map download progress 0-100 to 100-200 for UI or reuse 0-100
                                         const dlProgress = Math.min(percent, 100)
                                         setExportProgress(dlProgress)
-                                    }
+                                    },
+                                    currentJobId || undefined
                                 )
                                 setExportStatus('completed')
                             }

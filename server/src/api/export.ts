@@ -646,4 +646,65 @@ router.delete('/cancel/:jobId', (req, res) => {
     res.json({ success: true, message: 'Job cancelled' })
 })
 
+// Download proxy endpoint for handling CORS issues
+router.get('/download/:jobId', async (req, res) => {
+    try {
+        const job = exportJobs.get(req.params.jobId)
+        if (!job) {
+            return res.status(404).json({ success: false, error: 'Job not found' })
+        }
+
+        if (job.status !== 'completed' || !job.downloadUrl) {
+            return res.status(400).json({ success: false, error: 'Export not ready for download' })
+        }
+
+        console.log(`[Export ${req.params.jobId}] Proxying download request`)
+
+        // Fetch the file from GCS
+        const response = await fetch(job.downloadUrl)
+        if (!response.ok) {
+            throw new Error(`Failed to fetch file: ${response.status}`)
+        }
+
+        // Set appropriate headers for download
+        const filename = `video-export-${Date.now()}.mp4`
+        res.setHeader('Content-Type', 'video/mp4')
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+        res.setHeader('Cache-Control', 'no-cache')
+        
+        if (response.headers.get('content-length')) {
+            res.setHeader('Content-Length', response.headers.get('content-length')!)
+        }
+
+        // Stream the file to the client
+        if (response.body) {
+            const reader = response.body.getReader()
+            const stream = (await import('stream')).Readable.from(async function* () {
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read()
+                        if (done) break
+                        yield value
+                    }
+                } finally {
+                    reader.releaseLock()
+                }
+            }())
+            
+            stream.pipe(res)
+        } else {
+            throw new Error('No response body available')
+        }
+
+    } catch (error) {
+        console.error(`[Export] Download proxy error:`, error)
+        if (!res.headersSent) {
+            res.status(500).json({ 
+                success: false, 
+                error: error instanceof Error ? error.message : 'Download failed' 
+            })
+        }
+    }
+})
+
 export default router 
