@@ -272,26 +272,33 @@ class ProfessionalVideoExporter {
         
         console.log(`[Export ${this.jobId}] Filter: ${filterGraph}`)
         
+        // Use addOption instead of complexFilter to avoid fluent-ffmpeg issues
         ffmpegCommand
-            .complexFilter(filterGraph)
-            .outputOptions([
-                '-map', '[final_video]',
-                '-map', '[final_audio]',
-                '-c:v', 'libx264',
-                '-c:a', 'aac',
-                '-preset', 'medium',
-                '-crf', '23',
-                '-pix_fmt', 'yuv420p',
-                '-movflags', '+faststart'
-            ])
+            .addOption('-filter_complex', filterGraph)
+            .addOption('-map', '[final_video]')
+            .addOption('-map', '[final_audio]')
+            .addOption('-c:v', 'libx264')
+            .addOption('-c:a', 'aac')
+            .addOption('-preset', 'medium')
+            .addOption('-crf', '23')
+            .addOption('-pix_fmt', 'yuv420p')
+            .addOption('-movflags', '+faststart')
             .output(outputPath)
         
         return new Promise((resolve, reject) => {
             ffmpegCommand
+                .on('start', (commandLine) => {
+                    console.log(`[Export ${this.jobId}] FFmpeg command: ${commandLine}`)
+                })
                 .on('end', () => {
+                    console.log(`[Export ${this.jobId}] Export completed successfully`)
                     resolve()
                 })
-                .on('error', (err: any, _stdout: string | null, _stderr: string | null) => {
+                .on('error', (err: any, _stdout: string | null, stderr: string | null) => {
+                    console.error(`[Export ${this.jobId}] FFmpeg error:`, err.message)
+                    if (stderr) {
+                        console.error(`[Export ${this.jobId}] FFmpeg stderr:`, stderr)
+                    }
                     reject(err)
                 })
                 .run()
@@ -357,14 +364,14 @@ class ProfessionalVideoExporter {
         
         const videoElements = this.elements
             .filter(e => ['video', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
-            .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+                .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
 
         console.log(`[Export ${this.jobId}] Building ${videoElements.length} video tracks`)
 
         videoElements.forEach((element, index) => {
-            const assetPath = this.downloadedAssets.get(element.assetId!)
-            const inputIndex = inputMapping.get(assetPath!)
-            if (inputIndex === undefined) return
+                const assetPath = this.downloadedAssets.get(element.assetId!)
+                const inputIndex = inputMapping.get(assetPath!)
+                if (inputIndex === undefined) return
 
             const trackLabel = `video_track_${index}`
             const startTime = element.timelineStartMs / 1000
@@ -380,20 +387,20 @@ class ProfessionalVideoExporter {
             // Build element processing filter
             let elementFilter = `[${inputIndex}:v]`
         
-            // Source trimming
-            if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
+        // Source trimming
+        if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
                 const sourceStart = element.sourceStartMs / 1000
                 const sourceDuration = (element.sourceEndMs - element.sourceStartMs) / 1000
                 elementFilter += `trim=start=${sourceStart}:duration=${sourceDuration},setpts=PTS-STARTPTS,`
-            }
+        }
         
-            // Speed adjustment
-            if (element.speed && element.speed !== 1) {
+        // Speed adjustment
+        if (element.speed && element.speed !== 1) {
                 elementFilter += `setpts=${1/element.speed}*PTS,`
-            }
+        }
         
             // Image duration handling
-            if (element.type === 'image') {
+        if (element.type === 'image') {
                 elementFilter += `loop=loop=-1:size=1:start=0,setpts=N/(${this.outputSettings.fps}*TB),`
             }
             
@@ -403,17 +410,17 @@ class ProfessionalVideoExporter {
             elementFilter += `format=yuv420p,fps=${this.outputSettings.fps}`
             
             // Effects
-            if (element.opacity && element.opacity !== 1) {
+        if (element.opacity && element.opacity !== 1) {
                 elementFilter += `,colorchannelmixer=aa=${element.opacity}`
-            }
+        }
         
-            // Transitions
-            if (element.transitionIn) {
+        // Transitions
+        if (element.transitionIn) {
                 const transitionDuration = element.transitionIn.duration || 0.5
                 elementFilter += `,fade=t=in:st=0:d=${transitionDuration}`
-            }
-            
-            if (element.transitionOut) {
+        }
+        
+        if (element.transitionOut) {
                 const transitionDuration = element.transitionOut.duration || 0.5
                 const transitionStart = Math.max(0, duration - transitionDuration)
                 elementFilter += `,fade=t=out:st=${transitionStart}:d=${transitionDuration}`
@@ -516,7 +523,7 @@ class ProfessionalVideoExporter {
             const outputLabel = index === textElements.length - 1 ? 'final_video' : `text_${index}`
             
             // Add proper font specification to avoid font errors
-            const textFilter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}:enable='between(t,${startSec},${endSec})':fontfile=NotoSans-Regular`
+            const textFilter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}:enable='between(t,${startSec},${endSec})'`
             filters.push(`[${currentOutput}]${textFilter}[${outputLabel}]`)
             currentOutput = outputLabel
             
@@ -534,9 +541,9 @@ class ProfessionalVideoExporter {
         console.log(`[Export ${this.jobId}] Building ${audioElements.length} audio tracks`)
 
         audioElements.forEach((element, index) => {
-            const assetPath = this.downloadedAssets.get(element.assetId!)
-            const inputIndex = inputMapping.get(assetPath!)
-            if (inputIndex === undefined) return
+                const assetPath = this.downloadedAssets.get(element.assetId!)
+                const inputIndex = inputMapping.get(assetPath!)
+                if (inputIndex === undefined) return
 
             const trackLabel = `audio_track_${index}`
             const startTime = element.timelineStartMs / 1000
@@ -550,25 +557,25 @@ class ProfessionalVideoExporter {
             }
             
             // Build audio processing filter
-            let audioFilter = `[${inputIndex}:a]`
-            
-            // Source trimming
-            if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
+                let audioFilter = `[${inputIndex}:a]`
+                
+                // Source trimming
+                if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
                 const sourceStart = element.sourceStartMs / 1000
                 const sourceDuration = (element.sourceEndMs - element.sourceStartMs) / 1000
                 audioFilter += `atrim=start=${sourceStart}:duration=${sourceDuration},`
-            }
-            
-            // Speed adjustment
-            if (element.speed && element.speed !== 1) {
-                audioFilter += `atempo=${element.speed},`
-            }
-            
-            // Volume adjustment
-            if (element.volume && element.volume !== 1) {
-                audioFilter += `volume=${element.volume},`
-            }
-            
+                }
+                
+                // Speed adjustment
+                if (element.speed && element.speed !== 1) {
+                    audioFilter += `atempo=${element.speed},`
+                }
+                
+                // Volume adjustment
+                if (element.volume && element.volume !== 1) {
+                    audioFilter += `volume=${element.volume},`
+                }
+                
             // Ensure exact duration (only if no source trimming was done, to avoid double atrim)
             if (element.sourceStartMs === undefined || element.sourceEndMs === undefined) {
                 audioFilter += `atrim=duration=${duration},`

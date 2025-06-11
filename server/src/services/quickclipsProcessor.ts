@@ -85,7 +85,7 @@ const FORMAT_CONFIGS = {
         name: 'Short Format',
         aspectRatio: '9:16',
         maxDuration: 120, // < 2 minutes
-        segmentCount: { min: 2, max: 10 },
+        segmentCount: { min: 2, max: 14 },
         segmentLength: { min: 30, max: 90, target: 45 },
         totalDuration: { tolerance: 15 }, // ±15 seconds acceptable
         approach: 'Create a concise narrative arc with clear beginning, development, and conclusion. Each segment should build upon the previous one.'
