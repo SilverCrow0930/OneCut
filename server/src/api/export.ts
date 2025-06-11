@@ -272,33 +272,26 @@ class ProfessionalVideoExporter {
         
         console.log(`[Export ${this.jobId}] Filter: ${filterGraph}`)
         
-        // Use addOption instead of complexFilter to avoid fluent-ffmpeg issues
         ffmpegCommand
-            .addOption('-filter_complex', filterGraph)
-            .addOption('-map', '[final_video]')
-            .addOption('-map', '[final_audio]')
-            .addOption('-c:v', 'libx264')
-            .addOption('-c:a', 'aac')
-            .addOption('-preset', 'medium')
-            .addOption('-crf', '23')
-            .addOption('-pix_fmt', 'yuv420p')
-            .addOption('-movflags', '+faststart')
+            .complexFilter(filterGraph)
+            .outputOptions([
+                '-map', '[final_video]',
+                '-map', '[final_audio]',
+                '-c:v', 'libx264',
+                '-c:a', 'aac',
+                '-preset', 'medium',
+                '-crf', '23',
+                '-pix_fmt', 'yuv420p',
+                '-movflags', '+faststart'
+            ])
             .output(outputPath)
         
         return new Promise((resolve, reject) => {
             ffmpegCommand
-                .on('start', (commandLine) => {
-                    console.log(`[Export ${this.jobId}] FFmpeg command: ${commandLine}`)
-                })
                 .on('end', () => {
-                    console.log(`[Export ${this.jobId}] Export completed successfully`)
                     resolve()
                 })
-                .on('error', (err: any, _stdout: string | null, stderr: string | null) => {
-                    console.error(`[Export ${this.jobId}] FFmpeg error:`, err.message)
-                    if (stderr) {
-                        console.error(`[Export ${this.jobId}] FFmpeg stderr:`, stderr)
-                    }
+                .on('error', (err: any, _stdout: string | null, _stderr: string | null) => {
                     reject(err)
                 })
                 .run()
@@ -523,7 +516,7 @@ class ProfessionalVideoExporter {
             const outputLabel = index === textElements.length - 1 ? 'final_video' : `text_${index}`
             
             // Add proper font specification to avoid font errors
-            const textFilter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}:enable='between(t,${startSec},${endSec})'`
+            const textFilter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}:enable='between(t,${startSec},${endSec})':fontfile=NotoSans-Regular`
             filters.push(`[${currentOutput}]${textFilter}[${outputLabel}]`)
             currentOutput = outputLabel
             

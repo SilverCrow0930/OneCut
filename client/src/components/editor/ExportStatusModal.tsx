@@ -23,38 +23,38 @@ const ExportStatusModal = ({
     if (!isOpen) return null
 
     const getStatusMessage = () => {
-        if (error) return 'Export failed'
+        if (error) return 'Share failed'
         
         if (serverSide) {
             switch (status) {
                 case 'queued':
-                    return 'Export queued on server...'
+                    return 'Share queued on server...'
                 case 'processing':
                     if (progress < 10) return 'Downloading assets...'
                     if (progress < 35) return 'Processing media files...'
                     if (progress < 95) return 'Encoding video...'
                     if (progress < 100) return 'Uploading to cloud...'
-                    return 'Finalizing export...'
+                    return 'Finalizing share...'
                 case 'downloading':
                     return 'Downloading video...'
                 case 'completed':
-                    return 'Export complete!'
+                    return 'Share complete!'
                 case 'failed':
-                    return 'Export failed'
+                    return 'Share failed'
                 case 'cancelled':
-                    return 'Export cancelled'
+                    return 'Share cancelled'
                 default:
-                    return 'Processing export...'
+                    return 'Processing share...'
             }
         } else {
             // Browser-side export messages (legacy)
-        if (progress === 0) return 'Preparing export...'
+        if (progress === 0) return 'Preparing share...'
         if (progress < 20) return 'Loading assets...'
         if (progress < 40) return 'Processing video...'
         if (progress < 60) return 'Applying effects...'
         if (progress < 80) return 'Encoding video...'
-        if (progress < 100) return 'Finalizing export...'
-        return 'Export complete!'
+        if (progress < 100) return 'Finalizing share...'
+        return 'Share complete!'
         }
     }
 
@@ -102,9 +102,9 @@ const ExportStatusModal = ({
             <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-gray-900">Export Status</h2>
+                        <h2 className="text-xl font-bold text-gray-900">Share Status</h2>
                         {serverSide && (
-                            <Cloud className="w-5 h-5 text-blue-500" />
+                            <Cloud className="w-5 h-5 text-emerald-500" />
                         )}
                     </div>
                     {canClose && (
@@ -126,8 +126,8 @@ const ExportStatusModal = ({
 
                 {serverSide && status === 'queued' && (
                     <div className="text-center py-2 mb-4">
-                        <p className="text-sm text-blue-600">
-                            Your export has been queued for processing on our servers.
+                        <p className="text-sm text-emerald-600">
+                            Your video has been queued for processing on our servers.
                         </p>
                     </div>
                 )}
@@ -164,7 +164,7 @@ const ExportStatusModal = ({
                 {status === 'cancelled' && (
                     <div className="text-center py-4">
                         <p className="text-sm text-orange-600 mb-2">
-                            Export was cancelled.
+                            Share was cancelled.
                         </p>
                     </div>
                 )}
@@ -185,15 +185,15 @@ const ExportStatusModal = ({
                             onClick={onCancel}
                             className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium"
                         >
-                            Cancel Export
+                            Cancel Share
                         </button>
                         </div>
                     )}
 
                 {/* Server-side benefits info */}
                 {serverSide && !error && status !== 'completed' && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <p className="text-xs text-blue-700">
+                    <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                        <p className="text-xs text-emerald-700">
                             <strong>Server Processing:</strong> Faster encoding, higher quality, and no browser limitations.
                         </p>
                 </div>
