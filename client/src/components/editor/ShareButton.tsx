@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
-import { Share, Download, AlertCircle } from 'lucide-react'
+import { Download, AlertCircle } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { useAssetUrls } from '@/hooks/useAssetUrls'
@@ -256,7 +256,7 @@ const ShareButton = () => {
                     border border-emerald-400/20
                 "
             >
-                <Share size={18} />
+                <img src="/assets/icons/download.png" alt="Download" className="w-[18px] h-[18px]" />
                 Share
             </button>
 
@@ -369,7 +369,7 @@ const ShareButton = () => {
                                 flex items-center justify-center gap-2
                             "
                         >
-                            <Share size={20} />
+                            <img src="/assets/icons/download.png" alt="Download" className="w-[20px] h-[20px]" />
                             {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Share' : 'Share Video'}
                         </button>
                     </div>
