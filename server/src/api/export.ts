@@ -754,8 +754,8 @@ class ProfessionalVideoExporter {
             if (track.endTime > track.startTime) {
                 const outputLabel = `overlay_${validOverlays}`
                 
-                // Use simplified overlay without enable parameter - timing is handled in input preparation
-                filters.push(`[${currentComposite}][${track.label}]overlay=0:0:format=yuv420p:shortest=0[${outputLabel}]`)
+                // Use simplified overlay without deprecated format parameter - format is handled in input preparation
+                filters.push(`[${currentComposite}][${track.label}]overlay=0:0:shortest=0[${outputLabel}]`)
                 
                 currentComposite = outputLabel
                 validOverlays++
@@ -845,9 +845,9 @@ class ProfessionalVideoExporter {
                 // Add delay if needed
                 if (startSec > 0) {
                     filters.push(`[${textVideoLabel}]tpad=start_duration=${startSec}[${textVideoLabel}_delayed]`)
-                    filters.push(`[${currentOutput}][${textVideoLabel}_delayed]overlay=0:0:format=yuv420p:shortest=0[${outputLabel}]`)
+                    filters.push(`[${currentOutput}][${textVideoLabel}_delayed]overlay=0:0:shortest=0[${outputLabel}]`)
                 } else {
-                    filters.push(`[${currentOutput}][${textVideoLabel}]overlay=0:0:format=yuv420p:shortest=0[${outputLabel}]`)
+                    filters.push(`[${currentOutput}][${textVideoLabel}]overlay=0:0:shortest=0[${outputLabel}]`)
                 }
             } else {
                 // Text covers entire duration - simple overlay
