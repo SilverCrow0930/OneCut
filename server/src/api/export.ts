@@ -330,8 +330,8 @@ class ProfessionalVideoExporter {
         const timelineDurationSec = this.totalDurationMs / 1000
         const backgroundIndex = inputMapping.size
         
-        // Step 1: Create master timeline background with exact duration
-        filters.push(`[${backgroundIndex}:v]trim=duration=${timelineDurationSec},setpts=PTS-STARTPTS,format=yuv420p,fps=${this.outputSettings.fps}[master_timeline]`)
+        // Step 1: Create master timeline background with exact duration AND matching resolution
+        filters.push(`[${backgroundIndex}:v]trim=duration=${timelineDurationSec},setpts=PTS-STARTPTS,scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${this.outputSettings.width}:${this.outputSettings.height}:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,fps=${this.outputSettings.fps}[master_timeline]`)
         
         // Step 2: Process all video elements with timeline synchronization
         const videoTracks = this.buildVideoTracks(filters, inputMapping, timelineDurationSec)
