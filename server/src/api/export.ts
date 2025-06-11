@@ -1,3 +1,21 @@
+/**
+ * CONSOLIDATED EXPORT SYSTEM
+ * 
+ * This file contains the complete server-side video export implementation:
+ * - Handles text, captions, video, audio, and image elements
+ * - Includes font management for proper text rendering
+ * - Supports complex timeline compositions with overlays and transitions
+ * - Refactored to remove duplications and fix TypeScript errors
+ * 
+ * Key Features:
+ * - Professional video export with FFmpeg
+ * - Text and caption rendering with system fonts
+ * - Asset downloading and management
+ * - Progress tracking and job management
+ * - Multiple audio track mixing
+ * - Video overlay composition with timing
+ */
+
 import express from 'express'
 import { body, validationResult } from 'express-validator'
 import ffmpeg from 'fluent-ffmpeg'
@@ -61,11 +79,27 @@ interface TimelineElement {
     text?: string
     fontSize?: number
     fontColor?: string
+    fontFamily?: string
+    fontWeight?: string
+    fontStyle?: string
+    textAlign?: string
+    backgroundColor?: string
+    borderColor?: string
+    borderWidth?: number
     position?: { x: number, y: number }
     transitionIn?: { type: string, duration: number }
     transitionOut?: { type: string, duration: number }
     properties?: {
         externalAsset?: { url: string, platform: string }
+        captionStyle?: {
+            backgroundColor?: string
+            borderColor?: string
+            borderWidth?: number
+            padding?: number
+            borderRadius?: number
+            shadow?: boolean
+            outline?: boolean
+        }
         [key: string]: any
     }
 }
@@ -182,67 +216,213 @@ async function fetchAssetUrl(assetId: string): Promise<string> {
     }
 }
 
-async function downloadAsset(url: string, filename: string): Promise<string> {
+/**
+ * Enhanced asset download with retry mechanism and better error handling
+ */
+async function downloadAsset(url: string, filename: string, maxRetries: number = 3): Promise<string> {
     console.log(`[Download] Starting download: ${filename}`)
     console.log(`[Download] URL: ${url.substring(0, 100)}...`)
     
-    // Add timeout to prevent hanging
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+    let lastError: Error | null = null
     
-    try {
-        const response = await fetch(url, { 
-            signal: controller.signal,
-            headers: {
-                'User-Agent': 'Lemona-Server/1.0'
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        console.log(`[Download] Attempt ${attempt}/${maxRetries} for ${filename}`)
+        
+        // Add timeout to prevent hanging
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 45000) // 45 second timeout
+        
+        try {
+            // Validate URL before attempting download
+            let parsedUrl: URL
+            try {
+                parsedUrl = new URL(url)
+            } catch {
+                throw new Error(`Invalid URL format: ${url}`)
             }
-        })
-        
-        clearTimeout(timeoutId)
-        
-    if (!response.ok) {
-            throw new Error(`Download failed: ${response.status} ${response.statusText}`)
-    }
-        
-        console.log(`[Download] Response OK for ${filename}, size: ${response.headers.get('content-length')} bytes`)
-    
-    const buffer = await response.arrayBuffer()
-    const filePath = path.join(TEMP_DIR, filename)
-    await fs.writeFile(filePath, Buffer.from(buffer))
-        
-        console.log(`[Download] Saved ${filename} to ${filePath}`)
-    return filePath
-        
-    } catch (error) {
-        clearTimeout(timeoutId)
-        console.error(`[Download] Failed to download ${filename}:`, error)
-        
-        if (error instanceof Error && error.name === 'AbortError') {
-            throw new Error(`Download timeout after 30 seconds for ${filename}`)
+            
+            // Check for common issues
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                throw new Error(`Unsupported protocol: ${parsedUrl.protocol}`)
+            }
+            
+            const response = await fetch(url, { 
+                signal: controller.signal,
+                headers: {
+                    'User-Agent': 'Lemona-Server/1.0',
+                    'Accept': '*/*',
+                    'Cache-Control': 'no-cache'
+                }
+            })
+            
+            clearTimeout(timeoutId)
+            
+            if (!response.ok) {
+                const errorMsg = `HTTP ${response.status}: ${response.statusText}`
+                
+                // Don't retry on client errors (4xx)
+                if (response.status >= 400 && response.status < 500) {
+                    throw new Error(`${errorMsg} (client error - not retrying)`)
+                }
+                
+                throw new Error(errorMsg)
+            }
+            
+            const contentLength = response.headers.get('content-length')
+            const contentType = response.headers.get('content-type')
+            
+            console.log(`[Download] Response OK for ${filename}`)
+            console.log(`[Download] Content-Type: ${contentType || 'unknown'}`)
+            console.log(`[Download] Content-Length: ${contentLength || 'unknown'} bytes`)
+            
+            // Validate content type for media files
+            if (contentType && !contentType.startsWith('video/') && 
+                !contentType.startsWith('audio/') && 
+                !contentType.startsWith('image/') &&
+                !contentType.startsWith('application/')) {
+                console.warn(`[Download] Unexpected content type: ${contentType}`)
+            }
+            
+            const buffer = await response.arrayBuffer()
+            
+            // Validate file size
+            if (buffer.byteLength === 0) {
+                throw new Error('Downloaded file is empty')
+            }
+            
+            if (buffer.byteLength > 500 * 1024 * 1024) { // 500MB limit
+                throw new Error(`File too large: ${buffer.byteLength} bytes (500MB limit)`)
+            }
+            
+            const filePath = path.join(TEMP_DIR, filename)
+            await fs.writeFile(filePath, Buffer.from(buffer))
+            
+            // Verify file was written successfully
+            try {
+                const stats = await fs.stat(filePath)
+                if (stats.size !== buffer.byteLength) {
+                    throw new Error('File size mismatch after writing')
+                }
+            } catch (statError) {
+                throw new Error(`Failed to verify downloaded file: ${statError instanceof Error ? statError.message : 'Unknown error'}`)
+            }
+            
+            console.log(`[Download] Successfully saved ${filename} (${buffer.byteLength} bytes) to ${filePath}`)
+            return filePath
+            
+        } catch (error) {
+            clearTimeout(timeoutId)
+            lastError = error instanceof Error ? error : new Error('Unknown download error')
+            
+            console.error(`[Download] Attempt ${attempt} failed for ${filename}:`, lastError.message)
+            
+            // Don't retry on certain errors
+            if (lastError.message.includes('client error - not retrying') ||
+                lastError.message.includes('Invalid URL format') ||
+                lastError.message.includes('Unsupported protocol') ||
+                lastError.message.includes('File too large')) {
+                break
+            }
+            
+            if (lastError.name === 'AbortError') {
+                lastError = new Error(`Download timeout after 45 seconds for ${filename}`)
+                console.error(`[Download] Timeout on attempt ${attempt}`)
+            }
+            
+            // Wait before retry (exponential backoff)
+            if (attempt < maxRetries) {
+                const waitMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000) // Max 10s wait
+                console.log(`[Download] Waiting ${waitMs}ms before retry...`)
+                await new Promise(resolve => setTimeout(resolve, waitMs))
+            }
         }
-        
-        throw new Error(`Download failed for ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+    
+    const finalError = lastError || new Error('Download failed for unknown reason')
+    console.error(`[Download] All ${maxRetries} attempts failed for ${filename}`)
+    throw new Error(`Download failed after ${maxRetries} attempts: ${finalError.message}`)
+}
+
+// Duration validation constants
+const MIN_DURATION_MS = 100 // Minimum 100ms (0.1 seconds)
+const MIN_DURATION_SEC = MIN_DURATION_MS / 1000
+const MAX_DURATION_MS = 3600000 // Maximum 1 hour (3600 seconds)
+const MAX_TIMELINE_ELEMENTS = 1000 // Maximum elements per timeline
+const MAX_TRACKS = 100 // Maximum tracks per project
+
+/**
+ * Validates and fixes timeline durations to prevent FFmpeg errors
+ */
+function validateDuration(startMs: number, endMs: number, elementType: string, elementId: string): { startMs: number, endMs: number, durationMs: number } {
+    let validatedStartMs = Math.max(0, startMs || 0)
+    let validatedEndMs = Math.max(validatedStartMs + MIN_DURATION_MS, endMs || MIN_DURATION_MS)
+    
+    const durationMs = validatedEndMs - validatedStartMs
+    
+    if (durationMs < MIN_DURATION_MS) {
+        console.warn(`[Duration Validation] ${elementType} ${elementId}: Duration ${durationMs}ms too short, extending to ${MIN_DURATION_MS}ms`)
+        validatedEndMs = validatedStartMs + MIN_DURATION_MS
+    }
+    
+    return {
+        startMs: validatedStartMs,
+        endMs: validatedEndMs,
+        durationMs: validatedEndMs - validatedStartMs
     }
 }
 
+/**
+ * Validates source trimming to ensure positive durations
+ */
+function validateSourceTrimming(sourceStartMs?: number, sourceEndMs?: number): { sourceStartMs?: number, sourceEndMs?: number, sourceDurationMs?: number } {
+    if (sourceStartMs !== undefined && sourceEndMs !== undefined) {
+        const validatedStart = Math.max(0, sourceStartMs)
+        const validatedEnd = Math.max(validatedStart + MIN_DURATION_MS, sourceEndMs)
+        
+        return {
+            sourceStartMs: validatedStart,
+            sourceEndMs: validatedEnd,
+            sourceDurationMs: validatedEnd - validatedStart
+        }
+    }
+    
+    return { sourceStartMs, sourceEndMs }
+}
+
 function convertToTimelineElements(clips: TimelineClip[]): TimelineElement[] {
-    return clips.map(clip => ({
-        id: clip.id,
-        type: clip.type as any,
-        trackId: clip.trackId,
-        timelineStartMs: clip.timelineStartMs,
-        timelineEndMs: clip.timelineEndMs,
-        sourceStartMs: clip.sourceStartMs,
-        sourceEndMs: clip.sourceEndMs,
-        assetId: clip.assetId,
-        speed: clip.speed,
-        volume: clip.volume,
-        text: clip.properties?.text,
-        fontSize: clip.properties?.fontSize,
-        fontColor: clip.properties?.fontColor,
-        position: clip.properties?.position,
-        properties: clip.properties
-    }))
+    return clips.map(clip => {
+        // Validate timeline duration
+        const { startMs, endMs } = validateDuration(
+            clip.timelineStartMs, 
+            clip.timelineEndMs, 
+            clip.type, 
+            clip.id
+        )
+        
+        // Validate source trimming if present
+        const { sourceStartMs, sourceEndMs } = validateSourceTrimming(
+            clip.sourceStartMs,
+            clip.sourceEndMs
+        )
+        
+        return {
+            id: clip.id,
+            type: clip.type as any,
+            trackId: clip.trackId,
+            timelineStartMs: startMs,
+            timelineEndMs: endMs,
+            sourceStartMs,
+            sourceEndMs,
+            assetId: clip.assetId,
+            speed: clip.speed,
+            volume: clip.volume,
+            text: clip.properties?.text,
+            fontSize: clip.properties?.fontSize,
+            fontColor: clip.properties?.fontColor,
+            position: clip.properties?.position,
+            properties: clip.properties
+        }
+    })
 }
 
 class ProfessionalVideoExporter {
@@ -256,7 +436,17 @@ class ProfessionalVideoExporter {
     constructor(elements: TimelineElement[], tracks: TimelineTrack[], outputSettings: any, downloadedAssets: Map<string, string>, jobId: string) {
         this.elements = elements.sort((a, b) => a.timelineStartMs - b.timelineStartMs)
         this.tracks = tracks.sort((a, b) => a.index - b.index)
-        this.totalDurationMs = Math.max(...elements.map(e => e.timelineEndMs), 2000)
+        
+        // Calculate and validate total duration
+        const calculatedDuration = elements.length > 0 
+            ? Math.max(...elements.map(e => e.timelineEndMs)) 
+            : MIN_DURATION_MS
+        
+        // Ensure minimum total duration (1 second minimum for background video)
+        this.totalDurationMs = Math.max(calculatedDuration, 1000)
+        
+        console.log(`[Export ${jobId}] Timeline duration calculated: ${this.totalDurationMs}ms (${this.totalDurationMs / 1000}s)`)
+        
         this.outputSettings = outputSettings
         this.downloadedAssets = downloadedAssets
         this.jobId = jobId
@@ -272,27 +462,103 @@ class ProfessionalVideoExporter {
         
         console.log(`[Export ${this.jobId}] Filter: ${filterGraph}`)
         
+        // Use addOption instead of complexFilter to avoid fluent-ffmpeg issues
         ffmpegCommand
-            .complexFilter(filterGraph)
-            .outputOptions([
-                '-map', '[final_video]',
-                '-map', '[final_audio]',
-                '-c:v', 'libx264',
-                '-c:a', 'aac',
-                '-preset', 'medium',
-                '-crf', '23',
-                '-pix_fmt', 'yuv420p',
-                '-movflags', '+faststart'
-            ])
+            .addOption('-filter_complex', filterGraph)
+            .addOption('-map', '[final_video]')
+            .addOption('-map', '[final_audio]')
+            .addOption('-c:v', 'libx264')
+            .addOption('-c:a', 'aac')
+            .addOption('-preset', 'medium')
+            .addOption('-crf', '23')
+            .addOption('-pix_fmt', 'yuv420p')
+            .addOption('-movflags', '+faststart')
             .output(outputPath)
         
         return new Promise((resolve, reject) => {
+            let ffmpegStarted = false
+            let lastProgress = 0
+            
             ffmpegCommand
+                .on('start', (commandLine) => {
+                    ffmpegStarted = true
+                    console.log(`[Export ${this.jobId}] FFmpeg started successfully`)
+                    console.log(`[Export ${this.jobId}] Command: ${commandLine.length > 500 ? commandLine.substring(0, 500) + '...' : commandLine}`)
+                })
+                .on('progress', (progress) => {
+                    // Log progress every 10% or significant change
+                    const currentProgress = Math.round(progress.percent || 0)
+                    if (currentProgress - lastProgress >= 10 || currentProgress === 100) {
+                        console.log(`[Export ${this.jobId}] FFmpeg progress: ${currentProgress}% (${progress.timemark || 'unknown'})`)
+                        lastProgress = currentProgress
+                    }
+                })
                 .on('end', () => {
+                    console.log(`[Export ${this.jobId}] FFmpeg export completed successfully`)
                     resolve()
                 })
-                .on('error', (err: any, _stdout: string | null, _stderr: string | null) => {
-                    reject(err)
+                .on('error', (err: any, stdout: string | null, stderr: string | null) => {
+                    console.error(`[Export ${this.jobId}] FFmpeg error occurred`)
+                    console.error(`[Export ${this.jobId}] Error message: ${err.message}`)
+                    
+                    // Enhanced error analysis
+                    let errorCategory = 'Unknown'
+                    let userFriendlyMessage = 'Video export failed due to an unknown error'
+                    
+                    if (stderr) {
+                        console.error(`[Export ${this.jobId}] FFmpeg stderr:`, stderr)
+                        
+                        // Analyze common FFmpeg errors
+                        if (stderr.includes('Invalid data found when processing input')) {
+                            errorCategory = 'Corrupted Input'
+                            userFriendlyMessage = 'One or more input files are corrupted or invalid'
+                        } else if (stderr.includes('No such file or directory')) {
+                            errorCategory = 'Missing File'
+                            userFriendlyMessage = 'One or more required files could not be found'
+                        } else if (stderr.includes('Permission denied')) {
+                            errorCategory = 'Permission Error'
+                            userFriendlyMessage = 'Permission denied accessing files or directories'
+                        } else if (stderr.includes('codec not currently supported')) {
+                            errorCategory = 'Unsupported Codec'
+                            userFriendlyMessage = 'Video contains unsupported codec or format'
+                        } else if (stderr.includes('Error initializing complex filters')) {
+                            errorCategory = 'Filter Error'
+                            userFriendlyMessage = 'Video processing filter configuration error'
+                        } else if (stderr.includes('Conversion failed')) {
+                            errorCategory = 'Conversion Error'
+                            userFriendlyMessage = 'Video conversion process failed'
+                        } else if (stderr.includes('No space left on device')) {
+                            errorCategory = 'Storage Full'
+                            userFriendlyMessage = 'Not enough storage space to complete export'
+                        } else if (stderr.includes('Killed')) {
+                            errorCategory = 'Out of Memory'
+                            userFriendlyMessage = 'Export failed due to insufficient memory'
+                        } else if (stderr.includes('Invalid argument')) {
+                            errorCategory = 'Invalid Parameters'
+                            userFriendlyMessage = 'Invalid export parameters provided'
+                        }
+                    }
+                    
+                    if (stdout) {
+                        console.log(`[Export ${this.jobId}] FFmpeg stdout:`, stdout)
+                    }
+                    
+                    // Check if FFmpeg even started
+                    if (!ffmpegStarted) {
+                        errorCategory = 'Startup Failure'
+                        userFriendlyMessage = 'FFmpeg failed to start - check installation and configuration'
+                    }
+                    
+                    console.error(`[Export ${this.jobId}] Error category: ${errorCategory}`)
+                    
+                    // Create enhanced error object
+                    const enhancedError = new Error(`${userFriendlyMessage} (${errorCategory})`)
+                    ;(enhancedError as any).category = errorCategory
+                    ;(enhancedError as any).originalError = err
+                    ;(enhancedError as any).stderr = stderr
+                    ;(enhancedError as any).stdout = stdout
+                    
+                    reject(enhancedError)
                 })
                 .run()
         })
@@ -326,24 +592,24 @@ class ProfessionalVideoExporter {
         console.log(`[Export ${this.jobId}] Building professional timeline-based filter graph`)
         console.log(`[Export ${this.jobId}] Timeline duration: ${this.totalDurationMs}ms`)
         
-        // Professional approach: Build synchronized timeline using complex filter graph
-        const timelineDurationSec = this.totalDurationMs / 1000
+        // Validate timeline duration
+        const timelineDurationSec = Math.max(this.totalDurationMs / 1000, 1)
         const backgroundIndex = inputMapping.size
         
-        // Step 1: Create master timeline background with exact duration AND matching resolution
+        // Step 1: Create master timeline background
         filters.push(`[${backgroundIndex}:v]trim=duration=${timelineDurationSec},setpts=PTS-STARTPTS,scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${this.outputSettings.width}:${this.outputSettings.height}:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,fps=${this.outputSettings.fps}[master_timeline]`)
         
-        // Step 2: Process all video elements with timeline synchronization
+        // Step 2: Process video elements
         const videoTracks = this.buildVideoTracks(filters, inputMapping, timelineDurationSec)
         
-        // Step 3: Process all audio elements with timeline synchronization  
+        // Step 3: Process audio elements
         const audioTracks = this.buildAudioTracks(filters, inputMapping, timelineDurationSec)
         
-        // Step 4: Composite video tracks using professional overlay composition
+        // Step 4: Composite video tracks
         const finalVideo = this.compositeVideoTracks(filters, videoTracks, 'master_timeline')
         
-        // Step 5: Add text overlays with precise timing
-        this.addTextOverlays(filters, finalVideo)
+        // Step 5: Add text and caption overlays (UPDATED)
+        this.addTextAndCaptionOverlays(filters, finalVideo)
         
         // Step 6: Mix audio tracks
         this.mixAudioTracks(filters, audioTracks)
@@ -367,24 +633,34 @@ class ProfessionalVideoExporter {
                 if (inputIndex === undefined) return
 
             const trackLabel = `video_track_${index}`
-            const startTime = element.timelineStartMs / 1000
-            const endTime = element.timelineEndMs / 1000
+            
+            // Validate timeline positions with minimum duration
+            const startTime = Math.max(0, element.timelineStartMs / 1000)
+            const endTime = Math.max(startTime + MIN_DURATION_SEC, element.timelineEndMs / 1000)
             const duration = endTime - startTime
             
-            // Skip zero-duration tracks to prevent FFmpeg errors
-            if (duration <= 0) {
-                console.warn(`[Export ${this.jobId}] Skipping zero-duration video track ${index}: ${startTime}s-${endTime}s`)
+            // Additional validation - skip if still invalid
+            if (duration < MIN_DURATION_SEC) {
+                console.warn(`[Export ${this.jobId}] Skipping invalid video track ${index}: ${startTime}s-${endTime}s (duration: ${duration}s, minimum: ${MIN_DURATION_SEC}s)`)
                 return
             }
             
             // Build element processing filter
             let elementFilter = `[${inputIndex}:v]`
         
-        // Source trimming
+        // Source trimming with validation
         if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
-                const sourceStart = element.sourceStartMs / 1000
-                const sourceDuration = (element.sourceEndMs - element.sourceStartMs) / 1000
-                elementFilter += `trim=start=${sourceStart}:duration=${sourceDuration},setpts=PTS-STARTPTS,`
+                const sourceStart = Math.max(0, element.sourceStartMs / 1000)
+                const sourceEnd = Math.max(sourceStart + MIN_DURATION_SEC, element.sourceEndMs / 1000)
+                const sourceDuration = sourceEnd - sourceStart
+                
+                // Only add source trimming if duration is valid
+                if (sourceDuration >= MIN_DURATION_SEC) {
+                    elementFilter += `trim=start=${sourceStart}:duration=${sourceDuration},setpts=PTS-STARTPTS,`
+                    console.log(`[Export ${this.jobId}] Video track ${index}: Source trimming ${sourceStart}s-${sourceEnd}s (${sourceDuration}s)`)
+                } else {
+                    console.warn(`[Export ${this.jobId}] Video track ${index}: Source trimming duration too short (${sourceDuration}s), skipping trim`)
+                }
         }
         
         // Speed adjustment
@@ -407,19 +683,23 @@ class ProfessionalVideoExporter {
                 elementFilter += `,colorchannelmixer=aa=${element.opacity}`
         }
         
-        // Transitions
+        // Transitions with duration validation
         if (element.transitionIn) {
-                const transitionDuration = element.transitionIn.duration || 0.5
-                elementFilter += `,fade=t=in:st=0:d=${transitionDuration}`
+                const transitionDuration = Math.min(element.transitionIn.duration || 0.5, duration / 2)
+                if (transitionDuration > 0) {
+                    elementFilter += `,fade=t=in:st=0:d=${transitionDuration}`
+                }
         }
         
         if (element.transitionOut) {
-                const transitionDuration = element.transitionOut.duration || 0.5
+                const transitionDuration = Math.min(element.transitionOut.duration || 0.5, duration / 2)
                 const transitionStart = Math.max(0, duration - transitionDuration)
-                elementFilter += `,fade=t=out:st=${transitionStart}:d=${transitionDuration}`
+                if (transitionDuration > 0) {
+                    elementFilter += `,fade=t=out:st=${transitionStart}:d=${transitionDuration}`
+                }
             }
             
-            // Final duration trim (only if no source trimming AND not an image with loop)
+            // Final duration trim and timing setup for overlay positioning
             const hasSourceTrimming = element.sourceStartMs !== undefined && element.sourceEndMs !== undefined
             const isImageWithLoop = element.type === 'image'
             
@@ -427,15 +707,29 @@ class ProfessionalVideoExporter {
                 elementFilter += `,trim=duration=${duration},setpts=PTS-STARTPTS`
             }
             
-            filters.push(`${elementFilter}[${trackLabel}]`)
+            // Add delay for timeline positioning (this replaces the overlay enable parameter)
+            if (startTime > 0) {
+                // Create a delayed version with proper timing for overlay
+                const delayedLabel = `${trackLabel}_positioned`
+                filters.push(`${elementFilter}[${trackLabel}_raw]`)
+                filters.push(`[${trackLabel}_raw]tpad=start_duration=${startTime}[${delayedLabel}]`)
+                
+                videoTracks.push({
+                    label: delayedLabel,
+                    startTime: startTime,
+                    endTime: endTime
+                })
+            } else {
+                filters.push(`${elementFilter}[${trackLabel}]`)
+                
+                videoTracks.push({
+                    label: trackLabel,
+                    startTime: startTime,
+                    endTime: endTime
+                })
+            }
             
-            videoTracks.push({
-                label: trackLabel,
-                startTime: startTime,
-                endTime: endTime
-            })
-            
-            console.log(`[Export ${this.jobId}] Built video track ${index}: ${startTime}s-${endTime}s (${duration}s)`)
+            console.log(`[Export ${this.jobId}] Built video track ${index}: ${startTime}s-${endTime}s (${duration}s) ${startTime > 0 ? 'with positioning delay' : ''}`)
         })
         
         return videoTracks
@@ -449,9 +743,9 @@ class ProfessionalVideoExporter {
             return 'video_composite'
         }
         
-        console.log(`[Export ${this.jobId}] Compositing ${videoTracks.length} video tracks`)
+        console.log(`[Export ${this.jobId}] Compositing ${videoTracks.length} video tracks with simplified overlays`)
         
-        // Professional overlay composition with enable timing
+        // Simplified overlay composition without problematic enable parameters
         let currentComposite = baseTrack
         let validOverlays = 0
         
@@ -460,13 +754,12 @@ class ProfessionalVideoExporter {
             if (track.endTime > track.startTime) {
                 const outputLabel = `overlay_${validOverlays}`
                 
-                // Use overlay with enable parameter for precise timing
-                const enableExpr = `between(t,${track.startTime},${track.endTime})`
-                filters.push(`[${currentComposite}][${track.label}]overlay=0:0:format=yuv420p:eval=frame:enable='${enableExpr}':shortest=0[${outputLabel}]`)
+                // Use simplified overlay without enable parameter - timing is handled in input preparation
+                filters.push(`[${currentComposite}][${track.label}]overlay=0:0:format=yuv420p:shortest=0[${outputLabel}]`)
                 
                 currentComposite = outputLabel
                 validOverlays++
-                console.log(`[Export ${this.jobId}] Overlaid track ${index} with timing ${track.startTime}s-${track.endTime}s`)
+                console.log(`[Export ${this.jobId}] Overlaid track ${index} (${track.startTime}s-${track.endTime}s) using input timing`)
             } else {
                 console.warn(`[Export ${this.jobId}] Skipping invalid overlay timing for track ${index}: ${track.startTime}s-${track.endTime}s`)
             }
@@ -489,39 +782,330 @@ class ProfessionalVideoExporter {
         }
     }
 
-    private addTextOverlays(filters: string[], videoComposite: string): void {
-        const textElements = this.elements.filter(e => e.type === 'text' && e.text)
+    private addTextAndCaptionOverlays(filters: string[], videoComposite: string): void {
+        // Process BOTH text and caption elements
+        const textElements = this.elements.filter(e => 
+            (e.type === 'text' || e.type === 'caption') && e.text
+        )
         
         if (textElements.length === 0) {
-            console.log(`[Export ${this.jobId}] No text overlays`)
+            console.log(`[Export ${this.jobId}] No text or caption overlays`)
             filters.push(`[${videoComposite}]copy[final_video]`)
             return
         }
         
-        console.log(`[Export ${this.jobId}] Adding ${textElements.length} text overlays`)
+        console.log(`[Export ${this.jobId}] Adding ${textElements.length} text/caption overlays with simplified filters`)
         
         let currentOutput = videoComposite
         
         textElements.forEach((element, index) => {
-            const startSec = element.timelineStartMs / 1000
-            const endSec = element.timelineEndMs / 1000
-            const text = (element.text || '').replace(/'/g, "\\'")
-            const fontSize = element.fontSize || 24
-            const fontColor = element.fontColor || 'white'
+            // Validate text overlay duration with minimum duration
+            const startSec = Math.max(0, element.timelineStartMs / 1000)
+            const endSec = Math.max(startSec + MIN_DURATION_SEC, element.timelineEndMs / 1000)
+            const duration = endSec - startSec
             
-            // Use proper position calculation instead of center which might not work
-            const x = element.position?.x || '(w-text_w)/2'
-            const y = element.position?.y || '(h-text_h)/2'
+            // Skip if duration is still invalid
+            if (duration < MIN_DURATION_SEC) {
+                console.warn(`[Export ${this.jobId}] Skipping ${element.type} overlay ${index}: Duration ${duration}s too short (minimum: ${MIN_DURATION_SEC}s)`)
+                return
+            }
+            
+            // Clean and escape text
+            const text = (element.text || '')
+                .replace(/'/g, "\\'")
+                .replace(/:/g, '\\:')
+                .replace(/\\/g, '\\\\')
+                .replace(/\n/g, '\\n')
+            
+            if (!text.trim()) {
+                console.warn(`[Export ${this.jobId}] Skipping ${element.type} overlay ${index}: Empty text`)
+                return
+            }
             
             const outputLabel = index === textElements.length - 1 ? 'final_video' : `text_${index}`
             
-            // Add proper font specification to avoid font errors
-            const textFilter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}:enable='between(t,${startSec},${endSec})':fontfile=NotoSans-Regular`
-            filters.push(`[${currentOutput}]${textFilter}[${outputLabel}]`)
+            // For simplified text handling, we'll use basic timing approach
+            // Alternative: Create a text-only video track and overlay it with proper timing
+            if (startSec > 0 || endSec < (this.totalDurationMs / 1000)) {
+                // Text needs specific timing - create a timed text overlay
+                const textVideoLabel = `text_video_${index}`
+                
+                // Build the text filter
+                let textFilter: string
+                if (element.type === 'caption') {
+                    textFilter = this.buildCaptionFilter(element, text, startSec, endSec)
+                } else {
+                    textFilter = this.buildTextFilter(element, text, startSec, endSec)
+                }
+                
+                // Create a transparent background for the text with proper timing
+                filters.push(`color=c=black@0.0:s=${this.outputSettings.width}x${this.outputSettings.height}:r=${this.outputSettings.fps}:d=${duration}[text_bg_${index}]`)
+                filters.push(`[text_bg_${index}]${textFilter}[${textVideoLabel}]`)
+                
+                // Add delay if needed
+                if (startSec > 0) {
+                    filters.push(`[${textVideoLabel}]tpad=start_duration=${startSec}[${textVideoLabel}_delayed]`)
+                    filters.push(`[${currentOutput}][${textVideoLabel}_delayed]overlay=0:0:format=yuv420p:shortest=0[${outputLabel}]`)
+                } else {
+                    filters.push(`[${currentOutput}][${textVideoLabel}]overlay=0:0:format=yuv420p:shortest=0[${outputLabel}]`)
+                }
+            } else {
+                // Text covers entire duration - simple overlay
+                let textFilter: string
+                if (element.type === 'caption') {
+                    textFilter = this.buildCaptionFilter(element, text, startSec, endSec)
+                } else {
+                    textFilter = this.buildTextFilter(element, text, startSec, endSec)
+                }
+                
+                filters.push(`[${currentOutput}]${textFilter}[${outputLabel}]`)
+            }
+            
             currentOutput = outputLabel
             
-            console.log(`[Export ${this.jobId}] Added text overlay ${index}: "${text}" (${startSec}s-${endSec}s)`)
+            console.log(`[Export ${this.jobId}] Added ${element.type} overlay ${index}: "${text.substring(0, 30)}..." (${startSec}s-${endSec}s, duration: ${duration}s) with timing-aware approach`)
         })
+    }
+
+    private buildTextFilter(element: TimelineElement, text: string, startSec: number, endSec: number): string {
+        const fontSize = Math.max(8, element.fontSize || 24)
+        const fontColor = element.fontColor || 'white'
+        const fontFamily = element.fontFamily || 'Arial'
+        const fontWeight = element.fontWeight || 'normal'
+        
+        // Parse and resolve font with enhanced fallback system
+        const fontPath = this.getFontPath(fontFamily, fontWeight)
+        
+        // Position calculation
+        const x = element.position?.x || '(w-text_w)/2'
+        const y = element.position?.y || '(h-text_h)/2'
+        
+        // Build simplified text filter without enable parameter
+        let filter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}`
+        
+        // Add font file if available, otherwise FFmpeg will use built-in fonts
+        if (fontPath) {
+            filter += `:fontfile='${fontPath}'`
+            console.log(`[Export ${this.jobId}] Text filter using font: ${fontPath}`)
+        } else {
+            console.log(`[Export ${this.jobId}] Text filter using FFmpeg built-in font for: ${fontFamily}`)
+        }
+        
+        // Note: Timing will be handled through video stream timing rather than enable parameter
+        // This avoids syntax errors while maintaining proper text positioning in timeline
+        
+        return filter
+    }
+
+    private buildCaptionFilter(element: TimelineElement, text: string, startSec: number, endSec: number): string {
+        const fontSize = Math.max(8, element.fontSize || 20)
+        const fontColor = element.fontColor || 'white'
+        const fontFamily = element.fontFamily || 'Impact'  // Default to Impact for captions
+        const fontWeight = element.fontWeight || 'normal'
+        
+        // Parse and resolve font with enhanced fallback system
+        const fontPath = this.getFontPath(fontFamily, fontWeight)
+        
+        // Caption-specific styling
+        const captionStyle = element.properties?.captionStyle || {}
+        const backgroundColor = captionStyle.backgroundColor || element.backgroundColor || 'black@0.8'
+        const borderColor = captionStyle.borderColor || element.borderColor || 'black'
+        const borderWidth = captionStyle.borderWidth || element.borderWidth || 1
+        
+        // Caption positioning (usually bottom center)
+        const x = element.position?.x || '(w-text_w)/2'
+        const y = element.position?.y || '(h-text_h-20)' // 20px from bottom
+        
+        // Build simplified caption filter with background and border
+        let filter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}`
+        
+        // Add font file if available, otherwise FFmpeg will use built-in fonts
+        if (fontPath) {
+            filter += `:fontfile='${fontPath}'`
+            console.log(`[Export ${this.jobId}] Caption filter using font: ${fontPath}`)
+        } else {
+            console.log(`[Export ${this.jobId}] Caption filter using FFmpeg built-in font for: ${fontFamily}`)
+        }
+        
+        // Add caption-specific styling
+        filter += `:box=1:boxcolor=${backgroundColor}:boxborderw=${borderWidth}`
+        
+        // Add shadow/outline for better readability
+        if (captionStyle.shadow !== false) {
+            filter += `:shadowcolor=black@0.5:shadowx=1:shadowy=1`
+        }
+        
+        // Note: Timing will be handled through video stream timing rather than enable parameter
+        // This avoids syntax errors while maintaining proper caption positioning in timeline
+        
+        return filter
+    }
+
+    /**
+     * Parse CSS font-family string and extract the primary font family
+     */
+    private parseFontFamily(fontFamily?: string): string {
+        if (!fontFamily) return 'Arial'
+        
+        // Remove quotes and split by comma to get fallback chain
+        const fonts = fontFamily
+            .split(',')
+            .map(f => f.trim().replace(/["']/g, ''))
+            .filter(f => f.length > 0)
+        
+        // Return the first font that's not a generic family
+        const genericFamilies = ['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui']
+        for (const font of fonts) {
+            if (!genericFamilies.includes(font.toLowerCase())) {
+                return font
+            }
+        }
+        
+        // If only generic families found, return Arial as default
+        return 'Arial'
+    }
+
+    private getFontPath(fontFamily?: string, fontWeight?: string): string {
+        // Enhanced font paths supporting all UI fonts across platforms
+        const fontPaths: Record<string, string> = {
+            // Windows fonts - Primary system fonts
+            'Arial': 'C:\\Windows\\Fonts\\arial.ttf',
+            'Arial-Bold': 'C:\\Windows\\Fonts\\arialbd.ttf',
+            'Arial-Black': 'C:\\Windows\\Fonts\\ariblk.ttf',
+            'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',
+            'Times-Bold': 'C:\\Windows\\Fonts\\timesbd.ttf',
+            'Verdana': 'C:\\Windows\\Fonts\\verdana.ttf',
+            'Verdana-Bold': 'C:\\Windows\\Fonts\\verdanab.ttf',
+            'Impact': 'C:\\Windows\\Fonts\\impact.ttf',
+            'Georgia': 'C:\\Windows\\Fonts\\georgia.ttf',
+            'Courier-New': 'C:\\Windows\\Fonts\\cour.ttf',
+            'Trebuchet-MS': 'C:\\Windows\\Fonts\\trebuc.ttf',
+            'Franklin-Gothic': 'C:\\Windows\\Fonts\\framd.ttf',
+            
+            // macOS fonts - System fonts
+            'Helvetica': '/System/Library/Fonts/Helvetica.ttc',
+            'Helvetica-Bold': '/System/Library/Fonts/Helvetica.ttc',
+            'Arial-Mac': '/System/Library/Fonts/Arial.ttf',
+            'Arial-Mac-Bold': '/System/Library/Fonts/Arial Bold.ttf',
+            'Times-Mac': '/System/Library/Fonts/Times.ttc',
+            'Impact-Mac': '/System/Library/Fonts/Impact.ttf',
+            'Georgia-Mac': '/System/Library/Fonts/Georgia.ttc',
+            'Courier-Mac': '/System/Library/Fonts/Courier New.ttf',
+            'San-Francisco': '/System/Library/Fonts/SFNS.ttf',
+            'SF-Pro': '/System/Library/Fonts/SF-Pro.ttf',
+            
+            // Linux fonts - Liberation (Microsoft font equivalents)
+            'Liberation-Sans': '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+            'Liberation-Sans-Bold': '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+            'Liberation-Serif': '/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf',
+            'Liberation-Serif-Bold': '/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf',
+            'Liberation-Mono': '/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf',
+            
+            // DejaVu fonts (common Linux fallback)
+            'DejaVu-Sans': '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            'DejaVu-Sans-Bold': '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+            'DejaVu-Serif': '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf',
+            'DejaVu-Serif-Bold': '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',
+            'DejaVu-Mono': '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
+            
+            // Ubuntu fonts (popular Linux distribution)
+            'Ubuntu': '/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf',
+            'Ubuntu-Bold': '/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf',
+            'Ubuntu-Mono': '/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf',
+            
+            // Noto fonts (Google fonts, widely available)
+            'Noto-Sans': '/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
+            'Noto-Sans-Bold': '/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf',
+            'Noto-Serif': '/usr/share/fonts/truetype/noto/NotoSerif-Regular.ttf',
+            'Noto-Mono': '/usr/share/fonts/truetype/noto/NotoMono-Regular.ttf',
+        }
+        
+        // Font family mapping - maps UI font families to available system fonts
+        const fontFamilyMapping: Record<string, string[]> = {
+            // Sans-serif fonts
+            'Arial': ['Arial', 'Liberation-Sans', 'DejaVu-Sans', 'Ubuntu', 'Noto-Sans'],
+            'Helvetica': ['Helvetica', 'Arial', 'Liberation-Sans', 'DejaVu-Sans', 'Ubuntu'],
+            'Roboto': ['Liberation-Sans', 'DejaVu-Sans', 'Arial', 'Ubuntu', 'Noto-Sans'],
+            'Open Sans': ['Liberation-Sans', 'DejaVu-Sans', 'Arial', 'Ubuntu', 'Noto-Sans'],
+            'Montserrat': ['Liberation-Sans', 'DejaVu-Sans', 'Arial', 'Ubuntu', 'Noto-Sans'],
+            'San Francisco': ['SF-Pro', 'San-Francisco', 'Helvetica', 'Arial', 'Liberation-Sans'],
+            'Verdana': ['Verdana', 'DejaVu-Sans', 'Liberation-Sans', 'Arial', 'Ubuntu'],
+            'Trebuchet MS': ['Trebuchet-MS', 'Liberation-Sans', 'DejaVu-Sans', 'Arial'],
+            
+            // Serif fonts
+            'Times New Roman': ['Times-New-Roman', 'Times', 'Liberation-Serif', 'DejaVu-Serif', 'Noto-Serif'],
+            'Georgia': ['Georgia', 'Liberation-Serif', 'DejaVu-Serif', 'Times', 'Noto-Serif'],
+            
+            // Monospace fonts
+            'Courier New': ['Courier-New', 'Liberation-Mono', 'DejaVu-Mono', 'Ubuntu-Mono', 'Noto-Mono'],
+            
+            // Impact/Display fonts
+            'Impact': ['Impact', 'Arial-Black', 'Liberation-Sans-Bold', 'DejaVu-Sans-Bold'],
+            'Arial Black': ['Arial-Black', 'Impact', 'Liberation-Sans-Bold', 'DejaVu-Sans-Bold'],
+            'Franklin Gothic Bold': ['Franklin-Gothic', 'Arial-Black', 'Impact', 'Liberation-Sans-Bold'],
+        }
+        
+        // Parse CSS font-family string to get primary font
+        const normalizedFamily = this.parseFontFamily(fontFamily)
+        const isBold = fontWeight === 'bold' || fontWeight === '700' || fontWeight === '800' || fontWeight === '900'
+        
+        console.log(`[Export ${this.jobId}] Looking for font: ${normalizedFamily} (bold: ${isBold}, original: ${fontFamily})`)
+        
+        // Try to find the requested font family
+        if (normalizedFamily && fontFamilyMapping[normalizedFamily]) {
+            const candidates = fontFamilyMapping[normalizedFamily]
+            
+            for (const candidate of candidates) {
+                const fontKey = isBold ? `${candidate}-Bold` : candidate
+                if (fontPaths[fontKey]) {
+                    console.log(`[Export ${this.jobId}] Found font: ${fontKey} -> ${fontPaths[fontKey]}`)
+                    return fontPaths[fontKey]
+                }
+                // Try without bold suffix if bold version not found
+                if (isBold && fontPaths[candidate]) {
+                    console.log(`[Export ${this.jobId}] Found font (regular): ${candidate} -> ${fontPaths[candidate]}`)
+                    return fontPaths[candidate]
+                }
+            }
+        }
+        
+        // Direct font name lookup (case-insensitive)
+        if (normalizedFamily) {
+            const directKey = isBold ? `${normalizedFamily}-Bold` : normalizedFamily
+            for (const [key, path] of Object.entries(fontPaths)) {
+                if (key.toLowerCase() === directKey.toLowerCase()) {
+                    console.log(`[Export ${this.jobId}] Found direct font match: ${key} -> ${path}`)
+                    return path
+                }
+            }
+        }
+        
+        // Universal fallback chain based on platform
+        const universalFallbacks = [
+            // Linux first (most common for servers)
+            'Liberation-Sans', 'DejaVu-Sans', 'Ubuntu', 'Noto-Sans',
+            // Windows fallbacks
+            'Arial', 'Verdana',
+            // macOS fallbacks
+            'Helvetica', 'Arial-Mac'
+        ]
+        
+        for (const fallbackFont of universalFallbacks) {
+            const fallbackKey = isBold ? `${fallbackFont}-Bold` : fallbackFont
+            if (fontPaths[fallbackKey]) {
+                console.log(`[Export ${this.jobId}] Using fallback font: ${fallbackKey} -> ${fontPaths[fallbackKey]}`)
+                return fontPaths[fallbackKey]
+            }
+            // Try regular version if bold not available
+            if (isBold && fontPaths[fallbackFont]) {
+                console.log(`[Export ${this.jobId}] Using fallback font (regular): ${fallbackFont} -> ${fontPaths[fallbackFont]}`)
+                return fontPaths[fallbackFont]
+            }
+        }
+        
+        // Last resort: let FFmpeg use built-in font
+        console.warn(`[Export ${this.jobId}] No fonts available for "${normalizedFamily}", using FFmpeg built-in font`)
+        return ''
     }
 
     private buildAudioTracks(filters: string[], inputMapping: Map<string, number>, timelineDuration: number): Array<{label: string, startTime: number, endTime: number}> {
@@ -539,24 +1123,34 @@ class ProfessionalVideoExporter {
                 if (inputIndex === undefined) return
 
             const trackLabel = `audio_track_${index}`
-            const startTime = element.timelineStartMs / 1000
-            const endTime = element.timelineEndMs / 1000
+            
+            // Validate timeline positions with minimum duration
+            const startTime = Math.max(0, element.timelineStartMs / 1000)
+            const endTime = Math.max(startTime + MIN_DURATION_SEC, element.timelineEndMs / 1000)
             const duration = endTime - startTime
             
-            // Skip zero-duration tracks
-            if (duration <= 0) {
-                console.warn(`[Export ${this.jobId}] Skipping zero-duration audio track ${index}: ${startTime}s-${endTime}s`)
+            // Additional validation - skip if still invalid
+            if (duration < MIN_DURATION_SEC) {
+                console.warn(`[Export ${this.jobId}] Skipping invalid audio track ${index}: ${startTime}s-${endTime}s (duration: ${duration}s, minimum: ${MIN_DURATION_SEC}s)`)
                 return
             }
             
             // Build audio processing filter
                 let audioFilter = `[${inputIndex}:a]`
                 
-                // Source trimming
+                // Source trimming with validation
                 if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
-                const sourceStart = element.sourceStartMs / 1000
-                const sourceDuration = (element.sourceEndMs - element.sourceStartMs) / 1000
-                audioFilter += `atrim=start=${sourceStart}:duration=${sourceDuration},`
+                    const sourceStart = Math.max(0, element.sourceStartMs / 1000)
+                    const sourceEnd = Math.max(sourceStart + MIN_DURATION_SEC, element.sourceEndMs / 1000)
+                    const sourceDuration = sourceEnd - sourceStart
+                    
+                    // Only add source trimming if duration is valid
+                    if (sourceDuration >= MIN_DURATION_SEC) {
+                        audioFilter += `atrim=start=${sourceStart}:duration=${sourceDuration},`
+                        console.log(`[Export ${this.jobId}] Audio track ${index}: Source trimming ${sourceStart}s-${sourceEnd}s (${sourceDuration}s)`)
+                    } else {
+                        console.warn(`[Export ${this.jobId}] Audio track ${index}: Source trimming duration too short (${sourceDuration}s), skipping trim`)
+                    }
                 }
                 
                 // Speed adjustment
@@ -564,13 +1158,14 @@ class ProfessionalVideoExporter {
                     audioFilter += `atempo=${element.speed},`
                 }
                 
-                // Volume adjustment
+                // Volume adjustment  
                 if (element.volume && element.volume !== 1) {
                     audioFilter += `volume=${element.volume},`
                 }
                 
             // Ensure exact duration (only if no source trimming was done, to avoid double atrim)
-            if (element.sourceStartMs === undefined || element.sourceEndMs === undefined) {
+            const hasSourceTrimming = element.sourceStartMs !== undefined && element.sourceEndMs !== undefined
+            if (!hasSourceTrimming) {
                 audioFilter += `atrim=duration=${duration},`
             }
             audioFilter += `asetpts=PTS-STARTPTS`
@@ -590,7 +1185,7 @@ class ProfessionalVideoExporter {
     }
 
     private mixAudioTracks(filters: string[], audioTracks: Array<{label: string, startTime: number, endTime: number}>): void {
-        const timelineDuration = this.totalDurationMs / 1000
+        const timelineDuration = Math.max(this.totalDurationMs / 1000, 1) // Ensure minimum 1 second
         
         if (audioTracks.length === 0) {
             console.log(`[Export ${this.jobId}] No audio tracks - generating silence`)
@@ -605,22 +1200,23 @@ class ProfessionalVideoExporter {
             if (track.startTime > 0 || track.endTime < timelineDuration) {
                 // Audio doesn't fill timeline - pad with silence
                 // Calculate the silence duration after the audio ends
-                const silenceAfterDuration = timelineDuration - track.endTime
+                const silenceAfterDuration = Math.max(0, timelineDuration - track.endTime)
                 
-                if (track.startTime > 0 && silenceAfterDuration > 0) {
+                if (track.startTime > MIN_DURATION_SEC && silenceAfterDuration > MIN_DURATION_SEC) {
                     // Need both before and after silence
                     filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${track.startTime}[silence_before]`)
                     filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${silenceAfterDuration}[silence_after]`)
                     filters.push(`[silence_before][${track.label}][silence_after]concat=n=3:v=0:a=1[final_audio]`)
-                } else if (track.startTime > 0) {
+                } else if (track.startTime > MIN_DURATION_SEC) {
                     // Need only before silence
                     filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${track.startTime}[silence_before]`)
                     filters.push(`[silence_before][${track.label}]concat=n=2:v=0:a=1[final_audio]`)
-                } else if (silenceAfterDuration > 0) {
+                } else if (silenceAfterDuration > MIN_DURATION_SEC) {
                     // Need only after silence
                     filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${silenceAfterDuration}[silence_after]`)
                     filters.push(`[${track.label}][silence_after]concat=n=2:v=0:a=1[final_audio]`)
                 } else {
+                    // No significant silence needed
                     filters.push(`[${track.label}]copy[final_audio]`)
                 }
                 
@@ -634,7 +1230,7 @@ class ProfessionalVideoExporter {
         console.log(`[Export ${this.jobId}] Mixing ${audioTracks.length} audio tracks`)
         
         // Multiple tracks - professional audio mixing
-        // Create silence base track
+        // Create silence base track with validated duration
         filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${timelineDuration}[base_audio]`)
         
         let currentMix = 'base_audio'
@@ -643,8 +1239,9 @@ class ProfessionalVideoExporter {
             const outputLabel = index === audioTracks.length - 1 ? 'final_audio' : `mix_${index}`
             
             // Position audio track at correct timeline position
-            if (track.startTime > 0) {
-                filters.push(`[${track.label}]adelay=${track.startTime * 1000}|${track.startTime * 1000}[${track.label}_delayed]`)
+            if (track.startTime > MIN_DURATION_SEC) {
+                const delayMs = Math.round(track.startTime * 1000)
+                filters.push(`[${track.label}]adelay=${delayMs}|${delayMs}[${track.label}_delayed]`)
                 filters.push(`[${currentMix}][${track.label}_delayed]amix=inputs=2:duration=longest[${outputLabel}]`)
             } else {
                 filters.push(`[${currentMix}][${track.label}]amix=inputs=2:duration=longest[${outputLabel}]`)
@@ -674,6 +1271,358 @@ class ProfessionalVideoExporter {
     }
 }
 
+/**
+ * Comprehensive validation result interface
+ */
+interface ValidationResult {
+    valid: boolean
+    errors: string[]
+    warnings: string[]
+    correctedElements?: TimelineElement[]
+}
+
+/**
+ * Validates export settings for correctness and compatibility
+ */
+function validateExportSettings(settings: ExportSettings, jobId: string): ValidationResult {
+    const errors: string[] = []
+    const warnings: string[] = []
+    
+    console.log(`[Export ${jobId}] Validating export settings`)
+    
+    // Validate resolution
+    const validResolutions = ['480p', '720p', '1080p']
+    if (!validResolutions.includes(settings.resolution)) {
+        errors.push(`Invalid resolution: ${settings.resolution}. Must be one of: ${validResolutions.join(', ')}`)
+    }
+    
+    // Validate FPS
+    if (!settings.fps || settings.fps < 1 || settings.fps > 120) {
+        errors.push(`Invalid FPS: ${settings.fps}. Must be between 1 and 120`)
+    }
+    
+    // Validate quality
+    const validQualities = ['low', 'medium', 'high']
+    if (!validQualities.includes(settings.quality)) {
+        errors.push(`Invalid quality: ${settings.quality}. Must be one of: ${validQualities.join(', ')}`)
+    }
+    
+    // Check for high-stress combinations
+    if (settings.resolution === '1080p' && settings.fps > 60) {
+        warnings.push('High resolution (1080p) with high FPS (>60) may cause performance issues')
+    }
+    
+    return { valid: errors.length === 0, errors, warnings }
+}
+
+/**
+ * Validates tracks structure and relationships
+ */
+function validateTracks(tracks: TimelineTrack[], jobId: string): ValidationResult {
+    const errors: string[] = []
+    const warnings: string[] = []
+    
+    console.log(`[Export ${jobId}] Validating ${tracks.length} tracks`)
+    
+    // Check track count limits
+    if (tracks.length === 0) {
+        errors.push('No tracks provided for export')
+        return { valid: false, errors, warnings }
+    }
+    
+    if (tracks.length > MAX_TRACKS) {
+        errors.push(`Too many tracks: ${tracks.length}. Maximum allowed: ${MAX_TRACKS}`)
+    }
+    
+    // Check for duplicate track IDs
+    const trackIds = new Set<string>()
+    const trackIndices = new Set<number>()
+    
+    tracks.forEach((track, arrayIndex) => {
+        // Validate track ID
+        if (!track.id || typeof track.id !== 'string') {
+            errors.push(`Track ${arrayIndex}: Invalid or missing ID`)
+        } else if (trackIds.has(track.id)) {
+            errors.push(`Track ${arrayIndex}: Duplicate track ID: ${track.id}`)
+        } else {
+            trackIds.add(track.id)
+        }
+        
+        // Validate track index
+        if (typeof track.index !== 'number' || track.index < 0) {
+            errors.push(`Track ${arrayIndex} (${track.id}): Invalid index: ${track.index}`)
+        } else if (trackIndices.has(track.index)) {
+            warnings.push(`Track ${arrayIndex} (${track.id}): Duplicate index: ${track.index}`)
+        } else {
+            trackIndices.add(track.index)
+        }
+        
+        // Validate track type
+        const validTypes = ['video', 'audio', 'image', 'text', 'caption']
+        if (!validTypes.includes(track.type)) {
+            errors.push(`Track ${arrayIndex} (${track.id}): Invalid type: ${track.type}`)
+        }
+        
+        // Validate track name
+        if (!track.name || typeof track.name !== 'string' || track.name.trim().length === 0) {
+            warnings.push(`Track ${arrayIndex} (${track.id}): Missing or empty name`)
+        }
+    })
+    
+    return { valid: errors.length === 0, errors, warnings }
+}
+
+/**
+ * Validates asset references and accessibility
+ */
+function validateAssetReferences(elements: TimelineElement[], jobId: string): ValidationResult {
+    const errors: string[] = []
+    const warnings: string[] = []
+    
+    console.log(`[Export ${jobId}] Validating asset references`)
+    
+    const assetIds = new Set<string>()
+    const elementsWithAssets = elements.filter(e => ['video', 'audio', 'image', 'gif'].includes(e.type))
+    
+    elementsWithAssets.forEach((element, index) => {
+        // Check for missing asset ID
+        if (!element.assetId) {
+            errors.push(`Element ${index} (${element.type}): Missing asset ID`)
+            return
+        }
+        
+        // Check asset ID format
+        if (typeof element.assetId !== 'string' || element.assetId.trim().length === 0) {
+            errors.push(`Element ${index} (${element.type}): Invalid asset ID format`)
+            return
+        }
+        
+        // Track unique assets
+        assetIds.add(element.assetId)
+        
+        // Validate external asset structure
+        if (element.assetId.startsWith('external_')) {
+            const externalAsset = element.properties?.externalAsset
+            if (!externalAsset?.url) {
+                errors.push(`Element ${index} (${element.type}): External asset missing URL`)
+            } else {
+                // Basic URL validation
+                try {
+                    new URL(externalAsset.url)
+                } catch {
+                    errors.push(`Element ${index} (${element.type}): Invalid external asset URL`)
+                }
+            }
+        }
+    })
+    
+    // Text elements validation
+    const textElements = elements.filter(e => ['text', 'caption'].includes(e.type))
+    textElements.forEach((element, index) => {
+        if (!element.text || element.text.trim().length === 0) {
+            warnings.push(`Text element ${index}: Empty text content`)
+        }
+        
+        // Check for extremely long text that might cause rendering issues
+        if (element.text && element.text.length > 1000) {
+            warnings.push(`Text element ${index}: Very long text content (${element.text.length} chars) may affect performance`)
+        }
+    })
+    
+    console.log(`[Export ${jobId}] Found ${assetIds.size} unique assets to process`)
+    
+    return { valid: errors.length === 0, errors, warnings }
+}
+
+/**
+ * Validates timeline ranges and element positioning
+ */
+function validateTimelineRanges(elements: TimelineElement[], jobId: string): ValidationResult {
+    const errors: string[] = []
+    const warnings: string[] = []
+    const correctedElements: TimelineElement[] = []
+    
+    console.log(`[Export ${jobId}] Validating timeline ranges for ${elements.length} elements`)
+    
+    if (elements.length === 0) {
+        errors.push('No timeline elements provided for export')
+        return { valid: false, errors, warnings, correctedElements }
+    }
+    
+    if (elements.length > MAX_TIMELINE_ELEMENTS) {
+        errors.push(`Too many timeline elements: ${elements.length}. Maximum allowed: ${MAX_TIMELINE_ELEMENTS}`)
+    }
+    
+    let maxTimelineEnd = 0
+    const elementsByTrack = new Map<string, TimelineElement[]>()
+    
+    elements.forEach((element, index) => {
+        // Basic structure validation
+        if (!element.id || typeof element.id !== 'string') {
+            errors.push(`Element ${index}: Invalid or missing ID`)
+        }
+        
+        if (!element.trackId || typeof element.trackId !== 'string') {
+            errors.push(`Element ${index}: Invalid or missing track ID`)
+        }
+        
+        // Timeline duration validation
+        const duration = element.timelineEndMs - element.timelineStartMs
+        const correctedElement = { ...element }
+        let wasCorrected = false
+        
+        if (duration < MIN_DURATION_MS) {
+            const newEndMs = element.timelineStartMs + MIN_DURATION_MS
+            warnings.push(`Element ${index} (${element.type}): Duration ${duration}ms too short, correcting to ${MIN_DURATION_MS}ms`)
+            correctedElement.timelineEndMs = newEndMs
+            wasCorrected = true
+        }
+        
+        if (duration > MAX_DURATION_MS) {
+            errors.push(`Element ${index} (${element.type}): Duration ${duration}ms too long (maximum: ${MAX_DURATION_MS}ms)`)
+        }
+        
+        // Timeline position validation
+        if (element.timelineStartMs < 0) {
+            warnings.push(`Element ${index} (${element.type}): Negative start time ${element.timelineStartMs}ms, correcting to 0`)
+            correctedElement.timelineStartMs = 0
+            correctedElement.timelineEndMs = Math.max(correctedElement.timelineEndMs, MIN_DURATION_MS)
+            wasCorrected = true
+        }
+        
+        if (element.timelineEndMs <= element.timelineStartMs) {
+            errors.push(`Element ${index} (${element.type}): End time ${element.timelineEndMs}ms not after start time ${element.timelineStartMs}ms`)
+        }
+        
+        // Source trimming validation
+        if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
+            const sourceDuration = element.sourceEndMs - element.sourceStartMs
+            
+            if (sourceDuration < MIN_DURATION_MS) {
+                warnings.push(`Element ${index} (${element.type}): Source duration ${sourceDuration}ms too short`)
+            }
+            
+            if (element.sourceStartMs < 0) {
+                warnings.push(`Element ${index} (${element.type}): Negative source start time`)
+                correctedElement.sourceStartMs = 0
+                wasCorrected = true
+            }
+            
+            if (element.sourceEndMs <= element.sourceStartMs) {
+                errors.push(`Element ${index} (${element.type}): Source end time not after start time`)
+            }
+        }
+        
+        // Track maximum timeline end
+        maxTimelineEnd = Math.max(maxTimelineEnd, correctedElement.timelineEndMs)
+        
+        // Group elements by track for overlap detection
+        if (!elementsByTrack.has(element.trackId)) {
+            elementsByTrack.set(element.trackId, [])
+        }
+        elementsByTrack.get(element.trackId)!.push(correctedElement)
+        
+        correctedElements.push(wasCorrected ? correctedElement : element)
+    })
+    
+    // Check for overlapping elements on the same track
+    elementsByTrack.forEach((trackElements, trackId) => {
+        const sortedElements = trackElements.sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+        
+        for (let i = 0; i < sortedElements.length - 1; i++) {
+            const current = sortedElements[i]
+            const next = sortedElements[i + 1]
+            
+            if (current.timelineEndMs > next.timelineStartMs) {
+                const overlapMs = current.timelineEndMs - next.timelineStartMs
+                warnings.push(`Track ${trackId}: Elements overlap by ${overlapMs}ms (${current.id} and ${next.id})`)
+            }
+        }
+    })
+    
+    // Check total timeline duration
+    const totalDurationSec = maxTimelineEnd / 1000
+    if (totalDurationSec > 3600) { // 1 hour
+        warnings.push(`Very long timeline duration: ${totalDurationSec.toFixed(1)}s. Consider splitting into shorter segments`)
+    }
+    
+    console.log(`[Export ${jobId}] Timeline validation: ${maxTimelineEnd}ms total duration, ${elementsByTrack.size} tracks`)
+    
+    return { 
+        valid: errors.length === 0, 
+        errors, 
+        warnings,
+        correctedElements: correctedElements.length > 0 ? correctedElements : undefined
+    }
+}
+
+/**
+ * Comprehensive validation of all export inputs
+ */
+function validateExportInputs(
+    clips: TimelineClip[], 
+    tracks: TimelineTrack[], 
+    exportSettings: ExportSettings, 
+    jobId: string
+): ValidationResult {
+    const allErrors: string[] = []
+    const allWarnings: string[] = []
+    let correctedElements: TimelineElement[] | undefined
+    
+    console.log(`[Export ${jobId}] Starting comprehensive input validation`)
+    
+    try {
+        // Validate export settings
+        const settingsValidation = validateExportSettings(exportSettings, jobId)
+        allErrors.push(...settingsValidation.errors)
+        allWarnings.push(...settingsValidation.warnings)
+        
+        // Validate tracks
+        const tracksValidation = validateTracks(tracks, jobId)
+        allErrors.push(...tracksValidation.errors)
+        allWarnings.push(...tracksValidation.warnings)
+        
+        // Convert clips to elements for validation
+        const elements = convertToTimelineElements(clips)
+        
+        // Validate asset references
+        const assetsValidation = validateAssetReferences(elements, jobId)
+        allErrors.push(...assetsValidation.errors)
+        allWarnings.push(...assetsValidation.warnings)
+        
+        // Validate timeline ranges
+        const timelineValidation = validateTimelineRanges(elements, jobId)
+        allErrors.push(...timelineValidation.errors)
+        allWarnings.push(...timelineValidation.warnings)
+        correctedElements = timelineValidation.correctedElements
+        
+        // Summary logging
+        console.log(`[Export ${jobId}] Validation complete: ${allErrors.length} errors, ${allWarnings.length} warnings`)
+        
+        if (allWarnings.length > 0) {
+            console.warn(`[Export ${jobId}] Validation warnings:`)
+            allWarnings.forEach(warning => console.warn(`  - ${warning}`))
+        }
+        
+        if (allErrors.length > 0) {
+            console.error(`[Export ${jobId}] Validation errors:`)
+            allErrors.forEach(error => console.error(`  - ${error}`))
+        }
+        
+    } catch (error) {
+        const validationError = `Validation process failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        console.error(`[Export ${jobId}] ${validationError}`)
+        allErrors.push(validationError)
+    }
+    
+    return {
+        valid: allErrors.length === 0,
+        errors: allErrors,
+        warnings: allWarnings,
+        correctedElements
+    }
+}
+
 async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: TimelineTrack[], exportSettings: ExportSettings, accessToken?: string): Promise<void> {
     const job = exportJobs.get(jobId)
     if (!job) return
@@ -686,14 +1635,28 @@ async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: 
 
         console.log(`[Export ${jobId}] Professional export starting...`)
 
-        const elements = convertToTimelineElements(clips)
+        // Comprehensive input validation
+        const validation = validateExportInputs(clips, tracks, exportSettings, jobId)
+        if (!validation.valid) {
+            const errorMessage = `Export validation failed: ${validation.errors.join('; ')}`
+            console.error(`[Export ${jobId}] ${errorMessage}`)
+            throw new Error(errorMessage)
+        }
+        
+        if (validation.warnings.length > 0) {
+            console.warn(`[Export ${jobId}] Export proceeding with ${validation.warnings.length} warnings`)
+        }
+        
+        // Use corrected elements if validation provided them
+        const elements = validation.correctedElements || convertToTimelineElements(clips)
+        
         const totalDurationMs = Math.max(...elements.map(e => e.timelineEndMs), 2000)
 
         const validElements = elements.filter(e => 
             ['video', 'image', 'audio'].includes(e.type) && e.assetId
         )
 
-        // Download assets
+        // Download assets with enhanced error handling
         console.log(`[Export ${jobId}] Starting asset downloads for ${validElements.length} elements`)
         
         if (validElements.length === 0) {
@@ -701,38 +1664,110 @@ async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: 
             throw new Error('No valid media elements found for export')
         }
         
-        for (let i = 0; i < validElements.length; i++) {
-            const element = validElements[i]
-            if (!element.assetId) continue
-
-            console.log(`[Export ${jobId}] Processing asset ${i + 1}/${validElements.length}: ${element.assetId}`)
-
-            try {
-                let assetUrl: string
-                if (element.assetId.startsWith('external_')) {
-                    assetUrl = element.properties?.externalAsset?.url || ''
-                    if (!assetUrl) throw new Error(`External asset missing URL`)
-                    console.log(`[Export ${jobId}] External asset URL: ${assetUrl.substring(0, 100)}...`)
-                } else {
-                    console.log(`[Export ${jobId}] Fetching internal asset URL for: ${element.assetId}`)
-                    assetUrl = await fetchAssetUrl(element.assetId)
+        const downloadPromises: Promise<{ assetId: string; filePath: string }>[] = []
+        const failedAssets: string[] = []
+        
+        // Process assets in batches to avoid overwhelming the system
+        const batchSize = 3
+        for (let batchStart = 0; batchStart < validElements.length; batchStart += batchSize) {
+            const batchEnd = Math.min(batchStart + batchSize, validElements.length)
+            const batch = validElements.slice(batchStart, batchEnd)
+            
+            console.log(`[Export ${jobId}] Processing asset batch ${Math.floor(batchStart / batchSize) + 1}/${Math.ceil(validElements.length / batchSize)}`)
+            
+            const batchPromises = batch.map(async (element, batchIndex) => {
+                const globalIndex = batchStart + batchIndex
+                
+                if (!element.assetId) {
+                    throw new Error(`Element ${globalIndex} missing asset ID`)
                 }
 
-                const ext = path.extname(assetUrl.split('?')[0]) || '.mp4'
-                const filename = `${jobId}_${i}${ext}`
+                console.log(`[Export ${jobId}] Processing asset ${globalIndex + 1}/${validElements.length}: ${element.assetId}`)
+
+                try {
+                    let assetUrl: string
+                    
+                    // Handle external vs internal assets
+                    if (element.assetId.startsWith('external_')) {
+                        assetUrl = element.properties?.externalAsset?.url || ''
+                        if (!assetUrl) {
+                            throw new Error(`External asset ${element.assetId} missing URL`)
+                        }
+                        console.log(`[Export ${jobId}] External asset URL: ${assetUrl.substring(0, 100)}...`)
+                        
+                        // Additional validation for external URLs
+                        try {
+                            const urlObj = new URL(assetUrl)
+                            if (!['http:', 'https:'].includes(urlObj.protocol)) {
+                                throw new Error(`Invalid protocol: ${urlObj.protocol}`)
+                            }
+                        } catch (urlError) {
+                            throw new Error(`Invalid external asset URL: ${urlError instanceof Error ? urlError.message : 'Parse error'}`)
+                        }
+                    } else {
+                        console.log(`[Export ${jobId}] Fetching internal asset URL for: ${element.assetId}`)
+                        try {
+                            assetUrl = await fetchAssetUrl(element.assetId)
+                        } catch (fetchError) {
+                            throw new Error(`Failed to fetch asset URL: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`)
+                        }
+                    }
+
+                    // Generate safe filename
+                    const urlParts = assetUrl.split('?')[0].split('/')
+                    const originalExt = path.extname(urlParts[urlParts.length - 1]) || '.mp4'
+                    const safeExt = originalExt.toLowerCase()
+                    const filename = `${jobId}_asset_${globalIndex}_${Date.now()}${safeExt}`
+                    
+                    console.log(`[Export ${jobId}] Downloading ${filename}...`)
+                    
+                    // Download with retry mechanism
+                    const filePath = await downloadAsset(assetUrl, filename, 3)
+                    
+                    console.log(`[Export ${jobId}] Asset ${globalIndex + 1}/${validElements.length} downloaded successfully`)
+                    
+                    return { assetId: element.assetId, filePath }
+                    
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+                    console.error(`[Export ${jobId}] Failed to download asset ${element.assetId}: ${errorMessage}`)
+                    failedAssets.push(element.assetId)
+                    throw new Error(`Asset download failed for ${element.assetId}: ${errorMessage}`)
+                }
+            })
+            
+            // Wait for batch completion
+            try {
+                const batchResults = await Promise.all(batchPromises)
+                downloadPromises.push(...batchResults.map(result => Promise.resolve(result)))
                 
-                console.log(`[Export ${jobId}] Downloading ${filename}...`)
-                const filePath = await downloadAsset(assetUrl, filename)
+                // Update progress
+                const completedAssets = batchEnd
+                job.progress = 5 + Math.round((completedAssets / validElements.length) * 30)
+                console.log(`[Export ${jobId}] Batch completed. Progress: ${job.progress}%`)
                 
-                downloadedAssets.set(element.assetId, filePath)
-                job.progress = 5 + Math.round(((i + 1) / validElements.length) * 30)
-                
-                console.log(`[Export ${jobId}] Asset ${i + 1}/${validElements.length} downloaded successfully. Progress: ${job.progress}%`)
-                
-            } catch (error) {
-                console.error(`[Export ${jobId}] Failed to download asset ${element.assetId}:`, error)
-                throw new Error(`Asset download failed for ${element.assetId}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            } catch (batchError) {
+                console.error(`[Export ${jobId}] Batch failed:`, batchError)
+                throw batchError
             }
+        }
+        
+        // Collect all successful downloads
+        try {
+            const allResults = await Promise.all(downloadPromises)
+            allResults.forEach(result => {
+                downloadedAssets.set(result.assetId, result.filePath)
+            })
+            
+            console.log(`[Export ${jobId}] All ${allResults.length} assets downloaded successfully`)
+            
+            if (failedAssets.length > 0) {
+                console.warn(`[Export ${jobId}] Some assets failed to download: ${failedAssets.join(', ')}`)
+            }
+            
+        } catch (downloadError) {
+            console.error(`[Export ${jobId}] Asset download collection failed:`, downloadError)
+            throw new Error(`Critical asset download failure: ${downloadError instanceof Error ? downloadError.message : 'Unknown error'}`)
         }
         
         console.log(`[Export ${jobId}] All assets downloaded successfully`)

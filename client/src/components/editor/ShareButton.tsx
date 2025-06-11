@@ -246,18 +246,15 @@ const ShareButton = () => {
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="
                     flex items-center gap-2 
-                    px-6 py-2.5
-                    bg-gradient-to-r from-emerald-500 to-teal-500 
-                    hover:from-emerald-600 hover:to-teal-600
-                    text-white font-semibold rounded-full
-                    transition-all duration-300
-                    shadow-lg hover:shadow-xl
-                    transform hover:scale-105
-                    border border-emerald-400/20
+                    px-4 py-2
+                    bg-blue-500 hover:bg-blue-600
+                    text-white font-medium rounded-xl
+                    transition-all duration-200
+                    shadow-md hover:shadow-lg
                 "
             >
-                <Share size={18} />
-                Share
+                <Share size={20} />
+                Export
             </button>
 
             {isDropdownOpen && (
@@ -297,25 +294,25 @@ const ShareButton = () => {
 
                     {/* Video Export Type Selection */}
                     <div className="px-6 py-4">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Share Video</h4>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Video Export</h4>
                         
                         {/* Quick Export Toggle */}
-                        <div className="flex items-center justify-between mb-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                        <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
                             <div>
-                                <span className="text-sm font-medium text-gray-700">Quick Share</span>
+                                <span className="text-sm font-medium text-gray-700">Quick Export</span>
                                 <p className="text-xs text-gray-500">Lower quality, faster processing</p>
                             </div>
                             <button
                                 onClick={() => setQuickExport(!quickExport)}
                                 className={`
-                                    w-12 h-6 rounded-full transition-all duration-300 shadow-inner
-                                    ${quickExport ? 'bg-gradient-to-r from-emerald-400 to-teal-400' : 'bg-gray-300'}
+                                    w-12 h-6 rounded-full transition-colors duration-200
+                                    ${quickExport ? 'bg-blue-500' : 'bg-gray-300'}
                                     relative
                                 `}
                             >
                                 <div className={`
-                                    w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300
-                                    absolute top-0.5 border border-gray-200
+                                    w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200
+                                    absolute top-0.5
                                     ${quickExport ? 'translate-x-6' : 'translate-x-0.5'}
                                 `} />
                             </button>
@@ -327,22 +324,17 @@ const ShareButton = () => {
                                     <button
                                         onClick={() => setSelectedExportType(type.id)}
                                         className={`
-                                            px-4 py-3 rounded-xl text-left font-medium
-                                            border-2 transition-all duration-300
+                                            px-4 py-3 rounded-lg text-left font-medium
+                                            border transition-all duration-200
                                             ${selectedExportType === type.id
-                                                ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 border-emerald-300 shadow-md'
-                                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm hover:shadow-md'}
+                                                ? 'bg-blue-500 text-white border-blue-500'
+                                                : 'bg-gray-100 text-gray-900 border-gray-200 hover:bg-gray-200 hover:border-gray-300'}
                                         `}
                                     >
-                                        <div className="flex items-center justify-between">
-                                            <span>{type.label}</span>
-                                            {selectedExportType === type.id && (
-                                                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                            )}
-                                        </div>
+                                        {type.label}
                                     </button>
                                     {selectedExportType === type.id && (
-                                        <p className="text-xs text-gray-500 mt-2 ml-1 animate-fadeIn">
+                                        <p className="text-xs text-gray-500 mt-2 ml-1">
                                             {type.description}
                                         </p>
                                     )}
@@ -352,25 +344,20 @@ const ShareButton = () => {
                     </div>
 
                     {/* Video Export Button */}
-                    <div className="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                    <div className="px-6 py-4 border-t border-gray-200">
                         <button
                             onClick={handleVideoExport}
                             disabled={loadingUrls || clips.length === 0}
                             className="
-                                w-full px-6 py-3
-                                bg-gradient-to-r from-emerald-500 to-teal-500
-                                hover:from-emerald-600 hover:to-teal-600
+                                w-full px-4 py-3
+                                bg-blue-500 hover:bg-blue-600
                                 text-white font-semibold rounded-xl
-                                transition-all duration-300 text-lg
-                                shadow-lg hover:shadow-xl
+                                transition-colors duration-200 text-lg
+                                shadow-md
                                 disabled:opacity-50 disabled:cursor-not-allowed
-                                disabled:hover:from-emerald-500 disabled:hover:to-teal-500
-                                transform hover:scale-[1.02]
-                                flex items-center justify-center gap-2
                             "
                         >
-                            <Share size={20} />
-                            {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Share' : 'Share Video'}
+                            {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Export' : 'Export Video'}
                         </button>
                     </div>
                 </div>

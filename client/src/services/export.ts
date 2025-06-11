@@ -1,13 +1,16 @@
+// Export Types and Interfaces
 interface ExportSettings {
     resolution: '480p' | '720p' | '1080p'
     fps: number
     quality: 'low' | 'medium' | 'high'
     quickExport?: boolean
+    optimizationLevel?: 'auto' | 'speed' | 'quality' | 'balanced'
+    allowProgressiveQuality?: boolean
 }
 
 interface ExportJob {
     id: string
-    status: 'queued' | 'processing' | 'completed' | 'failed'
+    status: 'queued' | 'processing' | 'completed' | 'failed' | 'downloading'
     progress: number
     error?: string
     downloadUrl?: string
@@ -17,7 +20,7 @@ interface ExportJob {
 
 interface TimelineClip {
     id: string
-    type: 'video' | 'image' | 'audio' | 'text'
+    type: 'video' | 'image' | 'audio' | 'text' | 'caption'
     assetId?: string
     trackId: string
     timelineStartMs: number
@@ -25,10 +28,29 @@ interface TimelineClip {
     sourceStartMs: number
     sourceEndMs: number
     speed?: number
+    volume?: number
     properties?: {
         externalAsset?: {
             url: string
             platform: string
+        }
+        text?: string
+        fontSize?: number
+        fontColor?: string
+        fontFamily?: string
+        fontWeight?: string
+        backgroundColor?: string
+        borderColor?: string
+        borderWidth?: number
+        position?: { x: number, y: number }
+        captionStyle?: {
+            backgroundColor?: string
+            borderColor?: string
+            borderWidth?: number
+            padding?: number
+            borderRadius?: number
+            shadow?: boolean
+            outline?: boolean
         }
         [key: string]: any
     }
@@ -40,6 +62,11 @@ interface TimelineTrack {
     type: 'video' | 'audio' | 'image' | 'text'
     name: string
 }
+
+// Progress and Status Callbacks
+type ProgressCallback = (progress: number) => void
+type StatusCallback = (status: string) => void
+type ErrorCallback = (error: string) => void
 
 class ExportService {
     private baseUrl: string
@@ -63,6 +90,58 @@ class ExportService {
         }
 
         return headers
+    }
+
+    /**
+     * Comprehensive export method that handles the entire export process
+     */
+    async exportVideo(
+        clips: TimelineClip[],
+        tracks: TimelineTrack[],
+        exportSettings: ExportSettings,
+        callbacks?: {
+            onProgress?: ProgressCallback
+            onStatusChange?: StatusCallback
+            onError?: ErrorCallback
+        }
+    ): Promise<{ success: boolean; downloadUrl?: string; error?: string }> {
+        try {
+            console.log('[ExportService] Starting export with', clips.length, 'clips and', tracks.length, 'tracks')
+
+            // Start export job
+            const startResult = await this.startExport(clips, tracks, exportSettings)
+            if (!startResult.success || !startResult.jobId) {
+                return { success: false, error: startResult.error || 'Failed to start export' }
+            }
+
+            const jobId = startResult.jobId
+            console.log('[ExportService] Export job started:', jobId)
+
+            // Poll for completion
+            const pollResult = await this.pollExportStatus(
+                jobId,
+                callbacks?.onProgress,
+                callbacks?.onStatusChange
+            )
+
+            if (!pollResult.success) {
+                return { success: false, error: pollResult.error }
+            }
+
+            // Download the file
+            if (pollResult.downloadUrl) {
+                const filename = `video-export-${exportSettings.resolution}-${Date.now()}.mp4`
+                await this.downloadFile(pollResult.downloadUrl, filename, jobId)
+            }
+
+            return { success: true, downloadUrl: pollResult.downloadUrl }
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown export error'
+            console.error('[ExportService] Export failed:', errorMessage)
+            callbacks?.onError?.(errorMessage)
+            return { success: false, error: errorMessage }
+        }
     }
 
     /**
@@ -206,8 +285,8 @@ class ExportService {
      */
     async pollExportStatus(
         jobId: string,
-        onProgress?: (progress: number) => void,
-        onStatusChange?: (status: string) => void,
+        onProgress?: ProgressCallback,
+        onStatusChange?: StatusCallback,
         pollInterval: number = 2000
     ): Promise<{ success: boolean; downloadUrl?: string; error?: string }> {
         return new Promise((resolve) => {
@@ -225,14 +304,10 @@ class ExportService {
                 const job = result.job
 
                 // Update progress callback
-                if (onProgress) {
-                    onProgress(job.progress)
-                }
+                onProgress?.(job.progress)
 
                 // Update status callback
-                if (onStatusChange) {
-                    onStatusChange(job.status)
-                }
+                onStatusChange?.(job.status)
 
                 // Check if job is complete
                 if (job.status === 'completed') {
@@ -266,7 +341,6 @@ class ExportService {
     async downloadFile(url: string, filename: string, jobId?: string): Promise<void> {
         try {
             console.log('[ExportService] Starting download for:', filename)
-            console.log('[ExportService] Download URL:', url)
 
             // Method 1: Try direct link click first (fastest for signed URLs)
             try {
@@ -274,11 +348,10 @@ class ExportService {
                 link.href = url
                 link.download = filename
                 link.style.display = 'none'
-                link.target = '_blank' // Open in new tab if download fails
+                link.target = '_blank'
                 
                 document.body.appendChild(link)
                 
-                // Add user interaction event to bypass popup blockers
                 const clickEvent = new MouseEvent('click', {
                     view: window,
                     bubbles: true,
@@ -375,7 +448,12 @@ class ExportService {
     /**
      * Streaming download with progress callback
      */
-    async downloadFileWithProgress(url: string, filename: string, onProgress?: (percent: number) => void, jobId?: string): Promise<void> {
+    async downloadFileWithProgress(
+        url: string, 
+        filename: string, 
+        onProgressUpdate?: (percent: number) => void, 
+        jobId?: string
+    ): Promise<void> {
         return new Promise(async (resolve, reject) => {
             try {
                 console.log('[ExportService] Starting progress download for:', filename)
@@ -401,7 +479,7 @@ class ExportService {
                     let received = 0
 
                     console.log('[ExportService] Content length:', contentLength)
-                    onProgress?.(0)
+                    onProgressUpdate?.(0)
 
                     while (true) {
                         const { done, value } = await reader.read()
@@ -411,7 +489,7 @@ class ExportService {
                             received += value.length
                             if (contentLength > 0) {
                                 const percent = Math.min(Math.round((received / contentLength) * 100), 100)
-                                onProgress?.(percent)
+                                onProgressUpdate?.(percent)
                             }
                         }
                     }
@@ -432,7 +510,7 @@ class ExportService {
                         URL.revokeObjectURL(blobUrl)
                     }, 100)
 
-                    onProgress?.(100)
+                    onProgressUpdate?.(100)
                     console.log('[ExportService] Progress download completed successfully')
                     resolve()
                     
@@ -441,7 +519,7 @@ class ExportService {
                     
                     // Fallback to simple download without progress
                     await this.downloadFile(url, filename, jobId)
-                    onProgress?.(100)
+                    onProgressUpdate?.(100)
                     resolve()
                 }
 
@@ -453,6 +531,14 @@ class ExportService {
     }
 }
 
-// Export singleton instance
+// Export singleton instance and types
 export const exportService = new ExportService()
-export type { ExportSettings, ExportJob, TimelineClip, TimelineTrack } 
+export type { 
+    ExportSettings, 
+    ExportJob, 
+    TimelineClip, 
+    TimelineTrack,
+    ProgressCallback,
+    StatusCallback,
+    ErrorCallback
+} 
