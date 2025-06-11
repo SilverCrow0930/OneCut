@@ -357,37 +357,43 @@ class ProfessionalVideoExporter {
         
         const videoElements = this.elements
             .filter(e => ['video', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
-                .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+            .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
 
         console.log(`[Export ${this.jobId}] Building ${videoElements.length} video tracks`)
 
         videoElements.forEach((element, index) => {
-                const assetPath = this.downloadedAssets.get(element.assetId!)
-                const inputIndex = inputMapping.get(assetPath!)
-                if (inputIndex === undefined) return
+            const assetPath = this.downloadedAssets.get(element.assetId!)
+            const inputIndex = inputMapping.get(assetPath!)
+            if (inputIndex === undefined) return
 
             const trackLabel = `video_track_${index}`
             const startTime = element.timelineStartMs / 1000
             const endTime = element.timelineEndMs / 1000
             const duration = endTime - startTime
             
+            // Skip zero-duration tracks to prevent FFmpeg errors
+            if (duration <= 0) {
+                console.warn(`[Export ${this.jobId}] Skipping zero-duration video track ${index}: ${startTime}s-${endTime}s`)
+                return
+            }
+            
             // Build element processing filter
             let elementFilter = `[${inputIndex}:v]`
         
-        // Source trimming
-        if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
+            // Source trimming
+            if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
                 const sourceStart = element.sourceStartMs / 1000
                 const sourceDuration = (element.sourceEndMs - element.sourceStartMs) / 1000
                 elementFilter += `trim=start=${sourceStart}:duration=${sourceDuration},setpts=PTS-STARTPTS,`
-        }
+            }
         
-        // Speed adjustment
-        if (element.speed && element.speed !== 1) {
+            // Speed adjustment
+            if (element.speed && element.speed !== 1) {
                 elementFilter += `setpts=${1/element.speed}*PTS,`
-        }
+            }
         
             // Image duration handling
-        if (element.type === 'image') {
+            if (element.type === 'image') {
                 elementFilter += `loop=loop=-1:size=1:start=0,setpts=N/(${this.outputSettings.fps}*TB),trim=duration=${duration},`
             }
             
@@ -397,12 +403,12 @@ class ProfessionalVideoExporter {
             elementFilter += `format=yuv420p,fps=${this.outputSettings.fps}`
             
             // Effects
-        if (element.opacity && element.opacity !== 1) {
+            if (element.opacity && element.opacity !== 1) {
                 elementFilter += `,colorchannelmixer=aa=${element.opacity}`
-        }
+            }
         
-        // Transitions
-        if (element.transitionIn) {
+            // Transitions
+            if (element.transitionIn) {
                 const transitionDuration = element.transitionIn.duration || 0.5
                 elementFilter += `,fade=t=in:st=0:d=${transitionDuration}`
             }
@@ -424,7 +430,7 @@ class ProfessionalVideoExporter {
                 endTime: endTime
             })
             
-            console.log(`[Export ${this.jobId}] Built video track ${index}: ${startTime}s-${endTime}s`)
+            console.log(`[Export ${this.jobId}] Built video track ${index}: ${startTime}s-${endTime}s (${duration}s)`)
         })
         
         return videoTracks
@@ -433,27 +439,49 @@ class ProfessionalVideoExporter {
     private compositeVideoTracks(filters: string[], videoTracks: Array<{label: string, startTime: number, endTime: number}>, baseTrack: string): string {
         if (videoTracks.length === 0) {
             console.log(`[Export ${this.jobId}] No video tracks to composite`)
-            return baseTrack
+            // If no video tracks, ensure we still have a valid output
+            filters.push(`[${baseTrack}]copy[video_composite]`)
+            return 'video_composite'
         }
         
         console.log(`[Export ${this.jobId}] Compositing ${videoTracks.length} video tracks`)
         
         // Professional overlay composition with enable timing
         let currentComposite = baseTrack
-        const timelineDuration = this.totalDurationMs / 1000
+        let validOverlays = 0
         
         videoTracks.forEach((track, index) => {
-            const outputLabel = index === videoTracks.length - 1 ? 'video_composite' : `overlay_${index}`
-            
-            // Use overlay with enable parameter for precise timing
-            const enableExpr = `between(t,${track.startTime},${track.endTime})`
-            filters.push(`[${currentComposite}][${track.label}]overlay=0:0:format=yuv420p:eval=frame:enable='${enableExpr}':shortest=0[${outputLabel}]`)
-            
-            currentComposite = outputLabel
-            console.log(`[Export ${this.jobId}] Overlaid track ${index} with timing ${track.startTime}s-${track.endTime}s`)
+            // Only create overlay if track has valid duration
+            if (track.endTime > track.startTime) {
+                const outputLabel = `overlay_${validOverlays}`
+                
+                // Use overlay with enable parameter for precise timing
+                const enableExpr = `between(t,${track.startTime},${track.endTime})`
+                filters.push(`[${currentComposite}][${track.label}]overlay=0:0:format=yuv420p:eval=frame:enable='${enableExpr}':shortest=0[${outputLabel}]`)
+                
+                currentComposite = outputLabel
+                validOverlays++
+                console.log(`[Export ${this.jobId}] Overlaid track ${index} with timing ${track.startTime}s-${track.endTime}s`)
+            } else {
+                console.warn(`[Export ${this.jobId}] Skipping invalid overlay timing for track ${index}: ${track.startTime}s-${track.endTime}s`)
+            }
         })
         
-        return currentComposite
+        // Ensure we have a final composite label
+        if (validOverlays === 0) {
+            // No valid overlays created, use base track
+            filters.push(`[${baseTrack}]copy[video_composite]`)
+            return 'video_composite'
+        } else {
+            // Rename final overlay to video_composite
+            const finalOverlay = `overlay_${validOverlays - 1}`
+            if (finalOverlay !== 'video_composite') {
+                // Find and replace the last overlay's output label
+                const lastFilterIndex = filters.length - 1
+                filters[lastFilterIndex] = filters[lastFilterIndex].replace(`[${finalOverlay}]`, '[video_composite]')
+            }
+            return 'video_composite'
+        }
     }
 
     private addTextOverlays(filters: string[], videoComposite: string): void {
@@ -491,44 +519,53 @@ class ProfessionalVideoExporter {
     private buildAudioTracks(filters: string[], inputMapping: Map<string, number>, timelineDuration: number): Array<{label: string, startTime: number, endTime: number}> {
         const audioTracks: Array<{label: string, startTime: number, endTime: number}> = []
         
-            const audioElements = this.elements
+        const audioElements = this.elements
             .filter(e => ['audio'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
             .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
 
         console.log(`[Export ${this.jobId}] Building ${audioElements.length} audio tracks`)
 
         audioElements.forEach((element, index) => {
-                const assetPath = this.downloadedAssets.get(element.assetId!)
-                const inputIndex = inputMapping.get(assetPath!)
-                if (inputIndex === undefined) return
+            const assetPath = this.downloadedAssets.get(element.assetId!)
+            const inputIndex = inputMapping.get(assetPath!)
+            if (inputIndex === undefined) return
 
             const trackLabel = `audio_track_${index}`
             const startTime = element.timelineStartMs / 1000
             const endTime = element.timelineEndMs / 1000
             const duration = endTime - startTime
             
+            // Skip zero-duration tracks
+            if (duration <= 0) {
+                console.warn(`[Export ${this.jobId}] Skipping zero-duration audio track ${index}: ${startTime}s-${endTime}s`)
+                return
+            }
+            
             // Build audio processing filter
-                let audioFilter = `[${inputIndex}:a]`
-                
-                // Source trimming
-                if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
+            let audioFilter = `[${inputIndex}:a]`
+            
+            // Source trimming
+            if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
                 const sourceStart = element.sourceStartMs / 1000
                 const sourceDuration = (element.sourceEndMs - element.sourceStartMs) / 1000
                 audioFilter += `atrim=start=${sourceStart}:duration=${sourceDuration},`
-                }
-                
-                // Speed adjustment
-                if (element.speed && element.speed !== 1) {
-                    audioFilter += `atempo=${element.speed},`
-                }
-                
-                // Volume adjustment
-                if (element.volume && element.volume !== 1) {
-                    audioFilter += `volume=${element.volume},`
-                }
-                
-            // Ensure exact duration
-            audioFilter += `atrim=duration=${duration},asetpts=PTS-STARTPTS`
+            }
+            
+            // Speed adjustment
+            if (element.speed && element.speed !== 1) {
+                audioFilter += `atempo=${element.speed},`
+            }
+            
+            // Volume adjustment
+            if (element.volume && element.volume !== 1) {
+                audioFilter += `volume=${element.volume},`
+            }
+            
+            // Ensure exact duration (only if no source trimming was done, to avoid double atrim)
+            if (element.sourceStartMs === undefined || element.sourceEndMs === undefined) {
+                audioFilter += `atrim=duration=${duration},`
+            }
+            audioFilter += `asetpts=PTS-STARTPTS`
             
             filters.push(`${audioFilter}[${trackLabel}]`)
             
@@ -538,7 +575,7 @@ class ProfessionalVideoExporter {
                 endTime: endTime
             })
             
-            console.log(`[Export ${this.jobId}] Built audio track ${index}: ${startTime}s-${endTime}s`)
+            console.log(`[Export ${this.jobId}] Built audio track ${index}: ${startTime}s-${endTime}s (${duration}s)`)
         })
         
         return audioTracks
@@ -559,15 +596,19 @@ class ProfessionalVideoExporter {
             
             if (track.startTime > 0 || track.endTime < timelineDuration) {
                 // Audio doesn't fill timeline - pad with silence
-                const beforeSilence = track.startTime > 0 ? `anullsrc=channel_layout=stereo:sample_rate=48000:duration=${track.startTime}[silence_before];` : ''
-                const afterSilence = track.endTime < timelineDuration ? `anullsrc=channel_layout=stereo:sample_rate=48000:duration=${timelineDuration - track.endTime}[silence_after];` : ''
-                
-                if (beforeSilence && afterSilence) {
-                    filters.push(`${beforeSilence}${afterSilence}[silence_before][${track.label}][silence_after]concat=n=3:v=0:a=1[final_audio]`)
-                } else if (beforeSilence) {
-                    filters.push(`${beforeSilence}[silence_before][${track.label}]concat=n=2:v=0:a=1[final_audio]`)
-                } else if (afterSilence) {
-                    filters.push(`${afterSilence}[${track.label}][silence_after]concat=n=2:v=0:a=1[final_audio]`)
+                if (track.startTime > 0 && track.endTime < timelineDuration) {
+                    // Need both before and after silence
+                    filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${track.startTime}[silence_before]`)
+                    filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${timelineDuration - track.endTime}[silence_after]`)
+                    filters.push(`[silence_before][${track.label}][silence_after]concat=n=3:v=0:a=1[final_audio]`)
+                } else if (track.startTime > 0) {
+                    // Need only before silence
+                    filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${track.startTime}[silence_before]`)
+                    filters.push(`[silence_before][${track.label}]concat=n=2:v=0:a=1[final_audio]`)
+                } else if (track.endTime < timelineDuration) {
+                    // Need only after silence
+                    filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${timelineDuration - track.endTime}[silence_after]`)
+                    filters.push(`[${track.label}][silence_after]concat=n=2:v=0:a=1[final_audio]`)
                 } else {
                     filters.push(`[${track.label}]copy[final_audio]`)
                 }
