@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 
 interface PlayheadProps {
     playheadX: number
@@ -8,10 +8,14 @@ interface PlayheadProps {
 
 const Playhead = ({ playheadX, onDrag, isPlaying }: PlayheadProps) => {
     const isDraggingRef = useRef(false)
+    const [isDragging, setIsDragging] = useState(false)
 
     useEffect(() => {
         const handleMouseUp = () => {
-            isDraggingRef.current = false
+            if (isDraggingRef.current) {
+                isDraggingRef.current = false
+                setIsDragging(false)
+            }
         }
 
         const handleMouseMove = (e: MouseEvent) => {
@@ -38,15 +42,16 @@ const Playhead = ({ playheadX, onDrag, isPlaying }: PlayheadProps) => {
                 zIndex: 9998
             }}
             onMouseDown={(e) => {
-                if (!isPlaying) {
-                    isDraggingRef.current = true
-                    e.preventDefault()
-                }
+                isDraggingRef.current = true
+                setIsDragging(true)
+                e.preventDefault()
             }}
         >
             {/* Rectangular handle */}
             <div
-                className="absolute top-0 left-1/2 -translate-x-1/2 bg-red-500"
+                className={`absolute top-0 left-1/2 -translate-x-1/2 transition-colors duration-150 ${
+                    isDragging ? 'bg-red-600' : 'bg-red-500'
+                }`}
                 style={{
                     width: '8px',
                     height: '8px',
@@ -55,7 +60,9 @@ const Playhead = ({ playheadX, onDrag, isPlaying }: PlayheadProps) => {
             />
             {/* Vertical line */}
             <div
-                className="absolute top-0 bottom-0 w-px bg-red-500"
+                className={`absolute top-0 bottom-0 w-px transition-colors duration-150 ${
+                    isDragging ? 'bg-red-600' : 'bg-red-500'
+                }`}
                 style={{
                     left: '50%', // Center the line in the hit area
                     transform: 'translateX(-50%)'

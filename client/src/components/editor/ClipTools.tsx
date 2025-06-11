@@ -4,6 +4,33 @@ import { useEditor } from '@/contexts/EditorContext'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { v4 as uuid } from 'uuid'
 
+// Simple Tooltip component
+const Tooltip = ({ children, text, disabled = false }: { children: React.ReactNode, text: string, disabled?: boolean }) => {
+    const [isVisible, setIsVisible] = useState(false)
+    
+    if (disabled) {
+        return <>{children}</>
+    }
+    
+    return (
+        <div 
+            className="relative"
+            onMouseEnter={() => setIsVisible(true)}
+            onMouseLeave={() => setIsVisible(false)}
+        >
+            {children}
+            {isVisible && (
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50">
+                    <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                        {text}
+                    </div>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 const ClipTools = () => {
     const { executeCommand, selectedClipId, selectedClipIds, clips, tracks, setSelectedClipId, setSelectedClipIds } = useEditor()
     const { currentTime } = usePlayback()
@@ -298,42 +325,41 @@ const ClipTools = () => {
                 </span>
             )}
             
-            <button
-                className={`
-                    p-1 rounded-lg transition-all duration-200
-                    ${hasSelectedClip && !hasMultipleSelection ?
-                        'hover:bg-gray-300' :
-                        'opacity-40 cursor-not-allowed'
-                    }
-                `}
-                title="Split clip"
-                onClick={handleSplit}
-                disabled={!hasSelectedClip || hasMultipleSelection}
-            >
-                <SquareSplitHorizontal size={26} />
-            </button>
-
-            {/* Speed Control */}
-            <div className="relative" ref={speedSliderRef}>
+            <Tooltip text="Split" disabled={!hasSelectedClip || hasMultipleSelection}>
                 <button
                     className={`
                         p-1 rounded-lg transition-all duration-200
-                        ${canAdjustSpeed && hasAnySelection ? 
-                            'hover:bg-gray-300' : 
+                        ${hasSelectedClip && !hasMultipleSelection ?
+                            'hover:bg-gray-300' :
                             'opacity-40 cursor-not-allowed'
                         }
                     `}
-                    title={hasMultipleSelection ? 
-                        `Adjust speed of ${selectedClips.filter(c => c.type === 'video' || c.type === 'audio').length} media clips` : 
-                        "Adjust playback speed"
-                    }
-                    onClick={() => {
-                        setShowSpeedSlider(!showSpeedSlider)
-                    }}
-                    disabled={!canAdjustSpeed || !hasAnySelection}
+                    onClick={handleSplit}
+                    disabled={!hasSelectedClip || hasMultipleSelection}
                 >
-                    <Gauge size={26} />
+                    <SquareSplitHorizontal size={26} />
                 </button>
+            </Tooltip>
+
+            {/* Speed Control */}
+            <div className="relative" ref={speedSliderRef}>
+                <Tooltip text="Speed" disabled={!canAdjustSpeed || !hasAnySelection}>
+                    <button
+                        className={`
+                            p-1 rounded-lg transition-all duration-200
+                            ${canAdjustSpeed && hasAnySelection ? 
+                                'hover:bg-gray-300' : 
+                                'opacity-40 cursor-not-allowed'
+                            }
+                        `}
+                        onClick={() => {
+                            setShowSpeedSlider(!showSpeedSlider)
+                        }}
+                        disabled={!canAdjustSpeed || !hasAnySelection}
+                    >
+                        <Gauge size={26} />
+                    </button>
+                </Tooltip>
 
                 {/* Speed Slider */}
                 {showSpeedSlider && (
@@ -397,17 +423,18 @@ const ClipTools = () => {
                 )}
             </div>
 
-            <button
-                className={`
-                    p-1 rounded-lg transition-all duration-200
-                    ${hasAnySelection ? 'hover:bg-gray-300' : 'opacity-40 cursor-not-allowed'}
-                `}
-                title={hasMultipleSelection ? `Delete ${selectedClipIds.length} clips` : "Delete clip"}
-                onClick={handleDelete}
-                disabled={!hasAnySelection}
-            >
-                <Trash2 size={26} />
-            </button>
+            <Tooltip text={hasMultipleSelection ? "Delete" : "Delete"} disabled={!hasAnySelection}>
+                <button
+                    className={`
+                        p-1 rounded-lg transition-all duration-200
+                        ${hasAnySelection ? 'hover:bg-gray-300' : 'opacity-40 cursor-not-allowed'}
+                    `}
+                    onClick={handleDelete}
+                    disabled={!hasAnySelection}
+                >
+                    <Trash2 size={26} />
+                </button>
+            </Tooltip>
         </div>
     )
 }

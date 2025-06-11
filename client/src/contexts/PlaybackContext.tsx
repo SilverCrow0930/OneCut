@@ -38,6 +38,12 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         setCurrentTime(newTime)
         pausedTimeRef.current = newTime
         currentTimeRef.current = newTime
+        
+        // Reset the start time to ensure smooth playback continues from the new position
+        if (isPlaying) {
+            startTimeRef.current = 0
+        }
+        
         // Update audio context with new time
         updatePlayback(newTime, isPlaying)
     }

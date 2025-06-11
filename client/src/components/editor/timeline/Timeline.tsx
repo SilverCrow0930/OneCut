@@ -443,7 +443,7 @@ export default function Timeline() {
     }
 
     const handleTimelineClick = (e: React.MouseEvent) => {
-        if (isPlaying || !containerRef.current) return;
+        if (!containerRef.current) return;
 
         // Get the target element
         const target = e.target as HTMLElement;
@@ -462,7 +462,7 @@ export default function Timeline() {
     };
 
     const handlePlayheadDrag = (e: React.MouseEvent) => {
-        if (isPlaying || !containerRef.current) return
+        if (!containerRef.current) return
 
         const rect = containerRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left + containerRef.current.scrollLeft
