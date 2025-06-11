@@ -394,7 +394,7 @@ class ProfessionalVideoExporter {
         
             // Image duration handling
             if (element.type === 'image') {
-                elementFilter += `loop=loop=-1:size=1:start=0,setpts=N/(${this.outputSettings.fps}*TB),trim=duration=${duration},`
+                elementFilter += `loop=loop=-1:size=1:start=0,setpts=N/(${this.outputSettings.fps}*TB),`
             }
             
             // Professional scaling and formatting
@@ -419,8 +419,13 @@ class ProfessionalVideoExporter {
                 elementFilter += `,fade=t=out:st=${transitionStart}:d=${transitionDuration}`
             }
             
-            // Ensure exact timeline duration matching
-            elementFilter += `,trim=duration=${duration},setpts=PTS-STARTPTS`
+            // Final duration trim (only if no source trimming AND not an image with loop)
+            const hasSourceTrimming = element.sourceStartMs !== undefined && element.sourceEndMs !== undefined
+            const isImageWithLoop = element.type === 'image'
+            
+            if (!hasSourceTrimming && !isImageWithLoop) {
+                elementFilter += `,trim=duration=${duration},setpts=PTS-STARTPTS`
+            }
             
             filters.push(`${elementFilter}[${trackLabel}]`)
             
@@ -503,12 +508,15 @@ class ProfessionalVideoExporter {
             const text = (element.text || '').replace(/'/g, "\\'")
             const fontSize = element.fontSize || 24
             const fontColor = element.fontColor || 'white'
-            const x = element.position?.x || 'center'
-            const y = element.position?.y || 'center'
+            
+            // Use proper position calculation instead of center which might not work
+            const x = element.position?.x || '(w-text_w)/2'
+            const y = element.position?.y || '(h-text_h)/2'
             
             const outputLabel = index === textElements.length - 1 ? 'final_video' : `text_${index}`
             
-            const textFilter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}:enable='between(t,${startSec},${endSec})'`
+            // Add proper font specification to avoid font errors
+            const textFilter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}:enable='between(t,${startSec},${endSec})':fontfile=NotoSans-Regular`
             filters.push(`[${currentOutput}]${textFilter}[${outputLabel}]`)
             currentOutput = outputLabel
             
@@ -596,22 +604,27 @@ class ProfessionalVideoExporter {
             
             if (track.startTime > 0 || track.endTime < timelineDuration) {
                 // Audio doesn't fill timeline - pad with silence
-                if (track.startTime > 0 && track.endTime < timelineDuration) {
+                // Calculate the silence duration after the audio ends
+                const silenceAfterDuration = timelineDuration - track.endTime
+                
+                if (track.startTime > 0 && silenceAfterDuration > 0) {
                     // Need both before and after silence
                     filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${track.startTime}[silence_before]`)
-                    filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${timelineDuration - track.endTime}[silence_after]`)
+                    filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${silenceAfterDuration}[silence_after]`)
                     filters.push(`[silence_before][${track.label}][silence_after]concat=n=3:v=0:a=1[final_audio]`)
                 } else if (track.startTime > 0) {
                     // Need only before silence
                     filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${track.startTime}[silence_before]`)
                     filters.push(`[silence_before][${track.label}]concat=n=2:v=0:a=1[final_audio]`)
-                } else if (track.endTime < timelineDuration) {
+                } else if (silenceAfterDuration > 0) {
                     // Need only after silence
-                    filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${timelineDuration - track.endTime}[silence_after]`)
+                    filters.push(`anullsrc=channel_layout=stereo:sample_rate=48000:duration=${silenceAfterDuration}[silence_after]`)
                     filters.push(`[${track.label}][silence_after]concat=n=2:v=0:a=1[final_audio]`)
                 } else {
                     filters.push(`[${track.label}]copy[final_audio]`)
                 }
+                
+                console.log(`[Export ${this.jobId}] Audio track: ${track.startTime}s-${track.endTime}s, silence after: ${silenceAfterDuration}s, total: ${timelineDuration}s`)
             } else {
                 filters.push(`[${track.label}]copy[final_audio]`)
             }
