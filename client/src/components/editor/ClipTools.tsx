@@ -523,8 +523,8 @@ const ClipTools = () => {
                         <img 
                             src={getVolumeIcon(sliderVolume)} 
                             alt="Volume" 
-                            className="w-5 h-5"
-                        />
+                            className="w-4.5 h-4.5"
+                        />s
                     </button>
                 </Tooltip>
 
@@ -599,7 +599,7 @@ const ClipTools = () => {
                     onClick={handleDelete}
                     disabled={!hasAnySelection}
                 >
-                    <Trash2 size={26} />
+                    <Trash2 size={25} />
                 </button>
             </Tooltip>
         </div>
