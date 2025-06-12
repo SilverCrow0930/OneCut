@@ -1,0 +1,74 @@
+.bounce {
+  animation: bounceIn 0.4s;
+}
+@keyframes bounceIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.pop {
+  animation: popIn 0.3s;
+}
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  80% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.shake {
+  animation: shake 0.5s;
+}
+@keyframes shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
+}
+
+.slide-up {
+  animation: slideUp 0.4s;
+}
+@keyframes slideUp {
+  0% { transform: translateY(30px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.slide-in-top {
+  animation: slideInTop 0.4s;
+}
+@keyframes slideInTop {
+  0% { transform: translateY(-30px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+draw-in {
+  animation: drawIn 0.6s linear;
+}
+@keyframes drawIn {
+  0% { stroke-dasharray: 1000; stroke-dashoffset: 1000; }
+  100% { stroke-dasharray: 0; stroke-dashoffset: 0; }
+}
+
+.gradient-shimmer {
+  animation: gradientShimmer 1.2s infinite linear;
+  background: linear-gradient(90deg, #FFD600, #FF0080, #FFD600);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+@keyframes gradientShimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+.underline-in {
+  animation: underlineIn 0.5s;
+  border-bottom: 4px solid #00FF41;
+}
+@keyframes underlineIn {
+  0% { width: 0; }
+  100% { width: 100%; }
+} 

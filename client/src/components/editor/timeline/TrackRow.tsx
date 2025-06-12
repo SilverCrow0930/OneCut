@@ -473,44 +473,36 @@ export default function TrackRow({
                         className="absolute inset-0 rounded-lg pointer-events-auto"
                         style={{ pointerEvents: isDragOver ? 'none' : 'auto' }}
                         onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            
-                            // If this is an empty track, create a new track when clicked
+                            e.preventDefault();
+                            e.stopPropagation();
                             if ((track as any).isEmpty) {
-                                console.log('Creating new track from click on empty track')
-                                
-                                // Create a new track
+                                // Always add a new track on click
                                 const newTrack = {
                                     id: uuid(),
                                     projectId: track.projectId,
                                     index: track.index,
-                                    type: 'video' as TrackType, // Default to video track
+                                    type: 'video' as TrackType,
                                     createdAt: new Date().toISOString(),
-                                }
-                                
+                                };
                                 executeCommand({
                                     type: 'ADD_TRACK',
-                                    payload: { track: newTrack }
-                                })
-                                
-                                return
+                                    payload: { track: newTrack },
+                                });
+                                // Optionally, scroll to the new track or trigger a UI update here
+                                return;
                             }
-                            
                             // For non-empty tracks, pass click to timeline container (original behavior)
-                            const timelineContainer = rowRef.current?.closest('.timeline-container')
+                            const timelineContainer = rowRef.current?.closest('.timeline-container');
                             if (timelineContainer) {
-                                const rect = timelineContainer.getBoundingClientRect()
-                                const x = e.clientX - rect.left + timelineContainer.scrollLeft
-
-                                // Create a new click event on the timeline container
+                                const rect = timelineContainer.getBoundingClientRect();
+                                const x = e.clientX - rect.left + timelineContainer.scrollLeft;
                                 const clickEvent = new MouseEvent('click', {
                                     bubbles: true,
                                     cancelable: true,
                                     clientX: e.clientX,
-                                    clientY: e.clientY
-                                })
-                                timelineContainer.dispatchEvent(clickEvent)
+                                    clientY: e.clientY,
+                                });
+                                timelineContainer.dispatchEvent(clickEvent);
                             }
                         }}
                     />

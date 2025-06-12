@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation'
 import { apiPath } from '@/lib/config'
 import { v4 as uuid } from 'uuid'
 import { TrackType } from '@/types/editor'
+import styles from './CaptionsToolPanel.module.css'
 
 interface Caption {
     id: number
@@ -131,7 +132,7 @@ export const longVideoCaptionStyles = [
       background: 'none',
       borderRadius: '0',
       padding: '0',
-      textTransform: 'none',
+      textTransform: 'none' as any,
     },
   },
   {
@@ -147,7 +148,7 @@ export const longVideoCaptionStyles = [
       background: 'none',
       borderRadius: '0',
       padding: '0',
-      textTransform: 'none',
+      textTransform: 'none' as any,
     },
   },
   {
@@ -163,7 +164,7 @@ export const longVideoCaptionStyles = [
       padding: '8px 16px',
       WebkitTextStroke: '0',
       textShadow: 'none',
-      textTransform: 'none',
+      textTransform: 'none' as any,
     },
   },
   {
@@ -179,7 +180,7 @@ export const longVideoCaptionStyles = [
       borderRadius: '0',
       padding: '0',
       WebkitTextStroke: '0',
-      textTransform: 'none',
+      textTransform: 'none' as any,
     },
   },
   {
@@ -195,7 +196,7 @@ export const longVideoCaptionStyles = [
       background: 'none',
       borderRadius: '0',
       padding: '0',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
     },
   },
   {
@@ -211,7 +212,7 @@ export const longVideoCaptionStyles = [
       padding: '0',
       WebkitTextStroke: '0',
       textShadow: 'none',
-      textTransform: 'none',
+      textTransform: 'none' as any,
     },
   },
   {
@@ -227,7 +228,7 @@ export const longVideoCaptionStyles = [
       padding: '8px 16px',
       WebkitTextStroke: '0',
       textShadow: 'none',
-      textTransform: 'none',
+      textTransform: 'none' as any,
     },
   },
   {
@@ -243,7 +244,7 @@ export const longVideoCaptionStyles = [
       padding: '8px 24px',
       WebkitTextStroke: '0',
       textShadow: 'none',
-      textTransform: 'none',
+      textTransform: 'none' as any,
     },
   },
 ];
@@ -260,7 +261,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '4px #000',
       textShadow: '4px 4px 8px #000',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       letterSpacing: '1.5px',
       animation: 'bounceIn 0.4s',
     },
@@ -277,7 +278,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '3px #000',
       textShadow: '3px 3px 8px #000',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       letterSpacing: '1.2px',
       animation: 'popIn 0.3s',
     },
@@ -297,7 +298,7 @@ export const shortVideoCaptionStyles = [
       padding: '12px 24px',
       WebkitTextStroke: '0',
       textShadow: 'none',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       animation: 'slideUp 0.4s',
     },
     animationClass: 'slide-up',
@@ -312,7 +313,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '2px #000',
       textShadow: '2px 2px 6px #000',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       letterSpacing: '1.2px',
       animation: 'gradientShimmer 1.2s infinite',
     },
@@ -328,7 +329,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '4px #000',
       textShadow: '4px 4px 8px #000',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       letterSpacing: '2px',
       animation: 'shake 0.5s',
     },
@@ -348,7 +349,7 @@ export const shortVideoCaptionStyles = [
       background: 'rgba(255,255,255,0.2)',
       borderRadius: '16px',
       padding: '10px 20px',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       animation: 'popIn 0.3s',
     },
     animationClass: 'pop',
@@ -363,7 +364,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '3px #000',
       textShadow: '3px 3px 8px #000',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       animation: 'slideInTop 0.4s',
     },
     secondary: { color: '#FFF' },
@@ -379,7 +380,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '2px #000',
       textShadow: '2px 2px 6px #000',
-      textTransform: 'none',
+      textTransform: 'none' as any,
       animation: 'drawIn 0.6s',
     },
     animationClass: 'draw-in',
@@ -394,7 +395,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '3px #000',
       textShadow: '3px 3px 8px #000',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       animation: 'bounceIn 0.4s',
     },
     animationClass: 'bounce',
@@ -409,7 +410,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '4px #000',
       textShadow: '4px 4px 8px #000',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       animation: 'bounceIn 0.4s',
     },
     animationClass: 'bounce',
@@ -424,7 +425,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '3px #000',
       textShadow: '3px 3px 8px #000',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       borderBottom: '4px solid #00FF41',
       animation: 'underlineIn 0.5s',
     },
@@ -440,7 +441,7 @@ export const shortVideoCaptionStyles = [
       textAlign: 'center',
       WebkitTextStroke: '3px #000',
       textShadow: '3px 3px 8px #000',
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as any,
       animation: 'popIn 0.3s',
     },
     animationClass: 'pop',
@@ -709,7 +710,11 @@ const CaptionsToolPanel = () => {
             }
 
             // Get selected style (custom or preset)
-            const selectedStyle = useCustomStyle ? customStyle : captionStyles[selectedStyleIdx].style
+            const selectedStyle = useCustomStyle
+                ? customStyle
+                : captionStyleCategory === 'long'
+                    ? longVideoCaptionStyles[selectedLongStyleIdx].style
+                    : shortVideoCaptionStyles[selectedShortStyleIdx].style;
 
             // Create caption clips for each caption with custom styling
             const captionClips = captions.map(caption => ({
@@ -939,6 +944,40 @@ const CaptionsToolPanel = () => {
     const [selectedLongStyleIdx, setSelectedLongStyleIdx] = useState(0);
     const [selectedShortStyleIdx, setSelectedShortStyleIdx] = useState(0);
 
+    // When updating placement, update all captions in the batch:
+    const handlePlacementChange = (placement: string) => {
+        setSelectedPlacement(placement);
+        if (workflowPhase === 'styling') {
+            setCaptions(prev => prev.map(caption => ({ ...caption, placement })));
+        }
+    };
+
+    // In the preview/renderer, for short styles, if highlight/animationClass is present, render each word in a <span> with the highlight color and animation class.
+    const renderStyledCaption = (text: string, stylePreset: any): React.ReactNode => {
+        if (!text) return null;
+        if (captionStyleCategory === 'short' && stylePreset && (stylePreset.highlight || stylePreset.animationClass)) {
+            const words = text.split(/(\s+)/);
+            return <>{words.map((word: string, i: number) => {
+                const isHighlight = stylePreset.highlight && i % 4 === 2;
+                return (
+                    <span
+                        key={i}
+                        className={stylePreset.animationClass ? styles[stylePreset.animationClass] : ''}
+                        style={{
+                            ...stylePreset.style,
+                            color: isHighlight ? stylePreset.highlight?.color : stylePreset.style.color,
+                            display: 'inline-block',
+                            marginRight: word.trim() ? '2px' : undefined,
+                        }}
+                    >
+                        {word}
+                    </span>
+                );
+            })}</>;
+        }
+        return <span style={stylePreset?.style as React.CSSProperties}>{text}</span>;
+    };
+
     return (
         <div className="flex flex-col w-full gap-6 p-4">
             <PanelHeader 
@@ -1157,7 +1196,7 @@ const CaptionsToolPanel = () => {
                                         />
                                     ) : (
                                         <p className="text-sm text-gray-800 leading-relaxed cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleStartEdit(caption)}>
-                                            {renderHighlightedText(caption.highlightedHtml || caption.text)}
+                                            {renderStyledCaption(caption.highlightedHtml || caption.text, captionStyleCategory === 'long' ? longVideoCaptionStyles[selectedLongStyleIdx] : shortVideoCaptionStyles[selectedShortStyleIdx])}
                                         </p>
                                     )}
                                 </div>
@@ -1215,36 +1254,44 @@ const CaptionsToolPanel = () => {
                         </button>
                     </div>
 
-                    {/* Preset Styles */}
-                    {!useCustomStyle && (
-                        <div className="space-y-3">
-                            <h5 className="text-base font-semibold text-gray-700">Preset Styles</h5>
-                            <div className="grid grid-cols-2 gap-3">
-                                {captionStyles.map((style, i) => (
-                                    <button
-                                        key={style.name}
-                                        type="button"
-                                        className={`
-                                            border rounded-lg p-3 flex items-center justify-center transition-all duration-200 h-16 text-xs font-bold
-                                            ${selectedStyleIdx === i ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' : 'hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'}
-                                        `}
-                                        style={{
-                                            backgroundColor: '#000000', // Black background to show outline properly
-                                            ...style.style,
-                                            fontSize: 14, // Readable size for preview
-                                            padding: '8px 12px',
-                                            WebkitTextStroke: '2px #000000',
-                                            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-                                        }}
-                                        onClick={() => setSelectedStyleIdx(i)}
-                                        title={style.name}
-                                    >
-                                        {style.name.toUpperCase()}
-                                    </button>
-                                ))}
-                            </div>
+                    {/* Style Selection */}
+                    <div className="mb-4">
+                        <div className="flex gap-2 mb-2">
+                            <button
+                                className={`px-3 py-1 rounded-lg font-semibold ${captionStyleCategory === 'long' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                onClick={() => setCaptionStyleCategory('long')}
+                            >
+                                Long Video Styles
+                            </button>
+                            <button
+                                className={`px-3 py-1 rounded-lg font-semibold ${captionStyleCategory === 'short' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                onClick={() => setCaptionStyleCategory('short')}
+                            >
+                                Short Video Styles
+                            </button>
                         </div>
-                    )}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {(captionStyleCategory === 'long' ? longVideoCaptionStyles : shortVideoCaptionStyles).map((preset, idx) => (
+                                <button
+                                    key={preset.name}
+                                    className={`rounded-lg p-2 border-2 transition-all duration-200 ${
+                                        (captionStyleCategory === 'long' ? selectedLongStyleIdx : selectedShortStyleIdx) === idx
+                                            ? 'border-blue-600 scale-105 bg-blue-50'
+                                            : 'border-gray-200 bg-white hover:border-blue-400'
+                                    }`}
+                                    onClick={() => {
+                                        if (captionStyleCategory === 'long') setSelectedLongStyleIdx(idx);
+                                        else setSelectedShortStyleIdx(idx);
+                                    }}
+                                >
+                                    <div style={{ ...preset.style, fontSize: 20, padding: '0px', margin: '0px', textAlign: 'center' }}>
+                                        {preset.name}
+                                    </div>
+                                    <div className="mt-1 text-xs text-gray-500 text-center">{preset.name}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
                     {/* Custom Style Editor */}
                     {useCustomStyle && <CustomStyleEditor />}
@@ -1258,7 +1305,7 @@ const CaptionsToolPanel = () => {
                                 return (
                                     <button
                                         key={placement.id}
-                                        onClick={() => setSelectedPlacement(placement.id)}
+                                        onClick={() => handlePlacementChange(placement.id)}
                                         className={`
                                             flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all duration-200
                                             ${selectedPlacement === placement.id 
