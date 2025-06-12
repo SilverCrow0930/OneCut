@@ -276,6 +276,31 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         const timer = setTimeout(async () => {
             console.log(`🔄 [AutoSave] PUT /timeline/${projectId}`)
             try {
+                // Validate data before sending
+                console.log('🔄 [AutoSave] Validating timeline data...')
+                console.log(`🔄 [AutoSave] Tracks: ${tracks.length}, Clips: ${clips.length}`)
+                
+                // Convert to database format with validation
+                const dbTracks = tracks.map(t => {
+                    try {
+                        return toDbTrack(t, projectId!)
+                    } catch (error) {
+                        console.error('🚨 [AutoSave] Track validation failed:', error, t)
+                        throw new Error(`Track validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                    }
+                })
+                
+                const dbClips = clips.map(c => {
+                    try {
+                        return toDbClip(c)
+                    } catch (error) {
+                        console.error('🚨 [AutoSave] Clip validation failed:', error, c)
+                        throw new Error(`Clip validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                    }
+                })
+                
+                console.log('✅ [AutoSave] Data validation passed')
+                
                 const res = await fetch(apiPath(`timeline/${projectId}`), {
                     method: 'PUT',
                     headers: {
@@ -283,9 +308,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
                         Authorization: `Bearer ${session?.access_token}`,
                     },
                     body: JSON.stringify({
-                        // convert to snake_case rows for the DB
-                        tracks: tracks.map(t => toDbTrack(t, projectId!)),
-                        clips: clips.map(c => toDbClip(c)),
+                        tracks: dbTracks,
+                        clips: dbClips,
                     }),
                 });
 
@@ -293,15 +317,21 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
                 if (!res.ok) {
                     const err = await res.text();
-                    throw new Error(err || res.statusText);
+                    console.error('🚨 [AutoSave] Server error response:', err)
+                    throw new Error(`Server error (${res.status}): ${err || res.statusText}`);
                 }
 
                 console.log('✅ [AutoSave] saved!')
                 setSaveState('saved');
             }
             catch (e) {
-                console.error('🚨 [AutoSave] failed:', e);
+                const errorMessage = e instanceof Error ? e.message : 'Unknown save error'
+                console.error('🚨 [AutoSave] failed:', errorMessage);
+                console.error('🚨 [AutoSave] Error details:', e);
                 setSaveState('error');
+                
+                // Set a more descriptive error message
+                setError(`Failed to save timeline: ${errorMessage}`)
             }
         }, 500);
 
