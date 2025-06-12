@@ -442,7 +442,7 @@ export default function TrackRow({
                     {/* Track label */}
                     <div className="absolute left-2 top-2 text-xs font-medium text-gray-600 pointer-events-none">
                         {(track as any).isEmpty 
-                            ? "Click or drop content here to create track"
+                            ? "Drop content here to create track"
                             : `Track ${track.index + 1} • ${track.type}`
                         }
                     </div>

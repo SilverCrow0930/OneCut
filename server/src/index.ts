@@ -44,8 +44,11 @@ const corsOptions = {
 }
 app.use(cors(corsOptions))
 app.use(helmet())
-app.use(express.json())
-app.use(bodyParser.json())
+
+// Increase body parser limits to handle large caption data
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ limit: '10mb', extended: true }))
+app.use(bodyParser.json({ limit: '10mb' }))
 
 app.use(morgan('dev'))
 
