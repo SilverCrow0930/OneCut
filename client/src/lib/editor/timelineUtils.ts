@@ -328,6 +328,79 @@ export class TimelineEngine {
             suggestedAlternatives: alternatives
         }
     }
+
+    /**
+     * Generate commands to optimize the timeline by removing small gaps and aligning to grid
+     */
+    generateOptimizationCommands(options: {
+        removeSmallGaps?: boolean
+        alignToGrid?: boolean
+        maxGapMs?: number
+    }): Command[] {
+        const commands: Command[] = []
+        const { removeSmallGaps = true, alignToGrid = false, maxGapMs = 500 } = options
+
+        if (!removeSmallGaps && !alignToGrid) {
+            return commands
+        }
+
+        // Process each track separately
+        for (const track of this.tracks) {
+            const trackClips = this.clips
+                .filter(c => c.trackId === track.id)
+                .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+
+            if (trackClips.length === 0) continue
+
+            let cumulativeShift = 0
+
+            for (let i = 0; i < trackClips.length; i++) {
+                const clip = trackClips[i]
+                let newStartMs = clip.timelineStartMs - cumulativeShift
+                let newEndMs = clip.timelineEndMs - cumulativeShift
+
+                // Align to grid if enabled
+                if (alignToGrid) {
+                    const gridAlignedStart = Math.round(newStartMs / this.gridSnapMs) * this.gridSnapMs
+                    const duration = newEndMs - newStartMs
+                    newStartMs = gridAlignedStart
+                    newEndMs = newStartMs + duration
+                }
+
+                // Check for small gap before this clip
+                if (i > 0 && removeSmallGaps) {
+                    const prevClip = trackClips[i - 1]
+                    const prevClipNewEnd = prevClip.timelineEndMs - cumulativeShift
+                    const gapDuration = newStartMs - prevClipNewEnd
+
+                    if (gapDuration > 0 && gapDuration <= maxGapMs) {
+                        // Close this small gap
+                        const gapShift = gapDuration
+                        newStartMs -= gapShift
+                        newEndMs -= gapShift
+                        cumulativeShift += gapShift
+                    }
+                }
+
+                // Only create command if position actually changed
+                if (newStartMs !== clip.timelineStartMs || newEndMs !== clip.timelineEndMs) {
+                    commands.push({
+                        type: 'UPDATE_CLIP',
+                        payload: {
+                            before: clip,
+                            after: {
+                                ...clip,
+                                timelineStartMs: Math.max(0, newStartMs),
+                                timelineEndMs: Math.max(newStartMs + (clip.timelineEndMs - clip.timelineStartMs), newEndMs)
+                            }
+                        }
+                    } as Command)
+                }
+            }
+        }
+
+        return commands
+    }
 }
 
 /**
