@@ -5,7 +5,7 @@ import { useAssets } from '@/contexts/AssetsContext'
 import ClipItem from './ClipItem'
 import { getTimeScale } from '@/lib/constants'
 import { useZoom } from '@/contexts/ZoomContext'
-import type { Track, Clip } from '@/types/editor'
+import type { Track, Clip, TrackType } from '@/types/editor'
 import { X } from 'lucide-react'
 
 export default function TrackRow({
@@ -373,7 +373,7 @@ export default function TrackRow({
                     rounded-lg overflow-x-auto overflow-y-hidden
                     scrollbar-hide
                     ${(track as any).isEmpty 
-                        ? 'bg-gray-50/50 border-2 border-dashed border-gray-200/60 hover:border-gray-300/60 hover:bg-gray-100/50' 
+                        ? 'bg-gray-50/50 border-2 border-dashed border-gray-200/60 hover:border-gray-300/60 hover:bg-gray-100/50 cursor-pointer transition-all duration-200' 
                         : 'bg-white border-2 backdrop-blur-sm'
                     }
                     ${isDragOver
@@ -442,7 +442,7 @@ export default function TrackRow({
                     {/* Track label */}
                     <div className="absolute left-2 top-2 text-xs font-medium text-gray-600 pointer-events-none">
                         {(track as any).isEmpty 
-                            ? "Drop content here to create track"
+                            ? "Click or drop content here to create track"
                             : `Track ${track.index + 1} • ${track.type}`
                         }
                     </div>
@@ -475,7 +475,29 @@ export default function TrackRow({
                         onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
-                            // Get the timeline container
+                            
+                            // If this is an empty track, create a new track when clicked
+                            if ((track as any).isEmpty) {
+                                console.log('Creating new track from click on empty track')
+                                
+                                // Create a new track
+                                const newTrack = {
+                                    id: uuid(),
+                                    projectId: track.projectId,
+                                    index: track.index,
+                                    type: 'video' as TrackType, // Default to video track
+                                    createdAt: new Date().toISOString(),
+                                }
+                                
+                                executeCommand({
+                                    type: 'ADD_TRACK',
+                                    payload: { track: newTrack }
+                                })
+                                
+                                return
+                            }
+                            
+                            // For non-empty tracks, pass click to timeline container (original behavior)
                             const timelineContainer = rowRef.current?.closest('.timeline-container')
                             if (timelineContainer) {
                                 const rect = timelineContainer.getBoundingClientRect()
