@@ -33,14 +33,14 @@ const EditorContent = () => {
                 bg-white/80 backdrop-blur-sm py-1 px-4 rounded-lg shadow-sm border border-gray-200/60
                 flex-shrink-0 z-10
             ">
-                <div className="flex w-64 items-center gap-3">
+                <div className="flex items-center gap-3 flex-shrink-0">
                     <ClipTools />
                     <AspectRatioButton />
                 </div>
-                <div className="flex w-full items-center justify-center">
+                <div className="flex flex-1 items-center justify-center">
                     <PlaybackControls />
                 </div>
-                <div className="flex w-64 items-center justify-end">
+                <div className="flex items-center justify-end flex-shrink-0">
                     <ZoomSlider />
                 </div>
             </div>

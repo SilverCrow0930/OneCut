@@ -84,6 +84,16 @@ const ClipTools = () => {
         clip.type === 'video' || clip.type === 'audio'
     ) || (selectedClip && (selectedClip.type === 'video' || selectedClip.type === 'audio'))
 
+    // Debug logging
+    console.log('ClipTools Debug:', {
+        hasSelectedClip,
+        hasAnySelection,
+        canAdjustVolume,
+        selectedClip: selectedClip?.type,
+        selectedClipsTypes: selectedClips.map(c => c.type),
+        sliderVolume
+    })
+
     // Update slider speed when selection changes
     useEffect(() => {
         if (primarySelectedClip && (primarySelectedClip.type === 'video' || primarySelectedClip.type === 'audio')) {
@@ -397,6 +407,7 @@ const ClipTools = () => {
             text-black
             transition-all duration-200
             relative
+            min-w-max
         `}>
             {/* Selection info */}
             {hasMultipleSelection && (
@@ -515,11 +526,19 @@ const ClipTools = () => {
                             }
                         `}
                         onClick={() => {
+                            console.log('Volume button clicked', { canAdjustVolume, hasAnySelection, sliderVolume })
                             setShowVolumeSlider(!showVolumeSlider)
                         }}
                         disabled={!canAdjustVolume || !hasAnySelection}
+                        style={{ border: '1px solid red' }} // Debug border
                     >
-                        <img src={getVolumeIcon(sliderVolume)} alt="Volume" className="w-5 h-5" />
+                        <img 
+                            src={getVolumeIcon(sliderVolume)} 
+                            alt="Volume" 
+                            className="w-5 h-5"
+                            onError={(e) => console.error('Volume icon failed to load:', e.currentTarget.src)}
+                            onLoad={() => console.log('Volume icon loaded:', getVolumeIcon(sliderVolume))}
+                        />
                     </button>
                 </Tooltip>
 
