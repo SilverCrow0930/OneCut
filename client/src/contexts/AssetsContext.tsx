@@ -45,22 +45,46 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
     const [error, setError] = useState<string | null>(null)
 
     const refresh = useCallback(async () => {
-        if (!session?.access_token) return
+        console.log('[AssetsContext] Refresh called', { 
+            hasSession: !!session, 
+            hasToken: !!session?.access_token,
+            tokenLength: session?.access_token?.length 
+        })
+        
+        if (!session?.access_token) {
+            console.log('[AssetsContext] No session/token, skipping refresh')
+            return
+        }
+        
         setLoading(true)
         setError(null)
         try {
+            console.log('[AssetsContext] Fetching assets from API...')
             const response = await fetch(apiPath('assets'), {
                 headers: {
                     Authorization: `Bearer ${session.access_token}`,
                     'Content-Type': 'application/json'
                 },
             })
+            
+            console.log('[AssetsContext] API response:', { 
+                ok: response.ok, 
+                status: response.status,
+                statusText: response.statusText 
+            })
+            
             if (!response.ok) {
-                throw new Error(await response.text())
+                const errorText = await response.text()
+                console.error('[AssetsContext] API error:', errorText)
+                throw new Error(errorText)
             }
-            setAssets(await response.json())
+            
+            const assetsData = await response.json()
+            console.log('[AssetsContext] Assets loaded:', { count: assetsData.length, assets: assetsData })
+            setAssets(assetsData)
         }
         catch (err: any) {
+            console.error('[AssetsContext] Refresh error:', err)
             setError(err.message)
         }
         finally {

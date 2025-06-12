@@ -422,6 +422,88 @@ const ClipTools = () => {
                 </button>
             </Tooltip>
 
+            {/* Speed Control */}
+            <div className="relative" ref={speedSliderRef}>
+                <Tooltip text="Speed" disabled={!canAdjustSpeed || !hasAnySelection}>
+                    <button
+                        className={`
+                            p-1 rounded-lg transition-all duration-200
+                            ${canAdjustSpeed && hasAnySelection ? 
+                                'hover:bg-gray-300' : 
+                                'opacity-40 cursor-not-allowed'
+                            }
+                        `}
+                        onClick={() => {
+                            setShowSpeedSlider(!showSpeedSlider)
+                        }}
+                        disabled={!canAdjustSpeed || !hasAnySelection}
+                    >
+                        <Gauge size={26} />
+                    </button>
+                </Tooltip>
+
+                {/* Speed Slider */}
+                {showSpeedSlider && (
+                    <div 
+                        className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                    >
+                        <div className="text-sm font-semibold text-gray-700 mb-3 text-center">
+                            {sliderSpeed.toFixed(1)}x speed
+                        </div>
+                        <div 
+                            className="relative"
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <div
+                                className="absolute w-full h-2 rounded-full"
+                                style={{
+                                    background: `linear-gradient(to right, #4B5563 ${((sliderSpeed - 0.1) / (10 - 0.1)) * 100}%, #9CA3AF ${((sliderSpeed - 0.1) / (10 - 0.1)) * 100}%)`
+                                }}
+                            ></div>
+                            <input
+                                type="range"
+                                min="0.1"
+                                max="10"
+                                step="0.1"
+                                value={sliderSpeed}
+                                onChange={(e) => {
+                                    e.stopPropagation()
+                                    const newSpeed = parseFloat(e.target.value)
+                                    setSliderSpeed(newSpeed)
+                                    handleSpeedChange(newSpeed)
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                className="w-full h-2 bg-transparent appearance-none cursor-pointer relative z-10
+                                    [&::-webkit-slider-thumb]:appearance-none 
+                                    [&::-webkit-slider-thumb]:w-4 
+                                    [&::-webkit-slider-thumb]:h-4 
+                                    [&::-webkit-slider-thumb]:rounded-full 
+                                    [&::-webkit-slider-thumb]:bg-white
+                                    [&::-webkit-slider-thumb]:border 
+                                    [&::-webkit-slider-thumb]:border-gray-300
+                                    [&::-webkit-slider-thumb]:shadow-2xl 
+                                    [&::-webkit-slider-thumb]:cursor-pointer 
+                                    [&::-moz-range-thumb]:w-4 
+                                    [&::-moz-range-thumb]:h-4 
+                                    [&::-moz-range-thumb]:rounded-full 
+                                    [&::-moz-range-thumb]:bg-white 
+                                    [&::-moz-range-thumb]:border 
+                                    [&::-moz-range-thumb]:border-gray-300 
+                                    [&::-moz-range-thumb]:shadow-2xl 
+                                    [&::-moz-range-thumb]:cursor-pointer"
+                            />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2 text-center">
+                            0.1x - 10x
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* Volume Control */}
             <div className="relative" ref={volumeSliderRef}>
                 <Tooltip text="Volume" disabled={!canAdjustVolume || !hasAnySelection}>
@@ -503,88 +585,6 @@ const ClipTools = () => {
                         </div>
                         <div className="text-xs text-gray-500 mt-2 text-center">
                             0% - 100%
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Speed Control */}
-            <div className="relative" ref={speedSliderRef}>
-                <Tooltip text="Speed" disabled={!canAdjustSpeed || !hasAnySelection}>
-                    <button
-                        className={`
-                            p-1 rounded-lg transition-all duration-200
-                            ${canAdjustSpeed && hasAnySelection ? 
-                                'hover:bg-gray-300' : 
-                                'opacity-40 cursor-not-allowed'
-                            }
-                        `}
-                        onClick={() => {
-                            setShowSpeedSlider(!showSpeedSlider)
-                        }}
-                        disabled={!canAdjustSpeed || !hasAnySelection}
-                    >
-                        <Gauge size={26} />
-                    </button>
-                </Tooltip>
-
-                {/* Speed Slider */}
-                {showSpeedSlider && (
-                    <div 
-                        className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]"
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                    >
-                        <div className="text-sm font-semibold text-gray-700 mb-3 text-center">
-                            {sliderSpeed.toFixed(1)}x speed
-                        </div>
-                        <div 
-                            className="relative"
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                        >
-                            <div
-                                className="absolute w-full h-2 rounded-full"
-                                style={{
-                                    background: `linear-gradient(to right, #4B5563 ${((sliderSpeed - 0.1) / (10 - 0.1)) * 100}%, #9CA3AF ${((sliderSpeed - 0.1) / (10 - 0.1)) * 100}%)`
-                                }}
-                            ></div>
-                            <input
-                                type="range"
-                                min="0.1"
-                                max="10"
-                                step="0.1"
-                                value={sliderSpeed}
-                                onChange={(e) => {
-                                    e.stopPropagation()
-                                    const newSpeed = parseFloat(e.target.value)
-                                    setSliderSpeed(newSpeed)
-                                    handleSpeedChange(newSpeed)
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                className="w-full h-2 bg-transparent appearance-none cursor-pointer relative z-10
-                                    [&::-webkit-slider-thumb]:appearance-none 
-                                    [&::-webkit-slider-thumb]:w-4 
-                                    [&::-webkit-slider-thumb]:h-4 
-                                    [&::-webkit-slider-thumb]:rounded-full 
-                                    [&::-webkit-slider-thumb]:bg-white
-                                    [&::-webkit-slider-thumb]:border 
-                                    [&::-webkit-slider-thumb]:border-gray-300
-                                    [&::-webkit-slider-thumb]:shadow-2xl 
-                                    [&::-webkit-slider-thumb]:cursor-pointer 
-                                    [&::-moz-range-thumb]:w-4 
-                                    [&::-moz-range-thumb]:h-4 
-                                    [&::-moz-range-thumb]:rounded-full 
-                                    [&::-moz-range-thumb]:bg-white 
-                                    [&::-moz-range-thumb]:border 
-                                    [&::-moz-range-thumb]:border-gray-300 
-                                    [&::-moz-range-thumb]:shadow-2xl 
-                                    [&::-moz-range-thumb]:cursor-pointer"
-                            />
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2 text-center">
-                            0.1x - 10x
                         </div>
                     </div>
                 )}
