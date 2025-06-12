@@ -5,6 +5,7 @@ import { EditorProvider } from '@/contexts/EditorContext'
 import { AssetsProvider } from '@/contexts/AssetsContext'
 import { PlaybackProvider } from '@/contexts/PlaybackContext'
 import { ZoomProvider } from '@/contexts/ZoomContext'
+import { TimelineSettingsProvider } from '@/contexts/TimelineSettingsContext'
 
 import { AudioProvider } from '@/contexts/AudioContext'
 
@@ -19,7 +20,9 @@ export default function ProjectLayout({ children }: LayoutProps) {
                     <AudioProvider>
                         <PlaybackProvider>
                             <ZoomProvider>
-                                {children}
+                                <TimelineSettingsProvider>
+                                    {children}
+                                </TimelineSettingsProvider>
                             </ZoomProvider>
                         </PlaybackProvider>
                     </AudioProvider>
