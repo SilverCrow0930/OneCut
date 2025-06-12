@@ -154,22 +154,20 @@ export default function Timeline() {
     }, [tracks.length, clips.length, currentTimeMs, setCurrentTime])
 
     // Optimized smooth scrolling animation with throttling
-    const scrollUpdate = useCallback((targetScroll: number) => {
-        const element = containerRef.current
-        if (!element) return
-        
-        const currentScroll = element.scrollLeft
-        const diff = targetScroll - currentScroll
-        
-        // Use smoother interpolation for better UX
-        if (Math.abs(diff) > 1) {
-            element.scrollLeft = currentScroll + (diff * 0.15)
-        }
-    }, [])
-
     const throttledScrollUpdate = useCallback(
-        timelineHelpers.throttle(scrollUpdate, TIMELINE_CONFIG.PERFORMANCE.RENDER_THROTTLE),
-        [scrollUpdate]
+        timelineHelpers.throttle((targetScroll: number) => {
+            const element = containerRef.current
+            if (!element) return
+            
+            const currentScroll = element.scrollLeft
+            const diff = targetScroll - currentScroll
+            
+            // Use smoother interpolation for better UX
+            if (Math.abs(diff) > 1) {
+                element.scrollLeft = currentScroll + (diff * 0.15)
+            }
+        }, TIMELINE_CONFIG.PERFORMANCE.RENDER_THROTTLE),
+        []
     )
 
     useEffect(() => {

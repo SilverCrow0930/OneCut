@@ -53,7 +53,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
     // Optimized drag state
     const [dragState, setDragState] = useState<DragState>(initialDragState)
-    const dragAnimationRef = useRef<number>()
+    const dragAnimationRef = useRef<number | undefined>(undefined)
     const lastUpdateTime = useRef<number>(0)
 
     // Find the asset details
@@ -329,10 +329,10 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             let newStartMs = resizeStartMs + deltaMs
             if (clip.sourceStartMs === 0) {
                 const timelineRatio = (newStartMs - clip.timelineStartMs) / (clip.timelineEndMs - clip.timelineStartMs)
-                const sourceDuration = clip.sourceEndMs - clip.sourceStartMs
+            const sourceDuration = clip.sourceEndMs - clip.sourceStartMs
                 const newSourceStartMs = Math.round(clip.sourceStartMs + (sourceDuration * timelineRatio))
                 if (newSourceStartMs < clip.sourceStartMs) {
-                    newStartMs = clip.timelineStartMs
+                newStartMs = clip.timelineStartMs
                 }
             }
 
@@ -360,18 +360,18 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
             const newSourceEndMs = Math.round(clip.sourceStartMs + (newEndMs - clip.timelineStartMs))
 
-            executeCommand({
-                type: 'UPDATE_CLIP',
-                payload: {
-                    before: clip,
-                    after: {
-                        ...clip,
-                        timelineEndMs: newEndMs,
+        executeCommand({
+            type: 'UPDATE_CLIP',
+            payload: {
+                before: clip,
+                after: {
+                    ...clip,
+                    timelineEndMs: newEndMs,
                         sourceEndMs: Math.min(assetDuration, newSourceEndMs)
                     }
                 }
             })
-        }
+            }
 
         setIsResizing(false)
         setResizeType(null)
@@ -429,17 +429,17 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             const newStartMs = Math.round(dragState.currentLeft / timeScale)
             const durationMs = clip.timelineEndMs - clip.timelineStartMs
 
-            executeCommand({
-                type: 'UPDATE_CLIP',
-                payload: {
+        executeCommand({
+            type: 'UPDATE_CLIP',
+            payload: {
                     before: clip,
-                    after: {
+                after: {
                         ...clip,
-                        timelineStartMs: newStartMs,
-                        timelineEndMs: newStartMs + durationMs
-                    }
+                    timelineStartMs: newStartMs,
+                    timelineEndMs: newStartMs + durationMs
                 }
-            })
+            }
+        })
         }
 
         setDragState(initialDragState)
@@ -525,9 +525,9 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                             <div
                                 key={i}
                                 className="flex-shrink-0 h-full bg-cover bg-center"
-                                style={{
+                                        style={{
                                     width: `${thumbWidth}px`,
-                                    backgroundImage: `url(${url})`,
+                                            backgroundImage: `url(${url})`,
                                     backgroundSize: 'cover',
                                     backgroundPosition: 'center'
                                 }}
@@ -538,7 +538,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                             </svg>
                         </div>
-                    </div>
+                </div>
                 )}
 
                 {isImage && url && (
@@ -574,20 +574,20 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
             {/* Context Menu */}
             {showContextMenu && (
-                <div
+                    <div
                     className="fixed bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50"
-                    style={{
-                        left: contextMenuPosition.x,
+                        style={{
+                            left: contextMenuPosition.x,
                         top: contextMenuPosition.y
-                    }}
-                >
-                    <button
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
-                        onClick={handleDelete}
+                        }}
                     >
-                        Delete Clip
-                    </button>
-                </div>
+                        <button
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
+                            onClick={handleDelete}
+                        >
+                            Delete Clip
+                        </button>
+                    </div>
             )}
         </>
     )
