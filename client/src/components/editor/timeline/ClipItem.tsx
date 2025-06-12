@@ -62,6 +62,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
     const isImage = asset?.mime_type.startsWith('image/')
     const isAudio = asset?.mime_type.startsWith('audio/')
     const isText = clip.type === 'text' || clip.type === 'caption'
+    const isExternalAsset = clip.properties?.externalAsset
+    const isVoiceover = isAudio && asset?.name?.toLowerCase().includes('voiceover')
 
     // Get the source duration
     const assetDuration = asset?.duration ?? 0
@@ -378,7 +380,25 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         document.body.classList.remove('cursor-ew-resize')
     }
 
-    // Optimized mouse event handlers for dragging
+    // HTML5 Drag and Drop handlers for moving between tracks
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.setData('application/json', JSON.stringify({
+            clipId: clip.id
+        }))
+        e.dataTransfer.effectAllowed = 'move'
+        
+        // Create a custom drag image to avoid the default ghost
+        if (clipRef.current) {
+            const dragImage = clipRef.current.cloneNode(true) as HTMLElement
+            dragImage.style.opacity = '0.8'
+            dragImage.style.transform = 'rotate(2deg)'
+            document.body.appendChild(dragImage)
+            e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY)
+            setTimeout(() => document.body.removeChild(dragImage), 0)
+        }
+    }
+
+    // Optimized mouse event handlers for dragging (for horizontal movement within same track)
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (isResizing || e.button !== 0) return // Only left mouse button
 
@@ -405,7 +425,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         document.body.classList.add('cursor-grabbing')
         if (clipRef.current) {
             clipRef.current.style.zIndex = '1000'
-            clipRef.current.style.opacity = '0.8'
+            clipRef.current.style.opacity = '0.9'
         }
     }, [isResizing, left, clip.trackId])
 
@@ -487,7 +507,6 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     absolute h-full text-white text-xs
                     flex items-center justify-center rounded-lg
                     border-2 transition-all duration-75
-                    ${dragState.isDragging ? 'shadow-lg scale-105' : ''}
                     ${dragState.isOverlapping ? 'border-red-500 bg-red-500/20' : ''}
                     ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
@@ -499,12 +518,13 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 style={{
                     left: `${left}px`,
                     width: `${Math.max(width, 20)}px`,
-                    transform: dragState.isDragging ? 'translateY(-2px)' : 'translateY(0)',
+                    transform: dragState.isDragging ? 'translateY(-1px)' : 'translateY(0)',
                 }}
                 onClick={onClick}
                 onContextMenu={handleContextMenu}
                 onMouseDown={handleMouseDown}
-                draggable={false} // Disable HTML5 drag to use custom mouse events
+                draggable={true} // Enable HTML5 drag for track switching
+                onDragStart={handleDragStart}
             >
                 {/* Resize handles */}
                 <div
@@ -516,7 +536,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
                 />
 
-                                {/* Content based on type */}
+                {/* Enhanced Content based on type */}
                 {isVideo && url && (
                     <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800">
                         <div className="flex w-full h-full">
@@ -535,39 +555,92 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         </div>
                         {/* Play icon overlay */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="bg-black/50 rounded-full p-1">
-                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <div className="bg-black/60 rounded-full p-1.5">
+                                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                 </svg>
                             </div>
+                        </div>
+                        {/* Video label */}
+                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                            VIDEO
                         </div>
                     </div>
                 )}
 
                 {isImage && url && (
-                    <div
-                        className="w-full h-full bg-cover bg-center rounded-lg"
-                        style={{
-                            backgroundImage: `url(${url})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center'
-                        }}
-                    />
-                )}
-
-                {isAudio && (
-                    <div className="flex items-center justify-center w-full h-full">
-                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM15.657 6.343a1 1 0 011.414 0A9.972 9.972 0 0119 12a9.972 9.972 0 01-1.929 5.657 1 1 0 11-1.414-1.414A7.971 7.971 0 0017 12a7.971 7.971 0 00-1.343-4.243 1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-xs truncate">{formatTime(durationMs)}</span>
+                    <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800 relative">
+                        <div
+                            className="w-full h-full bg-cover bg-center"
+                            style={{
+                                backgroundImage: `url(${url})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center'
+                            }}
+                        />
+                        {/* Image icon overlay */}
+                        <div className="absolute top-1 right-1 bg-black/60 rounded p-1">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        {/* Image label */}
+                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                            IMAGE
+                        </div>
                     </div>
                 )}
 
-                {/* Duration indicator for all types */}
-                <div className="absolute bottom-0 right-1 text-xs opacity-75 bg-black/50 px-1 rounded">
-                    {formatTime(durationMs)}
-                </div>
+                {isAudio && (
+                    <div className="flex items-center justify-center w-full h-full relative">
+                        {/* Enhanced audio visualization */}
+                        <div className="flex items-center space-x-1">
+                            {isVoiceover ? (
+                                // Voiceover specific icon
+                                <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                                </svg>
+                            ) : (
+                                // Regular audio icon
+                                <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM15.657 6.343a1 1 0 011.414 0A9.972 9.972 0 0119 12a9.972 9.972 0 01-1.929 5.657 1 1 0 11-1.414-1.414A7.971 7.971 0 0017 12a7.971 7.971 0 00-1.343-4.243 1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                            )}
+                            
+                            {/* Audio waveform visualization */}
+                            <div className="flex items-end space-x-0.5">
+                                {Array.from({ length: Math.min(8, Math.floor(width / 20)) }, (_, i) => (
+                                    <div
+                                        key={i}
+                                        className="bg-current opacity-60"
+                                        style={{
+                                            width: '2px',
+                                            height: `${Math.random() * 12 + 4}px`,
+                                            animation: `pulse ${1 + Math.random()}s ease-in-out infinite alternate`
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {/* Audio label */}
+                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                            {isVoiceover ? 'VOICEOVER' : 'AUDIO'}
+                        </div>
+                        
+                        {/* Duration for audio */}
+                        <div className="absolute bottom-1 right-1 text-xs opacity-90">
+                            {formatTime(durationMs)}
+                        </div>
+                    </div>
+                )}
+
+                {/* Duration indicator for video and image types */}
+                {(isVideo || isImage) && (
+                    <div className="absolute bottom-1 right-1 text-xs opacity-90 bg-black/60 px-1 rounded">
+                        {formatTime(durationMs)}
+                    </div>
+                )}
 
                 {/* Multi-selection indicator */}
                 {isInMultiSelection && (
