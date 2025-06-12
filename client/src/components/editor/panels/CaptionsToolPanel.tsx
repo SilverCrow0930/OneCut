@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 
 import PanelHeader from './PanelHeader'
+import styles from './CaptionsToolPanel.module.css'
 // Import styles and constants directly
 const highlightColors = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', 
@@ -765,9 +766,32 @@ const CaptionsToolPanel = () => {
                                             autoFocus
                                         />
                                     ) : (
-                                        <p className="text-sm text-gray-800 leading-relaxed cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleStartEdit(caption)}>
+                                        <div 
+                                            className={styles['plain-caption-text']}
+                                            style={{
+                                                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                                                fontSize: '14px',
+                                                fontWeight: 400,
+                                                color: '#1f2937',
+                                                textShadow: 'none',
+                                                WebkitTextStroke: 'none',
+                                                background: 'transparent',
+                                                border: 'none',
+                                                textTransform: 'none' as const,
+                                                letterSpacing: 'normal',
+                                                textDecoration: 'none',
+                                                outline: 'none',
+                                                boxShadow: 'none',
+                                                borderRadius: 0,
+                                                padding: 0,
+                                                margin: 0,
+                                                lineHeight: '1.5',
+                                                cursor: 'pointer'
+                                            }}
+                                            onClick={() => handleStartEdit(caption)}
+                                        >
                                             {caption.text}
-                                        </p>
+                                        </div>
                                     )}
                                 </div>
                             ))}

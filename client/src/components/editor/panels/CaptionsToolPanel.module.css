@@ -71,4 +71,30 @@
 @keyframes underlineIn {
   0% { width: 0; }
   100% { width: 100%; }
+}
+
+/* Force plain text styling for caption editing */
+.plain-caption-text {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: #1f2937 !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: none !important;
+  background: transparent !important;
+  border: none !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  text-decoration: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1.5 !important;
+  cursor: pointer !important;
+}
+
+.plain-caption-text:hover {
+  color: #2563eb !important;
 } 
