@@ -451,7 +451,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             clipId: clip.id
         }))
         e.dataTransfer.effectAllowed = 'move'
-        
+
         // Create a custom drag image to avoid the default ghost
         if (clipRef.current) {
             const dragImage = clipRef.current.cloneNode(true) as HTMLElement
@@ -642,7 +642,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
                             VIDEO
                         </div>
-                    </div>
+                                        </div>
                 )}
 
                 {isImage && url && (
@@ -659,8 +659,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         <div className="absolute top-1 right-1 bg-black/60 rounded p-1">
                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                            </svg>
-                        </div>
+                                            </svg>
+                                        </div>
                         {/* Image label */}
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
                             IMAGE
@@ -715,8 +715,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 {/* Duration indicator for video and image types */}
                 {(isVideo || isImage) && (
                     <div className="absolute bottom-1 right-1 text-xs opacity-90 bg-black/60 px-1 rounded">
-                        {formatTime(durationMs)}
-                    </div>
+                    {formatTime(durationMs)}
+                </div>
                 )}
 
                 {/* Multi-selection indicator */}
