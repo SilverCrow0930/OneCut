@@ -599,7 +599,7 @@ const ClipTools = () => {
                     onClick={handleDelete}
                     disabled={!hasAnySelection}
                 >
-                    <Trash2 size={25} />
+                    <Trash2 size={24} />
                 </button>
             </Tooltip>
         </div>

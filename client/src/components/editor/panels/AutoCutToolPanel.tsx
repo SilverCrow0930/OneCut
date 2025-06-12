@@ -401,9 +401,7 @@ const AutoCutToolPanel = () => {
                                 onClick={() => fileInputRef.current?.click()}
                                 isUploading={isUploading}
                             />
-                            <p className="text-sm text-gray-500 text-center max-w-48">
-                                Upload video to automatically extract the best clips using AI
-                            </p>
+
                         </div>
                     </div>
                 ) : showConfig ? (
