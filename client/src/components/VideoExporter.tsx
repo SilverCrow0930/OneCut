@@ -113,8 +113,8 @@ export async function exportVideo(props: VideoExporterProps): Promise<{ success:
                 if (attempt > 1) {
                     console.log(`[VideoExporter] Retry attempt ${attempt}/${maxRetries}`)
                     onStatusChange?.(`Retrying export (attempt ${attempt}/${maxRetries})...`)
-                }
-                
+                        }
+                        
                 // Use the consolidated export service
                 const result = await exportService.exportVideo(clips, tracks, exportSettings, {
                     onProgress: (progress) => {
@@ -197,7 +197,7 @@ export function useVideoExporter() {
 
     const startExport = async (props: VideoExporterProps) => {
         return await exportVideo(props)
-    }
+        }
 
     const cancelExport = async () => {
         if (currentJobId) {

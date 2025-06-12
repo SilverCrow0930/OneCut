@@ -227,9 +227,9 @@ async function downloadAsset(url: string, filename: string, maxRetries: number =
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         console.log(`[Download] Attempt ${attempt}/${maxRetries} for ${filename}`)
-        
-        // Add timeout to prevent hanging
-        const controller = new AbortController()
+    
+    // Add timeout to prevent hanging
+    const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 45000) // 45 second timeout
         
         try {
@@ -246,18 +246,18 @@ async function downloadAsset(url: string, filename: string, maxRetries: number =
                 throw new Error(`Unsupported protocol: ${parsedUrl.protocol}`)
             }
             
-            const response = await fetch(url, { 
-                signal: controller.signal,
-                headers: {
+        const response = await fetch(url, { 
+            signal: controller.signal,
+            headers: {
                     'User-Agent': 'Lemona-Server/1.0',
                     'Accept': '*/*',
                     'Cache-Control': 'no-cache'
-                }
-            })
-            
-            clearTimeout(timeoutId)
-            
-            if (!response.ok) {
+            }
+        })
+        
+        clearTimeout(timeoutId)
+        
+    if (!response.ok) {
                 const errorMsg = `HTTP ${response.status}: ${response.statusText}`
                 
                 // Don't retry on client errors (4xx)
@@ -282,8 +282,8 @@ async function downloadAsset(url: string, filename: string, maxRetries: number =
                 !contentType.startsWith('application/')) {
                 console.warn(`[Download] Unexpected content type: ${contentType}`)
             }
-            
-            const buffer = await response.arrayBuffer()
+    
+    const buffer = await response.arrayBuffer()
             
             // Validate file size
             if (buffer.byteLength === 0) {
@@ -294,9 +294,9 @@ async function downloadAsset(url: string, filename: string, maxRetries: number =
                 throw new Error(`File too large: ${buffer.byteLength} bytes (500MB limit)`)
             }
             
-            const filePath = path.join(TEMP_DIR, filename)
-            await fs.writeFile(filePath, Buffer.from(buffer))
-            
+    const filePath = path.join(TEMP_DIR, filename)
+    await fs.writeFile(filePath, Buffer.from(buffer))
+        
             // Verify file was written successfully
             try {
                 const stats = await fs.stat(filePath)
@@ -308,10 +308,10 @@ async function downloadAsset(url: string, filename: string, maxRetries: number =
             }
             
             console.log(`[Download] Successfully saved ${filename} (${buffer.byteLength} bytes) to ${filePath}`)
-            return filePath
-            
-        } catch (error) {
-            clearTimeout(timeoutId)
+    return filePath
+        
+    } catch (error) {
+        clearTimeout(timeoutId)
             lastError = error instanceof Error ? error : new Error('Unknown download error')
             
             console.error(`[Download] Attempt ${attempt} failed for ${filename}:`, lastError.message)
@@ -406,21 +406,21 @@ function convertToTimelineElements(clips: TimelineClip[]): TimelineElement[] {
         )
         
         return {
-            id: clip.id,
-            type: clip.type as any,
-            trackId: clip.trackId,
+        id: clip.id,
+        type: clip.type as any,
+        trackId: clip.trackId,
             timelineStartMs: startMs,
             timelineEndMs: endMs,
             sourceStartMs,
             sourceEndMs,
-            assetId: clip.assetId,
-            speed: clip.speed,
-            volume: clip.volume,
-            text: clip.properties?.text,
-            fontSize: clip.properties?.fontSize,
-            fontColor: clip.properties?.fontColor,
-            position: clip.properties?.position,
-            properties: clip.properties
+        assetId: clip.assetId,
+        speed: clip.speed,
+        volume: clip.volume,
+        text: clip.properties?.text,
+        fontSize: clip.properties?.fontSize,
+        fontColor: clip.properties?.fontColor,
+        position: clip.properties?.position,
+        properties: clip.properties
         }
     })
 }
@@ -656,7 +656,7 @@ class ProfessionalVideoExporter {
                 
                 // Only add source trimming if duration is valid
                 if (sourceDuration >= MIN_DURATION_SEC) {
-                    elementFilter += `trim=start=${sourceStart}:duration=${sourceDuration},setpts=PTS-STARTPTS,`
+                elementFilter += `trim=start=${sourceStart}:duration=${sourceDuration},setpts=PTS-STARTPTS,`
                     console.log(`[Export ${this.jobId}] Video track ${index}: Source trimming ${sourceStart}s-${sourceEnd}s (${sourceDuration}s)`)
                 } else {
                     console.warn(`[Export ${this.jobId}] Video track ${index}: Source trimming duration too short (${sourceDuration}s), skipping trim`)
@@ -687,7 +687,7 @@ class ProfessionalVideoExporter {
         if (element.transitionIn) {
                 const transitionDuration = Math.min(element.transitionIn.duration || 0.5, duration / 2)
                 if (transitionDuration > 0) {
-                    elementFilter += `,fade=t=in:st=0:d=${transitionDuration}`
+                elementFilter += `,fade=t=in:st=0:d=${transitionDuration}`
                 }
         }
         
@@ -695,7 +695,7 @@ class ProfessionalVideoExporter {
                 const transitionDuration = Math.min(element.transitionOut.duration || 0.5, duration / 2)
                 const transitionStart = Math.max(0, duration - transitionDuration)
                 if (transitionDuration > 0) {
-                    elementFilter += `,fade=t=out:st=${transitionStart}:d=${transitionDuration}`
+                elementFilter += `,fade=t=out:st=${transitionStart}:d=${transitionDuration}`
                 }
             }
             
@@ -720,13 +720,13 @@ class ProfessionalVideoExporter {
                     endTime: endTime
                 })
             } else {
-                filters.push(`${elementFilter}[${trackLabel}]`)
-                
-                videoTracks.push({
-                    label: trackLabel,
-                    startTime: startTime,
-                    endTime: endTime
-                })
+            filters.push(`${elementFilter}[${trackLabel}]`)
+            
+            videoTracks.push({
+                label: trackLabel,
+                startTime: startTime,
+                endTime: endTime
+            })
             }
             
             console.log(`[Export ${this.jobId}] Built video track ${index}: ${startTime}s-${endTime}s (${duration}s) ${startTime > 0 ? 'with positioning delay' : ''}`)
@@ -1121,7 +1121,7 @@ class ProfessionalVideoExporter {
                     
                     // Only add source trimming if duration is valid
                     if (sourceDuration >= MIN_DURATION_SEC) {
-                        audioFilter += `atrim=start=${sourceStart}:duration=${sourceDuration},`
+                audioFilter += `atrim=start=${sourceStart}:duration=${sourceDuration},`
                         console.log(`[Export ${this.jobId}] Audio track ${index}: Source trimming ${sourceStart}s-${sourceEnd}s (${sourceDuration}s)`)
                     } else {
                         console.warn(`[Export ${this.jobId}] Audio track ${index}: Source trimming duration too short (${sourceDuration}s), skipping trim`)
@@ -1133,7 +1133,7 @@ class ProfessionalVideoExporter {
                     audioFilter += `atempo=${element.speed},`
                 }
                 
-                // Volume adjustment  
+                // Volume adjustment
                 if (element.volume && element.volume !== 1) {
                     audioFilter += `volume=${element.volume},`
                 }
@@ -1659,16 +1659,16 @@ async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: 
 
                 console.log(`[Export ${jobId}] Processing asset ${globalIndex + 1}/${validElements.length}: ${element.assetId}`)
 
-                try {
-                    let assetUrl: string
+            try {
+                let assetUrl: string
                     
                     // Handle external vs internal assets
-                    if (element.assetId.startsWith('external_')) {
-                        assetUrl = element.properties?.externalAsset?.url || ''
+                if (element.assetId.startsWith('external_')) {
+                    assetUrl = element.properties?.externalAsset?.url || ''
                         if (!assetUrl) {
                             throw new Error(`External asset ${element.assetId} missing URL`)
                         }
-                        console.log(`[Export ${jobId}] External asset URL: ${assetUrl.substring(0, 100)}...`)
+                    console.log(`[Export ${jobId}] External asset URL: ${assetUrl.substring(0, 100)}...`)
                         
                         // Additional validation for external URLs
                         try {
@@ -1679,10 +1679,10 @@ async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: 
                         } catch (urlError) {
                             throw new Error(`Invalid external asset URL: ${urlError instanceof Error ? urlError.message : 'Parse error'}`)
                         }
-                    } else {
-                        console.log(`[Export ${jobId}] Fetching internal asset URL for: ${element.assetId}`)
+                } else {
+                    console.log(`[Export ${jobId}] Fetching internal asset URL for: ${element.assetId}`)
                         try {
-                            assetUrl = await fetchAssetUrl(element.assetId)
+                    assetUrl = await fetchAssetUrl(element.assetId)
                         } catch (fetchError) {
                             throw new Error(`Failed to fetch asset URL: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`)
                         }
@@ -1693,17 +1693,17 @@ async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: 
                     const originalExt = path.extname(urlParts[urlParts.length - 1]) || '.mp4'
                     const safeExt = originalExt.toLowerCase()
                     const filename = `${jobId}_asset_${globalIndex}_${Date.now()}${safeExt}`
-                    
-                    console.log(`[Export ${jobId}] Downloading ${filename}...`)
-                    
+                
+                console.log(`[Export ${jobId}] Downloading ${filename}...`)
+                
                     // Download with retry mechanism
                     const filePath = await downloadAsset(assetUrl, filename, 3)
-                    
+                
                     console.log(`[Export ${jobId}] Asset ${globalIndex + 1}/${validElements.length} downloaded successfully`)
                     
                     return { assetId: element.assetId, filePath }
-                    
-                } catch (error) {
+                
+            } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
                     console.error(`[Export ${jobId}] Failed to download asset ${element.assetId}: ${errorMessage}`)
                     failedAssets.push(element.assetId)
