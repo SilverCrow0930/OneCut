@@ -492,9 +492,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
                       'border-transparent hover:border-gray-400'}
-                    ${isVideo ? 'bg-blue-500 hover:bg-blue-600' : 
-                      isAudio ? 'bg-green-500 hover:bg-green-600' : 
-                      'bg-purple-500 hover:bg-purple-600'}
+                    ${!isVideo && !isImage ? (isAudio ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600') : ''}
                     cursor-grab active:cursor-grabbing
                     select-none overflow-hidden
                 `}
@@ -518,32 +516,37 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
                 />
 
-                {/* Content based on type */}
+                                {/* Content based on type */}
                 {isVideo && url && (
-                    <div className="flex items-center justify-center w-full h-full overflow-hidden">
-                        {Array.from({ length: Math.min(MAX_THUMBNAILS, Math.floor(width / 32)) }, (_, i) => (
-                            <div
-                                key={i}
-                                className="flex-shrink-0 h-full bg-cover bg-center"
-                                        style={{
-                                    width: `${thumbWidth}px`,
-                                            backgroundImage: `url(${url})`,
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center'
-                                }}
-                            />
-                        ))}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                            </svg>
+                    <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800">
+                        <div className="flex w-full h-full">
+                            {Array.from({ length: Math.min(MAX_THUMBNAILS, Math.floor(width / 32)) }, (_, i) => (
+                                <div
+                                    key={i}
+                                    className="flex-shrink-0 h-full bg-cover bg-center border-r border-gray-600 last:border-r-0"
+                                    style={{
+                                        width: `${thumbWidth}px`,
+                                        backgroundImage: `url(${url})`,
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center'
+                                    }}
+                                />
+                            ))}
                         </div>
-                </div>
+                        {/* Play icon overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="bg-black/50 rounded-full p-1">
+                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {isImage && url && (
                     <div
-                        className="w-full h-full bg-cover bg-center"
+                        className="w-full h-full bg-cover bg-center rounded-lg"
                         style={{
                             backgroundImage: `url(${url})`,
                             backgroundSize: 'cover',
