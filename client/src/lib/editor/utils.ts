@@ -160,7 +160,21 @@ export function dbToTrack(r: any): Track {
 
 export function dbToClip(r: any): Clip {
     const start = Number(r.timeline_start_ms) || 0
-    const end = Number(r.timeline_end_ms) || start   // never NaN, never < start
+    let end = Number(r.timeline_end_ms) || 0
+    
+    // Ensure end is after start - add default duration for zero-duration clips
+    if (end <= start) {
+        // For images and text, add a default 5-second duration
+        if (r.type === 'image' || r.type === 'text') {
+            end = start + 5000 // 5 seconds default
+            console.log(`[dbToClip] Added default 5s duration for ${r.type} clip: ${start}ms -> ${end}ms`)
+        } else {
+            // For other types, use asset duration or minimum 1 second
+            const assetDuration = Number(r.asset_duration_ms) || 1000
+            end = start + assetDuration
+            console.log(`[dbToClip] Fixed zero duration for ${r.type} clip: ${start}ms -> ${end}ms`)
+        }
+    }
 
     // Handle external assets that have null asset_id by checking properties
     const hasExternalAsset = r.properties?.externalAsset
@@ -172,10 +186,10 @@ export function dbToClip(r: any): Clip {
         assetId: assetId,
         type: r.type,
         sourceStartMs: Number(r.source_start_ms) || 0,
-        sourceEndMs: Number(r.source_end_ms) || 0,
+        sourceEndMs: Number(r.source_end_ms) || (end - start), // Use calculated duration
         timelineStartMs: start,
         timelineEndMs: end,
-        assetDurationMs: Number(r.asset_duration_ms) || 0,
+        assetDurationMs: Number(r.asset_duration_ms) || (end - start),
         volume: Number(r.volume) || 1,
         speed: Number(r.speed) || 1,
         properties: r.properties ?? {},
@@ -246,6 +260,17 @@ export function addAssetToTrack(
         // Handle regular uploaded assets
         trackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
         duration = asset.duration ? Math.floor(asset.duration) : 0
+        
+        // Ensure minimum duration for images and other assets
+        if (duration <= 0) {
+            if (asset.mime_type.startsWith('image/')) {
+                duration = 5000 // 5 seconds for images
+                console.log('Added default 5s duration for uploaded image')
+            } else {
+                duration = 1000 // 1 second minimum for other assets
+                console.log('Added default 1s duration for asset with no duration')
+            }
+        }
     }
     
     // Find the target track or create a new one
@@ -297,6 +322,12 @@ export function addAssetToTrack(
         
         // For new tracks, start at 0 since there are no existing clips
         startTimeMs = 0
+    }
+    
+    // Final safety check - ensure duration is valid
+    if (duration <= 0) {
+        duration = 5000 // 5 seconds default
+        console.warn('Duration was still 0, using 5s default')
     }
     
     // Create the clip

@@ -3,6 +3,7 @@ import { useParams } from 'next/navigation'
 import { v4 as uuid } from 'uuid'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
+import { useTimelineSettings } from '@/contexts/TimelineSettingsContext'
 import TrackRow from './TrackRow'
 import { getTimeScale } from '@/lib/constants'
 import { TrackType } from '@/types/editor'
@@ -11,10 +12,15 @@ import { usePlayback } from '@/contexts/PlaybackContext'
 import { useZoom } from '@/contexts/ZoomContext'
 import Playhead from './Playhead'
 import TimelineLoading from './TimelineLoading'
+import TimelineToolbar from './TimelineToolbar'
+import EnhancedClipItem from './EnhancedClipItem'
+import ClipItem from './ClipItem'
+import { ClipType } from '@/types/editor'
 
 export default function Timeline() {
     const params = useParams()
     const { zoomLevel } = useZoom()
+    const { settings: timelineSettings } = useTimelineSettings()
     const timeScale = getTimeScale(zoomLevel)
     const dragCounterRef = useRef(0)
 
@@ -43,6 +49,7 @@ export default function Timeline() {
 
     // drag‐state for the whole timeline
     const [isDragOver, setIsDragOver] = useState(false)
+    const [useEnhancedClips, setUseEnhancedClips] = useState(true) // Toggle for enhanced clips
 
     // group clips by track
     const clipsByTrack = useMemo(() => {
@@ -214,278 +221,119 @@ export default function Timeline() {
         dragCounterRef.current = 0
         setIsDragOver(false)
 
-        if (!containerRef.current) return
-
-        // 1) parse payload
-        let payload: { assetId?: string, type?: string, assetType?: string, asset?: any }
         try {
-            payload = JSON.parse(e.dataTransfer.getData('application/json'))
-            console.log('Drop payload:', payload)
+            const data = e.dataTransfer.getData('application/json')
+            if (!data) return
+
+            const parsed = JSON.parse(data)
+            
+            // Handle asset drops from library
+            if (parsed.type === 'asset' && parsed.assetId) {
+                const asset = assets.find(a => a.id === parsed.assetId)
+                if (!asset) return
+
+                // Calculate drop position
+                const rect = containerRef.current?.getBoundingClientRect()
+                if (!rect) return
+
+                const x = e.clientX - rect.left
+                const timeMs = Math.round(x / timeScale)
+
+                // Find or create appropriate track
+                let targetTrack = tracks.find(t => {
+                    if (asset.mime_type.startsWith('video/')) return t.type === 'video'
+                    if (asset.mime_type.startsWith('audio/')) return t.type === 'audio'
+                    if (asset.mime_type.startsWith('image/')) return t.type === 'video' // Images go on video tracks
+                    return false
+                })
+
+                if (!targetTrack) {
+                    // Create new track
+                    const trackType = asset.mime_type.startsWith('video/') ? 'video' :
+                                    asset.mime_type.startsWith('audio/') ? 'audio' : 'video' // Images go on video tracks
+                    
+                    const newTrack = {
+                        id: uuid(),
+                        projectId: projectId!,
+                        index: tracks.length,
+                        type: trackType as TrackType,
+                        createdAt: new Date().toISOString()
+                    }
+
+                    executeCommand({
+                        type: 'ADD_TRACK',
+                        payload: { track: newTrack }
+                    })
+
+                    targetTrack = newTrack
+                }
+
+                // Create clip
+                const clipDuration = asset.duration ? asset.duration * 1000 : 5000 // 5 seconds default for images
+                const clipType: ClipType = asset.mime_type.startsWith('video/') ? 'video' :
+                                         asset.mime_type.startsWith('audio/') ? 'audio' : 'image'
+                
+                const newClip = {
+                    id: uuid(),
+                    trackId: targetTrack.id,
+                    assetId: asset.id,
+                    type: clipType,
+                    timelineStartMs: timeMs,
+                    timelineEndMs: timeMs + clipDuration,
+                    sourceStartMs: 0,
+                    sourceEndMs: clipDuration,
+                    assetDurationMs: clipDuration,
+                    volume: 1,
+                    speed: 1,
+                    createdAt: new Date().toISOString()
+                }
+
+                executeCommand({
+                    type: 'ADD_CLIP',
+                    payload: { clip: newClip }
+                })
+            }
         } catch (error) {
-            console.error('Failed to parse drop data:', error)
-            return
+            console.error('Failed to handle drop:', error)
         }
-
-        // Handle external assets (Pexels/stickers)
-        if (payload.type === 'external_asset') {
-            console.log('Handling external asset:', payload)
-
-            // Extract the correct URL based on asset type and source
-            let mediaUrl = ''
-
-            if (payload.asset.isSticker) {
-                // Giphy sticker
-                mediaUrl = payload.asset.url || payload.asset.images?.original?.url
-            } else if (payload.assetType === 'image') {
-                // Pexels image
-                mediaUrl = payload.asset.src?.original || payload.asset.src?.large2x || payload.asset.src?.large
-            } else if (payload.assetType === 'video') {
-                // Pexels video - get the first available video file
-                mediaUrl = payload.asset.video_files?.[0]?.link || payload.asset.url
-            }
-
-            console.log('Extracted media URL:', mediaUrl)
-
-            if (!mediaUrl) {
-                console.error('Could not extract media URL from external asset:', payload.asset)
-                return
-            }
-
-            // Create a temporary asset-like object for external assets
-            const externalAsset = {
-                id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                url: mediaUrl,
-                name: payload.asset.title || payload.asset.alt || `External ${payload.assetType}`,
-                mime_type: payload.assetType === 'video' ? 'video/mp4' : 
-                          (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
-                duration: payload.assetType === 'video' ? 10000 : 
-                         (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 3000 : 5000, // 3s for GIFs, 5s for images
-                isExternal: true,
-                originalData: payload.asset
-            }
-
-            console.log('Created external asset:', externalAsset)
-
-            // 2) compute time position
-            const rect = containerRef.current.getBoundingClientRect()
-            const x = e.clientX - rect.left
-            
-            // Grid snap to every 500ms for better precision
-            const gridSnapMs = 500
-            let startMs = Math.round(x / timeScale / gridSnapMs) * gridSnapMs
-            
-            // Snap to 00:00 if we're very close to the beginning (within 250ms)
-            if (startMs < 250) {
-                startMs = 0
-            } else {
-                startMs = Math.max(0, startMs)
-            }
-
-            // 3) compute new track index from Y position
-            const y = e.clientY - rect.top
-            const rowHeight = containerRef.current.firstElementChild?.clientHeight ?? 68
-            const rawIndex = Math.floor(y / rowHeight)
-            const newIndex = Math.max(0, Math.min(tracks.length, rawIndex))
-
-            console.log('Creating external track at index:', newIndex, 'time:', startMs)
-
-            // 4) CREATE TRACK
-            const trackType: TrackType = payload.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
-
-            const newTrack = {
-                id: uuid(),
-                projectId: projectId!,
-                index: newIndex,
-                type: trackType,
-                createdAt: new Date().toISOString(),
-            }
-
-            console.log('Creating external track:', newTrack)
-
-            executeCommand({
-                type: 'ADD_TRACK',
-                payload: { track: newTrack }
-            })
-
-            // 5) CREATE CLIP in that track
-            const dur = externalAsset.duration
-
-            // Calculate the maximum allowed start time to fit the clip
-            const maxStartMs = Math.max(0, paddedMaxMs - dur)
-            const adjustedStartMs = Math.min(startMs, maxStartMs)
-
-            const newClip = {
-                id: uuid(),
-                trackId: newTrack.id,
-                assetId: externalAsset.id,
-                type: (payload.asset.isSticker ? 'image' : trackType) as 'image' | 'video' | 'audio', // Use 'image' for stickers specifically
-                sourceStartMs: 0,
-                sourceEndMs: dur,
-                timelineStartMs: adjustedStartMs,
-                timelineEndMs: adjustedStartMs + dur,
-                assetDurationMs: dur,
-                volume: 1,
-                speed: 1,
-                properties: {
-                    externalAsset: externalAsset // Store external asset data in properties
-                },
-                createdAt: new Date().toISOString(),
-            }
-
-            console.log('Creating external clip:', newClip)
-
-            executeCommand({
-                type: 'ADD_CLIP',
-                payload: { clip: newClip }
-            })
-            return
-        }
-
-        // Handle regular uploaded assets
-        if (!payload.assetId) {
-            console.log('No assetId found in payload')
-            return
-        }
-
-        console.log('Looking for asset with ID:', payload.assetId)
-        console.log('Available assets:', assets.map(a => ({ id: a.id, name: a.name })))
-
-        const asset = assets.find(a => a.id === payload.assetId)
-        if (!asset) {
-            console.error('Asset not found:', payload.assetId)
-            return
-        }
-
-        console.log('Found asset:', asset)
-
-        // 2) compute time position
-        const rect = containerRef.current.getBoundingClientRect()
-        const x = e.clientX - rect.left
-        
-        // Grid snap to every 500ms for better precision
-        const gridSnapMs = 500
-        let startMs = Math.round(x / timeScale / gridSnapMs) * gridSnapMs
-        
-        // Snap to 00:00 if we're very close to the beginning (within 250ms)
-        if (startMs < 250) {
-            startMs = 0
-        } else {
-            startMs = Math.max(0, startMs)
-        }
-
-        // 3) compute new track index from Y position
-        const y = e.clientY - rect.top
-        const rowHeight = containerRef.current.firstElementChild?.clientHeight ?? 68
-        const rawIndex = Math.floor(y / rowHeight)
-        const newIndex = Math.max(0, Math.min(tracks.length, rawIndex))
-
-        console.log('Creating track at index:', newIndex, 'time:', startMs)
-
-        // 4) CREATE TRACK
-        const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
-
-        const newTrack = {
-            id: uuid(),
-            projectId: projectId!,
-            index: newIndex,
-            type: trackType,
-            createdAt: new Date().toISOString(),
-        }
-
-        console.log('Creating track:', newTrack)
-
-        executeCommand({
-            type: 'ADD_TRACK',
-            payload: { track: newTrack }
-        })
-
-        // 5) CREATE CLIP in that track
-        const dur = asset.duration ? Math.floor(asset.duration) : 0 // Duration is already in ms
-
-        // Calculate the maximum allowed start time to fit the clip
-        const maxStartMs = Math.max(0, paddedMaxMs - dur)
-        const adjustedStartMs = Math.min(startMs, maxStartMs)
-
-        const newClip = {
-            id: uuid(),
-            trackId: newTrack.id,
-            assetId: asset.id,
-            type: trackType,
-            sourceStartMs: 0,
-            sourceEndMs: dur,
-            timelineStartMs: adjustedStartMs,
-            timelineEndMs: adjustedStartMs + dur,
-            assetDurationMs: dur,
-            volume: 1,
-            speed: 1,
-            properties: asset.mime_type.startsWith('image/') ? {
-                crop: {
-                    width: 320,  // Default 16:9 aspect ratio
-                    height: 180,
-                    left: 0,
-                    top: 0
-                },
-                mediaPos: {
-                    x: 0,
-                    y: 0
-                },
-                mediaScale: 1
-            } : {},
-            createdAt: new Date().toISOString(),
-        }
-
-        console.log('Creating clip:', newClip)
-
-        executeCommand({
-            type: 'ADD_CLIP',
-            payload: { clip: newClip }
-        })
     }
 
     const handleTimelineClick = (e: React.MouseEvent) => {
-        if (!containerRef.current) return;
-
-        // Get the target element
-        const target = e.target as HTMLElement;
-
-        // If the click is on a clip or its children, don't handle it
-        if (target.closest('[data-clip-layer]')) return;
-
-        // If the click is on the ruler or playhead, don't handle it
-        if (target.closest('.ruler') || target.closest('.playhead')) return;
-
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left + containerRef.current.scrollLeft;
-        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs)); // Constrain between 0 and max
-        setCurrentTime(newTimeMs / 1000);
-        setSelectedClipId(null);
-    };
-
-    const handlePlayheadDrag = (e: React.MouseEvent) => {
-        if (!containerRef.current) return
-
-        const rect = containerRef.current.getBoundingClientRect()
-        const x = e.clientX - rect.left + containerRef.current.scrollLeft
-        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs)) // Strict bounds: 0 <= time <= paddedMaxMs
-        setCurrentTime(newTimeMs / 1000)
-
-        // Auto-scroll when dragging near the edges
-        const scrollThreshold = 100 // pixels from edge to trigger scroll
-        const scrollSpeed = 10 // pixels per frame
-        const mouseX = e.clientX - rect.left
-
-        if (mouseX < scrollThreshold) {
-            // Scroll left
-            containerRef.current.scrollLeft -= scrollSpeed
-        } else if (mouseX > rect.width - scrollThreshold) {
-            // Scroll right
-            containerRef.current.scrollLeft += scrollSpeed
+        // Only handle clicks on the timeline background, not on clips
+        if ((e.target as HTMLElement).closest('[data-timeline-clip]')) {
+            return
         }
+
+        const rect = containerRef.current?.getBoundingClientRect()
+        if (!rect) return
+
+        const x = e.clientX - rect.left + (containerRef.current?.scrollLeft || 0)
+        const timeMs = Math.round(x / timeScale)
+        const timeSeconds = timeMs / 1000
+
+        setCurrentTime(timeSeconds)
+        setSelectedClipId(null)
     }
 
-    // Determine if we need scrollbars based on content
-    const hasActualContent = clips.length > 0 || tracks.length > 0
-    const needsHorizontalScroll = hasActualContent && (totalContentPx > containerWidth)
+    const handlePlayheadDrag = (e: React.MouseEvent) => {
+        const startX = e.clientX
+        const startTime = currentTime
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const deltaX = e.clientX - startX
+            const deltaTimeMs = deltaX / timeScale
+            const newTime = Math.max(0, startTime + deltaTimeMs / 1000)
+            setCurrentTime(newTime)
+        }
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove)
+            document.removeEventListener('mouseup', handleMouseUp)
+        }
+
+        document.addEventListener('mousemove', handleMouseMove)
+        document.addEventListener('mouseup', handleMouseUp)
+    }
 
     if (loadingTimeline) {
         return <TimelineLoading />
@@ -493,70 +341,89 @@ export default function Timeline() {
 
     if (timelineError) {
         return (
-            <p className="p-4 text-red-500">
-                Error: {timelineError}
-            </p>
+            <div className="p-4 text-red-500">
+                Error loading timeline: {timelineError}
+            </div>
         )
     }
 
     return (
-        <div
-            ref={containerRef}
-            className={`
-                w-full
-                timeline-container
-                ${isDragOver ?
-                    'border-2 border-cyan-400 bg-cyan-50/50' :
-                    'border border-transparent bg-white'}
-            `}
-            style={{
-                // Prevent container from growing beyond its bounds
-                maxWidth: '100%',
-                overflowX: needsHorizontalScroll ? 'auto' : 'hidden',
-                overflowY: 'hidden' // Never scroll vertically on main container - tracks handle their own scrolling
-            }}
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDragOver={handleDragOver}
-            onDrop={onDrop}
-            onClick={handleTimelineClick}
-        >
-            <div
-                className="relative flex flex-col gap-3 bg-gradient-to-b from-gray-50/30 to-transparent rounded-lg"
-                style={{
-                    width: timelineContainerWidth,
-                    padding: '8px 8px 8px 0', // Remove left padding to align with ruler
-                }}
-            >
-                <Ruler
-                    totalMs={timelineContainerWidth / timeScale}
+        <div className="flex flex-col h-full bg-gray-100">
+            {/* Enhanced Timeline Toolbar */}
+            <TimelineToolbar />
+            
+            {/* Debug Toggle (remove in production) */}
+            <div className="px-4 py-1 bg-yellow-50 border-b border-yellow-200 text-xs">
+                <label className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={useEnhancedClips}
+                        onChange={(e) => setUseEnhancedClips(e.target.checked)}
+                        className="rounded"
+                    />
+                    <span>Use Enhanced Clips (with magnetic snapping & gap closure)</span>
+                </label>
+            </div>
+
+            {/* Timeline Header */}
+            <div className="flex-shrink-0 bg-white border-b border-gray-200">
+                <Ruler 
+                    totalMs={paddedMaxMs}
                     timeScale={timeScale}
                 />
-                <Playhead
-                    playheadX={playheadX}
-                    onDrag={handlePlayheadDrag}
-                    isPlaying={isPlaying}
-                />
-                <div 
-                    className="flex flex-col gap-3 overflow-y-auto elegant-scrollbar"
+            </div>
+
+            {/* Timeline Content */}
+            <div className="flex-1 relative overflow-hidden">
+                <div
+                    ref={containerRef}
+                    className={`timeline-container h-full overflow-x-auto overflow-y-auto ${
+                        isDragOver ? 'bg-blue-50' : 'bg-gray-50'
+                    }`}
                     style={{
-                        height: `${displayTracks.length * 60}px`, // Exact height: 48px track + 12px gap = 60px per track
-                        maxHeight: '240px', // Still keep a max height to enable scrolling when there are too many tracks
-                        minHeight: 0, // Allow flex item to shrink
+                        maxHeight: needsVerticalScroll ? '320px' : 'auto' // 4 tracks * 80px
                     }}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDragOver={handleDragOver}
+                    onDrop={onDrop}
+                    onClick={handleTimelineClick}
                 >
-                    {
-                        displayTracks.map(t => (
+                    <div
+                        className="relative"
+                        style={{
+                            width: `${timelineContainerWidth}px`,
+                            minHeight: `${displayTracks.length * 80}px`
+                        }}
+                    >
+                        {/* Track Rows */}
+                        {displayTracks.map((track, index) => (
                             <TrackRow
-                                key={t.id}
-                                track={t}
-                                clips={clipsByTrack.get(t.id) ?? []}
+                                key={track.id}
+                                track={track}
+                                clips={clipsByTrack.get(track.id) || []}
                                 timelineSetIsDragOver={setIsDragOver}
                                 onClipSelect={setSelectedClipId}
                                 selectedClipId={selectedClipId}
                             />
-                        ))
-                    }
+                        ))}
+
+                        {/* Playhead */}
+                        <Playhead
+                            playheadX={playheadX}
+                            onDrag={handlePlayheadDrag}
+                            isPlaying={isPlaying}
+                        />
+
+                        {/* Drop indicator */}
+                        {isDragOver && (
+                            <div className="absolute inset-0 border-2 border-dashed border-blue-400 bg-blue-50 bg-opacity-50 pointer-events-none rounded-lg flex items-center justify-center">
+                                <div className="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium">
+                                    Drop assets here to add to timeline
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

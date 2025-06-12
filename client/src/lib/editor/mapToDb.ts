@@ -29,17 +29,30 @@ export function toDbClip(c: Clip) {
         throw new Error(`Invalid clip timeline positions: start=${c.timelineStartMs}, end=${c.timelineEndMs}`)
     }
     
-    if (c.timelineEndMs <= c.timelineStartMs) {
-        throw new Error(`Invalid clip duration: end (${c.timelineEndMs}) must be after start (${c.timelineStartMs})`)
+    // Handle zero-duration clips (especially for images) by adding default duration
+    let timelineStartMs = c.timelineStartMs
+    let timelineEndMs = c.timelineEndMs
+    
+    if (timelineEndMs <= timelineStartMs) {
+        // For images and text, add a default 5-second duration
+        if (c.type === 'image' || c.type === 'text' || c.type === 'caption') {
+            timelineEndMs = timelineStartMs + 5000 // 5 seconds default
+            console.log(`[mapToDb] Added default 5s duration for ${c.type} clip: ${timelineStartMs}ms -> ${timelineEndMs}ms`)
+        } else {
+            throw new Error(`Invalid clip duration: end (${c.timelineEndMs}) must be after start (${c.timelineStartMs})`)
+        }
     }
     
     // Handle external assets - they have fake asset IDs that don't exist in the database
     const isExternalAsset = c.assetId?.startsWith('external_') || c.properties?.externalAsset
     
+    // Calculate corrected timeline duration
+    const timelineDurationMs = timelineEndMs - timelineStartMs
+    
     // Ensure asset_duration_ms is valid - fallback to timeline duration if missing
     const assetDurationMs = c.assetDurationMs && c.assetDurationMs > 0 
         ? c.assetDurationMs 
-        : Math.max(c.timelineEndMs - c.timelineStartMs, 1000) // Minimum 1 second
+        : Math.max(timelineDurationMs, 1000) // Minimum 1 second
     
     return {
         id: c.id,
@@ -48,8 +61,8 @@ export function toDbClip(c: Clip) {
         type: c.type === 'caption' ? 'text' : c.type, // Convert caption to text for database
         source_start_ms: c.sourceStartMs || 0,
         source_end_ms: c.sourceEndMs || assetDurationMs,
-        timeline_start_ms: c.timelineStartMs,
-        timeline_end_ms: c.timelineEndMs,
+        timeline_start_ms: timelineStartMs, // Use corrected values
+        timeline_end_ms: timelineEndMs,     // Use corrected values
         asset_duration_ms: assetDurationMs,
         volume: c.volume || 1.0,
         speed: c.speed || 1.0,
