@@ -35,13 +35,13 @@ const EditorContent = () => {
             ">
                 <div className="flex items-center gap-3 flex-shrink-0">
                     <ClipTools />
-                    <AspectRatioButton />
                 </div>
                 <div className="flex flex-1 items-center justify-center">
                     <PlaybackControls />
                 </div>
-                <div className="flex items-center justify-end flex-shrink-0">
+                <div className="flex items-center justify-end gap-3 flex-shrink-0">
                     <ZoomSlider />
+                    <AspectRatioButton />
                 </div>
             </div>
             

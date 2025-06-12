@@ -84,16 +84,6 @@ const ClipTools = () => {
         clip.type === 'video' || clip.type === 'audio'
     ) || (selectedClip && (selectedClip.type === 'video' || selectedClip.type === 'audio'))
 
-    // Debug logging
-    console.log('ClipTools Debug:', {
-        hasSelectedClip,
-        hasAnySelection,
-        canAdjustVolume,
-        selectedClip: selectedClip?.type,
-        selectedClipsTypes: selectedClips.map(c => c.type),
-        sliderVolume
-    })
-
     // Update slider speed when selection changes
     useEffect(() => {
         if (primarySelectedClip && (primarySelectedClip.type === 'video' || primarySelectedClip.type === 'audio')) {
@@ -432,6 +422,92 @@ const ClipTools = () => {
                 </button>
             </Tooltip>
 
+            {/* Volume Control */}
+            <div className="relative" ref={volumeSliderRef}>
+                <Tooltip text="Volume" disabled={!canAdjustVolume || !hasAnySelection}>
+                    <button
+                        className={`
+                            p-1 rounded-lg transition-all duration-200
+                            ${canAdjustVolume && hasAnySelection ? 
+                                'hover:bg-gray-300' : 
+                                'opacity-40 cursor-not-allowed'
+                            }
+                        `}
+                        onClick={() => {
+                            setShowVolumeSlider(!showVolumeSlider)
+                        }}
+                        disabled={!canAdjustVolume || !hasAnySelection}
+                    >
+                        <img 
+                            src={getVolumeIcon(sliderVolume)} 
+                            alt="Volume" 
+                            className="w-4 h-4"
+                        />
+                    </button>
+                </Tooltip>
+
+                {/* Volume Slider */}
+                {showVolumeSlider && (
+                    <div 
+                        className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                    >
+                        <div className="text-sm font-semibold text-gray-700 mb-3 text-center">
+                            {Math.round(sliderVolume * 100)}% volume
+                        </div>
+                        <div 
+                            className="relative"
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <div
+                                className="absolute w-full h-2 rounded-full"
+                                style={{
+                                    background: `linear-gradient(to right, #4B5563 ${sliderVolume * 100}%, #9CA3AF ${sliderVolume * 100}%)`
+                                }}
+                            ></div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={sliderVolume}
+                                onChange={(e) => {
+                                    e.stopPropagation()
+                                    const newVolume = parseFloat(e.target.value)
+                                    setSliderVolume(newVolume)
+                                    handleVolumeChange(newVolume)
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                className="w-full h-2 bg-transparent appearance-none cursor-pointer relative z-10
+                                    [&::-webkit-slider-thumb]:appearance-none 
+                                    [&::-webkit-slider-thumb]:w-4 
+                                    [&::-webkit-slider-thumb]:h-4 
+                                    [&::-webkit-slider-thumb]:rounded-full 
+                                    [&::-webkit-slider-thumb]:bg-white
+                                    [&::-webkit-slider-thumb]:border 
+                                    [&::-webkit-slider-thumb]:border-gray-300
+                                    [&::-webkit-slider-thumb]:shadow-2xl 
+                                    [&::-webkit-slider-thumb]:cursor-pointer 
+                                    [&::-moz-range-thumb]:w-4 
+                                    [&::-moz-range-thumb]:h-4 
+                                    [&::-moz-range-thumb]:rounded-full 
+                                    [&::-moz-range-thumb]:bg-white 
+                                    [&::-moz-range-thumb]:border 
+                                    [&::-moz-range-thumb]:border-gray-300 
+                                    [&::-moz-range-thumb]:shadow-2xl 
+                                    [&::-moz-range-thumb]:cursor-pointer"
+                            />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2 text-center">
+                            0% - 100%
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* Speed Control */}
             <div className="relative" ref={speedSliderRef}>
                 <Tooltip text="Speed" disabled={!canAdjustSpeed || !hasAnySelection}>
@@ -509,96 +585,6 @@ const ClipTools = () => {
                         </div>
                         <div className="text-xs text-gray-500 mt-2 text-center">
                             0.1x - 10x
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Volume Control */}
-            <div className="relative" ref={volumeSliderRef}>
-                <Tooltip text="Volume" disabled={!canAdjustVolume || !hasAnySelection}>
-                    <button
-                        className={`
-                            p-1 rounded-lg transition-all duration-200
-                            ${canAdjustVolume && hasAnySelection ? 
-                                'hover:bg-gray-300' : 
-                                'opacity-40 cursor-not-allowed'
-                            }
-                        `}
-                        onClick={() => {
-                            console.log('Volume button clicked', { canAdjustVolume, hasAnySelection, sliderVolume })
-                            setShowVolumeSlider(!showVolumeSlider)
-                        }}
-                        disabled={!canAdjustVolume || !hasAnySelection}
-                        style={{ border: '1px solid red' }} // Debug border
-                    >
-                        <img 
-                            src={getVolumeIcon(sliderVolume)} 
-                            alt="Volume" 
-                            className="w-5 h-5"
-                            onError={(e) => console.error('Volume icon failed to load:', e.currentTarget.src)}
-                            onLoad={() => console.log('Volume icon loaded:', getVolumeIcon(sliderVolume))}
-                        />
-                    </button>
-                </Tooltip>
-
-                {/* Volume Slider */}
-                {showVolumeSlider && (
-                    <div 
-                        className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]"
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                    >
-                        <div className="text-sm font-semibold text-gray-700 mb-3 text-center">
-                            {Math.round(sliderVolume * 100)}% volume
-                        </div>
-                        <div 
-                            className="relative"
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                        >
-                            <div
-                                className="absolute w-full h-2 rounded-full"
-                                style={{
-                                    background: `linear-gradient(to right, #4B5563 ${sliderVolume * 100}%, #9CA3AF ${sliderVolume * 100}%)`
-                                }}
-                            ></div>
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.01"
-                                value={sliderVolume}
-                                onChange={(e) => {
-                                    e.stopPropagation()
-                                    const newVolume = parseFloat(e.target.value)
-                                    setSliderVolume(newVolume)
-                                    handleVolumeChange(newVolume)
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                className="w-full h-2 bg-transparent appearance-none cursor-pointer relative z-10
-                                    [&::-webkit-slider-thumb]:appearance-none 
-                                    [&::-webkit-slider-thumb]:w-4 
-                                    [&::-webkit-slider-thumb]:h-4 
-                                    [&::-webkit-slider-thumb]:rounded-full 
-                                    [&::-webkit-slider-thumb]:bg-white
-                                    [&::-webkit-slider-thumb]:border 
-                                    [&::-webkit-slider-thumb]:border-gray-300
-                                    [&::-webkit-slider-thumb]:shadow-2xl 
-                                    [&::-webkit-slider-thumb]:cursor-pointer 
-                                    [&::-moz-range-thumb]:w-4 
-                                    [&::-moz-range-thumb]:h-4 
-                                    [&::-moz-range-thumb]:rounded-full 
-                                    [&::-moz-range-thumb]:bg-white 
-                                    [&::-moz-range-thumb]:border 
-                                    [&::-moz-range-thumb]:border-gray-300 
-                                    [&::-moz-range-thumb]:shadow-2xl 
-                                    [&::-moz-range-thumb]:cursor-pointer"
-                            />
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2 text-center">
-                            0% - 100%
                         </div>
                     </div>
                 )}
