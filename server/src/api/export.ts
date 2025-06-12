@@ -810,56 +810,33 @@ class ProfessionalVideoExporter {
                 return
             }
             
-            // Clean and escape text
-            const text = (element.text || '')
-                .replace(/'/g, "\\'")
-                .replace(/:/g, '\\:')
-                .replace(/\\/g, '\\\\')
-                .replace(/\n/g, '\\n')
+            // Clean and escape text for FFmpeg
+            const originalText = element.text || ''
+            const text = originalText
+                .replace(/\\/g, '\\\\')  // Escape backslashes first
+                .replace(/'/g, "\\'")    // Escape single quotes
+                .replace(/:/g, '\\:')    // Escape colons
+                .replace(/\n/g, '\\n')   // Escape newlines
             
-            if (!text.trim()) {
+            if (!originalText.trim()) {
                 console.warn(`[Export ${this.jobId}] Skipping ${element.type} overlay ${index}: Empty text`)
                 return
             }
             
+            console.log(`[Export ${this.jobId}] Processing ${element.type} overlay ${index}: "${originalText}" -> "${text}"`)
+            
             const outputLabel = index === textElements.length - 1 ? 'final_video' : `text_${index}`
             
-            // For simplified text handling, we'll use basic timing approach
-            // Alternative: Create a text-only video track and overlay it with proper timing
-            if (startSec > 0 || endSec < (this.totalDurationMs / 1000)) {
-                // Text needs specific timing - create a timed text overlay
-                const textVideoLabel = `text_video_${index}`
-                
-                // Build the text filter
-                let textFilter: string
-                if (element.type === 'caption') {
-                    textFilter = this.buildCaptionFilter(element, text, startSec, endSec)
-                } else {
-                    textFilter = this.buildTextFilter(element, text, startSec, endSec)
-                }
-                
-                // Create a transparent background for the text with proper timing
-                filters.push(`color=c=black@0.0:s=${this.outputSettings.width}x${this.outputSettings.height}:r=${this.outputSettings.fps}:d=${duration}[text_bg_${index}]`)
-                filters.push(`[text_bg_${index}]${textFilter}[${textVideoLabel}]`)
-                
-                // Add delay if needed
-                if (startSec > 0) {
-                    filters.push(`[${textVideoLabel}]tpad=start_duration=${startSec}[${textVideoLabel}_delayed]`)
-                    filters.push(`[${currentOutput}][${textVideoLabel}_delayed]overlay=0:0:shortest=0[${outputLabel}]`)
-                } else {
-                    filters.push(`[${currentOutput}][${textVideoLabel}]overlay=0:0:shortest=0[${outputLabel}]`)
-                }
+            // Apply text directly to the video using drawtext filter with timing
+            let textFilter: string
+            if (element.type === 'caption') {
+                textFilter = this.buildCaptionFilter(element, text, startSec, endSec)
             } else {
-                // Text covers entire duration - simple overlay
-                let textFilter: string
-                if (element.type === 'caption') {
-                    textFilter = this.buildCaptionFilter(element, text, startSec, endSec)
-                } else {
-                    textFilter = this.buildTextFilter(element, text, startSec, endSec)
-                }
-                
-                filters.push(`[${currentOutput}]${textFilter}[${outputLabel}]`)
+                textFilter = this.buildTextFilter(element, text, startSec, endSec)
             }
+            
+            // Apply text filter directly to the current video output with enable timing
+            filters.push(`[${currentOutput}]${textFilter}[${outputLabel}]`)
             
             currentOutput = outputLabel
             
@@ -880,20 +857,19 @@ class ProfessionalVideoExporter {
         const x = element.position?.x || '(w-text_w)/2'
         const y = element.position?.y || '(h-text_h)/2'
         
-        // Build simplified text filter without enable parameter
+        // Build text filter with enable parameter for timing
         let filter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}`
         
-        // Add font file if available, otherwise FFmpeg will use built-in fonts
-        if (fontPath) {
-            filter += `:fontfile='${fontPath}'`
-            console.log(`[Export ${this.jobId}] Text filter using font: ${fontPath}`)
-        } else {
-            console.log(`[Export ${this.jobId}] Text filter using FFmpeg built-in font for: ${fontFamily}`)
-        }
+        // Temporarily disable font file usage to debug text rendering issue
+        // Use only basic font family names to avoid path issues
+        const safeFontFamily = fontFamily.replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'Arial'
+        filter += `:font='${safeFontFamily}'`
+        console.log(`[Export ${this.jobId}] Text filter using safe font family: ${safeFontFamily} (original: ${fontFamily})`)
         
-        // Note: Timing will be handled through video stream timing rather than enable parameter
-        // This avoids syntax errors while maintaining proper text positioning in timeline
+        // Add timing with enable parameter
+        filter += `:enable='between(t,${startSec},${endSec})'`
         
+        console.log(`[Export ${this.jobId}] Generated text filter: ${filter}`)
         return filter
     }
 
@@ -916,16 +892,14 @@ class ProfessionalVideoExporter {
         const x = element.position?.x || '(w-text_w)/2'
         const y = element.position?.y || '(h-text_h-20)' // 20px from bottom
         
-        // Build simplified caption filter with background and border
+        // Build caption filter with background and border
         let filter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}`
         
-        // Add font file if available, otherwise FFmpeg will use built-in fonts
-        if (fontPath) {
-            filter += `:fontfile='${fontPath}'`
-            console.log(`[Export ${this.jobId}] Caption filter using font: ${fontPath}`)
-        } else {
-            console.log(`[Export ${this.jobId}] Caption filter using FFmpeg built-in font for: ${fontFamily}`)
-        }
+        // Temporarily disable font file usage to debug text rendering issue
+        // Use only basic font family names to avoid path issues
+        const safeFontFamily = fontFamily.replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'Arial'
+        filter += `:font='${safeFontFamily}'`
+        console.log(`[Export ${this.jobId}] Caption filter using safe font family: ${safeFontFamily} (original: ${fontFamily})`)
         
         // Add caption-specific styling
         filter += `:box=1:boxcolor=${backgroundColor}:boxborderw=${borderWidth}`
@@ -935,9 +909,10 @@ class ProfessionalVideoExporter {
             filter += `:shadowcolor=black@0.5:shadowx=1:shadowy=1`
         }
         
-        // Note: Timing will be handled through video stream timing rather than enable parameter
-        // This avoids syntax errors while maintaining proper caption positioning in timeline
+        // Add timing with enable parameter
+        filter += `:enable='between(t,${startSec},${endSec})'`
         
+        console.log(`[Export ${this.jobId}] Generated caption filter: ${filter}`)
         return filter
     }
 
