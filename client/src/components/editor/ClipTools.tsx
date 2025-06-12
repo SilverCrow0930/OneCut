@@ -3,7 +3,6 @@ import { SquareSplitHorizontal, Trash2, Gauge } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { v4 as uuid } from 'uuid'
-import Image from 'next/image'
 
 // Simple Tooltip component
 const Tooltip = ({ children, text, disabled = false }: { children: React.ReactNode, text: string, disabled?: boolean }) => {
@@ -453,7 +452,7 @@ const ClipTools = () => {
                         }}
                         disabled={!canAdjustVolume || !hasAnySelection}
                     >
-                        <Image 
+                        <img 
                             src={getVolumeIcon()} 
                             alt="Volume" 
                             width={26} 
