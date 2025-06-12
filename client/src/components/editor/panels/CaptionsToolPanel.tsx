@@ -15,12 +15,9 @@ import {
     Check, 
     RotateCcw, 
     Plus, 
-    Type, 
-    Palette, 
     ArrowUp, 
     AlignCenter, 
     ArrowDown,
-    Sliders,
     RefreshCw
 } from 'lucide-react'
 
@@ -32,22 +29,7 @@ const highlightColors = [
     '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
 ]
 
-const fontOptions = [
-    { name: 'Impact (Bold)', value: 'Impact, "Arial Black", sans-serif' },
-    { name: 'Arial (Clean)', value: 'Arial, Helvetica, sans-serif' },
-    { name: 'Roboto (Modern)', value: 'Roboto, "Open Sans", sans-serif' },
-    { name: 'Bebas Neue (Stylish)', value: 'Bebas Neue, Impact, sans-serif' },
-    { name: 'Montserrat (Elegant)', value: 'Montserrat, "Segoe UI", sans-serif' },
-]
 
-const colorPresets = [
-    { name: 'White', value: '#FFFFFF' },
-    { name: 'Black', value: '#000000' },
-    { name: 'Red', value: '#FF4444' },
-    { name: 'Blue', value: '#4444FF' },
-    { name: 'Yellow', value: '#FFFF44' },
-    { name: 'Green', value: '#44FF44' },
-]
 
 export const longVideoCaptionStyles = [
     {
@@ -130,10 +112,6 @@ const CaptionsToolPanel = () => {
         setSelectedLongStyleIdx,
         selectedShortStyleIdx,
         setSelectedShortStyleIdx,
-        useCustomStyle,
-        setUseCustomStyle,
-        customStyle,
-        setCustomStyle,
         selectedPlacement,
         setSelectedPlacement,
         workflowPhase,
@@ -146,7 +124,6 @@ const CaptionsToolPanel = () => {
     // Local state for generation process
     const [isGenerating, setIsGenerating] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [progressStage, setProgressStage] = useState<'upload' | 'processing' | 'generating' | null>(null)
     const [smoothProgress, setSmoothProgress] = useState(0)
     
@@ -283,7 +260,6 @@ const CaptionsToolPanel = () => {
         setIsGenerating(true)
         setWorkflowPhase('generating')
         setError(null)
-        setSuccessMessage(null)
         setCaptions([])
         setProgressStage('generating')
 
@@ -320,7 +296,7 @@ const CaptionsToolPanel = () => {
             const parsedCaptions = parseEnhancedSRT(result.transcription)
             setCaptions(parsedCaptions)
 
-            setSuccessMessage(`Generated ${parsedCaptions.length} captions successfully!`)
+
             setWorkflowPhase('editing')
         } catch (error: any) {
             console.error('❌ Transcription failed:', error)
@@ -372,12 +348,10 @@ const CaptionsToolPanel = () => {
                 createdAt: new Date().toISOString(),
             }
 
-            // Get selected style (custom or preset)
-            const selectedStyle = useCustomStyle
-                ? customStyle
-                : selectedStyleCategory === 'long'
-                    ? longVideoCaptionStyles[selectedLongStyleIdx].style
-                    : shortVideoCaptionStyles[selectedShortStyleIdx].style;
+            // Get selected style from presets
+            const selectedStyle = selectedStyleCategory === 'long'
+                ? longVideoCaptionStyles[selectedLongStyleIdx].style
+                : shortVideoCaptionStyles[selectedShortStyleIdx].style;
 
             // Create caption clips for each caption with custom styling
             const captionClips = captions.map(caption => ({
@@ -436,7 +410,7 @@ const CaptionsToolPanel = () => {
                 payload: { commands }
             })
 
-            setSuccessMessage(`Added ${captions.length} captions to timeline!`)
+
             
             // Don't reset captions - keep them for potential re-styling
             // setWorkflowPhase('initial')
@@ -449,7 +423,6 @@ const CaptionsToolPanel = () => {
     const handleRegenerateCaption = () => {
         resetCaptions()
         setError(null)
-        setSuccessMessage(null)
         setEditingCaptionId(null)
         setEditText('')
     }
@@ -471,111 +444,7 @@ const CaptionsToolPanel = () => {
 
     const progressContent = getProgressContent()
 
-    // Custom Style Editor Component
-    const CustomStyleEditor = () => (
-        <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
-            <div className="flex items-center gap-2 mb-3">
-                <Sliders size={16} className="text-blue-600" />
-                <h6 className="font-semibold text-gray-700">Custom Style</h6>
-            </div>
 
-            {/* Font Family */}
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Font</label>
-                <select
-                    value={customStyle.fontFamily}
-                    onChange={(e) => setCustomStyle(prev => ({ ...prev, fontFamily: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                    {fontOptions.map(font => (
-                        <option key={font.value} value={font.value}>{font.name}</option>
-                    ))}
-                </select>
-            </div>
-
-            {/* Font Size */}
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Size: {customStyle.fontSize}px</label>
-                <input
-                    type="range"
-                    min="16"
-                    max="48"
-                    value={customStyle.fontSize}
-                    onChange={(e) => setCustomStyle(prev => ({ ...prev, fontSize: Number(e.target.value) }))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
-            </div>
-
-            {/* Text Color */}
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Text Color</label>
-                <div className="grid grid-cols-3 gap-2">
-                    {colorPresets.map(color => (
-                        <button
-                            key={color.value}
-                            onClick={() => setCustomStyle(prev => ({ ...prev, color: color.value }))}
-                            className={`p-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                                customStyle.color === color.value 
-                                    ? 'ring-2 ring-blue-500 scale-105' 
-                                    : 'hover:scale-105'
-                            }`}
-                            style={{ backgroundColor: color.value, color: color.value === '#FFFFFF' ? '#000000' : '#FFFFFF' }}
-                        >
-                            {color.name}
-                        </button>
-                    ))}
-                </div>
-                <input
-                    type="color"
-                    value={customStyle.color}
-                    onChange={(e) => setCustomStyle(prev => ({ ...prev, color: e.target.value }))}
-                    className="w-full h-8 border border-gray-300 rounded cursor-pointer"
-                />
-            </div>
-
-            {/* Outline Width */}
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Outline: {customStyle.WebkitTextStroke.split(' ')[0]}</label>
-                <input
-                    type="range"
-                    min="0"
-                    max="8"
-                    step="0.5"
-                    value={parseFloat(customStyle.WebkitTextStroke.split(' ')[0])}
-                    onChange={(e) => setCustomStyle(prev => ({ ...prev, WebkitTextStroke: `${e.target.value}px #000000` }))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
-            </div>
-
-            {/* Letter Spacing */}
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Spacing: {customStyle.letterSpacing}</label>
-                <input
-                    type="range"
-                    min="0"
-                    max="3"
-                    step="0.1"
-                    value={parseFloat(customStyle.letterSpacing.replace('px', ''))}
-                    onChange={(e) => setCustomStyle(prev => ({ ...prev, letterSpacing: `${e.target.value}px` }))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
-            </div>
-
-            {/* Preview */}
-            <div className="p-4 bg-black rounded-lg">
-                <div
-                    className="text-center"
-                    style={{
-                        ...customStyle,
-                        fontSize: customStyle.fontSize / 2, // Scale down for preview
-                        WebkitTextStroke: customStyle.WebkitTextStroke.replace(/(\d+)/, (match) => (parseFloat(match) / 2).toString()),
-                    }}
-                >
-                    SAMPLE TEXT
-                </div>
-            </div>
-        </div>
-    )
 
     return (
         <div className="flex flex-col w-full gap-6 p-4">
@@ -592,12 +461,7 @@ const CaptionsToolPanel = () => {
                 </div>
             )}
 
-            {/* Success Message */}
-            {successMessage && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-700 text-sm">{successMessage}</p>
-                </div>
-            )}
+
 
             {/* Phase 1: Initial State or No Tracks */}
             {workflowPhase === 'initial' && transcribableTracks.length === 0 && (
@@ -814,10 +678,6 @@ const CaptionsToolPanel = () => {
                 <div className="space-y-5 animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
                     {/* Header */}
                     <div className="flex items-center justify-between">
-                        <h4 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                            <Sparkles size={18} className="text-blue-500" />
-                            Style Your Captions
-                        </h4>
                         <button
                             onClick={() => setWorkflowPhase('editing')}
                             className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors text-sm"
@@ -826,69 +686,42 @@ const CaptionsToolPanel = () => {
                         </button>
                     </div>
 
-                    {/* Style Selection Toggle */}
-                    <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
-                        <button
-                            onClick={() => setUseCustomStyle(false)}
-                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-all duration-200 ${
-                                !useCustomStyle ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                        >
-                            <Type size={16} />
-                            <span className="text-sm font-medium">Presets</span>
-                        </button>
-                        <button
-                            onClick={() => setUseCustomStyle(true)}
-                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-all duration-200 ${
-                                useCustomStyle ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                        >
-                            <Palette size={16} />
-                            <span className="text-sm font-medium">Custom</span>
-                        </button>
-                    </div>
-
                     {/* Style Selection */}
-                    {!useCustomStyle && (
-                        <div className="mb-4">
-                            <div className="flex gap-2 mb-2">
-                                <button
-                                    className={`px-3 py-1 rounded-lg font-semibold ${selectedStyleCategory === 'long' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                    onClick={() => setSelectedStyleCategory('long')}
-                                >
-                                    Long Video Styles
-                                </button>
-                                <button
-                                    className={`px-3 py-1 rounded-lg font-semibold ${selectedStyleCategory === 'short' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                    onClick={() => setSelectedStyleCategory('short')}
-                                >
-                                    Short Video Styles
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                {(selectedStyleCategory === 'long' ? longVideoCaptionStyles : shortVideoCaptionStyles).map((preset, idx) => (
-                                    <button
-                                        key={preset.name}
-                                        className={`rounded-lg p-3 border-2 transition-all duration-200 text-left ${
-                                            (selectedStyleCategory === 'long' ? selectedLongStyleIdx : selectedShortStyleIdx) === idx
-                                                ? 'border-blue-600 scale-105 bg-blue-50'
-                                                : 'border-gray-200 bg-white hover:border-blue-400'
-                                        }`}
-                                        onClick={() => {
-                                            if (selectedStyleCategory === 'long') setSelectedLongStyleIdx(idx);
-                                            else setSelectedShortStyleIdx(idx);
-                                        }}
-                                    >
-                                        <div className="text-sm font-medium text-gray-800">{preset.name}</div>
-                                        <div className="text-xs text-gray-500 mt-1">Click to select</div>
-                                    </button>
-                                ))}
-                            </div>
+                    <div className="mb-4">
+                        <div className="flex gap-2 mb-2">
+                            <button
+                                className={`px-3 py-1 rounded-lg font-semibold ${selectedStyleCategory === 'long' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                onClick={() => setSelectedStyleCategory('long')}
+                            >
+                                Long Video Styles
+                            </button>
+                            <button
+                                className={`px-3 py-1 rounded-lg font-semibold ${selectedStyleCategory === 'short' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                onClick={() => setSelectedStyleCategory('short')}
+                            >
+                                Short Video Styles
+                            </button>
                         </div>
-                    )}
-
-                    {/* Custom Style Editor */}
-                    {useCustomStyle && <CustomStyleEditor />}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {(selectedStyleCategory === 'long' ? longVideoCaptionStyles : shortVideoCaptionStyles).map((preset, idx) => (
+                                <button
+                                    key={preset.name}
+                                    className={`rounded-lg p-3 border-2 transition-all duration-200 text-left ${
+                                        (selectedStyleCategory === 'long' ? selectedLongStyleIdx : selectedShortStyleIdx) === idx
+                                            ? 'border-blue-600 scale-105 bg-blue-50'
+                                            : 'border-gray-200 bg-white hover:border-blue-400'
+                                    }`}
+                                    onClick={() => {
+                                        if (selectedStyleCategory === 'long') setSelectedLongStyleIdx(idx);
+                                        else setSelectedShortStyleIdx(idx);
+                                    }}
+                                >
+                                    <div className="text-sm font-medium text-gray-800">{preset.name}</div>
+                                    <div className="text-xs text-gray-500 mt-1">Click to select</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
                     {/* Placement Selection */}
                     <div className="space-y-3">
