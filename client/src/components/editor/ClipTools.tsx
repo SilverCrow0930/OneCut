@@ -441,7 +441,7 @@ const ClipTools = () => {
                         <img 
                             src={getVolumeIcon(sliderVolume)} 
                             alt="Volume" 
-                            className="w-4 h-4"
+                            className="w-5 h-5"
                         />
                     </button>
                 </Tooltip>

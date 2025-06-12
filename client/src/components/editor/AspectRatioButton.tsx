@@ -39,7 +39,7 @@ export function AspectRatioButton() {
                 <button
                     onClick={() => handleRatioChange('vertical')}
                     className={`
-                        flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200
+                        flex items-center justify-center p-2 rounded-md text-xs font-medium transition-all duration-200
                         ${aspectRatio === 'vertical'
                             ? 'bg-blue-500 text-white shadow-sm'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -48,13 +48,12 @@ export function AspectRatioButton() {
                     title="Vertical (9:16) - Mobile, TikTok, Instagram Reels"
                 >
                     <Smartphone className="w-4 h-4" />
-                    <span>9:16</span>
                 </button>
                 
                 <button
                     onClick={() => handleRatioChange('horizontal')}
                     className={`
-                        flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all duration-200
+                        flex items-center justify-center p-2 rounded-md text-xs font-medium transition-all duration-200
                         ${aspectRatio === 'horizontal'
                             ? 'bg-blue-500 text-white shadow-sm'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -63,7 +62,6 @@ export function AspectRatioButton() {
                     title="Horizontal (16:9) - YouTube, Desktop, TV"
                 >
                     <Monitor className="w-4 h-4" />
-                    <span>16:9</span>
                 </button>
             </div>
 
