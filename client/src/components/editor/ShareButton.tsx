@@ -6,14 +6,14 @@ import { useAssetUrls } from '@/hooks/useAssetUrls'
 import ExportStatusModal from './ExportStatusModal'
 import { VideoExporter } from '../VideoExporter'
 import { useAuth } from '@/contexts/AuthContext'
-import { exportService } from '@/services/export'
+import { exportService, type TimelineClip, type TimelineTrack } from '@/services/export'
 import type { Clip, Track } from '@/types/editor'
 
 // Type conversion functions
-const convertClipsForExport = (clips: Clip[]) => {
+const convertClipsForExport = (clips: Clip[]): TimelineClip[] => {
     return clips.map(clip => ({
         id: clip.id,
-        type: clip.type === 'caption' ? 'text' : clip.type as 'video' | 'image' | 'audio' | 'text',
+        type: clip.type as 'video' | 'image' | 'audio' | 'text' | 'caption', // Keep caption as is since TimelineClip supports it
         assetId: clip.assetId,
         trackId: clip.trackId,
         timelineStartMs: clip.timelineStartMs,
@@ -21,11 +21,12 @@ const convertClipsForExport = (clips: Clip[]) => {
         sourceStartMs: clip.sourceStartMs,
         sourceEndMs: clip.sourceEndMs,
         speed: clip.speed,
+        volume: clip.volume,
         properties: clip.properties
     }))
 }
 
-const convertTracksForExport = (tracks: Track[]) => {
+const convertTracksForExport = (tracks: Track[]): TimelineTrack[] => {
     return tracks.map(track => ({
         id: track.id,
         index: track.index,
@@ -179,8 +180,8 @@ const ShareButton = () => {
             } else {
                 // Use browser-side export (fallback)
                 const exporter = new VideoExporter({
-                    clips,
-                    tracks,
+                    clips: convertClipsForExport(clips),
+                    tracks: convertTracksForExport(tracks),
                     exportType: selectedExportType as '480p' | '720p' | '1080p',
                     onError: (error) => {
                         console.error('VideoExporter error:', error)
