@@ -18,18 +18,24 @@ interface DragState {
     dragOffset: number
     isOverlapping: boolean
     targetTrackId: string | null
+    isShiftDrag: boolean
+    startY: number
+    currentY: number
 }
 
-const initialDragState: DragState = {
-    isDragging: false,
-    startX: 0,
-    startLeft: 0,
-    currentLeft: 0,
-    ghostElement: null,
-    dragOffset: 0,
-    isOverlapping: false,
-    targetTrackId: null
-}
+    const initialDragState: DragState = {
+        isDragging: false,
+        startX: 0,
+        startLeft: 0,
+        currentLeft: 0,
+        ghostElement: null,
+        dragOffset: 0,
+        isOverlapping: false,
+        targetTrackId: null,
+        isShiftDrag: false,
+        startY: 0,
+        currentY: 0
+    }
 
 export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onSelect: (id: string | null) => void, selected: boolean }) {
     const { executeCommand, clips, tracks, selectedClipIds, setSelectedClipIds, setSelectedClipId } = useEditor()
@@ -53,6 +59,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
     // Optimized drag state
     const [dragState, setDragState] = useState<DragState>(initialDragState)
+    const [isShiftHeld, setIsShiftHeld] = useState(false)
     const dragAnimationRef = useRef<number | undefined>(undefined)
     const lastUpdateTime = useRef<number>(0)
 
@@ -226,6 +233,32 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         return () => document.removeEventListener('click', handleClickOutside)
     }, [])
 
+    // Keyboard event listeners for Shift key tracking
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                setIsShiftHeld(true)
+                document.body.style.cursor = 'move'
+            }
+        }
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                setIsShiftHeld(false)
+                document.body.style.cursor = ''
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown)
+        document.addEventListener('keyup', handleKeyUp)
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown)
+            document.removeEventListener('keyup', handleKeyUp)
+            document.body.style.cursor = ''
+        }
+    }, [])
+
     // click handler to select
     const onClick = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -380,8 +413,40 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         document.body.classList.remove('cursor-ew-resize')
     }
 
-    // HTML5 Drag and Drop handlers for moving between tracks
+    // Keyboard event listeners for Shift key tracking
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                setIsShiftHeld(true)
+                document.body.style.cursor = 'move'
+            }
+        }
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                setIsShiftHeld(false)
+                document.body.style.cursor = ''
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown)
+        document.addEventListener('keyup', handleKeyUp)
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown)
+            document.removeEventListener('keyup', handleKeyUp)
+            document.body.style.cursor = ''
+        }
+    }, [])
+
+    // HTML5 Drag and Drop handlers for moving between tracks (Shift+Drag)
     const handleDragStart = (e: React.DragEvent) => {
+        // Only allow HTML5 drag when Shift is held
+        if (!e.shiftKey) {
+            e.preventDefault()
+            return
+        }
+
         e.dataTransfer.setData('application/json', JSON.stringify({
             clipId: clip.id
         }))
@@ -392,16 +457,24 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             const dragImage = clipRef.current.cloneNode(true) as HTMLElement
             dragImage.style.opacity = '0.8'
             dragImage.style.transform = 'rotate(2deg)'
+            dragImage.style.border = '2px solid #3b82f6'
             document.body.appendChild(dragImage)
             e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY)
             setTimeout(() => document.body.removeChild(dragImage), 0)
         }
     }
 
-    // Optimized mouse event handlers for dragging (for horizontal movement within same track)
+    // Optimized mouse event handlers for dragging
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (isResizing || e.button !== 0) return // Only left mouse button
 
+        // If Shift is held, we'll use HTML5 drag for track switching
+        if (e.shiftKey) {
+            // Don't prevent default - let HTML5 drag handle it
+            return
+        }
+
+        // For regular drag (horizontal movement within same track)
         e.preventDefault()
         e.stopPropagation()
 
@@ -418,7 +491,10 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             ghostElement: null,
             dragOffset: offset,
             isOverlapping: false,
-            targetTrackId: clip.trackId
+            targetTrackId: clip.trackId,
+            isShiftDrag: false,
+            startY: e.clientY,
+            currentY: e.clientY
         })
 
         // Add visual feedback class
@@ -512,7 +588,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
                       'border-transparent hover:border-gray-400'}
                     ${!isVideo && !isImage ? (isAudio ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600') : ''}
-                    cursor-grab active:cursor-grabbing
+                    ${isShiftHeld ? 'cursor-move border-blue-300 shadow-lg' : 'cursor-grab active:cursor-grabbing'}
                     select-none overflow-hidden
                 `}
                 style={{
@@ -523,8 +599,9 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 onClick={onClick}
                 onContextMenu={handleContextMenu}
                 onMouseDown={handleMouseDown}
-                draggable={true} // Enable HTML5 drag for track switching
+                draggable={isShiftHeld} // Only enable HTML5 drag when Shift is held
                 onDragStart={handleDragStart}
+                title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move horizontally, Shift+Drag to move between tracks'}
             >
                 {/* Resize handles */}
                 <div

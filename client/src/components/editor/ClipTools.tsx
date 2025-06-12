@@ -3,6 +3,7 @@ import { SquareSplitHorizontal, Trash2, Gauge } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { v4 as uuid } from 'uuid'
+import Image from 'next/image'
 
 // Simple Tooltip component
 const Tooltip = ({ children, text, disabled = false }: { children: React.ReactNode, text: string, disabled?: boolean }) => {
@@ -36,7 +37,10 @@ const ClipTools = () => {
     const { currentTime } = usePlayback()
     const [showSpeedSlider, setShowSpeedSlider] = useState(false)
     const [sliderSpeed, setSliderSpeed] = useState(1)
+    const [showVolumeSlider, setShowVolumeSlider] = useState(false)
+    const [sliderVolume, setSliderVolume] = useState(1)
     const speedSliderRef = useRef<HTMLDivElement>(null)
+    const volumeSliderRef = useRef<HTMLDivElement>(null)
 
     // Close speed slider when clicking outside
     useEffect(() => {
@@ -55,6 +59,23 @@ const ClipTools = () => {
         }
     }, [showSpeedSlider])
 
+    // Close volume slider when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (volumeSliderRef.current && !volumeSliderRef.current.contains(event.target as Node)) {
+                setShowVolumeSlider(false)
+            }
+        }
+
+        if (showVolumeSlider) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [showVolumeSlider])
+
     // Find the selected clip(s)
     const selectedClip = clips.find(clip => clip.id === selectedClipId)
     const selectedClips = clips.filter(clip => selectedClipIds.includes(clip.id))
@@ -71,6 +92,11 @@ const ClipTools = () => {
         clip.type === 'video' || clip.type === 'audio'
     ) || (selectedClip && (selectedClip.type === 'video' || selectedClip.type === 'audio'))
 
+    // Check if selected clips can have volume adjustments (video/audio only)
+    const canAdjustVolume = selectedClips.some(clip => 
+        clip.type === 'video' || clip.type === 'audio'
+    ) || (selectedClip && (selectedClip.type === 'video' || selectedClip.type === 'audio'))
+
     // Update slider speed when selection changes
     useEffect(() => {
         if (primarySelectedClip && (primarySelectedClip.type === 'video' || primarySelectedClip.type === 'audio')) {
@@ -83,6 +109,21 @@ const ClipTools = () => {
             setSliderSpeed(currentSpeed)
         } else {
             setSliderSpeed(1) // Default speed for non-media clips
+        }
+    }, [selectedClip, selectedClips, hasSelectedClip, hasMultipleSelection, primarySelectedClip])
+
+    // Update slider volume when selection changes
+    useEffect(() => {
+        if (primarySelectedClip && (primarySelectedClip.type === 'video' || primarySelectedClip.type === 'audio')) {
+            const currentVolume = primarySelectedClip.volume || 1
+            setSliderVolume(currentVolume)
+        } else if (selectedClips.length > 1) {
+            // For multiple selection, show the volume of the first media clip or default to 1
+            const firstMediaClip = selectedClips.find(clip => clip.type === 'video' || clip.type === 'audio')
+            const currentVolume = firstMediaClip?.volume || 1
+            setSliderVolume(currentVolume)
+        } else {
+            setSliderVolume(1) // Default volume for non-media clips
         }
     }, [selectedClip, selectedClips, hasSelectedClip, hasMultipleSelection, primarySelectedClip])
 
@@ -139,6 +180,61 @@ const ClipTools = () => {
         const newSpeed = parseFloat(event.target.value)
         setSliderSpeed(newSpeed)
         handleSpeedChange(newSpeed)
+    }
+
+    const handleVolumeChange = (newVolume: number) => {
+        const clipsToUpdate = actualSelectedClips
+        
+        if (clipsToUpdate.length === 0) return
+
+        const commands = clipsToUpdate
+            .filter(clip => clip.type === 'video' || clip.type === 'audio') // Only update video/audio clips
+            .map(clip => {
+                const updatedClip = {
+                    ...clip,
+                    volume: newVolume
+                }
+
+                return {
+                    type: 'UPDATE_CLIP' as const,
+                    payload: {
+                        before: clip,
+                        after: updatedClip
+                    }
+                }
+            })
+
+        if (commands.length > 0) {
+            // Store current selection before executing commands
+            const currentSelectedClipId = selectedClipId
+            const currentSelectedClipIds = [...selectedClipIds]
+            
+            executeCommand({
+                type: 'BATCH',
+                payload: { commands }
+            })
+            
+            // Restore selection after command execution if it was lost
+            setTimeout(() => {
+                if (!selectedClipId && currentSelectedClipId) {
+                    setSelectedClipId(currentSelectedClipId)
+                }
+                if (selectedClipIds.length === 0 && currentSelectedClipIds.length > 0) {
+                    setSelectedClipIds(currentSelectedClipIds)
+                }
+            }, 50)
+        }
+    }
+
+    // Get the appropriate volume icon based on volume level
+    const getVolumeIcon = () => {
+        if (sliderVolume === 0) {
+            return '/assets/icons/volume-mute.png'
+        } else if (sliderVolume < 0.5) {
+            return '/assets/icons/volume-low.png'
+        } else {
+            return '/assets/icons/volume-high.png'
+        }
     }
 
     const handleDelete = () => {
@@ -340,6 +436,94 @@ const ClipTools = () => {
                     <SquareSplitHorizontal size={26} />
                 </button>
             </Tooltip>
+
+            {/* Volume Control */}
+            <div className="relative" ref={volumeSliderRef}>
+                <Tooltip text="Volume" disabled={!canAdjustVolume || !hasAnySelection}>
+                    <button
+                        className={`
+                            p-1 rounded-lg transition-all duration-200
+                            ${canAdjustVolume && hasAnySelection ? 
+                                'hover:bg-gray-300' : 
+                                'opacity-40 cursor-not-allowed'
+                            }
+                        `}
+                        onClick={() => {
+                            setShowVolumeSlider(!showVolumeSlider)
+                        }}
+                        disabled={!canAdjustVolume || !hasAnySelection}
+                    >
+                        <Image 
+                            src={getVolumeIcon()} 
+                            alt="Volume" 
+                            width={26} 
+                            height={26}
+                            className="object-contain"
+                        />
+                    </button>
+                </Tooltip>
+
+                {/* Volume Slider */}
+                {showVolumeSlider && (
+                    <div 
+                        className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-[9999] min-w-[200px]"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                    >
+                        <div className="text-sm font-semibold text-gray-700 mb-3 text-center">
+                            {Math.round(sliderVolume * 100)}% volume
+                        </div>
+                        <div 
+                            className="relative"
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <div
+                                className="absolute w-full h-2 rounded-full"
+                                style={{
+                                    background: `linear-gradient(to right, #4B5563 ${sliderVolume * 100}%, #9CA3AF ${sliderVolume * 100}%)`
+                                }}
+                            ></div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={sliderVolume}
+                                onChange={(e) => {
+                                    e.stopPropagation()
+                                    const newVolume = parseFloat(e.target.value)
+                                    setSliderVolume(newVolume)
+                                    handleVolumeChange(newVolume)
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                className="w-full h-2 bg-transparent appearance-none cursor-pointer relative z-10
+                                    [&::-webkit-slider-thumb]:appearance-none 
+                                    [&::-webkit-slider-thumb]:w-4 
+                                    [&::-webkit-slider-thumb]:h-4 
+                                    [&::-webkit-slider-thumb]:rounded-full 
+                                    [&::-webkit-slider-thumb]:bg-white
+                                    [&::-webkit-slider-thumb]:border 
+                                    [&::-webkit-slider-thumb]:border-gray-300
+                                    [&::-webkit-slider-thumb]:shadow-2xl 
+                                    [&::-webkit-slider-thumb]:cursor-pointer 
+                                    [&::-moz-range-thumb]:w-4 
+                                    [&::-moz-range-thumb]:h-4 
+                                    [&::-moz-range-thumb]:rounded-full 
+                                    [&::-moz-range-thumb]:bg-white 
+                                    [&::-moz-range-thumb]:border 
+                                    [&::-moz-range-thumb]:border-gray-300 
+                                    [&::-moz-range-thumb]:shadow-2xl 
+                                    [&::-moz-range-thumb]:cursor-pointer"
+                            />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2 text-center">
+                            0% - 100%
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* Speed Control */}
             <div className="relative" ref={speedSliderRef}>

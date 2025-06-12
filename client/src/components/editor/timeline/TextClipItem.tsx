@@ -11,6 +11,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     const timeScale = getTimeScale(zoomLevel)
     const [showContextMenu, setShowContextMenu] = useState(false)
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
+    const [isShiftHeld, setIsShiftHeld] = useState(false)
 
     // convert ms → px
     const left = clip.timelineStartMs * timeScale
@@ -23,12 +24,27 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     const isMultiSelectionActive = selectedClipIds.length > 1
     const isPrimarySelection = isSelected && !isMultiSelectionActive
 
-    // HTML5 Drag and Drop handlers for moving between tracks
+    // HTML5 Drag and Drop handlers for moving between tracks (Shift+Drag)
     const handleDragStart = (e: React.DragEvent) => {
+        // Only allow HTML5 drag when Shift is held
+        if (!e.shiftKey) {
+            e.preventDefault()
+            return
+        }
+
         e.dataTransfer.setData('application/json', JSON.stringify({
             clipId: clip.id
         }))
         e.dataTransfer.effectAllowed = 'move'
+        
+        // Create a custom drag image with blue border for track switching
+        const dragImage = e.currentTarget.cloneNode(true) as HTMLElement
+        dragImage.style.opacity = '0.8'
+        dragImage.style.transform = 'rotate(2deg)'
+        dragImage.style.border = '2px solid #3b82f6'
+        document.body.appendChild(dragImage)
+        e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY)
+        setTimeout(() => document.body.removeChild(dragImage), 0)
     }
 
     const handleContextMenu = (e: React.MouseEvent) => {
@@ -74,6 +90,32 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         return () => document.removeEventListener('click', handleClickOutside)
     }, [])
 
+    // Keyboard event listeners for Shift key tracking
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                setIsShiftHeld(true)
+                document.body.style.cursor = 'move'
+            }
+        }
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                setIsShiftHeld(false)
+                document.body.style.cursor = ''
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown)
+        document.addEventListener('keyup', handleKeyUp)
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown)
+            document.removeEventListener('keyup', handleKeyUp)
+            document.body.style.cursor = ''
+        }
+    }, [])
+
     const textContent = clip.properties?.text || (isCaption ? 'Caption' : 'Text Overlay')
     const truncatedText = textContent.length > 20 ? textContent.substring(0, 20) + '...' : textContent
 
@@ -83,11 +125,12 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                 data-timeline-clip
                 data-clip-id={clip.id}
                 className={`
-                    absolute h-full rounded-lg overflow-hidden cursor-grab active:cursor-grabbing
+                    absolute h-full rounded-lg overflow-hidden
                     border-2 transition-all duration-75 select-none
                     ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
                       'border-transparent hover:border-gray-400'}
+                    ${isShiftHeld ? 'cursor-move border-blue-300 shadow-lg' : 'cursor-grab active:cursor-grabbing'}
                     ${isCaption 
                         ? 'bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600' 
                         : 'bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600'}
@@ -98,8 +141,9 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                 }}
                 onClick={onClick}
                 onContextMenu={handleContextMenu}
-                draggable={true}
+                draggable={isShiftHeld} // Only enable HTML5 drag when Shift is held
                 onDragStart={handleDragStart}
+                title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move horizontally, Shift+Drag to move between tracks'}
             >
                 {/* Text content area */}
                 <div className="flex items-center justify-between h-full px-2 text-white">
