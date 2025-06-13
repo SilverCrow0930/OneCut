@@ -61,7 +61,7 @@ router.post(
             // 3) Get the project and verify ownership
             const { data: project, error: projectError } = await supabase
                 .from('projects')
-                .select('user_id, aspect_ratio')
+                .select('user_id')
                 .eq('id', track.project_id)
                 .single()
 
@@ -134,21 +134,17 @@ router.post(
 
             console.log('Generated signed URL for transcription')
 
-            // 9) Determine video format based on project aspect ratio and duration
-            const projectAspectRatio = project.aspect_ratio
+            // 9) Determine video format based on clip duration (since aspect_ratio is not stored in DB)
             const clipDuration = longestClip.timeline_end_ms - longestClip.timeline_start_ms
             
-            // Determine if this is short-form content
-            // Short-form: vertical aspect ratio (9:16) OR duration < 2 minutes
-            const isVertical = projectAspectRatio === '9:16'
+            // Determine if this is short-form content based on duration only
+            // Short-form: duration < 2 minutes (common for TikTok, Instagram Reels, YouTube Shorts)
             const isShortDuration = clipDuration < 120000 // 2 minutes in ms
-            const videoFormat = (isVertical || isShortDuration) ? 'short_vertical' : 'long_horizontal'
+            const videoFormat = isShortDuration ? 'short_vertical' : 'long_horizontal'
             
             console.log('Video format detection:', {
-                aspectRatio: projectAspectRatio,
                 durationMs: clipDuration,
                 durationSeconds: Math.round(clipDuration / 1000),
-                isVertical,
                 isShortDuration,
                 detectedFormat: videoFormat
             })
