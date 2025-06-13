@@ -43,8 +43,9 @@ export function toDbClip(c: Clip) {
         }
     }
     
-    // Handle external assets - they have fake asset IDs that don't exist in the database
+    // Handle external assets and missing assets - they have fake asset IDs that don't exist in the database
     const isExternalAsset = c.assetId?.startsWith('external_') || c.properties?.externalAsset
+    const isMissingAsset = c.assetId?.startsWith('missing_')
     
     // Calculate corrected timeline duration
     const timelineDurationMs = timelineEndMs - timelineStartMs
@@ -57,7 +58,7 @@ export function toDbClip(c: Clip) {
     return {
         id: c.id,
         track_id: c.trackId,             // FK matches the new track's id
-        asset_id: isExternalAsset ? null : c.assetId, // Use null for external assets
+        asset_id: (isExternalAsset || isMissingAsset) ? null : c.assetId, // Use null for external and missing assets
         type: c.type === 'caption' ? 'text' : c.type, // Convert caption to text for database
         source_start_ms: c.sourceStartMs || 0,
         source_end_ms: c.sourceEndMs || assetDurationMs,

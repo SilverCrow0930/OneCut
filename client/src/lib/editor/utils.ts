@@ -178,6 +178,8 @@ export function dbToClip(r: any): Clip {
 
     // Handle external assets that have null asset_id by checking properties
     const hasExternalAsset = r.properties?.externalAsset
+    // NOTE: For clips without valid asset_id (like captions/text), create a temporary "missing_" ID
+    // This gets filtered out in mapToDb.ts to prevent database save errors
     const assetId = r.asset_id || (hasExternalAsset ? hasExternalAsset.id : `missing_${r.id}`)
 
     return {
