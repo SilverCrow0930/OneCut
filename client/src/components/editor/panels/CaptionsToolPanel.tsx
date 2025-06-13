@@ -584,7 +584,7 @@ const CaptionsToolPanel = () => {
 
                     {/* Editable Captions List - PLAIN TEXT ONLY */}
                     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                        <div className="max-h-80 overflow-y-auto">
+                        <div className="max-h-[500px] overflow-y-auto">
                             {captions.map((caption, index) => (
                                 <div key={caption.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors">
                                     <div className="flex items-center gap-2 mb-3">
@@ -693,13 +693,13 @@ const CaptionsToolPanel = () => {
                                 className={`px-3 py-1 rounded-lg font-semibold ${selectedStyleCategory === 'long' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                                 onClick={() => setSelectedStyleCategory('long')}
                             >
-                                Long Video Styles
+                                Long Video
                             </button>
                             <button
                                 className={`px-3 py-1 rounded-lg font-semibold ${selectedStyleCategory === 'short' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                                 onClick={() => setSelectedStyleCategory('short')}
                             >
-                                Short Video Styles
+                                Short Video
                             </button>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -717,7 +717,6 @@ const CaptionsToolPanel = () => {
                                     }}
                                 >
                                     <div className="text-sm font-medium text-gray-800">{preset.name}</div>
-                                    <div className="text-xs text-gray-500 mt-1">Click to select</div>
                                 </button>
                             ))}
                         </div>
@@ -753,17 +752,10 @@ const CaptionsToolPanel = () => {
                     <div className="flex gap-3">
                         <button
                             onClick={handleAddToTimeline}
-                            className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 transform hover:scale-[1.02] font-medium shadow-md text-base"
+                            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 transform hover:scale-[1.02] font-medium shadow-md text-base"
                         >
                             <Plus size={20} />
                             Add to Timeline
-                        </button>
-                        <button
-                            onClick={handleRegenerateCaption}
-                            className="px-4 py-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
-                            title="Regenerate captions"
-                        >
-                            <RefreshCw size={18} />
                         </button>
                     </div>
 
