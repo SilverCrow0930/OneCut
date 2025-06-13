@@ -44,16 +44,10 @@ router.post(
                 })
             }
 
-            // 2) Get the track and verify ownership through project
+            // 2) Get the track first
             const { data: track, error: trackError } = await supabase
                 .from('tracks')
-                .select(`
-                    *,
-                    projects!inner(
-                        user_id,
-                        aspect_ratio
-                    )
-                `)
+                .select('*')
                 .eq('id', trackId)
                 .single()
 
@@ -64,14 +58,28 @@ router.post(
                 })
             }
 
-            // Verify user owns this track through the project
-            if (track.projects.user_id !== profile.id) {
+            // 3) Get the project and verify ownership
+            const { data: project, error: projectError } = await supabase
+                .from('projects')
+                .select('user_id, aspect_ratio')
+                .eq('id', track.project_id)
+                .single()
+
+            if (projectError || !project) {
+                console.error('Project lookup failed:', projectError)
+                return res.status(404).json({
+                    error: 'Project not found'
+                })
+            }
+
+            // Verify user owns this project
+            if (project.user_id !== profile.id) {
                 return res.status(403).json({
                     error: 'Access denied'
                 })
             }
 
-            // 3) Get all video/audio clips in this track
+            // 4) Get all video/audio clips in this track
             const { data: clips, error: clipsError } = await supabase
                 .from('clips')
                 .select('*')
@@ -86,13 +94,13 @@ router.post(
                 })
             }
 
-            // 4) Find the longest clip to use for transcription
+            // 5) Find the longest clip to use for transcription
             const longestClip = clips.reduce((longest: any, current: any) => 
                 (current.timeline_end_ms - current.timeline_start_ms) > (longest.timeline_end_ms - longest.timeline_start_ms) 
                     ? current : longest
             )
 
-            // 5) Get the asset associated with the longest clip
+            // 6) Get the asset associated with the longest clip
             const { data: asset, error: assetError } = await supabase
                 .from('assets')
                 .select('*')
@@ -107,7 +115,7 @@ router.post(
                 })
             }
 
-            // 6) Check if asset has audio (video or audio file)
+            // 7) Check if asset has audio (video or audio file)
             const isAudioCapable = asset.mime_type.startsWith('video/') || asset.mime_type.startsWith('audio/')
             if (!isAudioCapable) {
                 return res.status(400).json({
@@ -115,7 +123,7 @@ router.post(
                 })
             }
 
-            // 7) Get signed URL for the asset
+            // 8) Get signed URL for the asset
             const { bucket } = await import('../integrations/googleStorage.js')
             const [signedUrl] = await bucket
                 .file(asset.object_key)
@@ -126,8 +134,8 @@ router.post(
 
             console.log('Generated signed URL for transcription')
 
-            // 7.5) Determine video format based on project aspect ratio and duration
-            const projectAspectRatio = track.projects.aspect_ratio
+            // 9) Determine video format based on project aspect ratio and duration
+            const projectAspectRatio = project.aspect_ratio
             const clipDuration = longestClip.timeline_end_ms - longestClip.timeline_start_ms
             
             // Determine if this is short-form content
@@ -145,7 +153,7 @@ router.post(
                 detectedFormat: videoFormat
             })
 
-            // 8) Generate transcription using Gemini
+            // 10) Generate transcription using Gemini
             console.log('Starting transcription with Gemini...')
             const result = await generateTranscription(signedUrl, asset.mime_type, videoFormat)
 
