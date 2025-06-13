@@ -1,8 +1,8 @@
 import React from 'react'
 
-// Style presets - practical styles everyone actually uses
+// Most popular and practical text styles for video content
 export const stylePresets = [
-    // Essential high-contrast combinations
+    // Essential High-Contrast Styles (Most Used)
     {
         name: 'White on Black',
         style: {
@@ -27,10 +27,11 @@ export const stylePresets = [
             background: 'white',
             padding: '8px 16px',
             borderRadius: '4px',
+            border: '1px solid #ddd',
         },
     },
     {
-        name: 'White Outline',
+        name: 'White with Black Outline',
         style: {
             fontFamily: 'Arial, sans-serif', 
             fontSize: 20, 
@@ -43,7 +44,7 @@ export const stylePresets = [
         },
     },
     {
-        name: 'Black Outline',
+        name: 'Black with White Outline',
         style: {
             fontFamily: 'Arial, sans-serif', 
             fontSize: 20, 
@@ -55,14 +56,27 @@ export const stylePresets = [
             textShadow: '2px 2px 4px rgba(255,255,255,0.8)',
         },
     },
-    
-    // Popular font combinations
+
+    // Popular Modern Fonts
     {
-        name: 'Roboto Bold',
+        name: 'Montserrat Bold',
+        style: {
+            fontFamily: 'Montserrat, sans-serif', 
+            fontSize: 20, 
+            fontWeight: 700, 
+            textTransform: 'none' as 'none', 
+            color: 'white', 
+            background: 'rgba(0,0,0,0.8)',
+            padding: '8px 16px',
+            borderRadius: '8px',
+        },
+    },
+    {
+        name: 'Roboto Medium',
         style: {
             fontFamily: 'Roboto, sans-serif', 
             fontSize: 20, 
-            fontWeight: 700, 
+            fontWeight: 600, 
             textTransform: 'none' as 'none', 
             color: 'white', 
             background: 'rgba(0,0,0,0.7)',
@@ -81,37 +95,24 @@ export const stylePresets = [
             background: 'rgba(255,255,255,0.9)',
             padding: '6px 12px',
             borderRadius: '6px',
+            border: '1px solid #ddd',
         },
     },
     {
-        name: 'Montserrat',
+        name: 'Poppins',
         style: {
-            fontFamily: 'Montserrat, sans-serif', 
+            fontFamily: 'Poppins, sans-serif', 
             fontSize: 20, 
             fontWeight: 600, 
             textTransform: 'none' as 'none', 
             color: 'white', 
-            background: 'rgba(0,0,0,0.8)',
+            background: 'rgba(0,0,0,0.75)',
             padding: '8px 16px',
-            borderRadius: '8px',
-        },
-    },
-    {
-        name: 'Helvetica',
-        style: {
-            fontFamily: 'Helvetica, Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 500, 
-            textTransform: 'none' as 'none', 
-            color: 'black', 
-            background: 'white',
-            padding: '6px 12px',
-            borderRadius: '4px',
-            border: '1px solid #ddd',
+            borderRadius: '10px',
         },
     },
 
-    // Attention-grabbing but practical
+    // Alert & Notification Styles
     {
         name: 'Yellow Alert',
         style: {
@@ -165,115 +166,7 @@ export const stylePresets = [
         },
     },
 
-    // Subtle and clean options
-    {
-        name: 'Gray Subtitle',
-        style: {
-            fontFamily: 'Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 400, 
-            textTransform: 'none' as 'none', 
-            color: '#666666', 
-            background: 'rgba(255,255,255,0.9)',
-            padding: '4px 8px',
-            borderRadius: '4px',
-        },
-    },
-    {
-        name: 'Light Gray',
-        style: {
-            fontFamily: 'Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 500, 
-            textTransform: 'none' as 'none', 
-            color: 'white', 
-            background: 'rgba(0,0,0,0.5)',
-            padding: '6px 12px',
-            borderRadius: '6px',
-        },
-    },
-    {
-        name: 'Clean White',
-        style: {
-            fontFamily: 'Helvetica, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 500, 
-            textTransform: 'none' as 'none', 
-            color: 'white', 
-            background: 'none',
-            textShadow: '1px 1px 3px rgba(0,0,0,0.8)',
-        },
-    },
-    {
-        name: 'Clean Black',
-        style: {
-            fontFamily: 'Helvetica, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 500, 
-            textTransform: 'none' as 'none', 
-            color: 'black', 
-            background: 'none',
-            textShadow: '1px 1px 3px rgba(255,255,255,0.8)',
-        },
-    },
-
-    // Professional options
-    {
-        name: 'Corporate',
-        style: {
-            fontFamily: 'Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 600, 
-            textTransform: 'none' as 'none', 
-            color: '#333333', 
-            background: 'white',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: '2px solid #333333',
-        },
-    },
-    {
-        name: 'News',
-        style: {
-            fontFamily: 'Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 700, 
-            textTransform: 'uppercase' as 'uppercase', 
-            color: 'white', 
-            background: '#CC0000',
-            padding: '4px 12px',
-            borderRadius: '0px',
-        },
-    },
-    {
-        name: 'Caption',
-        style: {
-            fontFamily: 'Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 400, 
-            textTransform: 'none' as 'none', 
-            color: 'white', 
-            background: 'rgba(0,0,0,0.6)',
-            padding: '6px 12px',
-            borderRadius: '20px',
-        },
-    },
-    {
-        name: 'Title',
-        style: {
-            fontFamily: 'Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 800, 
-            textTransform: 'uppercase' as 'uppercase', 
-            color: 'black', 
-            background: 'white',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            border: '3px solid black',
-        },
-    },
-    
-    // Social Media & Modern Styles
+    // Social Media Styles
     {
         name: 'Instagram Story',
         style: {
@@ -309,116 +202,115 @@ export const stylePresets = [
             textTransform: 'uppercase' as 'uppercase', 
             color: 'white', 
             background: 'none',
-            WebkitTextStroke: '4px red',
-            textShadow: '4px 4px 8px rgba(0,0,0,0.8)',
+            WebkitTextStroke: '3px red',
+            textShadow: '3px 3px 6px rgba(0,0,0,0.8)',
         },
     },
     {
-        name: 'Minimalist',
+        name: 'Clean Minimal',
         style: {
             fontFamily: 'Roboto, sans-serif', 
             fontSize: 20, 
-            fontWeight: 300, 
-            textTransform: 'lowercase' as 'lowercase', 
+            fontWeight: 400, 
+            textTransform: 'none' as 'none', 
             color: '#2C3E50', 
             background: 'rgba(255,255,255,0.95)',
             padding: '6px 12px',
-            borderRadius: '2px',
+            borderRadius: '6px',
+            border: '1px solid #E0E0E0',
         },
     },
 
-    // Educational & Tutorial Styles
+    // Professional Styles
     {
-        name: 'Highlight Box',
+        name: 'Corporate',
         style: {
             fontFamily: 'Arial, sans-serif', 
             fontSize: 20, 
             fontWeight: 600, 
             textTransform: 'none' as 'none', 
-            color: '#8B4513', 
-            background: '#FFF8DC',
+            color: '#333333', 
+            background: 'white',
             padding: '8px 16px',
             borderRadius: '6px',
-            border: '2px solid #DAA520',
+            border: '2px solid #333333',
         },
     },
     {
-        name: 'Tutorial Step',
+        name: 'News Breaking',
         style: {
-            fontFamily: 'Verdana, sans-serif', 
+            fontFamily: 'Arial, sans-serif', 
+            fontSize: 20, 
+            fontWeight: 700, 
+            textTransform: 'uppercase' as 'uppercase', 
+            color: 'white', 
+            background: '#CC0000',
+            padding: '4px 12px',
+            borderRadius: '2px',
+        },
+    },
+    {
+        name: 'Subtitle Style',
+        style: {
+            fontFamily: 'Arial, sans-serif', 
             fontSize: 20, 
             fontWeight: 500, 
             textTransform: 'none' as 'none', 
             color: 'white', 
-            background: '#4A90E2',
+            background: 'rgba(0,0,0,0.6)',
             padding: '6px 12px',
-            borderRadius: '16px',
+            borderRadius: '20px',
         },
     },
     {
-        name: 'Warning',
+        name: 'Title Card',
+        style: {
+            fontFamily: 'Arial, sans-serif', 
+            fontSize: 20, 
+            fontWeight: 800, 
+            textTransform: 'uppercase' as 'uppercase', 
+            color: 'black', 
+            background: 'white',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            border: '3px solid black',
+        },
+    },
+
+    // Creative & Trendy Styles
+    {
+        name: 'Neon Glow',
         style: {
             fontFamily: 'Arial, sans-serif', 
             fontSize: 20, 
             fontWeight: 600, 
             textTransform: 'none' as 'none', 
-            color: '#8B4513', 
-            background: '#FFE4B5',
+            color: '#00FFFF', 
+            background: 'rgba(0,0,0,0.8)',
             padding: '6px 12px',
             borderRadius: '4px',
-            border: '2px solid #FF8C00',
+            textShadow: '0 0 10px #00FFFF, 0 0 20px #00FFFF',
         },
     },
     {
-        name: 'Quote',
-        style: {
-            fontFamily: 'Georgia, serif', 
-            fontSize: 20, 
-            fontWeight: 400, 
-            textTransform: 'none' as 'none', 
-            color: '#2F4F4F', 
-            background: 'rgba(240,248,255,0.9)',
-            padding: '10px 16px',
-            borderRadius: '8px',
-            fontStyle: 'italic',
-            borderLeft: '4px solid #4682B4',
-        },
-    },
-
-    // Business & Professional Extended
-    {
-        name: 'Executive',
-        style: {
-            fontFamily: 'Times New Roman, serif', 
-            fontSize: 20, 
-            fontWeight: 600, 
-            textTransform: 'none' as 'none', 
-            color: '#1A1A1A', 
-            background: '#F8F8FF',
-            padding: '8px 16px',
-            borderRadius: '4px',
-            border: '1px solid #4169E1',
-        },
-    },
-    {
-        name: 'Modern Tech',
+        name: 'Retro Gaming',
         style: {
             fontFamily: 'Courier New, monospace', 
             fontSize: 20, 
-            fontWeight: 500, 
-            textTransform: 'none' as 'none', 
-            color: '#00FF41', 
+            fontWeight: 700, 
+            textTransform: 'uppercase' as 'uppercase', 
+            color: '#00FF00', 
             background: 'rgba(0,0,0,0.9)',
-            padding: '8px 12px',
-            borderRadius: '4px',
+            padding: '4px 8px',
+            borderRadius: '2px',
         },
     },
     {
-        name: 'Startup',
+        name: 'Modern Gradient',
         style: {
-            fontFamily: 'San Francisco, Roboto, sans-serif', 
+            fontFamily: 'Roboto, sans-serif', 
             fontSize: 20, 
-            fontWeight: 500, 
+            fontWeight: 600, 
             textTransform: 'none' as 'none', 
             color: 'white', 
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -426,8 +318,6 @@ export const stylePresets = [
             borderRadius: '8px',
         },
     },
-
-    // Color Variations & Popular Combinations
     {
         name: 'Orange Punch',
         style: {
@@ -439,114 +329,6 @@ export const stylePresets = [
             background: '#FF4500',
             padding: '6px 12px',
             borderRadius: '6px',
-        },
-    },
-    {
-        name: 'Purple Modern',
-        style: {
-            fontFamily: 'Helvetica, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 600, 
-            textTransform: 'none' as 'none', 
-            color: 'white', 
-            background: '#8A2BE2',
-            padding: '8px 16px',
-            borderRadius: '10px',
-        },
-    },
-    {
-        name: 'Teal Fresh',
-        style: {
-            fontFamily: 'Open Sans, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 500, 
-            textTransform: 'none' as 'none', 
-            color: 'white', 
-            background: '#20B2AA',
-            padding: '6px 12px',
-            borderRadius: '8px',
-        },
-    },
-    {
-        name: 'Pink Vibrant',
-        style: {
-            fontFamily: 'Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 600, 
-            textTransform: 'none' as 'none', 
-            color: 'white', 
-            background: '#FF1493',
-            padding: '6px 12px',
-            borderRadius: '6px',
-        },
-    },
-
-    // Specialty & Creative Styles
-    {
-        name: 'Retro Gaming',
-        style: {
-            fontFamily: 'Courier New, monospace', 
-            fontSize: 20, 
-            fontWeight: 700, 
-            textTransform: 'uppercase' as 'uppercase', 
-            color: '#00FF00', 
-            background: 'black',
-            padding: '4px 8px',
-            borderRadius: '0px',
-        },
-    },
-    {
-        name: 'Neon Glow',
-        style: {
-            fontFamily: 'Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 600, 
-            textTransform: 'none' as 'none', 
-            color: '#00FFFF', 
-            background: 'black',
-            padding: '6px 12px',
-            borderRadius: '4px',
-            textShadow: '0 0 10px #00FFFF, 0 0 20px #00FFFF',
-        },
-    },
-    {
-        name: 'Elegant Script',
-        style: {
-            fontFamily: 'Brush Script MT, cursive', 
-            fontSize: 20, 
-            fontWeight: 400, 
-            textTransform: 'none' as 'none', 
-            color: '#4B0082', 
-            background: 'rgba(255,255,255,0.9)',
-            padding: '8px 16px',
-            borderRadius: '12px',
-        },
-    },
-    {
-        name: 'Sports Bold',
-        style: {
-            fontFamily: 'Impact, Arial, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 900, 
-            textTransform: 'uppercase' as 'uppercase', 
-            color: 'white', 
-            background: 'linear-gradient(45deg, #FF6B35, #F7931E)',
-            padding: '6px 12px',
-            borderRadius: '4px',
-            textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-        },
-    },
-    {
-        name: 'Soft Pastel',
-        style: {
-            fontFamily: 'Comic Sans MS, sans-serif', 
-            fontSize: 20, 
-            fontWeight: 500, 
-            textTransform: 'none' as 'none', 
-            color: '#8B4789', 
-            background: 'rgba(230,230,250,0.9)',
-            padding: '8px 16px',
-            borderRadius: '16px',
         },
     },
 ]
@@ -566,15 +348,16 @@ export default function TextStyleSelector({ selectedStyleIdx, setSelectedStyleId
                         key={preset.name}
                         type="button"
                         className={`
-                            border rounded-lg p-3 flex items-center justify-center transition-all duration-200 h-16 text-sm font-medium
-                            ${selectedStyleIdx === i ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' : 'hover:bg-blue-50 hover:border-blue-300 shadow-sm hover:shadow-md'}
+                            bg-white border border-gray-200 rounded-lg p-3 flex items-center justify-center transition-all duration-200 h-16 text-sm font-medium
+                            ${selectedStyleIdx === i ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' : 'hover:bg-gray-50 hover:border-blue-300 shadow-sm hover:shadow-md'}
                         `}
                         style={{
                             ...preset.style,
-                            fontSize: 14, // Better readability
+                            fontSize: 12, // Smaller for better preview fit
+                            padding: '4px 8px', // Reduced padding for preview
                             ...(preset.style.WebkitTextStroke ? { WebkitTextStroke: preset.style.WebkitTextStroke } : {}),
                             ...(preset.style.textShadow ? { textShadow: preset.style.textShadow } : {}),
-                            background: preset.style.background !== 'none' ? preset.style.background : undefined
+                            background: preset.style.background !== 'none' ? preset.style.background : 'transparent'
                         }}
                         onClick={() => setSelectedStyleIdx(i)}
                         title={preset.name}

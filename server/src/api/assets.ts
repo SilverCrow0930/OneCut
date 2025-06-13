@@ -222,25 +222,8 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
         const supaUid = authReq.user.id
         const { id } = req.params
 
-        console.log('DELETE asset request:', { assetId: id, userId: supaUid })
-
-        // Validate asset ID format
-        if (!id || typeof id !== 'string') {
-            return res.status(400).json({
-                error: 'Invalid asset ID'
-            })
-        }
-
         // 1) map to local user
-        let localUserId: string
-        try {
-            localUserId = await getLocalUserId(supaUid)
-        } catch (error) {
-            console.error('Failed to get local user ID:', error)
-            return res.status(500).json({
-                error: 'Failed to authenticate user'
-            })
-        }
+        const localUserId = await getLocalUserId(supaUid)
 
         // 2) fetch the object_key for that asset and user
         const { data: asset, error } = await supabase
@@ -250,30 +233,14 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
             .eq('user_id', localUserId)
             .single()
 
-        if (error) {
-            console.error('Asset lookup error:', error)
+        if (error || !asset) {
             return res.status(404).json({
-                error: 'Asset not found'
+                error: 'Not found'
             })
         }
 
-        if (!asset) {
-            return res.status(404).json({
-                error: 'Asset not found'
-            })
-        }
-
-        console.log('Found asset to delete:', { objectKey: asset.object_key })
-
-        // 3) delete from GCS (with error handling)
-        try {
-            await bucket.file(asset.object_key).delete()
-            console.log('Successfully deleted from GCS:', asset.object_key)
-        } catch (gcsError: any) {
-            console.error('GCS deletion error:', gcsError)
-            // Continue with database deletion even if GCS fails
-            // The file might already be deleted or not exist
-        }
+        // 3) delete from GCS
+        await bucket.file(asset.object_key).delete()
 
         // 4) delete from database
         const { error: deleteError } = await supabase
@@ -283,17 +250,14 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
             .eq('user_id', localUserId)
 
         if (deleteError) {
-            console.error('Database deletion error:', deleteError)
             return res.status(500).json({
                 error: 'Failed to delete asset from database'
             })
         }
 
-        console.log('Successfully deleted asset:', id)
         res.sendStatus(204)
     }
-    catch (err: any) {
-        console.error('Asset deletion error:', err)
+    catch (err) {
         next(err)
     }
 })

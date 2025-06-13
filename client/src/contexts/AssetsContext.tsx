@@ -128,31 +128,13 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
                     })
                     
                     if (!response.ok) {
-                        let errorMessage = response.statusText
-                        try {
-                            const errorData = await response.json()
-                            errorMessage = errorData.error || errorMessage
-                        } catch {
-                            // If JSON parsing fails, try to get text
-                            try {
-                                const errorText = await response.text()
-                                // Check if it's an HTML error page
-                                if (errorText.includes('<!DOCTYPE html>')) {
-                                    errorMessage = 'Server error occurred. Please try again.'
-                                } else {
-                                    errorMessage = errorText || errorMessage
-                                }
-                            } catch {
-                                errorMessage = 'Network error occurred'
-                            }
-                        }
-                        
+                        const errorText = await response.text()
                         console.error('Delete asset failed:', {
                             status: response.status,
                             statusText: response.statusText,
-                            error: errorMessage
+                            error: errorText
                         })
-                        throw new Error(errorMessage)
+                        throw new Error(`Failed to delete asset: ${errorText || response.statusText}`)
                     }
                     
                     console.log('Asset deleted successfully:', id)
