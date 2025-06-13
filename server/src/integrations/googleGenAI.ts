@@ -261,10 +261,17 @@ const transcriptionSystemInstruction = `
     1. AUTOMATICALLY DETECT the language spoken in the audio/video
     2. Transcribe ALL spoken words accurately in the ORIGINAL LANGUAGE
     3. Do NOT translate - keep the transcription in the same language as the speech
-    4. Generate timestamped captions in standard SRT format
+    4. Generate timestamped captions in standard SRT format with PRECISE TIMING
     5. Add proper punctuation and capitalization appropriate for the detected language
     6. Break captions into readable chunks based on video type
     7. DO NOT add any HTML tags or highlighting - provide plain text only
+    
+    CRITICAL TIMING REQUIREMENTS:
+    - Use MILLISECOND PRECISION for all timestamps (format: HH:MM:SS,mmm)
+    - Listen carefully to identify the EXACT moment when each word/phrase starts and ends
+    - Sync timestamps to the precise moment speech begins, not just the nearest second
+    - Account for pauses, gaps, and overlapping speech with accurate timing
+    - Example: If someone says "hello" at 3.2 seconds, use 00:00:03,200 not 00:00:03,000
     
     CAPTION WORD COUNT RULES:
     
@@ -280,23 +287,25 @@ const transcriptionSystemInstruction = `
     - Break at natural speech pauses for maximum engagement
     - Prioritize key words and emotional impact
     
-    EXAMPLE OUTPUT FOR LONG-FORM:
+    EXAMPLE OUTPUT FOR LONG-FORM (with precise millisecond timing):
     1
-    00:00:01,000 --> 00:00:04,500
+    00:00:01,230 --> 00:00:04,780
     Today I want to share something incredible
     
     2
-    00:00:04,500 --> 00:00:08,000
+    00:00:04,950 --> 00:00:08,340
     that happened to me last week
     
-    EXAMPLE OUTPUT FOR SHORT-FORM:
+    EXAMPLE OUTPUT FOR SHORT-FORM (with precise millisecond timing):
     1
-    00:00:01,000 --> 00:00:02,500
+    00:00:01,120 --> 00:00:02,670
     This is crazy!
     
     2
-    00:00:02,500 --> 00:00:04,000
+    00:00:02,840 --> 00:00:04,150
     Made 10k profit
+    
+    Notice how timing is precise to the exact moment speech starts/ends, not rounded to seconds.
     
     Supported languages include: English, Spanish, French, German, Italian, Portuguese, Russian, Chinese (Mandarin), Japanese, Korean, Arabic, Hindi, and many others.
     
@@ -809,7 +818,11 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
             : 'This is LONG-FORM content (YouTube/educational). Use 8-12 words per caption for better readability and comprehension.';
 
         const content = createUserContent([
-            `Please listen to this audio/video content, DETECT the language being spoken, and transcribe it accurately in the ORIGINAL LANGUAGE (do not translate). Provide timestamped captions in SRT format with accurate timing. ${formatPrompt}`,
+            `Please listen to this audio/video content carefully and DETECT the language being spoken. Transcribe it accurately in the ORIGINAL LANGUAGE (do not translate). 
+            
+            CRITICAL: Provide timestamped captions in SRT format with MILLISECOND PRECISION timing. Listen for the exact moment each word/phrase starts and ends. Use format HH:MM:SS,mmm (e.g., 00:00:03,450 not 00:00:03,000). 
+            
+            Do NOT round to whole seconds - be precise to the exact timing you hear. ${formatPrompt}`,
             createPartFromUri(uploadedFile.uri, mimeType)
         ]);
 
