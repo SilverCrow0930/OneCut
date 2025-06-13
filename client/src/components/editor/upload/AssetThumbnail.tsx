@@ -21,13 +21,11 @@ interface AssetThumbnailProps {
 }
 
 export default function AssetThumbnail({ asset, highlight, uploading, style }: AssetThumbnailProps) {
-    const [bypassCache, setBypassCache] = useState(false)
-    const { url, loading } = useAssetUrl(asset.id, bypassCache)
+    const { url, loading } = useAssetUrl(asset.id)
     const { deleteAsset } = useAssets()
     const { tracks, executeCommand, clips } = useEditor()
     const params = useParams()
     const [showContextMenu, setShowContextMenu] = useState(false)
-    const [mediaError, setMediaError] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
 
     // Get project ID
@@ -68,28 +66,9 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
             return
         }
 
-        try {
-            // Always open in new tab to avoid replacing the current Lemona Studio tab
-            window.open(url, '_blank')
-        } catch (error) {
-            console.error('Download error:', error)
-        }
+        // Always open in new tab to avoid replacing the current Lemona Studio tab
+        window.open(url, '_blank')
         setShowContextMenu(false)
-    }
-
-    const handleMediaError = () => {
-        console.warn('Media loading error for asset:', asset.id)
-        setMediaError(true)
-        
-        // Try bypassing cache on error
-        if (!bypassCache) {
-            console.log('Retrying without cache for asset:', asset.id)
-            setBypassCache(true)
-        }
-    }
-
-    const handleMediaLoad = () => {
-        setMediaError(false)
     }
 
     // Handle click to add asset to track
@@ -121,16 +100,13 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
         )
     }
 
-    if (!url || mediaError) {
+    if (!url) {
         return (
             <div 
                 className="relative bg-red-100 text-red-500 flex items-center justify-center rounded-lg"
                 style={{ ...style, minHeight: '120px' }}
             >
-                <div className="text-center">
-                    <div className="text-2xl mb-1">⚠️</div>
-                    <div className="text-xs">Failed to load</div>
-                </div>
+                !
             </div>
         )
     }
@@ -166,17 +142,11 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
                                 className="w-full h-full object-cover rounded"
                                 muted
                                 loop
-                                onError={handleMediaError}
-                                onLoadedData={handleMediaLoad}
-                                crossOrigin="anonymous"
                             />
                         ) : (
                             <img
                                 src={url}
                                 className="w-full h-full object-cover rounded"
-                                onError={handleMediaError}
-                                onLoad={handleMediaLoad}
-                                crossOrigin="anonymous"
                             />
                         )
                     }

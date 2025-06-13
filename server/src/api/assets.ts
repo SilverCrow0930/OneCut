@@ -200,26 +200,14 @@ router.get('/:id/url', async (req: Request, res: Response, next: NextFunction) =
             })
         }
 
-        // 3) generate signed URL with proper headers
+        // 3) generate signed URL
         const [url] = await bucket
             .file(asset.object_key)
             .getSignedUrl({
                 action: 'read',
                 expires: Date.now() + 60 * 60 * 1000,
-                extensionHeaders: {
-                    'Cache-Control': 'public, max-age=3600',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                }
             })
 
-        // Set CORS headers on the response
-        res.header('Access-Control-Allow-Origin', '*')
-        res.header('Access-Control-Allow-Methods', 'GET')
-        res.header('Access-Control-Allow-Headers', 'Content-Type')
-        res.header('Cache-Control', 'public, max-age=3600')
-        
         res.json({ url })
     }
     catch (err) {

@@ -42,45 +42,27 @@ const getFromCache = async (assetId: string): Promise<string | null> => {
         return memoryEntry.url
     }
 
-    // Skip IndexedDB if not supported or if it's causing issues
-    if (typeof window === 'undefined' || !window.indexedDB) {
-        return null
-    }
-
     try {
         const db = await initDB()
-        return new Promise((resolve) => {
-            try {
-                const transaction = db.transaction(['assets'], 'readonly')
-                const store = transaction.objectStore('assets')
-                const request = store.get(assetId)
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(['assets'], 'readonly')
+            const store = transaction.objectStore('assets')
+            const request = store.get(assetId)
 
-                request.onsuccess = () => {
-                    try {
-                        const entry = request.result as CacheEntry
-                        if (entry && entry.expiresAt > Date.now()) {
-                            // Update memory cache
-                            memoryCache.set(assetId, entry)
-                            resolve(entry.url)
-                        } else {
-                            resolve(null)
-                        }
-                    } catch (error) {
-                        console.warn('Cache read error:', error)
-                        resolve(null)
-                    }
-                }
-                request.onerror = () => {
-                    console.warn('IndexedDB read error for asset:', assetId)
+            request.onsuccess = () => {
+                const entry = request.result as CacheEntry
+                if (entry && entry.expiresAt > Date.now()) {
+                    // Update memory cache
+                    memoryCache.set(assetId, entry)
+                    resolve(entry.url)
+                } else {
                     resolve(null)
                 }
-            } catch (error) {
-                console.warn('Transaction error:', error)
-                resolve(null)
             }
+            request.onerror = () => reject(request.error)
         })
     } catch (error) {
-        console.warn('IndexedDB cache error:', error)
+        console.error('Cache error:', error)
         return null
     }
 }
@@ -93,38 +75,20 @@ const saveToCache = async (assetId: string, url: string) => {
         expiresAt: Date.now() + CACHE_DURATION
     }
 
-    // Always update memory cache
+    // Update memory cache
     memoryCache.set(assetId, entry)
-
-    // Skip IndexedDB if not supported or if it's causing issues
-    if (typeof window === 'undefined' || !window.indexedDB) {
-        return
-    }
 
     try {
         const db = await initDB()
         const transaction = db.transaction(['assets'], 'readwrite')
         const store = transaction.objectStore('assets')
-        
-        return new Promise<void>((resolve) => {
-            try {
-                const request = store.put({ id: assetId, ...entry })
-                request.onsuccess = () => resolve()
-                request.onerror = () => {
-                    console.warn('IndexedDB save error for asset:', assetId)
-                    resolve()
-                }
-            } catch (error) {
-                console.warn('IndexedDB transaction error:', error)
-                resolve()
-            }
-        })
+        await store.put({ id: assetId, ...entry })
     } catch (error) {
-        console.warn('IndexedDB cache save error:', error)
+        console.error('Cache save error:', error)
     }
 }
 
-export function useAssetUrl(assetId?: string, bypassCache = false) {
+export function useAssetUrl(assetId?: string) {
     const [url, setUrl] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const { session } = useAuth()
@@ -136,35 +100,23 @@ export function useAssetUrl(assetId?: string, bypassCache = false) {
             return
         }
 
-        const fetchUrl = async (retryCount = 0) => {
+        const fetchUrl = async () => {
             try {
-                // Check cache first (unless bypassed)
-                if (!bypassCache) {
-                    const cachedUrl = await getFromCache(assetId)
-                    if (cachedUrl) {
-                        setUrl(cachedUrl)
-                        setLoading(false)
-                        return
-                    }
+                // Check cache first
+                const cachedUrl = await getFromCache(assetId)
+                if (cachedUrl) {
+                    setUrl(cachedUrl)
+                    setLoading(false)
+                    return
                 }
 
                 const response = await fetch(apiPath(`assets/${assetId}/url`), {
                     headers: {
-                        'Authorization': `Bearer ${session?.access_token}`,
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
-                    },
-                    cache: 'no-store'
+                        'Authorization': `Bearer ${session?.access_token}`
+                    }
                 })
                 
                 if (!response.ok) {
-                    // Retry once for 5xx errors
-                    if (response.status >= 500 && retryCount < 1) {
-                        console.warn(`[useAssetUrl] Server error ${response.status}, retrying...`)
-                        setTimeout(() => fetchUrl(retryCount + 1), 1000)
-                        return
-                    }
-                    
                     // Don't spam console with the same error
                     const cached = memoryCache.get(assetId)
                     if (!cached || (Date.now() - cached.timestamp) > 30000) { // Log once per 30 seconds
@@ -178,25 +130,12 @@ export function useAssetUrl(assetId?: string, bypassCache = false) {
                 const data = await response.json()
                 const assetUrl = data.url
                 
-                if (assetUrl && !bypassCache) {
-                    // Validate URL before caching
-                    try {
-                        new URL(assetUrl)
-                        await saveToCache(assetId, assetUrl)
-                    } catch (urlError) {
-                        console.warn('Invalid URL received:', assetUrl)
-                    }
+                if (assetUrl) {
+                    await saveToCache(assetId, assetUrl)
                 }
                 
                 setUrl(assetUrl)
             } catch (error) {
-                // Retry once for network errors
-                if (retryCount < 1 && (error instanceof TypeError || error instanceof Error && error.message.includes('fetch'))) {
-                    console.warn(`[useAssetUrl] Network error, retrying...`)
-                    setTimeout(() => fetchUrl(retryCount + 1), 1000)
-                    return
-                }
-                
                 // Don't spam console with the same error
                 const cached = memoryCache.get(assetId)
                 if (!cached || (Date.now() - cached.timestamp) > 30000) { // Log once per 30 seconds

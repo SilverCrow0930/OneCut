@@ -955,7 +955,7 @@ const CaptionsToolPanel = () => {
                                     }}
                                 >
                                     {/* Style Preview */}
-                                    <div className="mb-2 h-12 flex items-center justify-center bg-gray-900 rounded overflow-hidden">
+                                    <div className="mb-2 h-12 flex items-center justify-center bg-white rounded overflow-hidden border border-gray-200">
                                         <div 
                                             style={{
                                                 ...preset.style,
