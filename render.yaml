@@ -44,6 +44,9 @@ services:
         - client/**
       ignoredPaths:
         - server/**
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://lemona-app.onrender.com
     routes:
       - type: rewrite
         source: /api/*
