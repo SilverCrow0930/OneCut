@@ -456,8 +456,24 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
     }, [project?.id, project?.thumbnail_url, clips.length, session?.access_token])
 
-    // aspect ratio
-    const [aspectRatio, setAspectRatio] = useState<'vertical' | 'horizontal'>('vertical')
+    // aspect ratio - persist in localStorage
+    const [aspectRatio, setAspectRatio] = useState<'vertical' | 'horizontal'>(() => {
+        try {
+            const saved = localStorage.getItem('lemona-aspect-ratio')
+            return (saved === 'horizontal' || saved === 'vertical') ? saved : 'vertical'
+        } catch {
+            return 'vertical'
+        }
+    })
+
+    // Save aspect ratio to localStorage whenever it changes
+    useEffect(() => {
+        try {
+            localStorage.setItem('lemona-aspect-ratio', aspectRatio)
+        } catch (error) {
+            console.warn('Failed to save aspect ratio to localStorage:', error)
+        }
+    }, [aspectRatio])
 
     return (
         <EditorContext.Provider value={{
