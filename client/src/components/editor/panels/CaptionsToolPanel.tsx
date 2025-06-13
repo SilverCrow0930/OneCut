@@ -149,23 +149,23 @@ export const longVideoCaptionStyles = [
 
 export const shortVideoCaptionStyles = [
     {
-        name: 'Mr. Beast Style',
+        name: 'Montserrat Heavy',
         style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
+            fontFamily: 'Montserrat, Arial, sans-serif',
             fontSize: 36,
             fontWeight: 900,
             color: '#FFFFFF',
             textAlign: 'center' as const,
-            WebkitTextStroke: '4px #000000',
-            textShadow: '4px 4px 8px #000000',
+            WebkitTextStroke: '3px #000000',
+            textShadow: '3px 3px 6px #000000',
             textTransform: 'uppercase' as const,
         },
-        animationClass: 'bounce',
+        supportsHighlight: true,
     },
     {
-        name: 'Pop-In Colorful Words',
+        name: 'Rubik Heavy',
         style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
+            fontFamily: 'Rubik, Arial, sans-serif',
             fontSize: 34,
             fontWeight: 900,
             color: '#FFFFFF',
@@ -174,102 +174,97 @@ export const shortVideoCaptionStyles = [
             textShadow: '3px 3px 6px #000000',
             textTransform: 'uppercase' as const,
         },
-        animationClass: 'pop',
+        supportsHighlight: true,
     },
     {
-        name: 'Thick Black Box',
+        name: 'Fira Sans Condensed',
         style: {
-            fontFamily: 'Arial Black, Impact, sans-serif',
-            fontSize: 32,
-            fontWeight: 900,
-            color: '#FFFFFF',
-            textAlign: 'center' as const,
-            background: 'rgba(0,0,0,0.8)',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            WebkitTextStroke: '0',
-            textShadow: 'none',
-            textTransform: 'uppercase' as const,
-        },
-    },
-    {
-        name: 'Gradient Text',
-        style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
-            fontSize: 34,
-            fontWeight: 900,
-            color: '#FFD700',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000',
-            textShadow: '2px 2px 4px #000000',
-            textTransform: 'uppercase' as const,
-            background: 'linear-gradient(45deg, #FFD700, #FF6B35)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-        },
-    },
-    {
-        name: 'Comic Book Style',
-        style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
+            fontFamily: 'Fira Sans Condensed, Arial, sans-serif',
             fontSize: 36,
-            fontWeight: 900,
-            color: '#FFFF00',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '4px #000000',
-            textShadow: '4px 4px 8px #000000',
-            textTransform: 'uppercase' as const,
-        },
-        animationClass: 'shake',
-    },
-    {
-        name: 'Bubble Letters',
-        style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
-            fontSize: 34,
             fontWeight: 900,
             color: '#FFFFFF',
             textAlign: 'center' as const,
             WebkitTextStroke: '3px #000000',
             textShadow: '3px 3px 6px #000000',
-            background: 'rgba(255,105,180,0.3)',
-            borderRadius: '20px',
-            padding: '8px 12px',
             textTransform: 'uppercase' as const,
         },
-        animationClass: 'pop',
+        supportsHighlight: true,
     },
     {
-        name: 'Split Color Style',
+        name: 'Poppins Bold',
         style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
-            fontSize: 36,
-            fontWeight: 900,
-            color: '#FFFF00',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '3px #000000',
-            textShadow: '3px 3px 6px #000000',
-            textTransform: 'uppercase' as const,
-        },
-    },
-    {
-        name: 'Handwritten Marker',
-        style: {
-            fontFamily: 'Comic Sans MS, cursive',
-            fontSize: 32,
+            fontFamily: 'Poppins, Arial, sans-serif',
+            fontSize: 34,
             fontWeight: 700,
             color: '#FFFFFF',
             textAlign: 'center' as const,
+            WebkitTextStroke: '3px #000000',
+            textShadow: '3px 3px 6px #000000',
+            textTransform: 'lowercase' as const,
+        },
+        supportsHighlight: true,
+    },
+    {
+        name: 'Gabarito Heavy',
+        style: {
+            fontFamily: 'Gabarito, Arial, sans-serif',
+            fontSize: 36,
+            fontWeight: 900,
+            color: '#FFFFFF',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '3px #000000',
+            textShadow: '3px 3px 6px #000000',
+            textTransform: 'uppercase' as const,
+        },
+        supportsHighlight: true,
+    },
+    {
+        name: 'DM Serif Display',
+        style: {
+            fontFamily: 'DM Serif Display, serif',
+            fontSize: 32,
+            fontWeight: 500,
+            color: '#FFFFFF',
+            textAlign: 'center' as const,
             WebkitTextStroke: '2px #000000',
             textShadow: '2px 2px 4px #000000',
-            textTransform: 'none' as const,
+            textTransform: 'lowercase' as const,
         },
+        supportsHighlight: true,
     },
     {
-        name: 'Emoji Enhanced',
+        name: 'Opinion Heavy',
         style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
+            fontFamily: 'Opinion, Arial, sans-serif',
+            fontSize: 36,
+            fontWeight: 900,
+            color: '#FFFFFF',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '3px #000000',
+            textShadow: '3px 3px 6px #000000',
+            textTransform: 'uppercase' as const,
+        },
+        supportsHighlight: true,
+    },
+    {
+        name: 'Circular Medium',
+        style: {
+            fontFamily: 'Circular, Arial, sans-serif',
             fontSize: 34,
+            fontWeight: 500,
+            color: '#FFFFFF',
+            textAlign: 'center' as const,
+            WebkitTextStroke: '2px #000000',
+            textShadow: '2px 2px 4px #000000',
+            textTransform: 'lowercase' as const,
+        },
+        supportsHighlight: true,
+    },
+    {
+        name: 'Roboto Heavy',
+        style: {
+            fontFamily: 'Roboto, Arial, sans-serif',
+            fontSize: 36,
             fontWeight: 900,
             color: '#FFFFFF',
             textAlign: 'center' as const,
@@ -277,49 +272,35 @@ export const shortVideoCaptionStyles = [
             textShadow: '3px 3px 6px #000000',
             textTransform: 'uppercase' as const,
         },
-        animationClass: 'bounce',
+        supportsHighlight: true,
     },
     {
-        name: 'Big Centered All Caps',
+        name: 'Anton Heavy',
         style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
-            fontSize: 40,
-            fontWeight: 900,
+            fontFamily: 'Anton, Arial, sans-serif',
+            fontSize: 38,
+            fontWeight: 400,
             color: '#FFFFFF',
             textAlign: 'center' as const,
-            WebkitTextStroke: '4px #000000',
-            textShadow: '4px 4px 8px #000000',
-            textTransform: 'uppercase' as const,
+            WebkitTextStroke: '3px #000000',
+            textShadow: '3px 3px 6px #000000',
+            textTransform: 'lowercase' as const,
         },
-        animationClass: 'bounce',
+        supportsHighlight: true,
     },
     {
-        name: 'Animated Underline',
+        name: 'Arial Heavy',
         style: {
-            fontFamily: 'Arial Black, Impact, sans-serif',
-            fontSize: 32,
+            fontFamily: 'Arial, sans-serif',
+            fontSize: 36,
             fontWeight: 900,
             color: '#FFFFFF',
             textAlign: 'center' as const,
             WebkitTextStroke: '3px #000000',
             textShadow: '3px 3px 6px #000000',
-            textTransform: 'uppercase' as const,
-            borderBottom: '4px solid #FF6B35',
+            textTransform: 'lowercase' as const,
         },
-    },
-    {
-        name: 'Vertical Pop',
-        style: {
-            fontFamily: 'Impact, Arial Black, sans-serif',
-            fontSize: 34,
-            fontWeight: 900,
-            color: '#FFFFFF',
-            textAlign: 'center' as const,
-            WebkitTextStroke: '3px #000000',
-            textShadow: '3px 3px 6px #000000',
-            textTransform: 'uppercase' as const,
-        },
-        animationClass: 'pop',
+        supportsHighlight: true,
     },
 ]
 
@@ -349,6 +330,9 @@ const CaptionsToolPanel = () => {
         setSelectedTrackId,
         resetCaptions,
     } = useCaptions()
+
+    // Local state for highlight color
+    const [selectedHighlightColor, setSelectedHighlightColor] = useState<string | null>(null)
 
     // Local state for generation process
     const [isGenerating, setIsGenerating] = useState(false)
@@ -383,7 +367,10 @@ const CaptionsToolPanel = () => {
     }, [transcribableTracks, selectedTrackId, setSelectedTrackId])
 
     // Smart random highlighting - highlights meaningful words
-    const addRandomHighlights = (text: string): string => {
+    const addRandomHighlights = (text: string, highlightColor?: string): string => {
+        // If no highlight color is selected, return original text
+        if (!highlightColor) return text
+
         // Words to skip (articles, prepositions, common words)
         const skipWords = new Set([
             'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
@@ -412,12 +399,11 @@ const CaptionsToolPanel = () => {
             wordsToHighlight.add(randomWord.toLowerCase().replace(/[^a-z]/g, ''))
         }
 
-        // Apply highlights
+        // Apply highlights with the selected color
         return words.map(word => {
             const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '')
             if (wordsToHighlight.has(cleanWord)) {
-                const color = highlightColors[Math.floor(Math.random() * highlightColors.length)]
-                return `<span color="${color}">${word}</span>`
+                return `<span color="${highlightColor}">${word}</span>`
             }
             return word
         }).join('')
@@ -440,8 +426,8 @@ const CaptionsToolPanel = () => {
                     // Remove any existing highlights from AI transcription
                     const plainText = textLines.replace(/<span[^>]*>(.*?)<\/span>/g, '$1')
                     
-                    // Add random highlights to meaningful words
-                    const highlightedText = addRandomHighlights(plainText)
+                    // Add random highlights to meaningful words (will be applied later when adding to timeline)
+                    const highlightedText = plainText
                     
                     parsedCaptions.push({
                         id: index + 1,
@@ -583,27 +569,34 @@ const CaptionsToolPanel = () => {
                 : shortVideoCaptionStyles[selectedShortStyleIdx].style;
 
             // Create caption clips for each caption with custom styling
-            const captionClips = captions.map(caption => ({
-                id: uuid(),
-                trackId: newTrack.id,
-                type: 'caption' as const,
-                sourceStartMs: 0,
-                sourceEndMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
-                timelineStartMs: srtTimeToMs(caption.startTime),
-                timelineEndMs: srtTimeToMs(caption.endTime),
-                assetDurationMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
-                volume: 1,
-                speed: 1,
-                properties: {
-                    text: caption.highlightedHtml || caption.text, // Use highlighted HTML if available
-                    style: {
-                        ...selectedStyle,
+            const captionClips = captions.map(caption => {
+                // Apply highlight color if selected (only for short videos)
+                const finalText = selectedStyleCategory === 'short' && selectedHighlightColor
+                    ? addRandomHighlights(caption.text, selectedHighlightColor)
+                    : caption.text
+
+                return {
+                    id: uuid(),
+                    trackId: newTrack.id,
+                    type: 'caption' as const,
+                    sourceStartMs: 0,
+                    sourceEndMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
+                    timelineStartMs: srtTimeToMs(caption.startTime),
+                    timelineEndMs: srtTimeToMs(caption.endTime),
+                    assetDurationMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
+                    volume: 1,
+                    speed: 1,
+                    properties: {
+                        text: finalText,
+                        style: {
+                            ...selectedStyle,
+                        },
+                        placement: selectedPlacement, // Store placement for the editor
+                        isCaptionClip: true, // Mark as caption clip
                     },
-                    placement: selectedPlacement, // Store placement for the editor
-                    isCaptionClip: true, // Mark as caption clip
-                },
-                createdAt: new Date().toISOString(),
-            }))
+                    createdAt: new Date().toISOString(),
+                }
+            })
 
             // Create commands to:
             // 1. Shift all existing tracks down
@@ -953,8 +946,8 @@ const CaptionsToolPanel = () => {
                                                 fontSize: '12px',
                                                 lineHeight: '1.2',
                                                 margin: 0,
-                                                padding: preset.style.background ? '2px 4px' : '0',
-                                                borderRadius: preset.style.borderRadius ? '4px' : '0',
+                                                padding: ('background' in preset.style) ? '2px 4px' : '0',
+                                                borderRadius: ('borderRadius' in preset.style) ? '4px' : '0',
                                                 ...(('borderBottom' in preset.style) && { borderBottom: '2px solid #FF6B35' }),
                                             }}
                                         >
@@ -967,6 +960,41 @@ const CaptionsToolPanel = () => {
                             ))}
                         </div>
                     </div>
+
+                    {/* Highlight Color Selection - Only for Short Videos */}
+                    {selectedStyleCategory === 'short' && (
+                        <div className="space-y-3">
+                            <h5 className="text-base font-semibold text-gray-700">Highlight Color (Optional)</h5>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => setSelectedHighlightColor(null)}
+                                    className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                                        selectedHighlightColor === null
+                                            ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                    }`}
+                                >
+                                    No Highlight
+                                </button>
+                                {highlightColors.map((color) => (
+                                    <button
+                                        key={color}
+                                        onClick={() => setSelectedHighlightColor(color)}
+                                        className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                                            selectedHighlightColor === color
+                                                ? 'border-blue-600 scale-110'
+                                                : 'border-gray-200 hover:border-gray-400'
+                                        }`}
+                                        style={{ backgroundColor: color }}
+                                        title={`Highlight with ${color}`}
+                                    />
+                                ))}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                                Random words will be highlighted in the selected color for emphasis
+                            </p>
+                        </div>
+                    )}
 
                     {/* Placement Selection */}
                     <div className="space-y-3">
