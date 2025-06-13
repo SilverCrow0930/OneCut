@@ -36,113 +36,129 @@ export const longVideoCaptionStyles = [
         name: 'Classic White with Black Outline',
         style: {
             fontFamily: 'Arial, Helvetica, sans-serif',
-            fontSize: 32,
+            fontSize: 20,
             fontWeight: 700,
             color: '#FFFFFF',
             textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000',
-            textShadow: '2px 2px 4px #000000',
+            WebkitTextStroke: '1.5px #000000',
+            textShadow: '1.5px 1.5px 3px #000000',
             textTransform: 'none' as const,
+            whiteSpace: 'nowrap' as const,
+            maxWidth: '90%',
         },
     },
     {
         name: 'Yellow Netflix Style',
         style: {
             fontFamily: 'Arial, Helvetica, sans-serif',
-            fontSize: 28,
+            fontSize: 18,
             fontWeight: 600,
             color: '#FFFF00',
             textAlign: 'center' as const,
-            WebkitTextStroke: '2px #000000',
-            textShadow: '2px 2px 4px #000000',
+            WebkitTextStroke: '1.5px #000000',
+            textShadow: '1.5px 1.5px 3px #000000',
             textTransform: 'none' as const,
+            whiteSpace: 'nowrap' as const,
+            maxWidth: '90%',
         },
     },
     {
         name: 'Semi-Transparent Box',
         style: {
             fontFamily: 'Arial, Helvetica, sans-serif',
-            fontSize: 30,
+            fontSize: 19,
             fontWeight: 600,
             color: '#FFFFFF',
             textAlign: 'center' as const,
             background: 'rgba(0,0,0,0.6)',
-            borderRadius: '8px',
-            padding: '8px 12px',
+            borderRadius: '6px',
+            padding: '6px 10px',
             WebkitTextStroke: '0',
             textShadow: 'none',
             textTransform: 'none' as const,
+            whiteSpace: 'nowrap' as const,
+            maxWidth: '90%',
         },
     },
     {
         name: 'Clean Lower Third',
         style: {
             fontFamily: 'Roboto, Arial, sans-serif',
-            fontSize: 28,
+            fontSize: 18,
             fontWeight: 500,
             color: '#FFFFFF',
             textAlign: 'left' as const,
             WebkitTextStroke: '0',
-            textShadow: '2px 2px 4px #000000',
+            textShadow: '1.5px 1.5px 3px #000000',
             textTransform: 'none' as const,
+            whiteSpace: 'nowrap' as const,
+            maxWidth: '90%',
         },
     },
     {
         name: 'Bold Uppercase with Shadow',
         style: {
             fontFamily: 'Impact, Arial Black, sans-serif',
-            fontSize: 34,
+            fontSize: 21,
             fontWeight: 900,
             color: '#FFFFFF',
             textAlign: 'center' as const,
             WebkitTextStroke: '0',
-            textShadow: '3px 3px 6px #000000',
+            textShadow: '2px 2px 4px #000000',
             textTransform: 'uppercase' as const,
+            whiteSpace: 'nowrap' as const,
+            maxWidth: '90%',
         },
     },
     {
         name: 'Minimalist Transparent',
         style: {
             fontFamily: 'Roboto, Helvetica, sans-serif',
-            fontSize: 26,
+            fontSize: 17,
             fontWeight: 400,
             color: 'rgba(255,255,255,0.8)',
             textAlign: 'center' as const,
             WebkitTextStroke: '0',
             textShadow: 'none',
             textTransform: 'none' as const,
+            whiteSpace: 'nowrap' as const,
+            maxWidth: '90%',
         },
     },
     {
         name: 'Colored Bar Background',
         style: {
             fontFamily: 'Arial, Helvetica, sans-serif',
-            fontSize: 30,
+            fontSize: 19,
             fontWeight: 600,
             color: '#FFFFFF',
             textAlign: 'center' as const,
             background: 'rgba(59,130,246,0.8)',
             borderRadius: '0',
-            padding: '8px 16px',
+            padding: '6px 12px',
             WebkitTextStroke: '0',
             textShadow: 'none',
             textTransform: 'none' as const,
+            whiteSpace: 'nowrap' as const,
+            maxWidth: '90%',
         },
     },
     {
         name: 'Professional News Style',
         style: {
             fontFamily: 'Arial, Helvetica, sans-serif',
-            fontSize: 26,
+            fontSize: 17,
             fontWeight: 500,
             color: '#FFFFFF',
             textAlign: 'left' as const,
             background: 'rgba(0,0,0,0.9)',
             borderRadius: '0',
-            padding: '6px 12px',
+            padding: '4px 10px',
             WebkitTextStroke: '0',
             textShadow: 'none',
             textTransform: 'none' as const,
+            whiteSpace: 'nowrap' as const,
+            maxWidth: '90%',
         },
     },
 ]
@@ -576,25 +592,25 @@ const CaptionsToolPanel = () => {
                     : caption.text
 
                 return {
-                    id: uuid(),
-                    trackId: newTrack.id,
-                    type: 'caption' as const,
-                    sourceStartMs: 0,
-                    sourceEndMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
-                    timelineStartMs: srtTimeToMs(caption.startTime),
-                    timelineEndMs: srtTimeToMs(caption.endTime),
-                    assetDurationMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
-                    volume: 1,
-                    speed: 1,
-                    properties: {
+                id: uuid(),
+                trackId: newTrack.id,
+                type: 'caption' as const,
+                sourceStartMs: 0,
+                sourceEndMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
+                timelineStartMs: srtTimeToMs(caption.startTime),
+                timelineEndMs: srtTimeToMs(caption.endTime),
+                assetDurationMs: srtTimeToMs(caption.endTime) - srtTimeToMs(caption.startTime),
+                volume: 1,
+                speed: 1,
+                properties: {
                         text: finalText,
-                        style: {
-                            ...selectedStyle,
-                        },
-                        placement: selectedPlacement, // Store placement for the editor
-                        isCaptionClip: true, // Mark as caption clip
+                    style: {
+                        ...selectedStyle,
                     },
-                    createdAt: new Date().toISOString(),
+                    placement: selectedPlacement, // Store placement for the editor
+                    isCaptionClip: true, // Mark as caption clip
+                },
+                createdAt: new Date().toISOString(),
                 }
             })
 
@@ -690,7 +706,7 @@ const CaptionsToolPanel = () => {
                 <div className="text-center py-12 space-y-4">
                     <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
                         <Mic size={24} className="text-gray-400" />
-                    </div>
+                        </div>
                     <div>
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">No Audio or Video Found</h3>
                         <p className="text-gray-500 text-sm max-w-md mx-auto">
@@ -702,67 +718,67 @@ const CaptionsToolPanel = () => {
 
             {/* Phase 1: Ready to Generate */}
             {workflowPhase === 'initial' && transcribableTracks.length > 0 && (
-                <div className="space-y-5">
-                    {/* Track Selection */}
-                    {transcribableTracks.length > 1 && (
-                        <div className="space-y-3">
-                            <label className="text-sm font-medium text-gray-700">Select Track to Caption</label>
-                            <select
-                                value={selectedTrackId || ''}
-                                onChange={(e) => setSelectedTrackId(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                                {transcribableTracks.map((track) => {
-                                    const trackClips = clips.filter(clip => clip.trackId === track.id && (clip.type === 'video' || clip.type === 'audio'))
-                                    const clipCount = trackClips.length
-                                    const totalDuration = trackClips.reduce((sum, clip) => sum + (clip.timelineEndMs - clip.timelineStartMs), 0)
-                                    return (
-                                        <option key={track.id} value={track.id}>
-                                            Track {track.index + 1} • {track.type} • {clipCount} clip{clipCount !== 1 ? 's' : ''} • {Math.round(totalDuration / 1000)}s
-                                        </option>
-                                    )
-                                })}
-                            </select>
-                        </div>
-                    )}
-
-                    {/* Track Info */}
-                    {selectedTrack && selectedClip && (
-                        <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-xl">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="w-10 h-10 rounded-lg bg-white/80 flex items-center justify-center text-lg">
-                                    {selectedTrack.type === 'video' ? '📹' : '🎵'}
-                                </div>
-                                <div>
-                                    <div className="text-sm font-semibold text-blue-800">
-                                        Track {selectedTrack.index + 1} • {selectedTrack.type} 
-                                    </div>
-                                    <div className="text-xs text-blue-600">
-                                        {selectedTrackClips.length} clip{selectedTrackClips.length !== 1 ? 's' : ''} • Total duration: {Math.round(selectedTrackClips.reduce((sum, clip) => sum + (clip.timelineEndMs - clip.timelineStartMs), 0) / 1000)}s
-                                    </div>
-                                </div>
-                                {transcribableTracks.length === 1 && (
-                                    <div className="ml-auto">
-                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                                            <Sparkles size={12} />
-                                            Ready
-                                        </span>
-                                    </div>
-                                )}
+                    <div className="space-y-5">
+                        {/* Track Selection */}
+                        {transcribableTracks.length > 1 && (
+                            <div className="space-y-3">
+                                <label className="text-sm font-medium text-gray-700">Select Track to Caption</label>
+                                <select
+                                    value={selectedTrackId || ''}
+                                    onChange={(e) => setSelectedTrackId(e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    {transcribableTracks.map((track) => {
+                                        const trackClips = clips.filter(clip => clip.trackId === track.id && (clip.type === 'video' || clip.type === 'audio'))
+                                        const clipCount = trackClips.length
+                                        const totalDuration = trackClips.reduce((sum, clip) => sum + (clip.timelineEndMs - clip.timelineStartMs), 0)
+                                        return (
+                                            <option key={track.id} value={track.id}>
+                                                Track {track.index + 1} • {track.type} • {clipCount} clip{clipCount !== 1 ? 's' : ''} • {Math.round(totalDuration / 1000)}s
+                                            </option>
+                                        )
+                                    })}
+                                </select>
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                        {/* Track Info */}
+                        {selectedTrack && selectedClip && (
+                            <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-xl">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 rounded-lg bg-white/80 flex items-center justify-center text-lg">
+                                        {selectedTrack.type === 'video' ? '📹' : '🎵'}
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-blue-800">
+                                            Track {selectedTrack.index + 1} • {selectedTrack.type} 
+                                        </div>
+                                        <div className="text-xs text-blue-600">
+                                            {selectedTrackClips.length} clip{selectedTrackClips.length !== 1 ? 's' : ''} • Total duration: {Math.round(selectedTrackClips.reduce((sum, clip) => sum + (clip.timelineEndMs - clip.timelineStartMs), 0) / 1000)}s
+                                        </div>
+                                    </div>
+                                    {transcribableTracks.length === 1 && (
+                                        <div className="ml-auto">
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                                <Sparkles size={12} />
+                                                Ready
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                     {/* Generate Button */}
-                    <button
-                        onClick={handleOneClickGenerate}
+                        <button 
+                            onClick={handleOneClickGenerate}
                         disabled={isGenerating || !selectedTrackId}
                         className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] font-medium shadow-md text-base"
                     >
                         <Sparkles size={20} />
                         {isGenerating ? 'Generating...' : 'Generate Captions'}
-                    </button>
-                </div>
+                        </button>
+                    </div>
             )}
 
             {/* Phase 2: Generating Progress */}
@@ -911,13 +927,13 @@ const CaptionsToolPanel = () => {
                     {/* Style Selection */}
                     <div className="mb-4">
                         <div className="flex gap-2 mb-2">
-                            <button
+                        <button
                                 className={`px-3 py-1 rounded-lg font-semibold ${selectedStyleCategory === 'long' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                                 onClick={() => setSelectedStyleCategory('long')}
                             >
                                 Long Video
-                            </button>
-                            <button
+                        </button>
+                        <button
                                 className={`px-3 py-1 rounded-lg font-semibold ${selectedStyleCategory === 'short' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                                 onClick={() => setSelectedStyleCategory('short')}
                             >
@@ -956,7 +972,7 @@ const CaptionsToolPanel = () => {
                                     </div>
                                     {/* Style Name */}
                                     <div className="text-sm font-medium text-gray-800">{preset.name}</div>
-                                </button>
+                        </button>
                             ))}
                         </div>
                     </div>
@@ -966,7 +982,7 @@ const CaptionsToolPanel = () => {
                         <div className="space-y-3">
                             <h5 className="text-base font-semibold text-gray-700">Highlight Color (Optional)</h5>
                             <div className="flex flex-wrap gap-2">
-                                <button
+                                    <button
                                     onClick={() => setSelectedHighlightColor(null)}
                                     className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                                         selectedHighlightColor === null
@@ -975,7 +991,7 @@ const CaptionsToolPanel = () => {
                                     }`}
                                 >
                                     No Highlight
-                                </button>
+                                    </button>
                                 {highlightColors.map((color) => (
                                     <button
                                         key={color}

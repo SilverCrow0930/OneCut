@@ -255,7 +255,7 @@ const chatSystemInstruction = `
 `
 
 const transcriptionSystemInstruction = `
-    You are an AI transcription assistant with multilingual capabilities specialized in creating accurate short video captions.
+    You are an AI transcription assistant with multilingual capabilities specialized in creating accurate video captions.
     
     Your task is to:
     1. AUTOMATICALLY DETECT the language spoken in the audio/video
@@ -263,24 +263,47 @@ const transcriptionSystemInstruction = `
     3. Do NOT translate - keep the transcription in the same language as the speech
     4. Generate timestamped captions in standard SRT format
     5. Add proper punctuation and capitalization appropriate for the detected language
-    6. Break captions into readable chunks suitable for short-form video
-    7. Each chunk should be at most 6 words for optimal readability
-    8. DO NOT add any HTML tags or highlighting - provide plain text only
+    6. Break captions into readable chunks based on video type
+    7. DO NOT add any HTML tags or highlighting - provide plain text only
     
-    EXAMPLE OUTPUT:
+    CAPTION WORD COUNT RULES:
+    
+    FOR LONG-FORM VIDEOS (YouTube, educational, professional content):
+    - Each caption should be 8-12 words maximum
+    - Prioritize complete phrases and natural speech breaks
+    - Allow longer captions for better readability and comprehension
+    - Focus on maintaining sentence structure and meaning
+    
+    FOR SHORT-FORM VIDEOS (TikTok, Reels, Shorts):
+    - Each caption should be 3-6 words maximum
+    - Use punchy, impactful phrases
+    - Break at natural speech pauses for maximum engagement
+    - Prioritize key words and emotional impact
+    
+    EXAMPLE OUTPUT FOR LONG-FORM:
     1
-    00:00:01,000 --> 00:00:03,500
-    This is amazing content!
+    00:00:01,000 --> 00:00:04,500
+    Today I want to share something incredible
     
     2
-    00:00:03,500 --> 00:00:06,000
-    Made 10,000 dollars in profit
+    00:00:04,500 --> 00:00:08,000
+    that happened to me last week
+    
+    EXAMPLE OUTPUT FOR SHORT-FORM:
+    1
+    00:00:01,000 --> 00:00:02,500
+    This is crazy!
+    
+    2
+    00:00:02,500 --> 00:00:04,000
+    Made 10k profit
     
     Supported languages include: English, Spanish, French, German, Italian, Portuguese, Russian, Chinese (Mandarin), Japanese, Korean, Arabic, Hindi, and many others.
     
     Be accurate with timing and make captions easy to read in the detected language.
     IMPORTANT: Never translate the content - always transcribe in the original spoken language.
     IMPORTANT: Provide clean text without any HTML tags or formatting.
+    IMPORTANT: Default to LONG-FORM format (8-12 words) unless specifically told it's for short-form content.
 `
 
 const textStyleSystemInstruction = `
@@ -687,7 +710,7 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
     }
 }
 
-export const generateTranscription = async (signedUrl: string, mimeType: string) => {
+export const generateTranscription = async (signedUrl: string, mimeType: string, videoFormat?: string) => {
     console.log('=== GOOGLE GENAI TRANSCRIPTION STARTED ===');
     console.log('Input parameters:', {
         mimeType,
@@ -779,8 +802,14 @@ export const generateTranscription = async (signedUrl: string, mimeType: string)
             throw new Error(`Media processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
+        // Determine the prompt based on video format
+        const isShortForm = videoFormat === 'short_vertical';
+        const formatPrompt = isShortForm 
+            ? 'This is SHORT-FORM content (TikTok/Reels/Shorts). Use 3-6 words per caption for maximum impact and engagement.'
+            : 'This is LONG-FORM content (YouTube/educational). Use 8-12 words per caption for better readability and comprehension.';
+
         const content = createUserContent([
-            'Please listen to this audio/video content, DETECT the language being spoken, and transcribe it accurately in the ORIGINAL LANGUAGE (do not translate). Provide timestamped captions in SRT format with accurate timing.',
+            `Please listen to this audio/video content, DETECT the language being spoken, and transcribe it accurately in the ORIGINAL LANGUAGE (do not translate). Provide timestamped captions in SRT format with accurate timing. ${formatPrompt}`,
             createPartFromUri(uploadedFile.uri, mimeType)
         ]);
 

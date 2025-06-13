@@ -50,7 +50,8 @@ router.post(
                 .select(`
                     *,
                     projects!inner(
-                        user_id
+                        user_id,
+                        aspect_ratio
                     )
                 `)
                 .eq('id', trackId)
@@ -125,9 +126,28 @@ router.post(
 
             console.log('Generated signed URL for transcription')
 
+            // 7.5) Determine video format based on project aspect ratio and duration
+            const projectAspectRatio = track.projects.aspect_ratio
+            const clipDuration = longestClip.timeline_end_ms - longestClip.timeline_start_ms
+            
+            // Determine if this is short-form content
+            // Short-form: vertical aspect ratio (9:16) OR duration < 2 minutes
+            const isVertical = projectAspectRatio === '9:16'
+            const isShortDuration = clipDuration < 120000 // 2 minutes in ms
+            const videoFormat = (isVertical || isShortDuration) ? 'short_vertical' : 'long_horizontal'
+            
+            console.log('Video format detection:', {
+                aspectRatio: projectAspectRatio,
+                durationMs: clipDuration,
+                durationSeconds: Math.round(clipDuration / 1000),
+                isVertical,
+                isShortDuration,
+                detectedFormat: videoFormat
+            })
+
             // 8) Generate transcription using Gemini
             console.log('Starting transcription with Gemini...')
-            const result = await generateTranscription(signedUrl, asset.mime_type)
+            const result = await generateTranscription(signedUrl, asset.mime_type, videoFormat)
 
             console.log('Transcription completed successfully')
 
