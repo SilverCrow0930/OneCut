@@ -65,13 +65,20 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
     // Find the asset details
     const asset = assets.find(a => a.id === clip.assetId)
-    const isVideo = asset?.mime_type.startsWith('video/') || (clip.properties?.externalAsset && clip.type === 'video')
-    const isImage = asset?.mime_type.startsWith('image/') || (clip.properties?.externalAsset && clip.type === 'image')
-    const isAudio = asset?.mime_type.startsWith('audio/') || (clip.properties?.externalAsset && clip.type === 'audio')
-    const isText = clip.type === 'text' || clip.type === 'caption'
+    const isVideo = clip.type === 'video' && clip.assetId
+    const isImage = clip.type === 'image' && clip.assetId
+    const isAudio = clip.type === 'audio' && clip.assetId
+    const isText = clip.type === 'text'
+    const isCaption = clip.type === 'caption'
     const isExternalAsset = clip.properties?.externalAsset
-    const isVoiceover = isAudio && asset?.name?.toLowerCase().includes('voiceover')
-    const isTransition = clip.properties?.isTransition === true
+    const isVoiceover = isAudio && clip.properties?.isVoiceover
+    // Remove the old transition detection
+    // const isTransition = clip.properties?.isTransition === true
+    
+    // Add new transition detection
+    const hasTransitionIn = !!clip.properties?.transitionIn
+    const hasTransitionOut = !!clip.properties?.transitionOut
+    const hasAnyTransition = hasTransitionIn || hasTransitionOut
 
     // Get the media URL - prioritize external asset URL over regular asset URL
     const externalAssetUrl = isExternalAsset?.url
@@ -715,8 +722,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
                       'border-transparent hover:border-gray-400'}
-                    ${isTransition ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600' :
-                      !isVideo && !isImage ? (isAudio ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600') : ''}
+                    ${isVoiceover ? 'bg-green-500 hover:bg-green-600' : !isVideo && !isImage ? 'bg-purple-500 hover:bg-purple-600' : ''}
                     ${isShiftHeld ? 'cursor-move border-blue-300 shadow-lg' : 'cursor-grab active:cursor-grabbing'}
                     select-none overflow-hidden
                 `}
@@ -744,7 +750,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
                 {/* Enhanced Content based on type */}
                 {isVideo && mediaUrl && (
-                    <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800">
+                    <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800 relative">
                         <div className="flex w-full h-full">
                             {Array.from({ length: Math.min(MAX_THUMBNAILS, Math.floor(width / 24)) }, (_, i) => (
                                 <div
@@ -771,6 +777,20 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
                             VIDEO
                         </div>
+                        
+                        {/* Transition indicators */}
+                        {hasTransitionIn && (
+                            <div className="absolute top-1 left-1/4 bg-purple-500/80 text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
+                                <span>↗️</span>
+                                <span className="text-xs">IN</span>
+                            </div>
+                        )}
+                        {hasTransitionOut && (
+                            <div className="absolute top-1 right-1/4 bg-purple-500/80 text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
+                                <span>↘️</span>
+                                <span className="text-xs">OUT</span>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -788,12 +808,26 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         <div className="absolute top-1 right-1 bg-black/60 rounded p-1">
                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                                            </svg>
-                                        </div>
+                            </svg>
+                        </div>
                         {/* Image label */}
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
                             IMAGE
                         </div>
+                        
+                        {/* Transition indicators */}
+                        {hasTransitionIn && (
+                            <div className="absolute top-1 left-1/4 bg-purple-500/80 text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
+                                <span>↗️</span>
+                                <span className="text-xs">IN</span>
+                            </div>
+                        )}
+                        {hasTransitionOut && (
+                            <div className="absolute top-1 right-1/4 bg-purple-500/80 text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
+                                <span>↘️</span>
+                                <span className="text-xs">OUT</span>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -841,62 +875,43 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     </div>
                 )}
 
-                {/* Transition Content */}
-                {isTransition && (
-                    <div className="flex flex-col items-center justify-center w-full h-full relative">
-                        <div className="flex flex-col items-center">
-                            <div className="text-lg mb-1">
-                                {clip.properties?.transitionType === 'fade' && '🌅'}
-                                {clip.properties?.transitionType === 'slide' && '➡️'}
-                                {clip.properties?.transitionType === 'zoom' && '🔍'}
-                                {clip.properties?.transitionType === 'wipe' && '▶️'}
-                                {clip.properties?.transitionType === 'dissolve' && '✨'}
-                                {clip.properties?.transitionType === 'iris' && '👁️'}
-                                {clip.properties?.transitionType === 'flip' && '🔄'}
-                                {clip.properties?.transitionType === 'blur' && '🌫️'}
-                                {!['fade', 'slide', 'zoom', 'wipe', 'dissolve', 'iris', 'flip', 'blur'].includes(clip.properties?.transitionType || '') && '⚡'}
-                            </div>
-                            <div className="text-xs font-medium text-center leading-tight">
-                                {clip.properties?.name || 'Transition'}
-                            </div>
-                        </div>
-                        
-                        {/* Duration for transition */}
-                        <div className="absolute bottom-1 right-1 text-xs opacity-90 bg-black/60 px-1 rounded">
-                            {(durationMs / 1000).toFixed(1)}s
-                        </div>
-                    </div>
-                )}
-
                 {/* Duration indicator for video and image types */}
                 {(isVideo || isImage) && (
                     <div className="absolute bottom-1 right-1 text-xs opacity-90 bg-black/60 px-1 rounded">
-                    {formatTime(durationMs)}
-                </div>
+                        {formatTime(durationMs)}
+                    </div>
                 )}
 
                 {/* Multi-selection indicator */}
                 {isInMultiSelection && (
                     <div className="absolute top-1 left-1 w-2 h-2 bg-purple-400 rounded-full" />
                 )}
+
+                {/* Enhanced transition border indicators */}
+                {hasTransitionIn && (
+                    <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-purple-400 to-purple-600 rounded-l-lg" />
+                )}
+                {hasTransitionOut && (
+                    <div className="absolute right-0 top-0 w-1 h-full bg-gradient-to-b from-purple-400 to-purple-600 rounded-r-lg" />
+                )}
             </div>
 
             {/* Context Menu */}
             {showContextMenu && (
-                    <div
+                <div
                     className="fixed bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50"
-                        style={{
-                            left: contextMenuPosition.x,
+                    style={{
+                        left: contextMenuPosition.x,
                         top: contextMenuPosition.y
-                        }}
-                    >
-                        <button
+                    }}
+                >
+                    <button
                         className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
-                            onClick={handleDelete}
-                        >
-                            Delete Clip
-                        </button>
-                    </div>
+                        onClick={handleDelete}
+                    >
+                        Delete Clip
+                    </button>
+                </div>
             )}
         </>
     )

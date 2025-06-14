@@ -34,12 +34,6 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
     const { url, loading } = useAssetUrl(clip.assetId)
     const externalAsset = clip.properties?.externalAsset
     const mediaUrl = externalAsset?.url || url
-    const isTransition = clip.properties?.isTransition === true
-
-    // Early return for transition clips - they don't render content, they apply effects
-    if (isTransition) {
-        return <TransitionLayer clip={clip} sourceTime={sourceTime} />
-    }
 
     // Memoize crop state initialization
     const [crop, setCrop] = useState(() => ({
@@ -585,6 +579,70 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         return null
     }
 
+    // Calculate transition effects
+    const getTransitionStyles = () => {
+        const styles: React.CSSProperties = {}
+        
+        // Handle transition in (clip fading in)
+        if (clip.properties?.transitionIn) {
+            const transition = clip.properties.transitionIn
+            const transitionProgress = Math.max(0, Math.min(1, localMs / transition.duration))
+            
+            switch (transition.type) {
+                case 'dissolve':
+                case 'fade':
+                    styles.opacity = transitionProgress
+                    break
+                case 'slide':
+                    styles.transform = `translateX(${(1 - transitionProgress) * -100}%)`
+                    break
+                case 'zoom':
+                    styles.transform = `scale(${0.5 + transitionProgress * 0.5})`
+                    styles.opacity = transitionProgress
+                    break
+                case 'wipe':
+                    styles.clipPath = `inset(0 ${(1 - transitionProgress) * 100}% 0 0)`
+                    break
+                case 'iris':
+                    styles.clipPath = `circle(${transitionProgress * 150}% at center)`
+                    break
+            }
+        }
+        
+        // Handle transition out (clip fading out)
+        if (clip.properties?.transitionOut) {
+            const transition = clip.properties.transitionOut
+            const transitionStartMs = transition.startMs - clip.timelineStartMs
+            const transitionProgress = localMs >= transitionStartMs 
+                ? Math.max(0, Math.min(1, (localMs - transitionStartMs) / transition.duration))
+                : 0
+            
+            switch (transition.type) {
+                case 'dissolve':
+                case 'fade':
+                    styles.opacity = 1 - transitionProgress
+                    break
+                case 'slide':
+                    styles.transform = `translateX(${transitionProgress * -100}%)`
+                    break
+                case 'zoom':
+                    styles.transform = `scale(${1 - transitionProgress * 0.5})`
+                    styles.opacity = 1 - transitionProgress
+                    break
+                case 'wipe':
+                    styles.clipPath = `inset(0 0 0 ${transitionProgress * 100}%)`
+                    break
+                case 'iris':
+                    styles.clipPath = `circle(${(1 - transitionProgress) * 150}% at center)`
+                    break
+            }
+        }
+        
+        return styles
+    }
+
+    const transitionStyles = getTransitionStyles()
+
     return (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             {(isPrimarySelection || (isInMultiSelection && isMultiSelectionActive)) && (
@@ -614,6 +672,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                     overflow: 'visible',
                     position: 'absolute',
                     background: clip.type === 'text' ? 'rgba(0, 0, 0, 0)' : 'black',
+                    ...transitionStyles // Apply transition effects
                 }}
                 onClick={handleClick}
             >
@@ -657,92 +716,3 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         </div>
     )
 })
-
-// Transition Layer Component
-const TransitionLayer = React.memo(function TransitionLayer({ 
-    clip, 
-    sourceTime 
-}: { 
-    clip: Clip, 
-    sourceTime?: number 
-}) {
-    const { currentTime } = usePlayback()
-    const localMs = currentTime * 1000 - clip.timelineStartMs
-    const durationMs = clip.timelineEndMs - clip.timelineStartMs
-    const isVisible = localMs >= 0 && localMs <= durationMs
-    
-    if (!isVisible) return null
-    
-    const transitionType = clip.properties?.transitionType || 'fade'
-    const progress = Math.max(0, Math.min(1, localMs / durationMs))
-    
-    // Apply transition effects based on type
-    const getTransitionStyle = () => {
-        switch (transitionType) {
-            case 'fade':
-                return {
-                    position: 'absolute' as const,
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'black',
-                    opacity: 1 - progress,
-                    pointerEvents: 'none' as const,
-                    zIndex: 1000
-                }
-            case 'slide':
-                return {
-                    position: 'absolute' as const,
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'linear-gradient(to right, black 0%, transparent 100%)',
-                    transform: `translateX(${(progress - 1) * 100}%)`,
-                    pointerEvents: 'none' as const,
-                    zIndex: 1000
-                }
-            case 'zoom':
-                return {
-                    position: 'absolute' as const,
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'black',
-                    clipPath: `circle(${progress * 150}% at center)`,
-                    pointerEvents: 'none' as const,
-                    zIndex: 1000
-                }
-            case 'wipe':
-                return {
-                    position: 'absolute' as const,
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'black',
-                    clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)`,
-                    pointerEvents: 'none' as const,
-                    zIndex: 1000
-                }
-            default:
-                return {
-                    position: 'absolute' as const,
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'black',
-                    opacity: 1 - progress,
-                    pointerEvents: 'none' as const,
-                    zIndex: 1000
-                }
-        }
-    }
-    
-    return <div style={getTransitionStyle()} />
-})
-
-export { TransitionLayer }
