@@ -94,9 +94,9 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             const otherLeft = otherClip.timelineStartMs * timeScale
             const otherRight = otherClip.timelineEndMs * timeScale
             
-            // Simple overlap check
+            // Simple overlap check - but this is just for visual feedback during drag
             if (!(newLeft + clipWidth <= otherLeft || newLeft >= otherRight)) {
-                return true // Overlapping
+                return true // Will trigger auto-insertion
             }
         }
         return false
@@ -520,26 +520,119 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             clipRef.current.style.opacity = ''
         }
 
-        // Only update if position actually changed and not overlapping
-        if (!dragState.isOverlapping && Math.abs(dragState.currentLeft - dragState.startLeft) > 5) {
+        // Only update if position actually changed - REMOVED overlap check to enable auto-insertion
+        if (Math.abs(dragState.currentLeft - dragState.startLeft) > 5) {
             const newStartMs = Math.round(dragState.currentLeft / timeScale)
             const durationMs = clip.timelineEndMs - clip.timelineStartMs
+            const newEndMs = newStartMs + durationMs
 
-        executeCommand({
-            type: 'UPDATE_CLIP',
-            payload: {
-                    before: clip,
-                after: {
-                        ...clip,
-                    timelineStartMs: newStartMs,
-                    timelineEndMs: newStartMs + durationMs
+            // Get all clips on the same track, excluding the current clip
+            const trackClips = clips.filter(c => c.trackId === clip.trackId && c.id !== clip.id)
+            
+            // Auto-insertion logic: If dropping between existing clips, push them forward
+            const clipsToShift: Array<{ before: Clip, after: Clip }> = []
+            let finalNewStartMs = newStartMs
+
+            // Check if we're dropping in the middle of existing content
+            for (const otherClip of trackClips) {
+                const otherStartMs = otherClip.timelineStartMs
+                const otherEndMs = otherClip.timelineEndMs
+                
+                // If our new position overlaps with this clip, we need to shift it
+                if (newStartMs < otherEndMs && newEndMs > otherStartMs) {
+                    // If we're inserting before this clip, shift it forward
+                    if (newStartMs <= otherStartMs) {
+                        const shiftAmount = newEndMs - otherStartMs
+                        clipsToShift.push({
+                            before: otherClip,
+                            after: {
+                                ...otherClip,
+                                timelineStartMs: otherClip.timelineStartMs + shiftAmount,
+                                timelineEndMs: otherClip.timelineEndMs + shiftAmount
+                            }
+                        })
+                    }
+                    // If we're inserting after the start of this clip, position after it
+                    else if (newStartMs > otherStartMs && newStartMs < otherEndMs) {
+                        finalNewStartMs = otherEndMs
+                    }
                 }
             }
-        })
+
+            // After shifting clips, check for cascading shifts
+            if (clipsToShift.length > 0) {
+                // Sort clips by start time to handle cascading shifts
+                const sortedShifts = clipsToShift.sort((a, b) => a.before.timelineStartMs - b.before.timelineStartMs)
+                
+                // Handle cascading shifts - if a shifted clip overlaps with another clip, shift that one too
+                for (let i = 0; i < sortedShifts.length; i++) {
+                    const currentShift = sortedShifts[i]
+                    const shiftedClip = currentShift.after
+                    
+                    // Check if this shifted clip now overlaps with any other clips
+                    for (const otherClip of trackClips) {
+                        if (otherClip.id === currentShift.before.id) continue
+                        
+                        // Skip if this clip is already being shifted
+                        if (sortedShifts.some(shift => shift.before.id === otherClip.id)) continue
+                        
+                        // If the shifted clip overlaps with another clip, shift that one too
+                        if (shiftedClip.timelineStartMs < otherClip.timelineEndMs && 
+                            shiftedClip.timelineEndMs > otherClip.timelineStartMs) {
+                            
+                            const additionalShiftAmount = shiftedClip.timelineEndMs - otherClip.timelineStartMs
+                            if (additionalShiftAmount > 0) {
+                                sortedShifts.push({
+                                    before: otherClip,
+                                    after: {
+                                        ...otherClip,
+                                        timelineStartMs: otherClip.timelineStartMs + additionalShiftAmount,
+                                        timelineEndMs: otherClip.timelineEndMs + additionalShiftAmount
+                                    }
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Create the commands array
+            const commands = []
+
+            // Add the main clip move command
+            commands.push({
+                type: 'UPDATE_CLIP' as const,
+                payload: {
+                    before: clip,
+                    after: {
+                        ...clip,
+                        timelineStartMs: finalNewStartMs,
+                        timelineEndMs: finalNewStartMs + durationMs
+                    }
+                }
+            })
+
+            // Add all shift commands
+            clipsToShift.forEach(shift => {
+                commands.push({
+                    type: 'UPDATE_CLIP' as const,
+                    payload: shift
+                })
+            })
+
+            // Execute all commands as a batch if there are multiple, or single command if just one
+            if (commands.length > 1) {
+                executeCommand({
+                    type: 'BATCH',
+                    payload: { commands }
+                })
+            } else {
+                executeCommand(commands[0])
+            }
         }
 
         setDragState(initialDragState)
-    }, [dragState, clip, timeScale, executeCommand])
+    }, [dragState, clip, timeScale, executeCommand, clips])
 
     // Mouse event listeners
     useEffect(() => {
@@ -583,7 +676,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     absolute h-full text-white text-xs
                     flex items-center justify-center rounded-lg
                     border-2 transition-all duration-75
-                    ${dragState.isOverlapping ? 'border-red-500 bg-red-500/20' : ''}
+                    ${dragState.isOverlapping ? 'border-blue-500 bg-blue-500/20 shadow-lg' : ''}
                     ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
                       'border-transparent hover:border-gray-400'}
@@ -601,7 +694,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 onMouseDown={handleMouseDown}
                 draggable={isShiftHeld} // Only enable HTML5 drag when Shift is held
                 onDragStart={handleDragStart}
-                title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move horizontally, Shift+Drag to move between tracks'}
+                title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move - overlapping clips will be automatically pushed forward'}
             >
                 {/* Resize handles */}
                 <div
