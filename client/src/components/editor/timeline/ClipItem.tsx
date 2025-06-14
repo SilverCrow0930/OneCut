@@ -767,9 +767,9 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         </div>
                         {/* Video label */}
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                            {isExternalAsset ? `${isExternalAsset.platform?.toUpperCase() || 'EXTERNAL'} VIDEO` : 'VIDEO'}
+                            VIDEO
                         </div>
-                                        </div>
+                    </div>
                 )}
 
                 {isImage && mediaUrl && (
@@ -790,7 +790,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                         </div>
                         {/* Image label */}
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                            {isExternalAsset ? `${isExternalAsset.platform?.toUpperCase() || 'EXTERNAL'} IMAGE` : 'IMAGE'}
+                            IMAGE
                         </div>
                     </div>
                 )}
