@@ -360,7 +360,7 @@ const CaptionsToolPanel = () => {
     const [editingCaptionId, setEditingCaptionId] = useState<number | null>(null)
     const [editText, setEditText] = useState('')
     
-    const { clips, tracks, executeCommand } = useEditor()
+    const { clips, tracks, executeCommand, aspectRatio } = useEditor()
     const { session } = useAuth()
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
@@ -507,7 +507,8 @@ const CaptionsToolPanel = () => {
                     'Authorization': `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify({
-                    trackId: selectedTrackId
+                    trackId: selectedTrackId,
+                    aspectRatio: aspectRatio // Pass aspect ratio to determine caption format
                 })
             })
 

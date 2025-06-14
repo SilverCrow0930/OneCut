@@ -276,13 +276,12 @@ const transcriptionSystemInstruction = `
     CAPTION WORD COUNT RULES:
     
     FOR LONG-FORM VIDEOS (YouTube, educational, professional content):
-    - Each caption should be 8-12 words maximum
+    - Each caption should be 14 words maximum
     - Prioritize complete phrases and natural speech breaks
-    - Allow longer captions for better readability and comprehension
-    - Focus on maintaining sentence structure and meaning
+    - Allow longer captions for better readability and comprehension, try to not cut off the sentence in the middle if possible
     
     FOR SHORT-FORM VIDEOS (TikTok, Reels, Shorts):
-    - Each caption should be 3-6 words maximum
+    - Each caption should be 2-6 words
     - Use punchy, impactful phrases
     - Break at natural speech pauses for maximum engagement
     - Prioritize key words and emotional impact
@@ -290,16 +289,16 @@ const transcriptionSystemInstruction = `
     EXAMPLE OUTPUT FOR LONG-FORM (with precise millisecond timing):
     1
     00:00:01,230 --> 00:00:04,780
-    Today I want to share something incredible
+    Today I want to share something incredible with you
     
     2
     00:00:04,950 --> 00:00:08,340
-    that happened to me last week
+    that happened to me last week at work
     
     EXAMPLE OUTPUT FOR SHORT-FORM (with precise millisecond timing):
     1
     00:00:01,120 --> 00:00:02,670
-    This is crazy!
+    This is crazy
     
     2
     00:00:02,840 --> 00:00:04,150
@@ -814,8 +813,8 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
         // Determine the prompt based on video format
         const isShortForm = videoFormat === 'short_vertical';
         const formatPrompt = isShortForm 
-            ? 'This is SHORT-FORM content (TikTok/Reels/Shorts). Use 3-6 words per caption for maximum impact and engagement.'
-            : 'This is LONG-FORM content (YouTube/educational). Use 8-12 words per caption for better readability and comprehension.';
+            ? 'This is SHORT-FORM content (TikTok/Reels/Shorts). Use EXACTLY 4-5 words per caption for consistency and maximum impact.'
+            : 'This is LONG-FORM content (YouTube/educational). Use EXACTLY 8-10 words per caption for consistency and better readability.';
 
         const content = createUserContent([
             `Please listen to this audio/video content carefully and DETECT the language being spoken. Transcribe it accurately in the ORIGINAL LANGUAGE (do not translate). 

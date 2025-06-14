@@ -13,6 +13,7 @@ router.post(
     '/generate',
     // Validate request body
     check('trackId').isUUID().withMessage('Invalid track ID'),
+    check('aspectRatio').optional().isIn(['vertical', 'horizontal']).withMessage('Invalid aspect ratio'),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             // Handle validation errors
@@ -24,7 +25,7 @@ router.post(
             }
 
             const { user } = req as AuthenticatedRequest
-            const { trackId } = req.body
+            const { trackId, aspectRatio } = req.body
 
             console.log('=== TRANSCRIPTION REQUEST ===')
             console.log('User:', user.id)
@@ -134,19 +135,16 @@ router.post(
 
             console.log('Generated signed URL for transcription')
 
-            // 9) Determine video format based on clip duration (since aspect_ratio is not stored in DB)
-            const clipDuration = longestClip.timeline_end_ms - longestClip.timeline_start_ms
-            
-            // Determine if this is short-form content based on duration only
-            // Short-form: duration < 2 minutes (common for TikTok, Instagram Reels, YouTube Shorts)
-            const isShortDuration = clipDuration < 120000 // 2 minutes in ms
-            const videoFormat = isShortDuration ? 'short_vertical' : 'long_horizontal'
+            // 9) Determine video format based on user-selected aspect ratio
+            // If no aspect ratio provided, default to horizontal (long-form)
+            const selectedAspectRatio = aspectRatio || 'horizontal'
+            const videoFormat = selectedAspectRatio === 'vertical' ? 'short_vertical' : 'long_horizontal'
             
             console.log('Video format detection:', {
-                durationMs: clipDuration,
-                durationSeconds: Math.round(clipDuration / 1000),
-                isShortDuration,
-                detectedFormat: videoFormat
+                providedAspectRatio: aspectRatio,
+                selectedAspectRatio,
+                detectedFormat: videoFormat,
+                reasoning: 'Based on user aspect ratio selection (vertical = short-form, horizontal = long-form)'
             })
 
             // 10) Generate transcription using Gemini
