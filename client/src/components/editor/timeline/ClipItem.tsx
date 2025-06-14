@@ -71,6 +71,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
     const isText = clip.type === 'text' || clip.type === 'caption'
     const isExternalAsset = clip.properties?.externalAsset
     const isVoiceover = isAudio && asset?.name?.toLowerCase().includes('voiceover')
+    const isTransition = clip.properties?.isTransition === true
 
     // Get the media URL - prioritize external asset URL over regular asset URL
     const externalAssetUrl = isExternalAsset?.url
@@ -714,7 +715,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
                       'border-transparent hover:border-gray-400'}
-                    ${!isVideo && !isImage ? (isAudio ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600') : ''}
+                    ${isTransition ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600' :
+                      !isVideo && !isImage ? (isAudio ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600') : ''}
                     ${isShiftHeld ? 'cursor-move border-blue-300 shadow-lg' : 'cursor-grab active:cursor-grabbing'}
                     select-none overflow-hidden
                 `}
@@ -835,6 +837,33 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         {/* Duration for audio */}
                         <div className="absolute bottom-1 right-1 text-xs opacity-90">
                             {formatTime(durationMs)}
+                        </div>
+                    </div>
+                )}
+
+                {/* Transition Content */}
+                {isTransition && (
+                    <div className="flex flex-col items-center justify-center w-full h-full relative">
+                        <div className="flex flex-col items-center">
+                            <div className="text-lg mb-1">
+                                {clip.properties?.transitionType === 'fade' && '🌅'}
+                                {clip.properties?.transitionType === 'slide' && '➡️'}
+                                {clip.properties?.transitionType === 'zoom' && '🔍'}
+                                {clip.properties?.transitionType === 'wipe' && '▶️'}
+                                {clip.properties?.transitionType === 'dissolve' && '✨'}
+                                {clip.properties?.transitionType === 'iris' && '👁️'}
+                                {clip.properties?.transitionType === 'flip' && '🔄'}
+                                {clip.properties?.transitionType === 'blur' && '🌫️'}
+                                {!['fade', 'slide', 'zoom', 'wipe', 'dissolve', 'iris', 'flip', 'blur'].includes(clip.properties?.transitionType || '') && '⚡'}
+                            </div>
+                            <div className="text-xs font-medium text-center leading-tight">
+                                {clip.properties?.name || 'Transition'}
+                            </div>
+                        </div>
+                        
+                        {/* Duration for transition */}
+                        <div className="absolute bottom-1 right-1 text-xs opacity-90 bg-black/60 px-1 rounded">
+                            {(durationMs / 1000).toFixed(1)}s
                         </div>
                     </div>
                 )}
