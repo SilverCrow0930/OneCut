@@ -8,6 +8,10 @@ import { useAssets } from '@/contexts/AssetsContext'
 import { formatTime } from '@/lib/utils'
 import TextClipItem from './TextClipItem'
 
+// Constants for thumbnail generation
+const MAX_THUMBNAILS = 10
+const MIN_THUMB_WIDTH = 32
+
 // Optimized drag state management
 interface DragState {
     isDragging: boolean
@@ -65,21 +69,35 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
     // Find the asset details
     const asset = assets.find(a => a.id === clip.assetId)
-    const isVideo = asset?.mime_type.startsWith('video/')
-    const isImage = asset?.mime_type.startsWith('image/')
-    const isAudio = asset?.mime_type.startsWith('audio/')
+    const externalAsset = clip.properties?.externalAsset
+    
+    // Determine media type - check external asset first, then regular asset
+    const mediaType = externalAsset?.type || asset?.mime_type || 'unknown'
+    const isVideo = mediaType.startsWith('video/') || externalAsset?.type === 'video'
+    const isImage = mediaType.startsWith('image/') || externalAsset?.type === 'image'  
+    const isAudio = mediaType.startsWith('audio/') || externalAsset?.type === 'audio'
     const isText = clip.type === 'text' || clip.type === 'caption'
-    const isExternalAsset = clip.properties?.externalAsset
-    const isVoiceover = isAudio && asset?.name?.toLowerCase().includes('voiceover')
+    const isExternalAsset = !!externalAsset
+    const isVoiceover = isAudio && (asset?.name?.toLowerCase().includes('voiceover') || externalAsset?.name?.toLowerCase().includes('voiceover'))
 
+    // Get thumbnail URL - prefer external asset thumbnail, then regular asset URL
+    const thumbnailUrl = externalAsset?.thumbnail || url
+    
+    // Get asset name for display
+    const assetName = externalAsset?.name || asset?.name || 'Unknown'
+    
     // Get the source duration
-    const assetDuration = asset?.duration ?? 0
+    const assetDuration = externalAsset?.duration || asset?.duration || 0
 
     // convert ms → px with optimized calculation
     const left = isResizing ? currentLeft : 
                  dragState.isDragging ? dragState.currentLeft : 
                  clip.timelineStartMs * timeScale
     const width = isResizing ? currentWidth : (clip.timelineEndMs - clip.timelineStartMs) * timeScale
+
+    // Calculate thumbnail width and clip duration
+    const thumbWidth = Math.max(MIN_THUMB_WIDTH, Math.floor(width / Math.min(MAX_THUMBNAILS, Math.floor(width / MIN_THUMB_WIDTH))))
+    const durationMs = clip.timelineEndMs - clip.timelineStartMs
 
     // If it's a text clip, use the TextClipItem component
     if (isText) {
@@ -290,13 +308,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         }
     }
 
-    // Limit the number of thumbnails to prevent performance issues
-    const MAX_THUMBNAILS = 4
-    const thumbWidth = Math.max(width / MAX_THUMBNAILS, 32)
-    const thumbHeight = '100%'
 
-    // Calculate duration in milliseconds
-    const durationMs = clip.timelineEndMs - clip.timelineStartMs
 
     const handleResizeStart = (e: React.MouseEvent, type: 'start' | 'end') => {
         e.preventDefault()
@@ -737,7 +749,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 />
 
                 {/* Enhanced Content based on type */}
-                {isVideo && url && (
+                {isVideo && thumbnailUrl && (
                     <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800">
                         <div className="flex w-full h-full">
                             {Array.from({ length: Math.min(MAX_THUMBNAILS, Math.floor(width / 32)) }, (_, i) => (
@@ -746,7 +758,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                     className="flex-shrink-0 h-full bg-cover bg-center border-r border-gray-600 last:border-r-0"
                                     style={{
                                         width: `${thumbWidth}px`,
-                                        backgroundImage: `url(${url})`,
+                                        backgroundImage: `url(${thumbnailUrl})`,
                                         backgroundSize: 'cover',
                                         backgroundPosition: 'center'
                                     }}
@@ -761,19 +773,52 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                 </svg>
                             </div>
                         </div>
-                        {/* Video label */}
+                        {/* Video label with asset source indicator */}
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                            VIDEO
+                            {isExternalAsset ? 'STOCK VIDEO' : 'VIDEO'}
                         </div>
-                                        </div>
+                        {/* Asset name if it fits */}
+                        {width > 100 && (
+                            <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded max-w-[calc(100%-2rem)] truncate">
+                                {assetName}
+                            </div>
+                        )}
+                    </div>
                 )}
 
-                {isImage && url && (
+                {/* Fallback for videos without thumbnails */}
+                {isVideo && !thumbnailUrl && (
+                    <div className="w-full h-full overflow-hidden rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
+                        {/* Large play icon */}
+                        <div className="flex flex-col items-center space-y-2">
+                            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                            </svg>
+                            {width > 80 && (
+                                <div className="text-xs text-white/90 text-center">
+                                    {isExternalAsset ? 'STOCK' : 'VIDEO'}
+                                </div>
+                            )}
+                        </div>
+                        {/* Video label */}
+                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                            {isExternalAsset ? 'STOCK VIDEO' : 'VIDEO'}
+                        </div>
+                        {/* Asset name */}
+                        {width > 100 && (
+                            <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded max-w-[calc(100%-2rem)] truncate">
+                                {assetName}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {isImage && thumbnailUrl && (
                     <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800 relative">
                         <div
                             className="w-full h-full bg-cover bg-center"
                             style={{
-                                backgroundImage: `url(${url})`,
+                                backgroundImage: `url(${thumbnailUrl})`,
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center'
                             }}
@@ -782,12 +827,45 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         <div className="absolute top-1 right-1 bg-black/60 rounded p-1">
                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                                            </svg>
-                                        </div>
+                            </svg>
+                        </div>
+                        {/* Image label with asset source indicator */}
+                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                            {isExternalAsset ? 'STOCK IMAGE' : 'IMAGE'}
+                        </div>
+                        {/* Asset name if it fits */}
+                        {width > 100 && (
+                            <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded max-w-[calc(100%-2rem)] truncate">
+                                {assetName}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Fallback for images without thumbnails */}
+                {isImage && !thumbnailUrl && (
+                    <div className="w-full h-full overflow-hidden rounded-lg bg-gradient-to-r from-green-600 to-green-800 flex items-center justify-center">
+                        {/* Large image icon */}
+                        <div className="flex flex-col items-center space-y-2">
+                            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                            </svg>
+                            {width > 80 && (
+                                <div className="text-xs text-white/90 text-center">
+                                    {isExternalAsset ? 'STOCK' : 'IMAGE'}
+                                </div>
+                            )}
+                        </div>
                         {/* Image label */}
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                            IMAGE
+                            {isExternalAsset ? 'STOCK IMAGE' : 'IMAGE'}
                         </div>
+                        {/* Asset name */}
+                        {width > 100 && (
+                            <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded max-w-[calc(100%-2rem)] truncate">
+                                {assetName}
+                            </div>
+                        )}
                     </div>
                 )}
 
