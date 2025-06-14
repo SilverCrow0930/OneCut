@@ -122,7 +122,7 @@ const transitions: Transition[] = [
 const TransitionsToolPanel = () => {
     const { executeCommand, tracks, clips, selectedClipId } = useEditor()
     const [selectedTransition, setSelectedTransition] = useState<string | null>(null)
-    const [showInstructions, setShowInstructions] = useState(true)
+    const [activeTab, setActiveTab] = useState<'clips' | 'between'>('clips')
 
     // Get all video clips that can have transitions
     const getVideoClips = () => {
@@ -352,225 +352,241 @@ const TransitionsToolPanel = () => {
                 <p className="text-sm text-gray-600">Add smooth transitions to your clips</p>
             </div>
 
-            {/* Instructions */}
-            {showInstructions && (
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <h4 className="text-sm font-semibold text-blue-800 mb-2">💡 How Transitions Work</h4>
-                            <ul className="text-xs text-blue-700 space-y-1">
-                                <li>• Apply fade in/out to individual clips</li>
-                                <li>• Create crossfades between adjacent clips</li>
-                                <li>• Transitions adapt to clip duration automatically</li>
-                            </ul>
-                        </div>
-                        <button
-                            onClick={() => setShowInstructions(false)}
-                            className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                            ✕
-                        </button>
-                    </div>
-                </div>
-            )}
-            
-            {/* Individual Clips */}
-            <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-700">Individual Clips</h4>
-                
-                {videoClips.map((clip, index) => {
-                    const track = tracks.find(t => t.id === clip.trackId)
-                    return (
-                        <div key={clip.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                            {/* Clip Info */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="text-sm font-medium text-gray-700">
-                                        Track {track?.index ? track.index + 1 : '?'} • Clip {index + 1}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                        {((clip.timelineEndMs - clip.timelineStartMs) / 1000).toFixed(1)}s
-                                    </div>
-                                </div>
-                                
-                                <div className="flex gap-2">
-                                    {clip.properties?.transitionIn && (
-                                        <button
-                                            onClick={() => removeTransitionFromClip(clip, 'in')}
-                                            className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
-                                        >
-                                            Remove In
-                                        </button>
-                                    )}
-                                    {clip.properties?.transitionOut && (
-                                        <button
-                                            onClick={() => removeTransitionFromClip(clip, 'out')}
-                                            className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
-                                        >
-                                            Remove Out
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Transition In Options */}
-                            <div className="space-y-2">
-                                <div className="text-xs font-medium text-gray-600">Fade In Transitions</div>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {transitions.filter(t => t.position === 'in').map((transition) => (
-                                        <button
-                                            key={transition.id}
-                                            onClick={() => applyTransitionToClip(transition, clip, 'in')}
-                                            disabled={!!clip.properties?.transitionIn}
-                                            className={`
-                                                relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 
-                                                transition-all duration-200 hover:scale-105 active:scale-95
-                                                ${selectedTransition === transition.id 
-                                                    ? 'border-blue-500 bg-blue-50 shadow-lg' 
-                                                    : clip.properties?.transitionIn
-                                                    ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                                                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
-                                                }
-                                                group cursor-pointer disabled:cursor-not-allowed
-                                            `}
-                                        >
-                                            <div className="text-sm group-hover:scale-110 transition-transform">
-                                                {transition.icon}
-                                            </div>
-                                            <div className="text-xs font-medium text-gray-800 text-center leading-tight">
-                                                {transition.name}
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                {(transition.duration / 1000).toFixed(1)}s
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Transition Out Options */}
-                            <div className="space-y-2">
-                                <div className="text-xs font-medium text-gray-600">Fade Out Transitions</div>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {transitions.filter(t => t.position === 'out').map((transition) => (
-                                        <button
-                                            key={transition.id}
-                                            onClick={() => applyTransitionToClip(transition, clip, 'out')}
-                                            disabled={!!clip.properties?.transitionOut}
-                                            className={`
-                                                relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 
-                                                transition-all duration-200 hover:scale-105 active:scale-95
-                                                ${selectedTransition === transition.id 
-                                                    ? 'border-blue-500 bg-blue-50 shadow-lg' 
-                                                    : clip.properties?.transitionOut
-                                                    ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                                                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
-                                                }
-                                                group cursor-pointer disabled:cursor-not-allowed
-                                            `}
-                                        >
-                                            <div className="text-sm group-hover:scale-110 transition-transform">
-                                                {transition.icon}
-                                            </div>
-                                            <div className="text-xs font-medium text-gray-800 text-center leading-tight">
-                                                {transition.name}
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                {(transition.duration / 1000).toFixed(1)}s
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )
-                })}
+            {/* Tab Navigation */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                    onClick={() => setActiveTab('clips')}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                        activeTab === 'clips'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                >
+                    Individual Clips ({videoClips.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('between')}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                        activeTab === 'between'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                >
+                    Between Clips ({adjacentPairs.length})
+                </button>
             </div>
 
-            {/* Adjacent Clip Pairs */}
-            {adjacentPairs.length > 0 && (
+            {/* Tab Content */}
+            {activeTab === 'clips' && (
                 <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-gray-700">Between Clips</h4>
-                    
-                    {adjacentPairs.map((pair, index) => (
-                        <div key={`${pair.clip1.id}-${pair.clip2.id}`} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                            {/* Clip Pair Info */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="text-sm font-medium text-gray-700">
-                                        Track {pair.track.index + 1}
+                    {videoClips.map((clip, index) => {
+                        const track = tracks.find(t => t.id === clip.trackId)
+                        return (
+                            <div key={clip.id} className="border border-gray-200 rounded-lg p-4 space-y-4">
+                                {/* Clip Header */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-sm font-medium text-gray-700">
+                                            Track {track?.index ? track.index + 1 : '?'} • Clip {index + 1}
+                                        </div>
+                                        <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                            {((clip.timelineEndMs - clip.timelineStartMs) / 1000).toFixed(1)}s
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                                        <span className="bg-blue-100 px-2 py-1 rounded">
-                                            Clip {clips.findIndex(c => c.id === pair.clip1.id) + 1}
-                                        </span>
-                                        <span>→</span>
-                                        <span className="bg-blue-100 px-2 py-1 rounded">
-                                            Clip {clips.findIndex(c => c.id === pair.clip2.id) + 1}
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                {hasTransition(pair.clip1, pair.clip2) && (
-                                    <button
-                                        onClick={() => removeTransitionBetweenClips(pair.clip1, pair.clip2)}
-                                        className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
-                                    >
-                                        Remove Transition
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Gap Info */}
-                            {pair.gap > 0 && (
-                                <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-                                    ⚠️ {(pair.gap / 1000).toFixed(1)}s gap between clips
-                                </div>
-                            )}
-
-                            {/* Transition Options */}
-                            <div className="grid grid-cols-4 gap-2">
-                                {transitions.filter(t => t.position === 'between').map((transition) => (
-                                    <button
-                                        key={transition.id}
-                                        onClick={() => applyTransitionBetweenClips(transition, pair.clip1, pair.clip2)}
-                                        disabled={hasTransition(pair.clip1, pair.clip2)}
-                                        className={`
-                                            relative flex flex-col items-center gap-1 p-3 rounded-lg border-2 
-                                            transition-all duration-200 hover:scale-105 active:scale-95
-                                            ${selectedTransition === transition.id 
-                                                ? 'border-blue-500 bg-blue-50 shadow-lg' 
-                                                : hasTransition(pair.clip1, pair.clip2)
-                                                ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
-                                            }
-                                            group cursor-pointer disabled:cursor-not-allowed
-                                        `}
-                                    >
-                                        {/* Transition Icon */}
-                                        <div className="text-lg group-hover:scale-110 transition-transform">
-                                            {transition.icon}
-                                        </div>
-                                        
-                                        {/* Transition Name */}
-                                        <div className="text-xs font-medium text-gray-800 text-center leading-tight">
-                                            {transition.name}
-                                        </div>
-                                        
-                                        {/* Duration */}
-                                        <div className="text-xs text-gray-500">
-                                            {(transition.duration / 1000).toFixed(1)}s
-                                        </div>
-                                        
-                                        {/* Selection Indicator */}
-                                        {selectedTransition === transition.id && (
-                                            <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                    
+                                    <div className="flex gap-2">
+                                        {clip.properties?.transitionIn && (
+                                            <button
+                                                onClick={() => removeTransitionFromClip(clip, 'in')}
+                                                className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
+                                            >
+                                                Remove In
+                                            </button>
                                         )}
-                                    </button>
-                                ))}
+                                        {clip.properties?.transitionOut && (
+                                            <button
+                                                onClick={() => removeTransitionFromClip(clip, 'out')}
+                                                className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
+                                            >
+                                                Remove Out
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Transition Options in Two Columns */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Fade In Column */}
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-medium text-gray-600 flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                            Fade In
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {transitions.filter(t => t.position === 'in').map((transition) => (
+                                                <button
+                                                    key={transition.id}
+                                                    onClick={() => applyTransitionToClip(transition, clip, 'in')}
+                                                    disabled={!!clip.properties?.transitionIn}
+                                                    className={`
+                                                        relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 
+                                                        transition-all duration-200 hover:scale-105 active:scale-95
+                                                        ${selectedTransition === transition.id 
+                                                            ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                                                            : clip.properties?.transitionIn
+                                                            ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                                                            : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50'
+                                                        }
+                                                        group cursor-pointer disabled:cursor-not-allowed
+                                                    `}
+                                                >
+                                                    <div className="text-sm group-hover:scale-110 transition-transform">
+                                                        {transition.icon}
+                                                    </div>
+                                                    <div className="text-xs font-medium text-gray-800 text-center leading-tight">
+                                                        {transition.name}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {(transition.duration / 1000).toFixed(1)}s
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Fade Out Column */}
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-medium text-gray-600 flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                                            Fade Out
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {transitions.filter(t => t.position === 'out').map((transition) => (
+                                                <button
+                                                    key={transition.id}
+                                                    onClick={() => applyTransitionToClip(transition, clip, 'out')}
+                                                    disabled={!!clip.properties?.transitionOut}
+                                                    className={`
+                                                        relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 
+                                                        transition-all duration-200 hover:scale-105 active:scale-95
+                                                        ${selectedTransition === transition.id 
+                                                            ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                                                            : clip.properties?.transitionOut
+                                                            ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                                                            : 'border-gray-200 hover:border-red-300 hover:bg-red-50/50'
+                                                        }
+                                                        group cursor-pointer disabled:cursor-not-allowed
+                                                    `}
+                                                >
+                                                    <div className="text-sm group-hover:scale-110 transition-transform">
+                                                        {transition.icon}
+                                                    </div>
+                                                    <div className="text-xs font-medium text-gray-800 text-center leading-tight">
+                                                        {transition.name}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {(transition.duration / 1000).toFixed(1)}s
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+
+            {activeTab === 'between' && (
+                <div className="space-y-4">
+                    {adjacentPairs.length === 0 ? (
+                        <div className="text-center py-8 space-y-3">
+                            <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
+                                <span className="text-xl">🔗</span>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-medium text-gray-700 mb-1">No Adjacent Clips</h4>
+                                <p className="text-xs text-gray-500">
+                                    Add more video clips close together to create crossfade transitions.
+                                </p>
                             </div>
                         </div>
-                    ))}
+                    ) : (
+                        adjacentPairs.map((pair, index) => (
+                            <div key={`${pair.clip1.id}-${pair.clip2.id}`} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                                {/* Clip Pair Header */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-sm font-medium text-gray-700">
+                                            Track {pair.track.index + 1}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <span className="bg-blue-100 px-2 py-1 rounded">
+                                                Clip {clips.findIndex(c => c.id === pair.clip1.id) + 1}
+                                            </span>
+                                            <span>→</span>
+                                            <span className="bg-blue-100 px-2 py-1 rounded">
+                                                Clip {clips.findIndex(c => c.id === pair.clip2.id) + 1}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    {hasTransition(pair.clip1, pair.clip2) && (
+                                        <button
+                                            onClick={() => removeTransitionBetweenClips(pair.clip1, pair.clip2)}
+                                            className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
+                                        >
+                                            Remove Transition
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Gap Warning */}
+                                {pair.gap > 0 && (
+                                    <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                                        ⚠️ {(pair.gap / 1000).toFixed(1)}s gap between clips
+                                    </div>
+                                )}
+
+                                {/* Transition Options */}
+                                <div className="grid grid-cols-3 gap-2">
+                                    {transitions.filter(t => t.position === 'between').map((transition) => (
+                                        <button
+                                            key={transition.id}
+                                            onClick={() => applyTransitionBetweenClips(transition, pair.clip1, pair.clip2)}
+                                            disabled={hasTransition(pair.clip1, pair.clip2)}
+                                            className={`
+                                                relative flex flex-col items-center gap-1 p-3 rounded-lg border-2 
+                                                transition-all duration-200 hover:scale-105 active:scale-95
+                                                ${selectedTransition === transition.id 
+                                                    ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                                                    : hasTransition(pair.clip1, pair.clip2)
+                                                    ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                                                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                                                }
+                                                group cursor-pointer disabled:cursor-not-allowed
+                                            `}
+                                        >
+                                            <div className="text-lg group-hover:scale-110 transition-transform">
+                                                {transition.icon}
+                                            </div>
+                                            <div className="text-xs font-medium text-gray-800 text-center leading-tight">
+                                                {transition.name}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                                {(transition.duration / 1000).toFixed(1)}s
+                                            </div>
+                                            
+                                            {selectedTransition === transition.id && (
+                                                <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             )}
         </div>
