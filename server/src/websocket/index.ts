@@ -69,6 +69,36 @@ export const setupWebSocket = async (httpServer: HttpServer): Promise<Server> =>
         io.on('connection', (socket: Socket) => {
             console.log(`[WebSocket] Client connected: ${socket.id}`);
 
+            // Chat message handler for AI assistant
+            socket.on('chat_message', async (data: { message: string, useIdeation?: boolean }) => {
+                console.log(`[WebSocket] Chat message received from ${socket.id}:`, data.message);
+                
+                try {
+                    // Emit thinking state
+                    socket.emit('state_change', { state: 'thinking' });
+                    
+                    // Use the generateContent function with empty signedUrl for chat
+                    const response = await generateContent(data.message, '', '', undefined, undefined);
+                    
+                    // Send the response back
+                    socket.emit('chat_message', { 
+                        text: response.textOutput.text 
+                    });
+                    
+                    // Reset state
+                    socket.emit('state_change', { state: 'idle' });
+                    
+                } catch (error) {
+                    console.error('[WebSocket] Chat error:', error);
+                    
+                    socket.emit('chat_message', { 
+                        text: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.` 
+                    });
+                    
+                    socket.emit('state_change', { state: 'idle' });
+                }
+            });
+
             // QuickClips handler
             socket.on('quickclips', async (data: {
                 fileUri: string,

@@ -20,8 +20,16 @@ interface ChatMessage {
 }
 
 const Assistant = () => {
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+        {
+            id: 1,
+            message: "👋 Welcome to your AI video assistant! I'm here to help you edit your videos intelligently.\n\n🎬 **What I can do:**\n• Analyze your video content\n• Find specific scenes or moments\n• Remove silent parts automatically\n• Cut at natural speech breaks\n• Add captions, text, and transitions\n• Suggest improvements\n\n💡 **Try asking me:**\n• \"Remove all silent parts\"\n• \"Find scenes where someone is speaking\"\n• \"Add captions to this video\"\n• \"Cut this clip at natural breaks\"\n\nJust type your request below and I'll help you edit like a pro! ✨",
+            sender: 'assistant',
+            type: 'text'
+        }
+    ])
     const [state, setState] = useState<string>('idle')
+    const [isWebSocketConnected, setIsWebSocketConnected] = useState<boolean>(false)
     const socketRef = useRef<Socket | null>(null)
     const [message, setMessage] = useState<string>("")
     const { session } = useAuth()
@@ -103,10 +111,12 @@ const Assistant = () => {
         // Log connection events
         socketRef.current.on('connect', () => {
             console.log('WebSocket connected successfully');
+            setIsWebSocketConnected(true);
         });
 
         socketRef.current.on('connect_error', (error) => {
             console.error('WebSocket connection error:', error);
+            setIsWebSocketConnected(false);
         });
 
         socketRef.current.on('disconnect', (reason) => {
@@ -115,6 +125,7 @@ const Assistant = () => {
                 // Server initiated disconnect, try to reconnect
                 socketRef.current?.connect();
             }
+            setIsWebSocketConnected(false);
         });
 
         socketRef.current.on('reconnect_attempt', (attemptNumber) => {
@@ -176,9 +187,10 @@ const Assistant = () => {
 
         setState('thinking');
 
-        try {
-            if (isInitialized && assistant) {
-                // Use the new AI assistant
+        // PRIORITY 1: Try the new AI assistant system first (best UX with tool integration)
+        if (isInitialized && assistant) {
+            try {
+                console.log('Using advanced AI assistant system');
                 const response = await processRequest(message);
                 
                 let assistantMessage: ChatMessage = {
@@ -209,23 +221,87 @@ const Assistant = () => {
                     }]);
                 }
 
-            } else {
-                // Fallback to socket-based chat
-                if (socketRef.current) {
-                    socketRef.current.emit('chat_message', { message, useIdeation });
-                }
+                setState('idle');
+                return; // Success - exit early
+                
+            } catch (error) {
+                console.log('Advanced AI assistant failed, falling back to WebSocket chat:', error);
+                // Don't return here - fall through to WebSocket fallback
             }
-        } catch (error) {
-            console.error('Message processing failed:', error);
-            setChatMessages(prev => [...prev, {
-                id: prev.length + 2,
-                message: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                sender: 'assistant',
-                type: 'error'
-            }]);
-        } finally {
-            setState('idle');
         }
+
+        // PRIORITY 2: Fall back to WebSocket chat system (maintains functionality)
+        if (socketRef.current && socketRef.current.connected) {
+            try {
+                console.log('Using WebSocket chat fallback');
+                
+                // Set up one-time listeners for this specific message
+                const messageHandler = (data: { text: string }) => {
+                    setChatMessages(prev => [...prev, {
+                        id: prev.length + 1,
+                        message: data.text,
+                        sender: 'assistant',
+                        type: 'text'
+                    }]);
+                    setState('idle');
+                    
+                    // Clean up listeners
+                    socketRef.current?.off('chat_message', messageHandler);
+                    socketRef.current?.off('state_change', stateHandler);
+                };
+
+                const stateHandler = (data: { state: string }) => {
+                    setState(data.state);
+                };
+
+                socketRef.current.on('chat_message', messageHandler);
+                socketRef.current.on('state_change', stateHandler);
+                
+                // Send the message
+                socketRef.current.emit('chat_message', { message, useIdeation });
+                
+                // Set timeout to clean up if no response
+                setTimeout(() => {
+                    socketRef.current?.off('chat_message', messageHandler);
+                    socketRef.current?.off('state_change', stateHandler);
+                }, 30000); // 30 second timeout
+                
+                return; // WebSocket request sent - exit early
+                
+            } catch (error) {
+                console.error('WebSocket chat also failed:', error);
+                // Fall through to final error handling
+            }
+        }
+
+        // PRIORITY 3: Final fallback - show helpful error message
+        console.error('All AI systems failed, showing error message');
+        setChatMessages(prev => [...prev, {
+            id: prev.length + 2,
+            message: `🔌 **Connection Issue**
+            
+I'm having trouble connecting to the AI services right now. Here are some things you can try:
+
+**Immediate Solutions:**
+• Refresh the page and try again
+• Check your internet connection
+• Try a simpler request like "help" or "what can you do"
+
+**If the issue persists:**
+• The server may need to be restarted
+• AI services might be temporarily unavailable
+
+**What I can still help with:**
+• General video editing guidance
+• Tool explanations and tutorials
+• Best practices and tips
+
+Try asking: "What editing tools are available?" or "How do I add captions?"`,
+            sender: 'assistant',
+            type: 'error'
+        }]);
+        
+        setState('idle');
     };
 
     const handleExecuteCommands = async (commands: any[]) => {
@@ -253,10 +329,19 @@ const Assistant = () => {
     const getStatusMessage = () => {
         if (!isInitialized) return "Initializing AI assistant...";
         if (isAnalyzing) return "Analyzing video content...";
-        if (!hasVideoAnalysis) return "Ready (no video analysis)";
         if (state === 'thinking') return "Thinking...";
         if (state === 'executing') return "Executing commands...";
-        return "Ready with video understanding";
+        
+        // Show which system is available
+        if (isInitialized && assistant && hasVideoAnalysis) {
+            return "🧠 Advanced AI ready (with video understanding)";
+        } else if (isInitialized && assistant) {
+            return "🤖 Advanced AI ready (upload video for full features)";
+        } else if (isWebSocketConnected) {
+            return "💬 Chat AI ready (basic functionality)";
+        } else {
+            return "⚠️ Connecting to AI services...";
+        }
     };
 
     return (
@@ -269,6 +354,9 @@ const Assistant = () => {
                 {getStatusMessage()}
                 {hasVideoAnalysis && (
                     <span className="ml-2 text-green-600">🧠 Video analyzed</span>
+                )}
+                {isWebSocketConnected && isInitialized && (
+                    <span className="ml-2 text-blue-600">💬 Chat backup</span>
                 )}
             </div>
 
