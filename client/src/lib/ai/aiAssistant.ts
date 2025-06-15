@@ -8,6 +8,7 @@ import type { Clip, Track, Command } from '@/types/editor';
 
 export interface AIAssistantConfig {
   projectId: string;
+  accessToken?: string;
   editorContext: {
     clips: Clip[];
     tracks: Track[];
@@ -180,19 +181,25 @@ export class AIAssistant {
     const context = this.buildContext();
     
     try {
-      console.log('Making AI request to /api/ai/assistant');
+      console.log('Making AI request to /api/v1/ai/assistant');
       console.log('Request payload:', {
         prompt: request,
         hasSemanticJSON: !!this.semanticJSON,
         timelineClips: context.timeline.clips.length
       });
 
-      const response = await fetch('/api/ai/assistant', {
+      // Get the access token from the session
+      const accessToken = this.getAccessToken();
+      if (!accessToken) {
+        throw new Error('No access token available. Please refresh the page and try again.');
+      }
+
+      const response = await fetch('/api/v1/ai/assistant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
-        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           prompt: request,
           semanticJSON: this.semanticJSON,
@@ -393,6 +400,16 @@ export class AIAssistant {
     return this.semanticJSON !== null;
   }
 
+  updateConfig(config: AIAssistantConfig): void {
+    this.config = config;
+    // Update command parser context with new timeline state
+    this.commandParser.updateContext(
+      this.semanticJSON, 
+      this.config.editorContext.clips, 
+      this.config.editorContext.tracks
+    );
+  }
+
   private provideLocalResponse(request: string, parsedCommand: ParsedCommand): AIResponse {
     const lowerRequest = request.toLowerCase();
     
@@ -515,5 +532,36 @@ ${!this.hasVideoAnalysis() ? '📹 **Video analysis required.** Please upload a 
 
 ${!this.hasVideoAnalysis() ? '\n💡 **Tip:** Upload a video to unlock advanced AI editing features!' : ''}`
     };
+  }
+
+  private getAccessToken(): string | null {
+    // First try to use the provided access token from config
+    if (this.config.accessToken) {
+      return this.config.accessToken;
+    }
+    
+    // Fallback: try to get the access token from various sources
+    try {
+      // Check if we're in a browser environment
+      if (typeof window !== 'undefined') {
+        // Try to get from localStorage (common pattern in Next.js apps)
+        const supabaseSession = localStorage.getItem('sb-' + window.location.hostname.replace(/\./g, '-') + '-auth-token');
+        if (supabaseSession) {
+          const session = JSON.parse(supabaseSession);
+          return session.access_token;
+        }
+        
+        // Alternative: try to get from a global context or state
+        // This would need to be injected properly in a production app
+        const globalAuth = (window as any).__SUPABASE_SESSION__;
+        if (globalAuth?.access_token) {
+          return globalAuth.access_token;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to get access token:', error);
+    }
+    
+    return null;
   }
 } 
