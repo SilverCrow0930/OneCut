@@ -134,8 +134,13 @@ export class AIAssistant {
       return await this.executeToolActions(parsedCommand);
     }
 
-    // STEP 3: Fall back to AI for complex requests
-    return await this.processWithAI(request, parsedCommand);
+    // STEP 3: Try AI first, but fall back to local responses if it fails
+    try {
+      return await this.processWithAI(request, parsedCommand);
+    } catch (error) {
+      console.log('AI processing failed, providing local response:', error);
+      return this.provideLocalResponse(request, parsedCommand);
+    }
   }
 
   private async executeToolActions(parsedCommand: ParsedCommand): Promise<AIResponse> {
@@ -175,11 +180,19 @@ export class AIAssistant {
     const context = this.buildContext();
     
     try {
+      console.log('Making AI request to /api/ai/assistant');
+      console.log('Request payload:', {
+        prompt: request,
+        hasSemanticJSON: !!this.semanticJSON,
+        timelineClips: context.timeline.clips.length
+      });
+
       const response = await fetch('/api/ai/assistant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           prompt: request,
           semanticJSON: this.semanticJSON,
@@ -188,11 +201,16 @@ export class AIAssistant {
         })
       });
 
+      console.log('AI API response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`AI request failed: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('AI API error response:', errorText);
+        throw new Error(`AI request failed (${response.status}): ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
       }
 
       const result = await response.json();
+      console.log('AI API result:', result);
       
       if (!result.response) {
         throw new Error('No response from AI assistant');
@@ -209,9 +227,32 @@ export class AIAssistant {
       
     } catch (error) {
       console.error('AI request processing failed:', error);
+      
+      // Provide more specific error messages
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return {
+          type: 'text',
+          content: `🔌 Connection error: Unable to reach the AI service. Please check your internet connection and try again.`
+        };
+      }
+      
+      if (error instanceof Error && error.message.includes('401')) {
+        return {
+          type: 'text',
+          content: `🔐 Authentication error: Please refresh the page and try again.`
+        };
+      }
+      
+      if (error instanceof Error && error.message.includes('500')) {
+        return {
+          type: 'text',
+          content: `🛠️ Server error: The AI service is temporarily unavailable. Please try again in a moment.`
+        };
+      }
+      
       return {
         type: 'text',
-        content: `I encountered an error processing your request: ${error instanceof Error ? error.message : 'Unknown error'}. Please try rephrasing your request.`
+        content: `❌ I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try rephrasing your request or check the console for more details.`
       };
     }
   }
@@ -350,5 +391,129 @@ export class AIAssistant {
 
   hasVideoAnalysis(): boolean {
     return this.semanticJSON !== null;
+  }
+
+  private provideLocalResponse(request: string, parsedCommand: ParsedCommand): AIResponse {
+    const lowerRequest = request.toLowerCase();
+    
+    // Handle common requests locally
+    if (lowerRequest.includes('help') || lowerRequest.includes('what can you do')) {
+      return {
+        type: 'text',
+        content: `🎬 **I can help you with:**
+
+**Content Analysis & Search:**
+• Find specific scenes or moments
+• Search for when someone speaks
+• Locate visual elements
+
+**Editing Operations:**
+• Remove silent parts
+• Cut at natural speech breaks
+• Trim clips precisely
+• Split clips at timestamps
+
+**Tool Integration:**
+• Add captions automatically
+• Insert text overlays
+• Apply transitions
+• Generate voiceovers
+• Add stickers and effects
+
+**Smart Suggestions:**
+• Improve pacing and flow
+• Organize similar content
+• Optimize for different platforms
+
+💡 **Try asking me:**
+• "Remove all silent parts"
+• "Find scenes where John is speaking"
+• "Add captions to this video"
+• "Cut this clip at natural breaks"
+• "Add a fade transition between clips"
+
+*Note: Some advanced features require video analysis. Upload a video to unlock full AI capabilities!*`
+      };
+    }
+
+    if (lowerRequest.includes('analyze') || lowerRequest.includes('analysis')) {
+      return {
+        type: 'text',
+        content: `🧠 **Video Analysis**
+
+To analyze your video and unlock intelligent editing features:
+
+1. **Upload a video** to your project
+2. I'll automatically analyze the content to understand:
+   • Scene descriptions and timing
+   • Speech transcription
+   • Visual composition
+   • Music and audio elements
+
+3. **Once analyzed**, I can help with:
+   • Precise content search
+   • Intelligent editing suggestions
+   • Automated editing operations
+
+${!this.hasVideoAnalysis() ? '📹 **No video analysis available yet.** Upload a video to get started!' : '✅ **Video analysis complete!** I understand your content and can help with intelligent editing.'}`
+      };
+    }
+
+    if (lowerRequest.includes('caption') || lowerRequest.includes('subtitle')) {
+      return {
+        type: 'tool_actions',
+        content: `📝 **Adding Captions**
+
+I can help you add captions to your video! Here are your options:
+
+• **Auto-generate captions** from speech
+• **Choose caption style** (short-form, professional, default)
+• **Customize timing and appearance**
+
+Would you like me to generate captions for your video?`,
+        toolActions: [{
+          toolName: 'CaptionsToolPanel',
+          action: 'generateCaptions',
+          parameters: { style: 'default' },
+          description: 'Generate captions with default style'
+        }]
+      };
+    }
+
+    if (lowerRequest.includes('silent') || lowerRequest.includes('quiet') || lowerRequest.includes('remove silence')) {
+      return {
+        type: 'text',
+        content: `🔇 **Removing Silent Parts**
+
+To remove silent parts from your video, I need to:
+
+1. **Analyze the audio** to detect silence
+2. **Identify speech segments** vs quiet moments  
+3. **Create precise cuts** to remove gaps
+
+${!this.hasVideoAnalysis() ? '📹 **Video analysis required.** Please upload a video first so I can analyze the audio and detect silent parts.' : '🎵 **Ready to remove silence!** I can detect quiet moments and create smooth cuts. Would you like me to proceed?'}`
+      };
+    }
+
+    // Default response for unrecognized requests
+    return {
+      type: 'text',
+      content: `🤔 I'm not sure how to help with "${request}" right now.
+
+**Here's what I can do:**
+• Search and find content
+• Add captions and text
+• Apply transitions and effects
+• Remove silent parts
+• Provide editing suggestions
+
+**Try asking:**
+• "Help me with captions"
+• "What can you do?"
+• "Remove silent parts"
+• "Find scenes where someone speaks"
+
+${!this.hasVideoAnalysis() ? '\n💡 **Tip:** Upload a video to unlock advanced AI editing features!' : ''}`
+    };
   }
 } 
