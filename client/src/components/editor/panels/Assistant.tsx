@@ -92,6 +92,10 @@ const Assistant = () => {
     }, [error, clearError]);
 
     useEffect(() => {
+        if (!session?.access_token || !session?.user?.id) {
+            return;
+        }
+
         // Initialize socket connection with proper configuration
         socketRef.current = io(API_URL, {
             transports: ['websocket'],  // Force WebSocket only
@@ -105,7 +109,11 @@ const Assistant = () => {
             autoConnect: true,
             forceNew: true,
             upgrade: false,  // Disable transport upgrade
-            rememberUpgrade: false
+            rememberUpgrade: false,
+            auth: {
+                userId: session.user.id,
+                token: session.access_token
+            }
         });
 
         // Log connection events
@@ -164,7 +172,7 @@ const Assistant = () => {
                 socketRef.current.disconnect()
             }
         }
-    }, [])
+    }, [session?.access_token, session?.user?.id])
 
     const handleVideoAnalysis = async (videoUrl: string, mimeType: string) => {
         try {
