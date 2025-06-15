@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateVideoAnalysis, generateAIAssistantResponse } from '../integrations/googleGenAI';
+import { generateVideoAnalysis, generateAIAssistantResponse } from '../integrations/googleGenAI.js';
 
 const router = express.Router();
 
