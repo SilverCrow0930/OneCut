@@ -180,14 +180,14 @@ export class AIAssistant {
     const context = this.buildContext();
     
     try {
-      console.log('Making AI request to /api/ai/assistant');
+      console.log('Making AI request to /api/assistant');
       console.log('Request payload:', {
         prompt: request,
         hasSemanticJSON: !!this.semanticJSON,
         timelineClips: context.timeline.clips.length
       });
 
-      const response = await fetch('/api/ai/assistant', {
+      const response = await fetch('/api/assistant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

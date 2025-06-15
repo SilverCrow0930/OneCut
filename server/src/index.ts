@@ -29,15 +29,32 @@ const productionOrigins = [
     'https://lemona-app.onrender.com'
 ]
 
-const allowedOrigins = NODE_ENV === 'production'
-    ? [...productionOrigins, ...(ALLOWED_ORIGINS?.split(',').filter(Boolean) || [])]
-    : ['http://localhost:3000']
+// Always allow production origins, plus any additional ones from env
+const allowedOrigins = [
+    ...productionOrigins,
+    ...(ALLOWED_ORIGINS?.split(',').filter(Boolean) || [])
+]
+
+// Add localhost only in development
+if (NODE_ENV === 'development') {
+    allowedOrigins.push('http://localhost:3000')
+}
 
 console.log('[CORS] Environment:', NODE_ENV)
 console.log('[CORS] Allowed origins:', allowedOrigins)
 
 const corsOptions = {
-    origin: allowedOrigins,
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true)
+        
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true)
+        }
+        
+        console.log('[CORS] Blocked origin:', origin)
+        return callback(new Error('Not allowed by CORS'))
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -53,19 +70,32 @@ app.use(bodyParser.json({ limit: '10mb' }))
 
 app.use(morgan('dev'))
 
+// Health check endpoint (no auth required)
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: NODE_ENV,
+        port: PORT,
+        allowedOrigins: allowedOrigins
+    })
+})
+
+// Google GenAI Assistant routes (protected)
+console.log('[Server] Mounting Google GenAI Assistant routes at /api/assistant');
+app.use(
+    '/api/assistant',
+    authenticate,
+    aiRouter
+)
+
 // protect everything under /api
+console.log('[Server] Mounting main API routes at /api/v1');
 app.use(
     '/api/v1',
     authenticate,
     updateLastLogin,
     apiRouter
-)
-
-// AI routes (protected)
-app.use(
-    '/api/ai',
-    authenticate,
-    aiRouter
 )
 
 const server = http.createServer(app);
