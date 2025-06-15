@@ -9,6 +9,7 @@ import http from 'http'
 import { authenticate } from './middleware/authenticate.js'
 import { updateLastLogin } from './middleware/updateLastLogin.js'
 import apiRouter from './api/index.js'
+import aiRouter from './routes/ai.js'
 import { setupWebSocket } from './websocket/index.js'
 
 dotenv.config();
@@ -58,6 +59,13 @@ app.use(
     authenticate,
     updateLastLogin,
     apiRouter
+)
+
+// AI routes (protected)
+app.use(
+    '/api/ai',
+    authenticate,
+    aiRouter
 )
 
 const server = http.createServer(app);

@@ -365,6 +365,133 @@ const textStyleSystemInstruction = `
     }
 `
 
+const videoAnalysisSystemInstruction = `
+You are a professional video analysis AI specialized in creating semantic JSON files for video editing.
+
+Your task is to analyze a video and create a structured JSON representation that will serve as a "codebase" for AI-assisted video editing.
+
+CRITICAL REQUIREMENTS:
+1. DETAILED descriptions and visuals (2-3 sentences each)
+2. BRIEF keywords and other fields (1-2 words/sentences)
+3. PRECISE timing in milliseconds
+4. COMPLETE coverage of the video content
+
+OUTPUT FORMAT - Return ONLY valid JSON in this exact structure:
+{
+  "metadata": {
+    "duration_ms": number,
+    "resolution": {"width": number, "height": number},
+    "analyzed_at": "ISO_timestamp",
+    "file_id": "unique_identifier"
+  },
+  "scenes": [
+    {
+      "start_ms": number,
+      "end_ms": number,
+      "description": "DETAILED 2-3 sentence description of what's happening, including actions, context, and significance",
+      "keywords": ["keyword1", "keyword2", "keyword3"],
+      "speaker": "brief_identifier_if_applicable",
+      "visual": "DETAILED 2-3 sentence description of visual composition, camera work, lighting, and visual elements"
+    }
+  ],
+  "audio": {
+    "speech": [
+      {
+        "start_ms": number,
+        "end_ms": number,
+        "text": "exact_transcription",
+        "speaker": "speaker_id"
+      }
+    ],
+    "music": [
+      {
+        "start_ms": number,
+        "end_ms": number,
+        "type": "background|intro|outro"
+      }
+    ]
+  },
+  "timeline": {
+    "clips": [
+      {
+        "id": "clip_1",
+        "start_ms": 0,
+        "end_ms": number,
+        "type": "video",
+        "source_start_ms": 0,
+        "source_end_ms": number
+      }
+    ]
+  }
+}
+
+ANALYSIS GUIDELINES:
+- Scene descriptions: Focus on narrative significance, emotional context, and editing relevance
+- Visual descriptions: Include camera angles, composition, lighting, color, movement
+- Keywords: Choose terms useful for search and editing decisions
+- Timing: Be precise to the millisecond for accurate editing
+- Coverage: Ensure no gaps in timeline coverage
+
+Remember: This JSON will be used by AI to make intelligent editing decisions, so prioritize information that helps with:
+- Finding specific content
+- Understanding narrative flow
+- Making cut decisions
+- Applying appropriate effects
+- Maintaining visual consistency
+`;
+
+const aiAssistantSystemInstruction = `
+You are Melody, an AI video editing assistant with access to a semantic JSON "codebase" of the video content.
+
+Your capabilities:
+1. UNDERSTAND video content through semantic JSON analysis
+2. EXECUTE editing commands through the timeline system
+3. SEARCH and FIND specific content using the semantic data
+4. SUGGEST intelligent edits based on content understanding
+5. PERFORM batch operations efficiently
+
+SEMANTIC JSON STRUCTURE:
+- metadata: Basic video information
+- scenes: Detailed scene descriptions with timing
+- audio: Speech transcription and music segments  
+- timeline: Current clip arrangement
+
+AVAILABLE COMMANDS:
+- ADD_CLIP: Add new clips to timeline
+- REMOVE_CLIP: Remove clips from timeline
+- UPDATE_CLIP: Modify clip properties (timing, speed, volume)
+- ADD_TRACK: Create new tracks
+- REMOVE_TRACK: Delete tracks
+- BATCH: Execute multiple commands together
+
+RESPONSE FORMATS:
+1. For text responses: Provide helpful explanation
+2. For commands: Return JSON array of Command objects in \`\`\`json code blocks
+3. For suggestions: Offer multiple options with descriptions
+
+EDITING PRINCIPLES:
+1. Use semantic JSON to understand content context
+2. Make precise cuts based on speech/scene boundaries
+3. Maintain narrative flow and pacing
+4. Consider visual composition when making cuts
+5. Batch similar operations for efficiency
+
+Always explain your reasoning and ask for confirmation before major changes.
+
+COMMAND EXAMPLES:
+\`\`\`json
+[
+  {
+    "type": "UPDATE_CLIP",
+    "payload": {
+      "before": {"id": "clip_1", "timelineStartMs": 0, "timelineEndMs": 30000},
+      "after": {"id": "clip_1", "timelineStartMs": 0, "timelineEndMs": 15000}
+    }
+  }
+]
+\`\`\`
+`;
+
 const waitForFileActive = async (fileId: string, delayMs = 5000) => {
     let attempt = 0;
     let lastState: string | undefined = '';
@@ -982,62 +1109,283 @@ export const generateTextStyle = async (stylePrompt: string, sampleText: string 
     }
 }
 
-// const ans = {
-//     "candidates": [{
-//         "content": {
-//             "parts": [
-//                 {
-//                     "thought": true,
-//                     "text": `
-//                         **Analysis of Video Editing Request**\n\nOkay, I understand the task. 
-//                         The user wants me to edit a video, specifically to create a 40-60 second clip from it.  
-//                         They've given me a very specific format to follow: I need to define the start and end points of each cut, 
-//                         write a description of that section, and provide captions for each cut, making sure the sum of all captions equals the video's transcript. 
-//                         The goal is to make the final clip interesting, captivating, and engaging, and to avoid using any introduction or conclusion.\n\n
-//                         The challenge is that the only \"video\" provided is a snippet, a mere 9-second clip of a stressed man at his laptop (0:00-0:09). 
-//                         There's no audio, no transcript, and critically, the video itself, only a timestamp range.  This makes the task *impossible* to fulfill as requested. 
-//                         I can't create a 40-60 second video from a 9-second clip!\n\nMy initial thoughts are, \"This is tough!  I'm missing key information.\"  
-//                         The prompt specifies \"watch this video,\" so I have to assume I'm supposed to *see* something. 
-//                         Given the information and the provided timestamp range, the video exists, but is currently absent.\n\n
-//                         I've checked the constraints: I *understand* the format the user wants. I need to make cuts, I need to format the cuts as `src_start`, `src_end`, `description`, and `captions`. 
-//                         The user wants me to make sure the captions are at most 5 words, and the sum of the captions represents the transcript. 
-//                         If the video was provided and had a transcript I could use the information to achieve these goals.\n\n
-//                         Here's my analysis:\n
-//                         1.  **Length Requirement:**  I cannot create a clip of the desired length (40-60 seconds) from a 9-second source. This constraint is not met.\n
-//                         2.  **Transcript/Captions:**  No audio or transcript is provided, making it impossible to generate accurate captions aligned with the dialogue. This constraint is not met.\n
-//                         3.  **Content Engagement:**  The lack of video content or transcript makes it hard to analyze and make an engaging video.\n
-//                         4.  **Format:** I *understand* the desired output format, but am unable to execute it fully without the necessary resources.\n\n
-//                         In an ideal world, if I *had* the full video (say, a 2-minute video) and a transcript, I would approach this by:\n\n
-//                         1.  **Watching the entire video:** I'd get a sense of the narrative, the key points, and the flow.\n
-//                         2.  **Identifying Key Moments:** I'd look for visually engaging scenes, moments of tension, resolution, or humor – things that would draw the viewer in.\n
-//                         3.  **Structuring the Narrative:** I'd try to craft a mini-story within the 40-60 second timeframe, focusing on a clear beginning, middle, and end, or at least a compelling \"slice of life.\"\n
-//                         4.  **Selecting Cuts:** I'd strategically choose start and end points for each cut, considering pacing and flow.\n
-//                         5.  **Crafting Descriptions:** I would write concise descriptions to give the viewer a visual context.\n
-//                         6.  **Writing Captions:** I'd extract key phrases and translate them into concise captions, keeping within the 5-word limit and aiming for a transcript-like feel.\n\n
-//                         **Since I only have a 9-second clip and no transcript,** I'll have to *demonstrate* the output format and *explain* the limitation.  
-//                         I will use the full 9-second clip as a single cut, showing how I *would* approach the task *if* I had the real content.\n\n
-//                         Here's a sample cut, based on the *assumption* that this 9-second clip is part of a larger video about work stress.\n\n```json\n[\n  {\n    \"src_start\": 0,\n    \"src_end\": 9000,\n    \"description\": \"Opening shot establishing the protagonist's initial struggle and frustration with his work, setting the stage for the rest of the narrative.\",\n    \"captions\": [\n      \"Feeling the pressure\",\n      \"Overwhelmed by work\",\n      \"Stressed and frustrated\"\n    ]\n  }\n]\n```\n\n**Important Note:** *This is not a complete 40-60 second clip.* This example merely shows my *understanding* of the format and the type of *approach* I would take with the real video content.  This is what I *would* do if the full video and audio transcript were provided. Without those, I'm unable to create the finished product`
-//                 },
-//                 {
-//                     "text": "The provided video clip is 9 seconds long (0:00 to 0:09). Unfortunately, I cannot create a video clip of 40 to 60 seconds from a source video that is only 9 seconds long.\n\nTo demonstrate how I would approach this task if a longer video were provided, I will make a cut from the available 9-second clip, assuming it would be part of a larger narrative. Please note that the captions are inferred from the visual content as no transcript was provided for this short clip.\n\nHere is a sample cut based on the provided video:\n\n```json\n[\n  {\n    \"src_start\": 0,\n    \"src_end\": 9000,\n    \"description\": \"This shot captures the man's initial feeling of overwhelm and frustration, setting up a problem that would ideally be resolved later in a longer video. His gestures convey deep stress and exhaustion.\",\n    \"captions\": [\n      \"Overwhelmed by the task\",\n      \"Feeling the pressure\",\n      \"Deep in thought\",\n      \"Struggling to cope\",\n      \"Work stress hits\"\n    ]\n  }\n]\n```"
-//                 }
-//             ],
-//             "role": "model"
-//         }, "finishReason": "STOP", "index": 0
-//     }],
-//     "modelVersion": "models/gemini-2.5-flash-preview-05-20",
-//     "usageMetadata": {
-//         "promptTokenCount": 2804,
-//         "candidatesTokenCount": 254,
-//         "totalTokenCount": 4424,
-//         "promptTokensDetails": [{
-//             "modality": "TEXT",
-//             "tokenCount": 174
-//         },
-//         {
-//             "modality": "VIDEO",
-//             "tokenCount": 2630
-//         }],
-//         "thoughtsTokenCount": 1366
-//     }
-// }
+export const generateVideoAnalysis = async (signedUrl: string, mimeType: string) => {
+    console.log('=== GOOGLE GENAI VIDEO ANALYSIS STARTED ===');
+    console.log('Input parameters:', {
+        mimeType,
+        signedUrlLength: signedUrl.length
+    });
+
+    try {
+        // Download the video file
+        console.log('Starting video file download for analysis...');
+        const controller = new AbortController();
+        const fileResponse = await fetch(signedUrl, {
+            signal: controller.signal,
+        });
+
+        if (!fileResponse.ok) {
+            console.error('Download failed:', {
+                status: fileResponse.status,
+                statusText: fileResponse.statusText,
+                headers: Object.fromEntries(fileResponse.headers.entries())
+            });
+            throw new Error(`Failed to download video file: ${fileResponse.status} ${fileResponse.statusText}`);
+        }
+
+        console.log('Download successful, reading file buffer...');
+        const buffer = await Promise.race([
+            fileResponse.arrayBuffer(),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Buffer read timeout')), 24 * 60 * 60 * 1000)
+            )
+        ]) as ArrayBuffer;
+
+        console.log('File details:', {
+            sizeBytes: buffer.byteLength,
+            sizeMB: (buffer.byteLength / (1024 * 1024)).toFixed(2),
+            mimeType
+        });
+
+        if (buffer.byteLength === 0) {
+            throw new Error('Video file is empty');
+        }
+
+        const blob = new Blob([buffer], { type: mimeType });
+        console.log('Blob created for analysis:', {
+            size: blob.size,
+            type: blob.type
+        });
+
+        // Upload the file to Google GenAI
+        console.log('Initiating file upload to Google GenAI for analysis...');
+        const uploadStartTime = Date.now();
+        const uploadPromise = ai.files.upload({
+            file: blob,
+            config: { mimeType: mimeType }
+        });
+
+        const uploadedFile = await Promise.race([
+            uploadPromise,
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('File upload timeout')), 24 * 60 * 60 * 1000)
+            )
+        ]);
+
+        console.log('File upload completed for analysis:', {
+            duration: `${((Date.now() - uploadStartTime) / 1000).toFixed(2)}s`,
+            fileUri: uploadedFile.uri,
+            fileName: uploadedFile.name
+        });
+
+        if (!uploadedFile.uri) {
+            throw new Error('Failed to upload file to Google GenAI');
+        }
+
+        if (!uploadedFile.name) {
+            throw new Error('File name not returned from upload');
+        }
+
+        console.log('Waiting for file to become active for analysis...');
+        try {
+            await waitForFileActive(uploadedFile.name);
+            console.log('File is now active, proceeding with analysis');
+        } catch (error) {
+            console.error('Error waiting for file to become active:', {
+                error: error instanceof Error ? {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                } : error
+            });
+            throw new Error(`Video processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        const analysisPrompt = `
+        Analyze this video completely and create a semantic JSON file.
+        
+        REQUIREMENTS:
+        1. Create detailed scene descriptions (2-3 sentences each)
+        2. Create detailed visual descriptions (2-3 sentences each) 
+        3. Extract all speech with precise timing
+        4. Identify all scene changes and transitions
+        5. Note any background music or sound effects
+        6. Provide accurate millisecond timing for everything
+        
+        Focus on creating a comprehensive "codebase" that an AI video editor can use to:
+        - Understand the content and context
+        - Make intelligent editing decisions
+        - Find specific moments or content
+        - Apply appropriate effects and transitions
+        
+        Return ONLY the JSON structure, no additional text.
+        `;
+
+        const content = createUserContent([
+            analysisPrompt,
+            createPartFromUri(uploadedFile.uri, mimeType)
+        ]);
+
+        console.log('Sending content to model for analysis...');
+        const modelStartTime = Date.now();
+        const modelResponse = await Promise.race([
+            ai.models.generateContent({
+                model: model,
+                contents: [content],
+                config: {
+                    systemInstruction: videoAnalysisSystemInstruction,
+                    maxOutputTokens: 8192,
+                    temperature: 0.3, // Lower temperature for more consistent analysis
+                    topP: 0.8,
+                    topK: 40,
+                },
+            }).catch((error: any) => {
+                console.error('Gemini API analysis error details:', {
+                    message: error.message,
+                    status: error.status,
+                    code: error.code,
+                    details: error.details,
+                    stack: error.stack
+                });
+                
+                if (error.message?.includes('503') || error.status === 503) {
+                    throw new Error('got status: 503 Service Unavailable. The AI service is temporarily overloaded. Please try again in a few minutes.');
+                } else if (error.message?.includes('quota') || error.message?.includes('limit')) {
+                    throw new Error('API quota or rate limit exceeded. Please try again later.');
+                } else if (error.message?.includes('timeout')) {
+                    throw new Error('Request timed out. Please try with a shorter video.');
+                } else {
+                    throw error;
+                }
+            }),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Model generation timeout after 24 hours')), 24 * 60 * 60 * 1000)
+            )
+        ]);
+
+        console.log('Model analysis completed:', {
+            duration: `${((Date.now() - modelStartTime) / 1000).toFixed(2)}s`,
+            hasCandidates: !!modelResponse.candidates,
+            candidateCount: modelResponse.candidates?.length
+        });
+
+        if (!modelResponse.candidates) {
+            throw new Error('No candidates found in response')
+        }
+
+        if (!modelResponse.candidates?.[0]?.content?.parts) {
+            throw new Error('No parts found in response')
+        }
+
+        const analysisOutput = modelResponse.candidates[0].content.parts
+            .find((part: any) => !('thought' in part))?.text;
+
+        console.log('Model analysis output:', {
+            length: analysisOutput?.length || 0,
+            preview: analysisOutput?.substring(0, 200) + '...'
+        });
+
+        // Parse the JSON output
+        let semanticJSON;
+        try {
+            // Extract JSON from the response (in case there's extra text)
+            const jsonMatch = analysisOutput?.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                semanticJSON = JSON.parse(jsonMatch[0]);
+            } else {
+                semanticJSON = JSON.parse(analysisOutput || '{}');
+            }
+        } catch (parseError) {
+            console.error('Failed to parse analysis JSON:', parseError);
+            throw new Error('AI generated invalid analysis format');
+        }
+
+        // Add metadata
+        semanticJSON.metadata = {
+            ...semanticJSON.metadata,
+            analyzed_at: new Date().toISOString(),
+            file_id: uploadedFile.name
+        };
+
+        console.log('=== GOOGLE GENAI VIDEO ANALYSIS COMPLETED ===');
+        return {
+            analysis: semanticJSON
+        }
+    }
+    catch (error) {
+        console.error('=== GOOGLE GENAI VIDEO ANALYSIS FAILED ===');
+        console.error('Error details:', {
+            error: error instanceof Error ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            } : error,
+            timestamp: new Date().toISOString()
+        });
+        throw error;
+    }
+}
+
+export const generateAIAssistantResponse = async (prompt: string, semanticJSON?: any, currentTimeline?: any) => {
+    console.log('=== GOOGLE GENAI AI ASSISTANT RESPONSE STARTED ===');
+    console.log('Input parameters:', {
+        promptLength: prompt.length,
+        hasSemanticJSON: !!semanticJSON,
+        hasTimeline: !!currentTimeline
+    });
+
+    try {
+        let contextPrompt = `USER REQUEST: "${prompt}"`;
+        
+        if (semanticJSON) {
+            contextPrompt += `\n\nSEMANTIC JSON CODEBASE:\n${JSON.stringify(semanticJSON, null, 2)}`;
+        }
+        
+        if (currentTimeline) {
+            contextPrompt += `\n\nCURRENT TIMELINE STATE:\n${JSON.stringify(currentTimeline, null, 2)}`;
+        }
+        
+        contextPrompt += `\n\nBased on the semantic JSON "codebase" and current timeline state, help the user with their request.`;
+
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: [{ role: 'user', parts: [{ text: contextPrompt }] }],
+            config: {
+                systemInstruction: aiAssistantSystemInstruction,
+                maxOutputTokens: 4096,
+                temperature: 0.7,
+                topP: 0.8,
+                topK: 40,
+            },
+        });
+
+        console.log('AI assistant response completed');
+
+        if (!response.candidates?.[0]?.content?.parts?.[0]?.text) {
+            throw new Error('No response from AI assistant model');
+        }
+
+        const responseText = response.candidates[0].content.parts[0].text;
+        
+        console.log('AI assistant output:', {
+            length: responseText.length,
+            preview: responseText.substring(0, 200) + '...'
+        });
+
+        console.log('=== GOOGLE GENAI AI ASSISTANT RESPONSE COMPLETED ===');
+        return {
+            response: responseText
+        };
+    } catch (error) {
+        console.error('=== GOOGLE GENAI AI ASSISTANT RESPONSE FAILED ===');
+        console.error('Error details:', {
+            error: error instanceof Error ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            } : error,
+            timestamp: new Date().toISOString()
+        });
+        throw error;
+    }
+}

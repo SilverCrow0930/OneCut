@@ -353,28 +353,6 @@ const TransitionsToolPanel = () => {
                 <p className="text-sm text-gray-600">Add smooth transitions to your clips</p>
             </div>
             
-            {/* Instructions */}
-            {showInstructions && (
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <h4 className="text-sm font-semibold text-blue-800 mb-2">💡 How Transitions Work</h4>
-                            <ul className="text-xs text-blue-700 space-y-1">
-                                <li>• Apply fade in/out to individual clips</li>
-                                <li>• Create crossfades between adjacent clips</li>
-                                <li>• Transitions adapt to clip duration automatically</li>
-                            </ul>
-                        </div>
-                        <button
-                            onClick={() => setShowInstructions(false)}
-                            className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                            ✕
-                        </button>
-                    </div>
-                </div>
-            )}
-            
             {/* Tab Toggle */}
             <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
