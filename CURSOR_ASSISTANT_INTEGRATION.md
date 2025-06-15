@@ -1,8 +1,8 @@
-# Cursor-Style AI Assistant Integration Guide
+# Enhanced AI Assistant Integration Guide
 
 ## 🎯 Overview
 
-I've successfully created a Cursor-style AI assistant chat box for Lemona with all the requested features:
+I've successfully created an enhanced AI assistant chat box for Lemona with all the requested features:
 
 1. ✅ **AI Most Recent Edits** - Accept/reject functionality
 2. ✅ **@ Mentions** - Dropdown menu with search for available tools
@@ -14,11 +14,11 @@ I've successfully created a Cursor-style AI assistant chat box for Lemona with a
 ## 📁 New Components Created
 
 ### Core Components
-- `client/src/components/editor/assistant/CursorChatTextField.tsx` - Enhanced input with @ mentions, mode selection, file upload
-- `client/src/components/editor/assistant/CursorChatHistory.tsx` - Tabbed interface with chat and AI edits
+- `client/src/components/editor/assistant/AssistantChatTextField.tsx` - Enhanced input with @ mentions, mode selection, file upload
+- `client/src/components/editor/assistant/AssistantChatHistory.tsx` - Tabbed interface with chat and AI edits
 - `client/src/components/editor/assistant/AIEditsPanel.tsx` - Manage AI edits with accept/reject
-- `client/src/components/editor/panels/CursorAssistant.tsx` - Main component integrating all features
-- `client/src/components/editor/panels/CursorAssistantDemo.tsx` - Demo component showing usage
+- `client/src/components/editor/panels/EnhancedAssistant.tsx` - Main component integrating all features
+- `client/src/components/editor/panels/EnhancedAssistantDemo.tsx` - Demo component showing usage
 
 ## 🚀 Key Features
 
@@ -81,10 +81,10 @@ interface Tool {
 import Assistant from './panels/Assistant'
 
 // With:
-import CursorAssistant from './panels/CursorAssistant'
+import EnhancedAssistant from './panels/EnhancedAssistant'
 
 // Then use:
-<CursorAssistant />
+<EnhancedAssistant />
 ```
 
 ### Step 2: Update Tool Definitions
@@ -109,7 +109,7 @@ The component automatically:
 
 ## 🎨 UI/UX Features
 
-### Modern Cursor-Style Design
+### Modern Professional Design
 - **Clean Input Field**: Multi-line with auto-resize
 - **Professional Tabs**: Custom tab implementation with badges
 - **Status Indicators**: Real-time feedback on AI capabilities
@@ -196,7 +196,7 @@ The component automatically:
 
 ### Configuration
 ```typescript
-// Update available tools list in CursorAssistant.tsx
+// Update available tools list in EnhancedAssistant.tsx
 const availableTools: Tool[] = [
   // Your specific tools here
 ];
@@ -223,6 +223,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 ## 🎉 Conclusion
 
-The new Cursor-style AI assistant provides a professional, feature-rich interface that matches modern AI development tools. It maintains backward compatibility while adding powerful new capabilities for video editing workflows.
+The new Enhanced AI assistant provides a professional, feature-rich interface that matches modern AI development tools. It maintains backward compatibility while adding powerful new capabilities for video editing workflows.
 
 The implementation is production-ready and can be integrated immediately into the existing Lemona editor. 

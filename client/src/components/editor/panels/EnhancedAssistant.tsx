@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { io, Socket } from 'socket.io-client'
 import ChatHeader from '../assistant/ChatHeader'
-import CursorChatHistory from '../assistant/CursorChatHistory'
-import CursorChatTextField from '../assistant/CursorChatTextField'
+import AssistantChatHistory from '../assistant/AssistantChatHistory'
+import AssistantChatTextField from '../assistant/AssistantChatTextField'
 import { API_URL } from '@/lib/config'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAIAssistant } from '@/contexts/AIAssistantContext'
@@ -44,7 +44,7 @@ interface Tool {
     icon: string;
 }
 
-const CursorAssistant = () => {
+const EnhancedAssistant = () => {
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
     const [aiEdits, setAiEdits] = useState<AIEdit[]>([])
     const [state, setState] = useState<string>('idle')
@@ -356,7 +356,7 @@ const CursorAssistant = () => {
 
             {/* Chat History with AI Edits */}
             <div className="flex-1 overflow-hidden">
-                <CursorChatHistory
+                <AssistantChatHistory
                     chatMessages={chatMessages}
                     aiEdits={aiEdits}
                     state={state}
@@ -370,7 +370,7 @@ const CursorAssistant = () => {
 
             {/* Enhanced Chat Input */}
             <div className="p-3 border-t border-gray-200">
-                <CursorChatTextField
+                <AssistantChatTextField
                     onSend={handleSendMessage}
                     message={message}
                     setMessage={setMessage}
@@ -382,4 +382,4 @@ const CursorAssistant = () => {
     )
 }
 
-export default CursorAssistant
+export default EnhancedAssistant

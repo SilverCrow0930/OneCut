@@ -1,8 +1,8 @@
 import React from 'react';
-import CursorAssistant from './CursorAssistant';
+import EnhancedAssistant from './EnhancedAssistant';
 
 /**
- * Demo component showing how to integrate the new Cursor-style AI Assistant
+ * Demo component showing how to integrate the new Enhanced AI Assistant
  * 
  * Features implemented:
  * 1. ✅ AI most recent edits with accept/reject functionality
@@ -13,28 +13,28 @@ import CursorAssistant from './CursorAssistant';
  * 6. ✅ Enhanced send button
  * 
  * Usage:
- * - Replace the existing Assistant component with CursorAssistant
+ * - Replace the existing Assistant component with EnhancedAssistant
  * - Or use this demo to test the new features
  */
 
-const CursorAssistantDemo: React.FC = () => {
+const EnhancedAssistantDemo: React.FC = () => {
   return (
     <div className="w-full h-full">
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h3 className="text-lg font-semibold text-blue-900 mb-2">
-          🎬 Cursor-Style AI Assistant Demo
+          🎬 Enhanced AI Assistant Demo
         </h3>
         <div className="text-sm text-blue-800 space-y-1">
           <p><strong>✅ AI Edits Panel:</strong> View and manage AI's recent edits with accept/reject</p>
           <p><strong>✅ @ Mentions:</strong> Type @ to mention tools (Captions, Text, Transitions, etc.)</p>
           <p><strong>✅ Agent/Ask Modes:</strong> Choose between automatic actions or suggestions</p>
           <p><strong>✅ File Upload:</strong> Attach files to your messages</p>
-          <p><strong>✅ Enhanced UX:</strong> Cursor-like interface with tabs and status indicators</p>
+          <p><strong>✅ Enhanced UX:</strong> Modern interface with tabs and status indicators</p>
         </div>
       </div>
       
       <div className="h-96 border border-gray-300 rounded-lg overflow-hidden">
-        <CursorAssistant />
+        <EnhancedAssistant />
       </div>
       
       <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
@@ -61,4 +61,4 @@ const CursorAssistantDemo: React.FC = () => {
   );
 };
 
-export default CursorAssistantDemo; 
+export default EnhancedAssistantDemo; 

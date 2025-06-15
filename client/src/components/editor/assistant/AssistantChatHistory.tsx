@@ -31,7 +31,7 @@ interface AIEdit {
   commands?: any[];
 }
 
-interface CursorChatHistoryProps {
+interface AssistantChatHistoryProps {
   chatMessages: ChatMessage[];
   aiEdits: AIEdit[];
   state: string;
@@ -68,7 +68,7 @@ const formatTime = (ms: number): string => {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-const CursorChatHistory: React.FC<CursorChatHistoryProps> = ({
+const AssistantChatHistory: React.FC<AssistantChatHistoryProps> = ({
   chatMessages,
   aiEdits,
   state,
@@ -312,4 +312,4 @@ const CursorChatHistory: React.FC<CursorChatHistoryProps> = ({
   );
 };
 
-export default CursorChatHistory; 
+export default AssistantChatHistory; 

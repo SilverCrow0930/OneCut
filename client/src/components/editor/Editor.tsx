@@ -5,7 +5,7 @@ import { useEditor } from '@/contexts/EditorContext'
 import { AIAssistantProvider } from '@/contexts/AIAssistantContext'
 import ToolBar from './ToolBar'
 import ToolPanel from './ToolPanel'
-import Assistant from './panels/Assistant'
+import EnhancedAssistant from './panels/EnhancedAssistant'
 import ResizeHandle from './ResizeHandle'
 import EditorContent from './EditorContent'
 import { useParams } from 'next/navigation'
@@ -338,7 +338,7 @@ const Editor = () => {
                             className="absolute -left-2 z-10"
                             onResize={handleAssistantResize}
                         />
-                        <Assistant />
+                        <EnhancedAssistant />
                     </div>
                 </div>
             </div>
