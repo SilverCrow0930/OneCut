@@ -45,12 +45,18 @@ const Editor = () => {
         canRedo
     } = useEditor()
     const params = useParams()
-    
-    // Initialize assistant width from localStorage or default to 384
-    const [assistantWidth, setAssistantWidth] = useState(() => {
-        const saved = localStorage.getItem('lemona-assistant-width')
-        return saved ? parseInt(saved, 10) : 384
-    })
+    const [assistantWidth, setAssistantWidth] = useState(384)
+
+    // Load assistant width from localStorage on mount
+    useEffect(() => {
+        const savedWidth = localStorage.getItem('lemona-assistant-width')
+        if (savedWidth) {
+            const width = parseInt(savedWidth, 10)
+            if (width >= 200 && width <= 800) {
+                setAssistantWidth(width)
+            }
+        }
+    }, [])
 
     const handleAssistantResize = (deltaX: number) => {
         const newWidth = Math.max(200, Math.min(800, assistantWidth - deltaX))
