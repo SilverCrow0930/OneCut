@@ -9,7 +9,7 @@ import http from 'http'
 import { authenticate } from './middleware/authenticate.js'
 import { updateLastLogin } from './middleware/updateLastLogin.js'
 import apiRouter from './api/index.js'
-import aiRouter from './routes/ai.js'
+import geminiAiRouter from './routes/ai.js'
 import { setupWebSocket } from './websocket/index.js'
 
 dotenv.config();
@@ -90,7 +90,7 @@ console.log('[Server] API v1 routes mounted at /api/v1');
 app.use(
     '/api/ai',
     authenticate,
-    aiRouter
+    geminiAiRouter
 )
 
 console.log('[Server] AI routes mounted at /api/ai');
