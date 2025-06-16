@@ -22,14 +22,14 @@ interface AIEdit {
 }
 
 const AVAILABLE_TOOLS: ToolMention[] = [
-    { id: 'captions', name: 'Captions Tool', description: 'Generate and edit video captions', icon: '📝' },
-    { id: 'text', name: 'Text Tool', description: 'Add text overlays and titles', icon: '🔤' },
-    { id: 'transitions', name: 'Transitions Tool', description: 'Apply video transitions', icon: '🎬' },
-    { id: 'voiceover', name: 'Voiceover Tool', description: 'Generate AI voiceovers', icon: '🎤' },
-    { id: 'stickers', name: 'Stickers Tool', description: 'Add stickers and emojis', icon: '😀' },
-    { id: 'timeline', name: 'Timeline', description: 'Edit timeline and clips', icon: '⏱️' },
-    { id: 'analysis', name: 'Video Analysis', description: 'Analyze video content', icon: '🧠' },
-    { id: 'export', name: 'Export Tool', description: 'Export and render video', icon: '📤' },
+    { id: 'captions', name: 'Captions', description: 'Generate and edit video captions', icon: 'CC' },
+    { id: 'text', name: 'Text', description: 'Add text overlays and titles', icon: 'T' },
+    { id: 'transitions', name: 'Transitions', description: 'Apply video transitions', icon: 'TR' },
+    { id: 'voiceover', name: 'Voiceover', description: 'Generate AI voiceovers', icon: 'VO' },
+    { id: 'stickers', name: 'Stickers', description: 'Add stickers and emojis', icon: 'ST' },
+    { id: 'timeline', name: 'Timeline', description: 'Edit timeline and clips', icon: 'TL' },
+    { id: 'analysis', name: 'Analysis', description: 'Analyze video content', icon: 'AN' },
+    { id: 'export', name: 'Export', description: 'Export and render video', icon: 'EX' },
 ];
 
 const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessage }) => {
@@ -189,58 +189,64 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
     const pendingEdits = recentAIEdits.filter(edit => edit.status === 'pending');
 
     return (
-        <div className="flex flex-col w-full gap-3">
-            {/* AI Recent Edits Section */}
+        <div className="flex flex-col w-full">
+            {/* AI Edits Section - Above Input */}
             {pendingEdits.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-blue-700">AI Recent Edits</span>
-                    </div>
-                    <div className="space-y-2">
-                        {pendingEdits.map(edit => (
-                            <div key={edit.id} className="flex items-center justify-between bg-white rounded p-2 border border-blue-100">
-                                <div className="flex-1">
-                                    <p className="text-sm text-gray-700">{edit.description}</p>
-                                    <p className="text-xs text-gray-500">{edit.timestamp.toLocaleTimeString()}</p>
-                                </div>
-                                <div className="flex gap-1 ml-2">
-                                    <button
-                                        onClick={() => handleEditAction(edit.id, 'accept')}
-                                        className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition-colors"
-                                    >
-                                        ✓
-                                    </button>
-                                    <button
-                                        onClick={() => handleEditAction(edit.id, 'reject')}
-                                        className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
+                <div className="mb-3 space-y-2">
+                    {pendingEdits.map(edit => (
+                        <div key={edit.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-700 truncate">{edit.description}</p>
+                                <p className="text-xs text-gray-500">{edit.timestamp.toLocaleTimeString()}</p>
                             </div>
-                        ))}
-                    </div>
+                            <div className="flex items-center gap-1 ml-3">
+                                <button
+                                    onClick={() => handleEditAction(edit.id, 'accept')}
+                                    className="flex items-center justify-center w-6 h-6 bg-green-100 hover:bg-green-200 text-green-600 rounded transition-colors"
+                                    title="Accept"
+                                >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <polyline points="20,6 9,17 4,12"></polyline>
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => handleEditAction(edit.id, 'reject')}
+                                    className="flex items-center justify-center w-6 h-6 bg-red-100 hover:bg-red-200 text-red-600 rounded transition-colors"
+                                    title="Reject"
+                                >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
 
-            {/* Main Input Section */}
-            <div className="relative bg-white border border-gray-300 rounded-lg overflow-hidden">
-                {/* Mentioned Tools Bar */}
+            {/* Main Input Container */}
+            <div className="relative border border-gray-300 rounded-lg bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+                {/* Mentioned Tools - Inside Input Box at Top */}
                 {mentionedTools.length > 0 && (
-                    <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border-b border-gray-200">
+                    <div className="flex flex-wrap gap-1 p-2 border-b border-gray-200 bg-gray-50">
                         {mentionedTools.map(tool => (
                             <div
                                 key={tool.id}
-                                className="group flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition-colors"
+                                className="group flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium"
                             >
-                                <span>{tool.icon}</span>
+                                <span className="w-4 h-4 bg-blue-200 text-blue-800 rounded text-xs flex items-center justify-center font-mono">
+                                    {tool.icon}
+                                </span>
                                 <span>{tool.name}</span>
                                 <button
                                     onClick={() => removeTool(tool.id)}
                                     className="opacity-0 group-hover:opacity-100 ml-1 text-blue-500 hover:text-blue-700 transition-opacity"
                                 >
-                                    ✕
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
                                 </button>
                             </div>
                         ))}
@@ -251,27 +257,30 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                 <div className="relative">
                     <textarea
                         ref={textareaRef}
-                        className="w-full p-3 text-sm resize-none focus:outline-none"
-                        placeholder="Plan, search, ask anything"
-                        rows={2}
+                        className="w-full p-3 text-sm resize-none focus:outline-none placeholder-gray-500"
+                        placeholder="Plan, search, build anything"
+                        rows={1}
                         value={message}
                         onChange={handleChange}
                         onKeyDown={handleKeyDown}
+                        style={{ minHeight: '44px' }}
                     />
 
                     {/* Tool Dropdown */}
                     {showToolDropdown && (
-                        <div className="absolute bottom-full left-3 right-3 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
+                        <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
                             {filteredTools.length > 0 ? (
                                 filteredTools.map(tool => (
                                     <button
                                         key={tool.id}
                                         onClick={() => handleToolSelect(tool)}
-                                        className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-left"
+                                        className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
                                     >
-                                        <span className="text-lg">{tool.icon}</span>
-                                        <div>
-                                            <div className="font-medium text-sm">{tool.name}</div>
+                                        <div className="w-6 h-6 bg-gray-100 text-gray-700 rounded text-xs flex items-center justify-center font-mono">
+                                            {tool.icon}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="font-medium text-sm text-gray-900">{tool.name}</div>
                                             <div className="text-xs text-gray-500">{tool.description}</div>
                                         </div>
                                     </button>
@@ -284,41 +293,59 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                 </div>
 
                 {/* Bottom Controls */}
-                <div className="flex items-center justify-between p-2 bg-gray-50 border-t border-gray-200">
+                <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50">
                     {/* Left Side - AI Mode Toggle */}
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => setAiMode('agent')}
-                            className={`px-3 py-1 text-xs rounded transition-colors ${
-                                aiMode === 'agent'
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                            }`}
-                        >
-                            🤖 Agent
-                        </button>
-                        <button
-                            onClick={() => setAiMode('ask')}
-                            className={`px-3 py-1 text-xs rounded transition-colors ${
-                                aiMode === 'ask'
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                            }`}
-                        >
-                            💬 Ask
-                        </button>
+                    <div className="flex items-center">
+                        <div className="flex bg-white border border-gray-200 rounded-md overflow-hidden">
+                            <button
+                                onClick={() => setAiMode('agent')}
+                                className={`px-3 py-1 text-xs font-medium transition-colors ${
+                                    aiMode === 'agent'
+                                        ? 'bg-gray-900 text-white'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                }`}
+                            >
+                                Agent
+                            </button>
+                            <button
+                                onClick={() => setAiMode('ask')}
+                                className={`px-3 py-1 text-xs font-medium transition-colors ${
+                                    aiMode === 'ask'
+                                        ? 'bg-gray-900 text-white'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                }`}
+                            >
+                                Ask
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Right Side - File Upload and Send */}
+                    {/* Right Side - Controls */}
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleFileUpload}
                             className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
-                            title="Upload file"
+                            title="Attach file"
                         >
-                            📎
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.64 16.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path>
+                            </svg>
                         </button>
-                        <ChatSendButton onSend={handleSend} />
+                        <button
+                            onClick={handleSend}
+                            disabled={!message.trim()}
+                            className={`p-1.5 rounded transition-colors ${
+                                message.trim()
+                                    ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                                    : 'text-gray-400 cursor-not-allowed'
+                            }`}
+                            title="Send message"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
