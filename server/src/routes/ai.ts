@@ -5,9 +5,27 @@ const router = express.Router();
 
 console.log('[AI Routes] Router initialized');
 
-// Handle CORS preflight requests
-router.options('*', (req, res) => {
-    console.log('[AI Routes] OPTIONS request to:', req.path);
+// Handle CORS preflight requests for specific routes
+router.options('/assistant', (req, res) => {
+    console.log('[AI Routes] OPTIONS request to /assistant');
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.sendStatus(200);
+});
+
+router.options('/analyze-video', (req, res) => {
+    console.log('[AI Routes] OPTIONS request to /analyze-video');
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.sendStatus(200);
+});
+
+router.options('/test', (req, res) => {
+    console.log('[AI Routes] OPTIONS request to /test');
     res.header('Access-Control-Allow-Origin', req.headers.origin);
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
@@ -83,18 +101,6 @@ router.get('/test', (req, res) => {
 router.post('/test-post', (req, res) => {
     console.log('[AI Routes] Test POST endpoint hit');
     res.json({ message: 'POST requests are working', method: req.method, timestamp: new Date().toISOString() });
-});
-
-// Catch-all route to debug what requests are reaching this router
-router.all('*', (req, res) => {
-    console.log('[AI Routes] Catch-all route hit:', req.method, req.path);
-    console.log('[AI Routes] Available routes: /analyze-video, /assistant, /test, /test-post');
-    res.status(404).json({ 
-        error: 'Route not found',
-        method: req.method,
-        path: req.path,
-        availableRoutes: ['/analyze-video', '/assistant', '/test', '/test-post']
-    });
 });
 
 console.log('[AI Routes] All routes registered');
