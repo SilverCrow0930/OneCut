@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, ReactNode, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { API_URL } from '@/lib/config';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface AutoCutEvent {
     prompt: string;
@@ -35,19 +34,8 @@ const AutoCutContext = createContext<AutoCutContextType | undefined>(undefined);
 export function AutoCutProvider({ children }: { children: ReactNode }) {
     const [socket, setSocket] = useState<Socket | null>(null);
     const socketRef = useRef<Socket | null>(null);
-    const { session, user } = useAuth();
 
     useEffect(() => {
-        if (!session?.access_token || !user?.id) {
-            // If no auth token, disconnect existing socket
-            if (socketRef.current) {
-                socketRef.current.disconnect();
-                socketRef.current = null;
-                setSocket(null);
-            }
-            return;
-        }
-
         console.log('Initializing WebSocket connection to:', API_URL);
         // Initialize socket connection with proper configuration
         const newSocket = io(API_URL, {
@@ -62,11 +50,7 @@ export function AutoCutProvider({ children }: { children: ReactNode }) {
             autoConnect: true,
             forceNew: true,
             upgrade: false,
-            rememberUpgrade: false,
-            auth: {
-                userId: user.id,
-                token: session.access_token
-            }
+            rememberUpgrade: false
         });
 
         // Log connection events
@@ -92,7 +76,7 @@ export function AutoCutProvider({ children }: { children: ReactNode }) {
                 newSocket.disconnect();
             }
         };
-    }, [session?.access_token, user?.id]);
+    }, []);
 
     const sendAutoCutRequest = (data: AutoCutEvent) => {
         if (socket) {

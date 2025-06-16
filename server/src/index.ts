@@ -61,6 +61,13 @@ app.use(
     apiRouter
 )
 
+// AI routes (protected)
+app.use(
+    '/api/ai',
+    authenticate,
+    aiRouter
+)
+
 const server = http.createServer(app);
 setupWebSocket(server);
 

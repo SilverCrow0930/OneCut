@@ -27,13 +27,25 @@ const bucket = storage.bucket(process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'lemona
 
 export const setupWebSocket = async (httpServer: HttpServer): Promise<Server> => {
     try {
+        // Configure CORS based on environment
+        const productionOrigins = [
+            'https://lemona.studio', 
+            'https://www.lemona.studio', 
+            'https://lemona-app.onrender.com'
+        ];
+
+        const allowedOrigins = process.env.NODE_ENV === 'production'
+            ? [...productionOrigins, ...(process.env.ALLOWED_ORIGINS?.split(',').filter(Boolean) || [])]
+            : ['http://localhost:3000'];
+
+        console.log('[WebSocket CORS] Environment:', process.env.NODE_ENV);
+        console.log('[WebSocket CORS] Allowed origins:', allowedOrigins);
+
         const io = new Server(httpServer, {
             path: '/socket.io/',
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'], // Allow both transports for better compatibility
             cors: {
-                origin: process.env.NODE_ENV === 'production' 
-                    ? ['https://lemona.studio', 'https://www.lemona.studio', 'https://lemona-app.onrender.com']
-                    : (process.env.CLIENT_URL || 'http://localhost:3000'),
+                origin: allowedOrigins,
                 methods: ['GET', 'POST'],
                 credentials: true
             }

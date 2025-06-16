@@ -3,7 +3,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AIAssistant, AIResponse, AIAssistantConfig } from '@/lib/ai/aiAssistant';
 import { useEditor } from './EditorContext';
 import { usePlayback } from './PlaybackContext';
-import { useAuth } from './AuthContext';
 
 interface AIAssistantContextType {
   assistant: AIAssistant | null;
@@ -43,16 +42,14 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
 
   const editorContext = useEditor();
   const { currentTime } = usePlayback();
-  const { session } = useAuth();
 
-  // Initialize assistant when editor context is available (don't wait for session)
+  // Initialize assistant when editor context is available
   useEffect(() => {
     if (editorContext && projectId && !assistant) {
       console.log('Initializing AI Assistant...');
       
       const config: AIAssistantConfig = {
         projectId,
-        accessToken: session?.access_token, // This can be undefined initially
         editorContext: {
           clips: editorContext.clips,
           tracks: editorContext.tracks,
@@ -78,13 +75,12 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
     }
   }, [editorContext, projectId, currentTime]);
 
-  // Update assistant when editor state or session changes
+  // Update assistant when editor state changes
   useEffect(() => {
     if (assistant && isInitialized) {
       // Update the assistant's understanding of current state
       const config: AIAssistantConfig = {
         projectId,
-        accessToken: session?.access_token,
         editorContext: {
           clips: editorContext.clips,
           tracks: editorContext.tracks,
@@ -95,10 +91,10 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
         }
       };
       
-      // Update assistant config
-      assistant.updateConfig(config);
+      // Update assistant config (this would need to be implemented in AIAssistant class)
+      // assistant.updateConfig(config);
     }
-  }, [editorContext.clips, editorContext.tracks, editorContext.selectedClipId, editorContext.selectedClipIds, currentTime, session?.access_token]);
+  }, [editorContext.clips, editorContext.tracks, editorContext.selectedClipId, editorContext.selectedClipIds, currentTime]);
 
   const initializeWithVideo = async (videoUrl: string, mimeType: string): Promise<void> => {
     if (!assistant) {

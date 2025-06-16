@@ -14,8 +14,6 @@ services:
         value: 8080
       - key: ALLOWED_ORIGINS
         value: https://lemona.studio,https://www.lemona.studio,https://lemona-app.onrender.com
-      - key: CLIENT_URL
-        value: https://lemona.studio
       - key: FFMPEG_PATH
         value: ffmpeg
       - key: FFPROBE_PATH
@@ -31,12 +29,6 @@ services:
       - key: GIPHY_API_KEY
         sync: false
       - key: OPENAI_API_KEY
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: GOOGLE_CLOUD_PROJECT
-        sync: false
-      - key: GOOGLE_CLOUD_LOCATION
         sync: false
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: ./lemona-app-4d1a5c95d8c6.json

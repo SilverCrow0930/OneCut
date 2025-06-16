@@ -117,13 +117,10 @@ const EnhancedAssistant = () => {
 
     // Initialize WebSocket connection
     useEffect(() => {
-        if (session?.access_token && session?.user?.id && project?.id) {
+        if (session?.user?.id && project?.id) {
             const socket = io(API_URL, {
-                transports: ['websocket'],
-                path: '/socket.io/',
                 auth: {
                     userId: session.user.id,
-                    token: session.access_token,
                     projectId: project.id
                 }
             })
@@ -156,7 +153,7 @@ const EnhancedAssistant = () => {
                 socket.disconnect()
             }
         }
-    }, [session?.access_token, session?.user?.id, project?.id])
+    }, [session?.user?.id, project?.id])
 
     // Handle sending messages with new Cursor-style features
     const handleSendMessage = async (

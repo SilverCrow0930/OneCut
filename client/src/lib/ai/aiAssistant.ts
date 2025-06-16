@@ -5,10 +5,10 @@ import { CommandParser, ParsedCommand } from './commandParser';
 import { ToolExecutor, BatchExecutor, ExecutionResult } from './toolExecutors';
 import { ToolAction, SearchResult } from './toolIntegration';
 import type { Clip, Track, Command } from '@/types/editor';
+import { createClient } from '@supabase/supabase-js';
 
 export interface AIAssistantConfig {
   projectId: string;
-  accessToken?: string;
   editorContext: {
     clips: Clip[];
     tracks: Track[];
@@ -188,21 +188,33 @@ export class AIAssistant {
         timelineClips: context.timeline.clips.length
       });
 
-      // Get the access token from the session
-      const accessToken = this.getAccessToken();
-      if (!accessToken) {
-        console.warn('No access token available for AI request');
-        throw new Error('Authentication required. Please refresh the page and try again.');
+      // Get auth token from Supabase client
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add authorization header if session exists
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
-      console.log('Access token available, making authenticated request');
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? '[REDACTED]' : 'none',
+        hasSession: !!session
+      });
 
-              const response = await fetch('/api/v1/ai/assistant', {
+      const response = await fetch('/api/ai/assistant', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers,
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           prompt: request,
           semanticJSON: this.semanticJSON,
@@ -253,30 +265,30 @@ export class AIAssistant {
         };
       }
       
-      if (error instanceof Error && error.message.includes('405')) {
-        return {
-          type: 'text',
-          content: `🚫 Service error: The AI service endpoint is not available. This might be a server configuration issue.`
-        };
-      }
-      
       if (error instanceof Error && error.message.includes('500')) {
         return {
           type: 'text',
           content: `🛠️ Server error: The AI service is temporarily unavailable. Please try again in a moment.`
         };
       }
-      
-      if (error instanceof Error && error.message.includes('Authentication required')) {
+
+      if (error instanceof Error && error.message.includes('GEMINI_API_KEY')) {
         return {
           type: 'text',
-          content: `🔐 Please refresh the page to authenticate and try again.`
+          content: `🔑 Configuration error: The AI service is not properly configured. Please contact support.`
+        };
+      }
+
+      if (error instanceof Error && error.message.includes('quota')) {
+        return {
+          type: 'text',
+          content: `📊 Quota exceeded: The AI service has reached its usage limit. Please try again later.`
         };
       }
       
       return {
         type: 'text',
-        content: `❌ I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try rephrasing your request or check the console for more details.`
+        content: `❌ Service error: The AI service endpoint is not available. This might be a server configuration issue. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -417,16 +429,6 @@ export class AIAssistant {
     return this.semanticJSON !== null;
   }
 
-  updateConfig(config: AIAssistantConfig): void {
-    this.config = config;
-    // Update command parser context with new timeline state
-    this.commandParser.updateContext(
-      this.semanticJSON, 
-      this.config.editorContext.clips, 
-      this.config.editorContext.tracks
-    );
-  }
-
   private provideLocalResponse(request: string, parsedCommand: ParsedCommand): AIResponse {
     const lowerRequest = request.toLowerCase();
     
@@ -549,36 +551,5 @@ ${!this.hasVideoAnalysis() ? '📹 **Video analysis required.** Please upload a 
 
 ${!this.hasVideoAnalysis() ? '\n💡 **Tip:** Upload a video to unlock advanced AI editing features!' : ''}`
     };
-  }
-
-  private getAccessToken(): string | null {
-    // First try to use the provided access token from config
-    if (this.config.accessToken) {
-      return this.config.accessToken;
-    }
-    
-    // Fallback: try to get the access token from various sources
-    try {
-      // Check if we're in a browser environment
-      if (typeof window !== 'undefined') {
-        // Try to get from localStorage (common pattern in Next.js apps)
-        const supabaseSession = localStorage.getItem('sb-' + window.location.hostname.replace(/\./g, '-') + '-auth-token');
-        if (supabaseSession) {
-          const session = JSON.parse(supabaseSession);
-          return session.access_token;
-        }
-        
-        // Alternative: try to get from a global context or state
-        // This would need to be injected properly in a production app
-        const globalAuth = (window as any).__SUPABASE_SESSION__;
-        if (globalAuth?.access_token) {
-          return globalAuth.access_token;
-        }
-      }
-    } catch (error) {
-      console.error('Failed to get access token:', error);
-    }
-    
-    return null;
   }
 } 
