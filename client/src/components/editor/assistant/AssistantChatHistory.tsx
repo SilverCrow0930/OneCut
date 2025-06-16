@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ChatMessage from './ChatMessage';
 import AIEditsPanel from './AIEditsPanel';
-import { AIEdit } from './types';
 
 interface ChatMessage {
   id: number;
@@ -15,6 +14,21 @@ interface ChatMessage {
   mode?: 'agent' | 'ask';
   mentionedTools?: string[];
   files?: File[];
+}
+
+interface AIEdit {
+  id: string;
+  type: 'add' | 'remove' | 'modify' | 'split' | 'merge';
+  description: string;
+  timestamp: Date;
+  status: 'pending' | 'accepted' | 'rejected';
+  details: {
+    target?: string;
+    before?: any;
+    after?: any;
+    position?: number;
+  };
+  commands?: any[];
 }
 
 interface CursorChatHistoryProps {
@@ -289,10 +303,8 @@ const CursorChatHistory: React.FC<CursorChatHistoryProps> = ({
             edits={aiEdits}
             onAcceptEdit={onAcceptEdit}
             onRejectEdit={onRejectEdit}
-            onPreviewEdit={(editId: string) => {
-              // Handle preview functionality - could show a modal or preview panel
-              console.log('Preview edit:', editId);
-            }}
+            onAcceptAll={onAcceptAllEdits}
+            onRejectAll={onRejectAllEdits}
           />
         </div>
       )}
