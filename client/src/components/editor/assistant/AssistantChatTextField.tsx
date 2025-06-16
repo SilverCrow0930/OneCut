@@ -14,7 +14,7 @@ interface MentionedTool {
   position: number;
 }
 
-interface AssistantChatTextFieldProps {
+interface CursorChatTextFieldProps {
   onSend: (message: string, mode: 'agent' | 'ask', mentionedTools: string[], files?: File[]) => void;
   message: string;
   setMessage: (msg: string) => void;
@@ -22,7 +22,7 @@ interface AssistantChatTextFieldProps {
   disabled?: boolean;
 }
 
-const AssistantChatTextField: React.FC<AssistantChatTextFieldProps> = ({ 
+const CursorChatTextField: React.FC<CursorChatTextFieldProps> = ({ 
   onSend, 
   message, 
   setMessage, 
@@ -325,4 +325,4 @@ const AssistantChatTextField: React.FC<AssistantChatTextFieldProps> = ({
   );
 };
 
-export default AssistantChatTextField; 
+export default CursorChatTextField; 

@@ -17,18 +17,9 @@ export async function authenticate(
     res: Response,
     next: NextFunction
 ) {
-    console.log('[Auth] Authenticating request to:', req.method, req.path);
-    
     const authHeader = req.headers.authorization
     const token = authHeader?.split(' ')[1]
-    
-    console.log('[Auth] Auth header present:', !!authHeader);
-    console.log('[Auth] Token present:', !!token);
-    
-    if (!token) {
-        console.log('[Auth] Missing token, returning 401');
-        return res.status(401).json({ error: 'Missing token' });
-    }
+    if (!token) return res.status(401).json({ error: 'Missing token' })
 
     const {
         data: { user },
@@ -36,11 +27,8 @@ export async function authenticate(
     } = await supabase.auth.getUser(token)
 
     if (authError || !user) {
-        console.log('[Auth] Invalid token, error:', authError?.message);
         return res.status(401).json({ error: 'Invalid token' })
     }
-
-    console.log('[Auth] User authenticated:', user.email);
 
     // Upsert (insert-or-update) the profile under service key:
     const now = new Date().toISOString()
@@ -71,7 +59,5 @@ export async function authenticate(
         email: user.email as string,
         user_metadata: user.user_metadata,
     }
-    
-    console.log('[Auth] Authentication successful, proceeding to next middleware');
     next()
 }

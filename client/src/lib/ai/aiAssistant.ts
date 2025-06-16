@@ -5,7 +5,6 @@ import { CommandParser, ParsedCommand } from './commandParser';
 import { ToolExecutor, BatchExecutor, ExecutionResult } from './toolExecutors';
 import { ToolAction, SearchResult } from './toolIntegration';
 import type { Clip, Track, Command } from '@/types/editor';
-import { createClient } from '@supabase/supabase-js';
 
 export interface AIAssistantConfig {
   projectId: string;
@@ -188,32 +187,11 @@ export class AIAssistant {
         timelineClips: context.timeline.clips.length
       });
 
-      // Get auth token from Supabase client
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      
-      // Add authorization header if session exists
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-
-      console.log('Request headers:', { 
-        ...headers, 
-        Authorization: headers.Authorization ? '[REDACTED]' : 'none',
-        hasSession: !!session
-      });
-
       const response = await fetch('/api/ai/assistant', {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
         credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           prompt: request,
@@ -271,24 +249,10 @@ export class AIAssistant {
           content: `🛠️ Server error: The AI service is temporarily unavailable. Please try again in a moment.`
         };
       }
-
-      if (error instanceof Error && error.message.includes('GEMINI_API_KEY')) {
-        return {
-          type: 'text',
-          content: `🔑 Configuration error: The AI service is not properly configured. Please contact support.`
-        };
-      }
-
-      if (error instanceof Error && error.message.includes('quota')) {
-        return {
-          type: 'text',
-          content: `📊 Quota exceeded: The AI service has reached its usage limit. Please try again later.`
-        };
-      }
       
       return {
         type: 'text',
-        content: `❌ Service error: The AI service endpoint is not available. This might be a server configuration issue. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        content: `❌ I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try rephrasing your request or check the console for more details.`
       };
     }
   }

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ChatMessage from './ChatMessage';
 import AIEditsPanel from './AIEditsPanel';
+import { AIEdit } from './types';
 
 interface ChatMessage {
   id: number;
@@ -16,22 +17,7 @@ interface ChatMessage {
   files?: File[];
 }
 
-interface AIEdit {
-  id: string;
-  type: 'add' | 'remove' | 'modify' | 'split' | 'merge';
-  description: string;
-  timestamp: Date;
-  status: 'pending' | 'accepted' | 'rejected';
-  details: {
-    target?: string;
-    before?: any;
-    after?: any;
-    position?: number;
-  };
-  commands?: any[];
-}
-
-interface AssistantChatHistoryProps {
+interface CursorChatHistoryProps {
   chatMessages: ChatMessage[];
   aiEdits: AIEdit[];
   state: string;
@@ -68,7 +54,7 @@ const formatTime = (ms: number): string => {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-const AssistantChatHistory: React.FC<AssistantChatHistoryProps> = ({
+const CursorChatHistory: React.FC<CursorChatHistoryProps> = ({
   chatMessages,
   aiEdits,
   state,
@@ -303,8 +289,10 @@ const AssistantChatHistory: React.FC<AssistantChatHistoryProps> = ({
             edits={aiEdits}
             onAcceptEdit={onAcceptEdit}
             onRejectEdit={onRejectEdit}
-            onAcceptAll={onAcceptAllEdits}
-            onRejectAll={onRejectAllEdits}
+            onPreviewEdit={(editId: string) => {
+              // Handle preview functionality - could show a modal or preview panel
+              console.log('Preview edit:', editId);
+            }}
           />
         </div>
       )}
@@ -312,4 +300,4 @@ const AssistantChatHistory: React.FC<AssistantChatHistoryProps> = ({
   );
 };
 
-export default AssistantChatHistory; 
+export default CursorChatHistory; 

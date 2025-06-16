@@ -1,13 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { io, Socket } from 'socket.io-client'
 import ChatHeader from '../assistant/ChatHeader'
-import AssistantChatHistory from '../assistant/AssistantChatHistory'
-import AssistantChatTextField from '../assistant/AssistantChatTextField'
+import ChatHistory from '../assistant/ChatHistory'
+import ChatTextField from '../assistant/ChatTextField'
 import { API_URL } from '@/lib/config'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAIAssistant } from '@/contexts/AIAssistantContext'
 import { useEditor } from '@/contexts/EditorContext'
-import { createClient } from '@supabase/supabase-js'
 
 interface ChatMessage {
     id: number;
@@ -18,206 +17,171 @@ interface ChatMessage {
     searchResults?: any[];
     toolActions?: any[];
     executionResults?: any[];
-    mode?: 'agent' | 'ask';
-    mentionedTools?: string[];
-    files?: File[];
-}
-
-interface AIEdit {
-    id: string;
-    type: 'add' | 'remove' | 'modify' | 'split' | 'merge';
-    description: string;
-    timestamp: Date;
-    status: 'pending' | 'accepted' | 'rejected';
-    details: {
-        target?: string;
-        before?: any;
-        after?: any;
-        position?: number;
-    };
-    commands?: any[];
-}
-
-interface Tool {
-    id: string;
-    name: string;
-    description: string;
-    icon: string;
 }
 
 const Assistant = () => {
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
-    const [aiEdits, setAiEdits] = useState<AIEdit[]>([])
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+        {
+            id: 1,
+            message: "👋 Welcome to your AI video assistant! I'm here to help you edit your videos intelligently.\n\n🎬 **What I can do:**\n• Analyze your video content\n• Find specific scenes or moments\n• Remove silent parts automatically\n• Cut at natural speech breaks\n• Add captions, text, and transitions\n• Suggest improvements\n\n💡 **Try asking me:**\n• \"Remove all silent parts\"\n• \"Find scenes where someone is speaking\"\n• \"Add captions to this video\"\n• \"Cut this clip at natural breaks\"\n\nJust type your request below and I'll help you edit like a pro! ✨",
+            sender: 'assistant',
+            type: 'text'
+        }
+    ])
     const [state, setState] = useState<string>('idle')
+    const [isWebSocketConnected, setIsWebSocketConnected] = useState<boolean>(false)
     const socketRef = useRef<Socket | null>(null)
     const [message, setMessage] = useState<string>("")
     const { session } = useAuth()
     const { project } = useEditor()
     
-    // AI Assistant Context
     const {
+        assistant,
         isInitialized,
         isAnalyzing,
         hasVideoAnalysis,
+        initializeWithVideo,
         processRequest,
         executeAICommands,
-        assistant
+        findContent,
+        error,
+        clearError
     } = useAIAssistant()
 
-    // Available tools for @ mentions
-    const availableTools: Tool[] = [
-        {
-            id: 'captions',
-            name: 'Captions',
-            description: 'Generate and manage video captions',
-            icon: '💬'
-        },
-        {
-            id: 'text',
-            name: 'Text',
-            description: 'Add text overlays and titles',
-            icon: '📝'
-        },
-        {
-            id: 'transitions',
-            name: 'Transitions',
-            description: 'Add transitions between clips',
-            icon: '🎬'
-        },
-        {
-            id: 'voiceover',
-            name: 'Voiceover',
-            description: 'Generate AI voiceovers',
-            icon: '🎤'
-        },
-        {
-            id: 'stickers',
-            name: 'Stickers',
-            description: 'Add stickers and emojis',
-            icon: '😀'
-        },
-        {
-            id: 'timeline',
-            name: 'Timeline',
-            description: 'Edit timeline and clips',
-            icon: '⏱️'
-        },
-        {
-            id: 'audio',
-            name: 'Audio',
-            description: 'Audio editing and effects',
-            icon: '🔊'
-        },
-        {
-            id: 'effects',
-            name: 'Effects',
-            description: 'Visual effects and filters',
-            icon: '✨'
-        }
-    ];
-
-    // Initialize WebSocket connection
+    // Initialize video analysis when project loads
     useEffect(() => {
-        if (session?.user?.id && project?.id) {
-            const socket = io(API_URL, {
-                auth: {
-                    userId: session.user.id,
-                    projectId: project.id
-                }
-            })
+        if (project && isInitialized && !hasVideoAnalysis) {
+            // For now, we'll skip auto-analysis and let user trigger it manually
+            // This can be enhanced later when we have proper asset management
+            console.log('AI Assistant ready for video analysis');
+        }
+    }, [project, isInitialized, hasVideoAnalysis]);
 
-            socket.on('connect', () => {
-                console.log('[WebSocket] Connected to server')
-            })
+    // Display analysis status
+    useEffect(() => {
+        if (isAnalyzing) {
+            setChatMessages(prev => [...prev, {
+                id: prev.length + 1,
+                message: "🎬 Analyzing your video to understand its content. This may take a moment...",
+                sender: 'assistant',
+                type: 'analysis'
+            }]);
+            setState('analyzing');
+        } else if (hasVideoAnalysis && state === 'analyzing') {
+            setChatMessages(prev => [...prev, {
+                id: prev.length + 1,
+                message: "✅ Video analysis complete! I now understand your content and can help with intelligent editing. Try asking me to:\n\n• Find specific scenes or moments\n• Remove silent parts\n• Cut at natural speech breaks\n• Organize similar content\n• Suggest improvements",
+                sender: 'assistant',
+                type: 'analysis'
+            }]);
+            setState('ready');
+        }
+    }, [isAnalyzing, hasVideoAnalysis, state]);
 
-            socket.on('disconnect', () => {
-                console.log('[WebSocket] Disconnected from server')
-            })
+    // Display errors
+    useEffect(() => {
+        if (error) {
+            setChatMessages(prev => [...prev, {
+                id: prev.length + 1,
+                message: `❌ Error: ${error}`,
+                sender: 'assistant',
+                type: 'error'
+            }]);
+            clearError();
+        }
+    }, [error, clearError]);
 
-            socket.on('state_change', (data: { state: string }) => {
-                setState(data.state)
-            })
+    useEffect(() => {
+        // Initialize socket connection with proper configuration
+        socketRef.current = io(API_URL, {
+            transports: ['websocket'],  // Force WebSocket only
+            path: '/socket.io/',
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            randomizationFactor: 0.5,
+            timeout: 60000,  // Match server pingTimeout
+            autoConnect: true,
+            forceNew: true,
+            upgrade: false,  // Disable transport upgrade
+            rememberUpgrade: false
+        });
 
-            socket.on('chat_response', (data: { message: string }) => {
-                const assistantMessage: ChatMessage = {
-                    id: chatMessages.length + 1,
-                    message: data.message,
-                    sender: 'assistant'
-                }
-                setChatMessages(prev => [...prev, assistantMessage])
-                setState('idle')
-            })
+        // Log connection events
+        socketRef.current.on('connect', () => {
+            console.log('WebSocket connected successfully');
+            setIsWebSocketConnected(true);
+        });
 
-            socketRef.current = socket
+        socketRef.current.on('connect_error', (error) => {
+            console.error('WebSocket connection error:', error);
+            setIsWebSocketConnected(false);
+        });
 
-            return () => {
-                socket.disconnect()
+        socketRef.current.on('disconnect', (reason) => {
+            console.log('WebSocket disconnected:', reason);
+            if (reason === 'io server disconnect') {
+                // Server initiated disconnect, try to reconnect
+                socketRef.current?.connect();
+            }
+            setIsWebSocketConnected(false);
+        });
+
+        socketRef.current.on('reconnect_attempt', (attemptNumber) => {
+            console.log('Reconnection attempt:', attemptNumber);
+        });
+
+        socketRef.current.on('reconnect', (attemptNumber) => {
+            console.log('Reconnected after', attemptNumber, 'attempts');
+        });
+
+        socketRef.current.on('reconnect_error', (error) => {
+            console.error('Reconnection error:', error);
+        });
+
+        socketRef.current.on('reconnect_failed', () => {
+            console.error('Failed to reconnect');
+        });
+
+        // Listen for chat messages from the server
+        socketRef.current.on('chat_message', (data: { text: string }) => {
+            setChatMessages(prev => [...prev, {
+                id: prev.length + 1,
+                message: data.text,
+                sender: 'assistant'
+            }])
+        })
+
+        // Listen for state changes
+        socketRef.current.on('state_change', (data: { state: string }) => {
+            setState(data.state)
+        })
+
+        // Cleanup on unmount
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect()
             }
         }
-    }, [session?.user?.id, project?.id])
+    }, [])
 
-    // Debug function to test server connectivity
-    const testServerConnectivity = async () => {
-        console.log('🔍 Testing server connectivity...');
-        
+    const handleVideoAnalysis = async (videoUrl: string, mimeType: string) => {
         try {
-            // Test 1: Basic health check
-            const healthResponse = await fetch('/health');
-            console.log('✅ Health check:', healthResponse.status, healthResponse.statusText);
-            
-            // Test 2: Direct AI test route
-            const directTestResponse = await fetch('/api/ai/test-direct', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ test: 'connectivity' })
-            });
-            console.log('✅ Direct AI test:', directTestResponse.status, directTestResponse.statusText);
-            
-            // Test 3: AI test route with auth
-            const supabase = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-            );
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session?.access_token) {
-                const authTestResponse = await fetch('/api/ai/test', {
-                    headers: { 'Authorization': `Bearer ${session.access_token}` }
-                });
-                console.log('✅ Auth AI test:', authTestResponse.status, authTestResponse.statusText);
-            } else {
-                console.log('⚠️ No session found for auth test');
-            }
-            
+            await initializeWithVideo(videoUrl, mimeType);
         } catch (error) {
-            console.error('❌ Server connectivity test failed:', error);
+            console.error('Video analysis failed:', error);
         }
     };
 
-    // Run connectivity test on mount (only in development)
-    useEffect(() => {
-        if (process.env.NODE_ENV === 'development') {
-            testServerConnectivity();
-        }
-    }, []);
-
-    // Handle sending messages with new Cursor-style features
-    const handleSendMessage = async (
-        message: string, 
-        mode: 'agent' | 'ask', 
-        mentionedTools: string[], 
-        files?: File[]
-    ) => {
-        if (!message.trim() && (!files || files.length === 0)) return;
+    const handleSendMessage = async (message: string, useIdeation: boolean) => {
+        if (!message.trim()) return;
 
         // Add user message to chat
         const userMessage: ChatMessage = {
             id: chatMessages.length + 1,
             message,
-            sender: 'user',
-            mode,
-            mentionedTools,
-            files
+            sender: 'user'
         };
         setChatMessages(prev => [...prev, userMessage]);
 
@@ -229,57 +193,56 @@ const Assistant = () => {
                 console.log('Using advanced AI assistant system');
                 const response = await processRequest(message);
                 
-                const assistantMessage: ChatMessage = {
+                let assistantMessage: ChatMessage = {
                     id: chatMessages.length + 2,
                     message: response.content,
                     sender: 'assistant',
                     type: response.type,
-                    commands: response.commands,
                     searchResults: response.searchResults,
                     toolActions: response.toolActions,
                     executionResults: response.executionResults
                 };
 
+                if (response.commands && response.commands.length > 0) {
+                    assistantMessage.commands = response.commands;
+                    assistantMessage.message += "\n\n🎬 I've prepared some editing commands. Would you like me to execute them?";
+                }
+
                 setChatMessages(prev => [...prev, assistantMessage]);
 
-                // If in Agent mode and we have commands, create AI edits for review
-                if (mode === 'agent' && response.commands && response.commands.length > 0) {
-                    const newEdit: AIEdit = {
-                        id: `edit_${Date.now()}`,
-                        type: 'modify',
-                        description: `Agent action: ${message.substring(0, 50)}...`,
-                        timestamp: new Date(),
-                        status: 'pending',
-                        details: {
-                            target: 'Timeline',
-                        },
-                        commands: response.commands
-                    };
-                    setAiEdits(prev => [...prev, newEdit]);
+                // Auto-execute simple commands or ask for confirmation for complex ones
+                if (response.commands && response.commands.length === 1 && 
+                    ['UPDATE_CLIP', 'REMOVE_CLIP'].includes(response.commands[0].type)) {
+                    await executeAICommands(response.commands);
+                    setChatMessages(prev => [...prev, {
+                        id: prev.length + 1,
+                        message: "✅ Commands executed successfully!",
+                        sender: 'assistant'
+                    }]);
                 }
 
                 setState('idle');
-                return;
+                return; // Success - exit early
+                
             } catch (error) {
-                console.error('Advanced AI assistant failed:', error);
-                // Fall through to WebSocket backup
+                console.log('Advanced AI assistant failed, falling back to WebSocket chat:', error);
+                // Don't return here - fall through to WebSocket fallback
             }
         }
 
-        // PRIORITY 2: WebSocket chat fallback (maintains functionality)
-        if (socketRef.current?.connected) {
+        // PRIORITY 2: Fall back to WebSocket chat system (maintains functionality)
+        if (socketRef.current && socketRef.current.connected) {
             try {
-                console.log('Using WebSocket chat system');
+                console.log('Using WebSocket chat fallback');
                 
                 // Set up one-time listeners for this specific message
                 const messageHandler = (data: { text: string }) => {
-                    const assistantMessage: ChatMessage = {
-                        id: chatMessages.length + 2,
+                    setChatMessages(prev => [...prev, {
+                        id: prev.length + 1,
                         message: data.text,
                         sender: 'assistant',
                         type: 'text'
-                    };
-                    setChatMessages(prev => [...prev, assistantMessage]);
+                    }]);
                     setState('idle');
                     
                     // Clean up listeners
@@ -295,39 +258,26 @@ const Assistant = () => {
                 socketRef.current.on('state_change', stateHandler);
                 
                 // Send the message
-                socketRef.current.emit('chat_message', { 
-                    message, 
-                    useIdeation: mode === 'agent' 
-                });
+                socketRef.current.emit('chat_message', { message, useIdeation });
                 
                 // Set timeout to clean up if no response
                 setTimeout(() => {
                     socketRef.current?.off('chat_message', messageHandler);
                     socketRef.current?.off('state_change', stateHandler);
-                    
-                    // If still thinking after timeout, show error
-                    if (state === 'thinking') {
-                        const timeoutMessage: ChatMessage = {
-                            id: chatMessages.length + 2,
-                            message: "⏱️ Request timed out. Please try again with a simpler request.",
-                            sender: 'assistant',
-                            type: 'error'
-                        };
-                        setChatMessages(prev => [...prev, timeoutMessage]);
-                        setState('idle');
-                    }
                 }, 30000); // 30 second timeout
                 
-                return;
+                return; // WebSocket request sent - exit early
+                
             } catch (error) {
-                console.error('WebSocket chat failed:', error);
+                console.error('WebSocket chat also failed:', error);
+                // Fall through to final error handling
             }
         }
 
-        // PRIORITY 3: Local fallback (basic functionality)
-        console.log('Using local fallback system');
-        const fallbackMessage: ChatMessage = {
-            id: chatMessages.length + 2,
+        // PRIORITY 3: Final fallback - show helpful error message
+        console.error('All AI systems failed, showing error message');
+        setChatMessages(prev => [...prev, {
+            id: prev.length + 2,
             message: `🔌 **Connection Issue**
             
 I'm having trouble connecting to the AI services right now. Here are some things you can try:
@@ -346,94 +296,36 @@ I'm having trouble connecting to the AI services right now. Here are some things
 • Tool explanations and tutorials
 • Best practices and tips
 
-**Your request was:** "${message}"
-**Mode:** ${mode === 'agent' ? 'Agent (would perform actions)' : 'Ask (would provide suggestions)'}
-${mentionedTools.length > 0 ? `**Tools mentioned:** ${mentionedTools.join(', ')}` : ''}
-${files && files.length > 0 ? `**Files uploaded:** ${files.length} file(s)` : ''}
-
 Try asking: "What editing tools are available?" or "How do I add captions?"`,
             sender: 'assistant',
             type: 'error'
-        };
-        setChatMessages(prev => [...prev, fallbackMessage]);
+        }]);
+        
         setState('idle');
     };
 
-    // Handle command execution
     const handleExecuteCommands = async (commands: any[]) => {
-        setState('executing');
         try {
-            if (executeAICommands) {
-                await executeAICommands(commands);
-                
-                const successMessage: ChatMessage = {
-                    id: chatMessages.length + 1,
-                    message: `✅ Successfully executed ${commands.length} command${commands.length > 1 ? 's' : ''}!`,
-                    sender: 'assistant',
-                    type: 'text'
-                };
-                setChatMessages(prev => [...prev, successMessage]);
-            }
+            setState('executing');
+            await executeAICommands(commands);
+            setChatMessages(prev => [...prev, {
+                id: prev.length + 1,
+                message: "✅ Commands executed successfully!",
+                sender: 'assistant'
+            }]);
         } catch (error) {
             console.error('Command execution failed:', error);
-            const errorMessage: ChatMessage = {
-                id: chatMessages.length + 1,
-                message: `❌ Failed to execute commands: ${error}`,
+            setChatMessages(prev => [...prev, {
+                id: prev.length + 1,
+                message: `❌ Command execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
                 sender: 'assistant',
                 type: 'error'
-            };
-            setChatMessages(prev => [...prev, errorMessage]);
-        }
-        setState('idle');
-    };
-
-    // Handle AI edit actions
-    const handleAcceptEdit = (editId: string) => {
-        setAiEdits(prev => prev.map(edit => 
-            edit.id === editId 
-                ? { ...edit, status: 'accepted' as const }
-                : edit
-        ));
-        
-        // Execute the commands for this edit
-        const edit = aiEdits.find(e => e.id === editId);
-        if (edit?.commands) {
-            handleExecuteCommands(edit.commands);
+            }]);
+        } finally {
+            setState('idle');
         }
     };
 
-    const handleRejectEdit = (editId: string) => {
-        setAiEdits(prev => prev.map(edit => 
-            edit.id === editId 
-                ? { ...edit, status: 'rejected' as const }
-                : edit
-        ));
-    };
-
-    const handleAcceptAllEdits = () => {
-        const pendingEdits = aiEdits.filter(edit => edit.status === 'pending');
-        setAiEdits(prev => prev.map(edit => 
-            edit.status === 'pending' 
-                ? { ...edit, status: 'accepted' as const }
-                : edit
-        ));
-        
-        // Execute all pending commands
-        const allCommands = pendingEdits.flatMap(edit => edit.commands || []);
-        if (allCommands.length > 0) {
-            handleExecuteCommands(allCommands);
-        }
-    };
-
-    const handleRejectAllEdits = () => {
-        setAiEdits(prev => prev.map(edit => 
-            edit.status === 'pending' 
-                ? { ...edit, status: 'rejected' as const }
-                : edit
-        ));
-    };
-
-    // Get status message
     const getStatusMessage = () => {
         if (!isInitialized) return "Initializing AI assistant...";
         if (isAnalyzing) return "Analyzing video content...";
@@ -445,7 +337,7 @@ Try asking: "What editing tools are available?" or "How do I add captions?"`,
             return "🧠 Advanced AI ready (with video understanding)";
         } else if (isInitialized && assistant) {
             return "🤖 Advanced AI ready (upload video for full features)";
-        } else if (socketRef.current?.connected) {
+        } else if (isWebSocketConnected) {
             return "💬 Chat AI ready (basic functionality)";
         } else {
             return "⚠️ Connecting to AI services...";
@@ -453,50 +345,36 @@ Try asking: "What editing tools are available?" or "How do I add captions?"`,
     };
 
     return (
-        <div className="flex flex-col h-full bg-white">
-            <ChatHeader />
-            
+        <div className="
+            flex flex-col items-center justify-between w-full h-full
+            p-2
+        ">
             {/* Status indicator */}
             <div className="w-full mb-2 p-2 bg-gray-50 rounded text-xs text-gray-600 text-center">
                 {getStatusMessage()}
                 {hasVideoAnalysis && (
                     <span className="ml-2 text-green-600">🧠 Video analyzed</span>
                 )}
-                {socketRef.current?.connected && isInitialized && (
+                {isWebSocketConnected && isInitialized && (
                     <span className="ml-2 text-blue-600">💬 Chat backup</span>
                 )}
-                {/* Debug button for testing connectivity */}
-                <button 
-                    onClick={testServerConnectivity}
-                    className="ml-2 text-xs text-blue-500 hover:text-blue-700 underline"
-                    title="Test server connectivity (check console for results)"
-                >
-                    🔍 Test Connection
-                </button>
             </div>
 
-            {/* Chat History with AI Edits */}
-            <div className="flex-1 overflow-hidden">
-                <AssistantChatHistory
+            {/* Chat History */}
+            <div className='w-full flex-1 min-h-0 overflow-hidden'>
+                <ChatHistory
                     chatMessages={chatMessages}
-                    aiEdits={aiEdits}
                     state={state}
                     onExecuteCommands={handleExecuteCommands}
-                    onAcceptEdit={handleAcceptEdit}
-                    onRejectEdit={handleRejectEdit}
-                    onAcceptAllEdits={handleAcceptAllEdits}
-                    onRejectAllEdits={handleRejectAllEdits}
                 />
             </div>
 
-            {/* Enhanced Chat Input */}
-            <div className="p-3 border-t border-gray-200">
-                <AssistantChatTextField
+            {/* Chat Text Field */}
+            <div className='w-full'>
+                <ChatTextField
                     onSend={handleSendMessage}
                     message={message}
                     setMessage={setMessage}
-                    availableTools={availableTools}
-                    disabled={state === 'thinking' || state === 'executing'}
                 />
             </div>
         </div>
@@ -504,4 +382,3 @@ Try asking: "What editing tools are available?" or "How do I add captions?"`,
 }
 
 export default Assistant
- 

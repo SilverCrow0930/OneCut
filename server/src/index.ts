@@ -53,29 +53,6 @@ app.use(bodyParser.json({ limit: '10mb' }))
 
 app.use(morgan('dev'))
 
-// Add test routes before protected routes
-app.get('/health', (req, res) => {
-    console.log('[Server] Health check hit');
-    res.json({ 
-        status: 'ok', 
-        timestamp: new Date().toISOString(),
-        environment: NODE_ENV 
-    });
-});
-
-// Add a test route for AI assistant without authentication
-app.post('/api/ai/test-direct', (req, res) => {
-    console.log('[Server] Direct AI test route hit');
-    res.json({ 
-        message: 'Direct AI route working',
-        method: req.method,
-        body: req.body,
-        timestamp: new Date().toISOString()
-    });
-});
-
-console.log('[Server] Test routes added');
-
 // protect everything under /api
 app.use(
     '/api/v1',
@@ -84,16 +61,12 @@ app.use(
     apiRouter
 )
 
-console.log('[Server] API v1 routes mounted at /api/v1');
-
 // AI routes (protected)
 app.use(
     '/api/ai',
     authenticate,
     aiRouter
 )
-
-console.log('[Server] AI routes mounted at /api/ai');
 
 const server = http.createServer(app);
 setupWebSocket(server);
