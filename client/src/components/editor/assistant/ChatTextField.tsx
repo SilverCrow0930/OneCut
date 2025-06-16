@@ -285,7 +285,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
             <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200">
                 {/* Mentioned Tools - Inside Input Box at Top */}
                 {mentionedTools.length > 0 && (
-                    <div className="flex flex-wrap gap-2 p-3 bg-white">
+                    <div className="flex flex-wrap gap-2 p-3 bg-white rounded-t-xl">
                         {mentionedTools.map(tool => (
                             <div
                                 key={tool.id}
@@ -358,7 +358,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                 </div>
 
                 {/* Bottom Controls */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+                <div className={`flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30 ${mentionedTools.length > 0 ? 'rounded-b-xl' : ''}`}>
                     {/* Left Side - @ Button and Mode Toggle */}
                     <div className="flex items-center gap-3">
                         <button

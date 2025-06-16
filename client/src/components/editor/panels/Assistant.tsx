@@ -187,7 +187,45 @@ const Assistant = () => {
 
         setState('thinking');
 
-        // PRIORITY 1: Try the new AI assistant system first (best UX with tool integration)
+        // PRIORITY 1: Try HTTP API first (most reliable)
+        try {
+            console.log('Using HTTP AI assistant API');
+            
+            const response = await fetch('/api/ai/assistant', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    prompt: message,
+                    semanticJSON: null, // Will be added when video analysis is implemented
+                    currentTimeline: null // Will be added when timeline integration is ready
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            setChatMessages(prev => [...prev, {
+                id: prev.length + 1,
+                message: data.response || 'I received your message but had trouble generating a response.',
+                sender: 'assistant',
+                type: 'text'
+            }]);
+
+            setState('idle');
+            return; // Success - exit early
+            
+        } catch (error) {
+            console.log('HTTP AI assistant failed, falling back to WebSocket:', error);
+            // Don't return here - fall through to WebSocket fallback
+        }
+
+        // PRIORITY 2: Try the advanced AI assistant system (when available)
         if (isInitialized && assistant) {
             try {
                 console.log('Using advanced AI assistant system');
@@ -230,7 +268,7 @@ const Assistant = () => {
             }
         }
 
-        // PRIORITY 2: Fall back to WebSocket chat system (maintains functionality)
+        // PRIORITY 3: Fall back to WebSocket chat system (maintains functionality)
         if (socketRef.current && socketRef.current.connected) {
             try {
                 console.log('Using WebSocket chat fallback');
@@ -274,7 +312,7 @@ const Assistant = () => {
             }
         }
 
-        // PRIORITY 3: Final fallback - show helpful error message
+        // PRIORITY 4: Final fallback - show helpful error message
         console.error('All AI systems failed, showing error message');
         setChatMessages(prev => [...prev, {
             id: prev.length + 2,
