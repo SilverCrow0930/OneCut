@@ -105,20 +105,35 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
 
     // Handle Tool Selection
     const handleToolSelect = (tool: ToolMention) => {
-        const lastAtIndex = message.lastIndexOf('@', cursorPosition - 1);
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        
+        const currentCursorPos = textarea.selectionStart;
+        const lastAtIndex = message.lastIndexOf('@', currentCursorPos - 1);
+        
         if (lastAtIndex !== -1) {
+            // Calculate what text to remove: @ + the search query
+            const textToRemove = '@' + toolSearchQuery;
             const beforeAt = message.substring(0, lastAtIndex);
-            const afterCursor = message.substring(cursorPosition);
-            const newMessage = beforeAt + `@${tool.name} ` + afterCursor;
+            const afterMention = message.substring(lastAtIndex + textToRemove.length);
+            const newMessage = beforeAt + afterMention;
+            
             setMessage(newMessage);
             
             // Add to mentioned tools if not already present
             if (!mentionedTools.find(t => t.id === tool.id)) {
                 setMentionedTools([...mentionedTools, tool]);
             }
+            
+            // Set cursor position after the removed text
+            setTimeout(() => {
+                textarea.focus();
+                textarea.setSelectionRange(lastAtIndex, lastAtIndex);
+            }, 0);
         }
+        
         setShowToolDropdown(false);
-        textareaRef.current?.focus();
+        setToolSearchQuery('');
     };
 
     // Remove Tool Mention
