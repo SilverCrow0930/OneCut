@@ -111,7 +111,7 @@ export default function Timeline() {
     // Fixed timeline approach: Keep timeline container at fixed width, let tracks handle their own scrolling
     const timelineContainerWidth = Math.max(
         totalContentPx, // Scale with actual content and zoom
-        1200 // Fixed minimum width that's larger than default assistant panel
+        2000 // Fixed minimum width for longer default track length
     )
 
     const playheadX = currentTimeMs * timeScale
