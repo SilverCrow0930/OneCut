@@ -181,7 +181,7 @@ export class AIAssistant {
     const context = this.buildContext();
     
     try {
-      console.log('Making AI request to /api/v1/ai/assistant');
+      console.log('Making AI request to /api/ai/assistant');
       console.log('Request payload:', {
         prompt: request,
         hasSemanticJSON: !!this.semanticJSON,
@@ -191,10 +191,13 @@ export class AIAssistant {
       // Get the access token from the session
       const accessToken = this.getAccessToken();
       if (!accessToken) {
-        throw new Error('No access token available. Please refresh the page and try again.');
+        console.warn('No access token available for AI request');
+        throw new Error('Authentication required. Please refresh the page and try again.');
       }
 
-      const response = await fetch('/api/v1/ai/assistant', {
+      console.log('Access token available, making authenticated request');
+
+      const response = await fetch('/api/ai/assistant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -250,10 +253,24 @@ export class AIAssistant {
         };
       }
       
+      if (error instanceof Error && error.message.includes('405')) {
+        return {
+          type: 'text',
+          content: `🚫 Service error: The AI service endpoint is not available. This might be a server configuration issue.`
+        };
+      }
+      
       if (error instanceof Error && error.message.includes('500')) {
         return {
           type: 'text',
           content: `🛠️ Server error: The AI service is temporarily unavailable. Please try again in a moment.`
+        };
+      }
+      
+      if (error instanceof Error && error.message.includes('Authentication required')) {
+        return {
+          type: 'text',
+          content: `🔐 Please refresh the page to authenticate and try again.`
         };
       }
       

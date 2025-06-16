@@ -45,14 +45,14 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
   const { currentTime } = usePlayback();
   const { session } = useAuth();
 
-  // Initialize assistant when editor context is available
+  // Initialize assistant when editor context is available (don't wait for session)
   useEffect(() => {
-    if (editorContext && projectId && session?.access_token && !assistant) {
+    if (editorContext && projectId && !assistant) {
       console.log('Initializing AI Assistant...');
       
       const config: AIAssistantConfig = {
         projectId,
-        accessToken: session.access_token,
+        accessToken: session?.access_token, // This can be undefined initially
         editorContext: {
           clips: editorContext.clips,
           tracks: editorContext.tracks,
@@ -76,9 +76,9 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
         setError(err.message);
       });
     }
-  }, [editorContext, projectId, session?.access_token, currentTime]);
+  }, [editorContext, projectId, currentTime]);
 
-  // Update assistant when editor state changes
+  // Update assistant when editor state or session changes
   useEffect(() => {
     if (assistant && isInitialized) {
       // Update the assistant's understanding of current state
@@ -98,7 +98,7 @@ export const AIAssistantProvider: React.FC<AIAssistantProviderProps> = ({
       // Update assistant config
       assistant.updateConfig(config);
     }
-      }, [editorContext.clips, editorContext.tracks, editorContext.selectedClipId, editorContext.selectedClipIds, currentTime, session?.access_token]);
+  }, [editorContext.clips, editorContext.tracks, editorContext.selectedClipId, editorContext.selectedClipIds, currentTime, session?.access_token]);
 
   const initializeWithVideo = async (videoUrl: string, mimeType: string): Promise<void> => {
     if (!assistant) {
