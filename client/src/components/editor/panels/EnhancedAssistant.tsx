@@ -7,6 +7,7 @@ import { API_URL } from '@/lib/config'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAIAssistant } from '@/contexts/AIAssistantContext'
 import { useEditor } from '@/contexts/EditorContext'
+import { createClient } from '@supabase/supabase-js'
 
 interface ChatMessage {
     id: number;
@@ -155,6 +156,51 @@ const EnhancedAssistant = () => {
         }
     }, [session?.user?.id, project?.id])
 
+    // Debug function to test server connectivity
+    const testServerConnectivity = async () => {
+        console.log('🔍 Testing server connectivity...');
+        
+        try {
+            // Test 1: Basic health check
+            const healthResponse = await fetch('/health');
+            console.log('✅ Health check:', healthResponse.status, healthResponse.statusText);
+            
+            // Test 2: Direct AI test route
+            const directTestResponse = await fetch('/api/ai/test-direct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ test: 'connectivity' })
+            });
+            console.log('✅ Direct AI test:', directTestResponse.status, directTestResponse.statusText);
+            
+            // Test 3: AI test route with auth
+            const supabase = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            );
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session?.access_token) {
+                const authTestResponse = await fetch('/api/ai/test', {
+                    headers: { 'Authorization': `Bearer ${session.access_token}` }
+                });
+                console.log('✅ Auth AI test:', authTestResponse.status, authTestResponse.statusText);
+            } else {
+                console.log('⚠️ No session found for auth test');
+            }
+            
+        } catch (error) {
+            console.error('❌ Server connectivity test failed:', error);
+        }
+    };
+
+    // Run connectivity test on mount (only in development)
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'development') {
+            testServerConnectivity();
+        }
+    }, []);
+
     // Handle sending messages with new Cursor-style features
     const handleSendMessage = async (
         message: string, 
@@ -224,10 +270,54 @@ const EnhancedAssistant = () => {
         if (socketRef.current?.connected) {
             try {
                 console.log('Using WebSocket chat system');
+                
+                // Set up one-time listeners for this specific message
+                const messageHandler = (data: { text: string }) => {
+                    const assistantMessage: ChatMessage = {
+                        id: chatMessages.length + 2,
+                        message: data.text,
+                        sender: 'assistant',
+                        type: 'text'
+                    };
+                    setChatMessages(prev => [...prev, assistantMessage]);
+                    setState('idle');
+                    
+                    // Clean up listeners
+                    socketRef.current?.off('chat_message', messageHandler);
+                    socketRef.current?.off('state_change', stateHandler);
+                };
+
+                const stateHandler = (data: { state: string }) => {
+                    setState(data.state);
+                };
+
+                socketRef.current.on('chat_message', messageHandler);
+                socketRef.current.on('state_change', stateHandler);
+                
+                // Send the message
                 socketRef.current.emit('chat_message', { 
                     message, 
                     useIdeation: mode === 'agent' 
                 });
+                
+                // Set timeout to clean up if no response
+                setTimeout(() => {
+                    socketRef.current?.off('chat_message', messageHandler);
+                    socketRef.current?.off('state_change', stateHandler);
+                    
+                    // If still thinking after timeout, show error
+                    if (state === 'thinking') {
+                        const timeoutMessage: ChatMessage = {
+                            id: chatMessages.length + 2,
+                            message: "⏱️ Request timed out. Please try again with a simpler request.",
+                            sender: 'assistant',
+                            type: 'error'
+                        };
+                        setChatMessages(prev => [...prev, timeoutMessage]);
+                        setState('idle');
+                    }
+                }, 30000); // 30 second timeout
+                
                 return;
             } catch (error) {
                 console.error('WebSocket chat failed:', error);
@@ -238,7 +328,30 @@ const EnhancedAssistant = () => {
         console.log('Using local fallback system');
         const fallbackMessage: ChatMessage = {
             id: chatMessages.length + 2,
-            message: `I understand you want to ${mode === 'agent' ? 'perform' : 'get help with'}: "${message}". However, I'm currently unable to connect to the AI services. Please check your connection and try again.`,
+            message: `🔌 **Connection Issue**
+            
+I'm having trouble connecting to the AI services right now. Here are some things you can try:
+
+**Immediate Solutions:**
+• Refresh the page and try again
+• Check your internet connection
+• Try a simpler request like "help" or "what can you do"
+
+**If the issue persists:**
+• The server may need to be restarted
+• AI services might be temporarily unavailable
+
+**What I can still help with:**
+• General video editing guidance
+• Tool explanations and tutorials
+• Best practices and tips
+
+**Your request was:** "${message}"
+**Mode:** ${mode === 'agent' ? 'Agent (would perform actions)' : 'Ask (would provide suggestions)'}
+${mentionedTools.length > 0 ? `**Tools mentioned:** ${mentionedTools.join(', ')}` : ''}
+${files && files.length > 0 ? `**Files uploaded:** ${files.length} file(s)` : ''}
+
+Try asking: "What editing tools are available?" or "How do I add captions?"`,
             sender: 'assistant',
             type: 'error'
         };
@@ -352,6 +465,14 @@ const EnhancedAssistant = () => {
                 {socketRef.current?.connected && isInitialized && (
                     <span className="ml-2 text-blue-600">💬 Chat backup</span>
                 )}
+                {/* Debug button for testing connectivity */}
+                <button 
+                    onClick={testServerConnectivity}
+                    className="ml-2 text-xs text-blue-500 hover:text-blue-700 underline"
+                    title="Test server connectivity (check console for results)"
+                >
+                    🔍 Test Connection
+                </button>
             </div>
 
             {/* Chat History with AI Edits */}
@@ -383,3 +504,4 @@ const EnhancedAssistant = () => {
 }
 
 export default EnhancedAssistant
+ 
