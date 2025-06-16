@@ -271,7 +271,7 @@ export class AIAssistant {
           errorText: errorText
         });
         
-        // Special handling for 405 errors
+        // Special handling for 405 errors - try emergency route
         if (response.status === 405) {
           console.error('[AI Client] 405 METHOD NOT ALLOWED - This means the route exists but doesn\'t accept POST requests');
           console.error('[AI Client] This could indicate:');
@@ -279,6 +279,44 @@ export class AIAssistant {
           console.error('[AI Client] 2. Middleware blocking the request');
           console.error('[AI Client] 3. Import conflicts in server');
           console.error('[AI Client] 4. Server not redeployed with fixes');
+          
+          console.log('[AI Client] Attempting emergency fallback route...');
+          
+          try {
+            const emergencyResponse = await fetch('/api/ai/assistant-direct', {
+              method: 'POST',
+              headers,
+              credentials: 'include',
+              body: JSON.stringify(requestBody)
+            });
+            
+            console.log('[AI Client] Emergency route response:', emergencyResponse.status, emergencyResponse.statusText);
+            
+            if (emergencyResponse.ok) {
+              console.log('[AI Client] Emergency route worked! Using emergency response.');
+              const emergencyResult = await emergencyResponse.json();
+              
+              if (!emergencyResult.response) {
+                console.error('[AI Client] No response field in emergency result');
+                throw new Error('No response from AI assistant (emergency route)');
+              }
+              
+              const aiResponse = this.parseAIResponse(emergencyResult.response, request);
+              
+              const finalResponse = {
+                ...aiResponse,
+                searchResults: parsedCommand.searchResults,
+                parsedCommand
+              };
+              
+              console.log('[AI Client] Emergency route success - returning response');
+              return finalResponse;
+            } else {
+              console.error('[AI Client] Emergency route also failed:', emergencyResponse.status);
+            }
+          } catch (emergencyError) {
+            console.error('[AI Client] Emergency route error:', emergencyError);
+          }
         }
         
         throw new Error(`AI request failed (${response.status}): ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);

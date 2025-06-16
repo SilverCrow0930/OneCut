@@ -7,21 +7,15 @@ console.log('[AI Routes] Router initialized');
 console.log('[AI Routes] generateVideoAnalysis function:', typeof generateVideoAnalysis);
 console.log('[AI Routes] generateAIAssistantResponse function:', typeof generateAIAssistantResponse);
 
-// Add middleware to log all requests to this router
-router.use((req, res, next) => {
-    console.log(`[AI Router] ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
-    console.log(`[AI Router] Path: ${req.path}`);
-    console.log(`[AI Router] Base URL: ${req.baseUrl}`);
-    console.log(`[AI Router] Headers:`, {
-        'content-type': req.headers['content-type'],
-        'authorization': req.headers.authorization ? '[PRESENT]' : '[MISSING]',
-        'origin': req.headers.origin
+// EMERGENCY: Add a simple test route first to verify router is working
+router.get('/emergency-test', (req, res) => {
+    console.log('[AI Routes] EMERGENCY TEST route hit');
+    res.json({
+        message: 'Emergency test route working',
+        timestamp: new Date().toISOString(),
+        routerWorking: true
     });
-    console.log(`[AI Router] Body size:`, JSON.stringify(req.body || {}).length, 'bytes');
-    next();
 });
-console.log('[AI Routes] generateVideoAnalysis function:', typeof generateVideoAnalysis);
-console.log('[AI Routes] generateAIAssistantResponse function:', typeof generateAIAssistantResponse);
 
 // Add middleware to log all requests to this router
 router.use((req, res, next) => {
@@ -66,6 +60,17 @@ router.options('/test', (req, res) => {
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.sendStatus(200);
+});
+
+// EMERGENCY: Add a GET version of assistant for testing
+router.get('/assistant', (req, res) => {
+    console.log('[AI Routes] GET /assistant endpoint hit (emergency test)');
+    res.json({
+        message: 'Assistant route exists but this is GET method',
+        timestamp: new Date().toISOString(),
+        note: 'POST method should be available',
+        availableMethods: ['GET', 'POST']
+    });
 });
 
 // Video Analysis endpoint
@@ -213,6 +218,31 @@ router.post('/test-post', (req, res) => {
     });
 });
 
+// EMERGENCY: Add a comprehensive route listing endpoint
+router.get('/routes-debug', (req, res) => {
+    console.log('[AI Routes] Routes debug endpoint hit');
+    
+    const routes: any[] = [];
+    
+    // List all routes in this router
+    router.stack.forEach((layer: any) => {
+        if (layer.route) {
+            routes.push({
+                path: layer.route.path,
+                methods: Object.keys(layer.route.methods || {}),
+                stack: layer.route.stack?.length || 0
+            });
+        }
+    });
+    
+    res.json({
+        message: 'AI Router routes',
+        routes: routes,
+        timestamp: new Date().toISOString(),
+        totalRoutes: routes.length
+    });
+});
+
 // Add a catch-all route for debugging unmatched paths (using function instead of wildcard)
 router.use((req, res, next) => {
     console.log('[AI Routes] Unmatched route in AI router:', req.method, req.originalUrl);
@@ -222,9 +252,22 @@ router.use((req, res, next) => {
 
 console.log('[AI Routes] All routes registered');
 console.log('[AI Routes] Available routes:');
+console.log('[AI Routes] - GET /emergency-test');
+console.log('[AI Routes] - GET /assistant (emergency test)');
 console.log('[AI Routes] - POST /assistant');
 console.log('[AI Routes] - POST /analyze-video');
 console.log('[AI Routes] - GET /test');
 console.log('[AI Routes] - POST /test-post');
+console.log('[AI Routes] - GET /routes-debug');
+
+// EMERGENCY: Verify the router has the routes
+console.log('[AI Routes] Router stack verification:');
+router.stack.forEach((layer: any, index) => {
+    if (layer.route) {
+        console.log(`[AI Routes] Route ${index}: ${layer.route.path} - Methods: ${Object.keys(layer.route.methods || {}).join(', ')}`);
+    } else {
+        console.log(`[AI Routes] Middleware ${index}: ${layer.name || 'anonymous'}`);
+    }
+});
 
 export default router; 

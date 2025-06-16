@@ -151,6 +151,67 @@ app.use(
 
 console.log('[Server] AI routes mounted at /api/ai');
 
+// EMERGENCY: Add direct route registration as backup
+console.log('[EMERGENCY] Adding direct route registration as backup...');
+
+// Import the AI function directly for emergency route
+import { generateAIAssistantResponse } from './integrations/googleGenAI.js';
+
+// EMERGENCY: Direct route registration bypassing the router
+app.post('/api/ai/assistant-direct', authenticate, async (req, res) => {
+    console.log('=== [EMERGENCY DIRECT] /assistant-direct endpoint hit ===');
+    console.log('[EMERGENCY DIRECT] This bypasses the router completely');
+    console.log('[EMERGENCY DIRECT] Request method:', req.method);
+    console.log('[EMERGENCY DIRECT] Request body keys:', Object.keys(req.body || {}));
+    
+    try {
+        const { prompt, semanticJSON, currentTimeline } = req.body;
+
+        if (!prompt) {
+            console.log('[EMERGENCY DIRECT] Missing prompt parameter');
+            return res.status(400).json({ 
+                error: 'Missing required parameter: prompt' 
+            });
+        }
+
+        console.log('[EMERGENCY DIRECT] Processing AI assistant request...');
+        
+        // Check if the function exists
+        if (typeof generateAIAssistantResponse !== 'function') {
+            console.error('[EMERGENCY DIRECT] generateAIAssistantResponse is not a function!');
+            return res.status(500).json({
+                error: 'AI assistant function not available'
+            });
+        }
+        
+        const result = await generateAIAssistantResponse(prompt, semanticJSON, currentTimeline);
+        
+        console.log('[EMERGENCY DIRECT] AI assistant response completed successfully');
+        res.json(result);
+        
+    } catch (error) {
+        console.error('[EMERGENCY DIRECT] AI assistant API error:', error);
+        res.status(500).json({ 
+            error: error instanceof Error ? error.message : 'AI assistant request failed' 
+        });
+    }
+});
+
+// EMERGENCY: Test route without authentication
+app.get('/api/ai/test-no-auth', (req, res) => {
+    console.log('[EMERGENCY] Test route without auth hit');
+    res.json({
+        message: 'Emergency test route working (no auth)',
+        timestamp: new Date().toISOString(),
+        method: req.method,
+        path: req.path
+    });
+});
+
+console.log('[EMERGENCY] Direct routes added:');
+console.log('[EMERGENCY] - POST /api/ai/assistant-direct (with auth)');
+console.log('[EMERGENCY] - GET /api/ai/test-no-auth (no auth)');
+
 // Add a catch-all route to debug unmatched requests (using function instead of wildcard)
 app.use((req, res, next) => {
     // Only log if it's not a static file request
