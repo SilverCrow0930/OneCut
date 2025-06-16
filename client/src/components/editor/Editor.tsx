@@ -45,10 +45,18 @@ const Editor = () => {
         canRedo
     } = useEditor()
     const params = useParams()
-    const [assistantWidth, setAssistantWidth] = useState(384)
+    
+    // Initialize assistant width from localStorage or default to 384
+    const [assistantWidth, setAssistantWidth] = useState(() => {
+        const saved = localStorage.getItem('lemona-assistant-width')
+        return saved ? parseInt(saved, 10) : 384
+    })
 
     const handleAssistantResize = (deltaX: number) => {
-        setAssistantWidth(prev => Math.max(200, Math.min(800, prev - deltaX)))
+        const newWidth = Math.max(200, Math.min(800, assistantWidth - deltaX))
+        setAssistantWidth(newWidth)
+        // Save to localStorage
+        localStorage.setItem('lemona-assistant-width', newWidth.toString())
     }
 
     // Handle tool selection with toggle functionality

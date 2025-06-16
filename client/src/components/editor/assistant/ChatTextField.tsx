@@ -267,7 +267,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
             )}
 
             {/* Main Input Container */}
-            <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all duration-200">
+            <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200">
                 {/* Mentioned Tools - Inside Input Box at Top */}
                 {mentionedTools.length > 0 && (
                     <div className="flex flex-wrap gap-2 p-3 border-b border-gray-100 bg-gray-50/50">
