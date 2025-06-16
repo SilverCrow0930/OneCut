@@ -92,8 +92,8 @@ app.post('/api/ai/test-direct', (req, res) => {
     });
 });
 
-// Add route debugging for AI endpoints
-app.use('/api/ai*', (req, res, next) => {
+// Add route debugging for AI endpoints (using regex pattern instead of wildcard)
+app.use(/^\/api\/ai/, (req, res, next) => {
     console.log(`[AI ROUTE DEBUG] ${req.method} ${req.originalUrl}`);
     console.log(`[AI ROUTE DEBUG] Path: ${req.path}`);
     console.log(`[AI ROUTE DEBUG] Base URL: ${req.baseUrl}`);
@@ -151,10 +151,13 @@ app.use(
 
 console.log('[Server] AI routes mounted at /api/ai');
 
-// Add a catch-all route to debug unmatched requests
-app.use('*', (req, res, next) => {
-    console.log(`[CATCH-ALL] Unmatched route: ${req.method} ${req.originalUrl}`);
-    console.log(`[CATCH-ALL] Available routes should include /api/ai/assistant`);
+// Add a catch-all route to debug unmatched requests (using function instead of wildcard)
+app.use((req, res, next) => {
+    // Only log if it's not a static file request
+    if (!req.path.includes('.') && !req.path.startsWith('/_next')) {
+        console.log(`[CATCH-ALL] Unmatched route: ${req.method} ${req.originalUrl}`);
+        console.log(`[CATCH-ALL] Available routes should include /api/ai/assistant`);
+    }
     
     // Don't actually handle the request, let it fall through to 404
     next();
@@ -164,48 +167,31 @@ app.use('*', (req, res, next) => {
 app.get('/debug/routes', (req, res) => {
     console.log('[DEBUG] Route listing requested');
     
-    const routes: any[] = [];
-    
-    function extractRoutes(stack: any[], prefix = '') {
-        stack.forEach((layer: any) => {
-            if (layer.route) {
-                const methods = Object.keys(layer.route.methods);
-                routes.push({
-                    path: prefix + layer.route.path,
-                    methods: methods,
-                    name: layer.route.stack[0]?.name || 'anonymous'
-                });
-            } else if (layer.name === 'router' && layer.handle?.stack) {
-                let routerPrefix = '';
-                try {
-                    routerPrefix = layer.regexp.source
-                        .replace(/\\\//g, '/')
-                        .replace(/\$.*/, '')
-                        .replace(/^\^/, '')
-                        .replace(/\?\(\?\:/, '')
-                        .replace(/\)/, '');
-                } catch (e) {
-                    routerPrefix = '[complex-pattern]';
-                }
-                extractRoutes(layer.handle.stack, prefix + routerPrefix);
-            }
-        });
-    }
-    
     try {
-        extractRoutes(app._router.stack);
-        console.log('[DEBUG] Found routes:', routes.length);
+        // Simple route listing without complex regex parsing to avoid path-to-regexp issues
+        const simpleRoutes = [
+            { path: '/health', methods: ['GET'], description: 'Health check' },
+            { path: '/api/ai/assistant', methods: ['POST'], description: 'AI Assistant endpoint' },
+            { path: '/api/ai/analyze-video', methods: ['POST'], description: 'Video analysis' },
+            { path: '/api/ai/test', methods: ['GET'], description: 'AI test endpoint' },
+            { path: '/api/ai/test-post', methods: ['POST'], description: 'AI POST test' },
+            { path: '/api/v1/*', methods: ['*'], description: 'API v1 routes (protected)' },
+            { path: '/debug/routes', methods: ['GET'], description: 'This debug endpoint' }
+        ];
+        
+        console.log('[DEBUG] Returning simplified route list');
         
         res.json({
-            message: 'Available routes',
-            routes: routes,
+            message: 'Available routes (simplified to avoid path-to-regexp issues)',
+            routes: simpleRoutes,
             timestamp: new Date().toISOString(),
-            totalRoutes: routes.length
+            totalRoutes: simpleRoutes.length,
+            note: 'This is a simplified list. The server should have these routes available.'
         });
     } catch (error) {
-        console.error('[DEBUG] Error extracting routes:', error);
+        console.error('[DEBUG] Error in route debug endpoint:', error);
         res.status(500).json({
-            error: 'Failed to extract routes',
+            error: 'Failed to list routes',
             message: error instanceof Error ? error.message : 'Unknown error'
         });
     }

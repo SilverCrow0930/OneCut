@@ -213,8 +213,8 @@ router.post('/test-post', (req, res) => {
     });
 });
 
-// Add a catch-all route for debugging unmatched paths
-router.use('*', (req, res, next) => {
+// Add a catch-all route for debugging unmatched paths (using function instead of wildcard)
+router.use((req, res, next) => {
     console.log('[AI Routes] Unmatched route in AI router:', req.method, req.originalUrl);
     console.log('[AI Routes] Available routes: /assistant, /analyze-video, /test, /test-post');
     next(); // Let it fall through to 404
