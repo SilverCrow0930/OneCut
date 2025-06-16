@@ -197,7 +197,7 @@ export class AIAssistant {
 
       console.log('Access token available, making authenticated request');
 
-      const response = await fetch('/api/ai/assistant', {
+              const response = await fetch('/api/v1/ai/assistant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
