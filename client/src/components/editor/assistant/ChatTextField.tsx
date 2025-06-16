@@ -208,57 +208,81 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
     const pendingEdits = recentAIEdits.filter(edit => edit.status === 'pending');
 
     return (
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full space-y-4">
             {/* AI Recent Edits Section - Above Input */}
             {pendingEdits.length > 0 && (
-                <div className="mb-3 space-y-2">
-                    {pendingEdits.map(edit => (
-                        <div key={edit.id} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-900 font-medium">{edit.description}</p>
-                                <p className="text-xs text-gray-500 mt-1">{edit.timestamp.toLocaleTimeString()}</p>
-                            </div>
-                            <div className="flex gap-2 flex-shrink-0">
-                                <button
-                                    onClick={() => handleEditAction(edit.id, 'accept')}
-                                    className="flex items-center justify-center w-7 h-7 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
-                                    title="Accept"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <polyline points="20,6 9,17 4,12"></polyline>
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 px-1">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm font-medium text-gray-700">Recent AI Edits</span>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {pendingEdits.length} pending
+                        </span>
+                    </div>
+                    <div className="space-y-2">
+                        {pendingEdits.map(edit => (
+                            <div key={edit.id} className="group flex items-start gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl hover:shadow-md transition-all duration-200">
+                                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                        <path d="M2 17l10 5 10-5"></path>
+                                        <path d="M2 12l10 5 10-5"></path>
                                     </svg>
-                                </button>
-                                <button
-                                    onClick={() => handleEditAction(edit.id, 'reject')}
-                                    className="flex items-center justify-center w-7 h-7 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
-                                    title="Reject"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg>
-                                </button>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-gray-900 font-medium leading-relaxed">{edit.description}</p>
+                                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12,6 12,12 16,14"></polyline>
+                                        </svg>
+                                        {edit.timestamp.toLocaleTimeString()}
+                                    </p>
+                                </div>
+                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <button
+                                        onClick={() => handleEditAction(edit.id, 'accept')}
+                                        className="flex items-center justify-center w-8 h-8 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors duration-200 hover:scale-105"
+                                        title="Accept edit"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                            <polyline points="20,6 9,17 4,12"></polyline>
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={() => handleEditAction(edit.id, 'reject')}
+                                        className="flex items-center justify-center w-8 h-8 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200 hover:scale-105"
+                                        title="Reject edit"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             )}
 
             {/* Main Input Container */}
-            <div className="relative border border-gray-300 rounded-lg bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+            <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all duration-200">
                 {/* Mentioned Tools - Inside Input Box at Top */}
                 {mentionedTools.length > 0 && (
-                    <div className="flex flex-wrap gap-1 p-2 border-b border-gray-200 bg-gray-50">
+                    <div className="flex flex-wrap gap-2 p-3 border-b border-gray-100 bg-gray-50/50">
                         {mentionedTools.map(tool => (
                             <div
                                 key={tool.id}
-                                className="group flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium"
+                                className="group flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors duration-200"
                             >
-                                <span className="text-xs font-mono">{tool.icon}</span>
+                                <div className="flex items-center justify-center w-5 h-5 bg-blue-200 rounded text-xs font-mono text-blue-700">
+                                    {tool.icon}
+                                </div>
                                 <span>{tool.name}</span>
                                 <button
                                     onClick={() => removeTool(tool.id)}
-                                    className="ml-1 opacity-60 hover:opacity-100 text-blue-600"
+                                    className="ml-1 opacity-60 hover:opacity-100 text-blue-600 hover:bg-blue-300 rounded p-0.5 transition-all duration-200"
                                 >
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -274,7 +298,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                 <div className="relative">
                     <textarea
                         ref={textareaRef}
-                        className="w-full px-3 py-3 text-sm resize-none focus:outline-none placeholder-gray-500"
+                        className="w-full px-4 py-4 text-sm resize-none focus:outline-none placeholder-gray-400 leading-relaxed"
                         placeholder="Ask anything or use @ to mention tools..."
                         rows={1}
                         value={message}
@@ -284,59 +308,69 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
 
                     {/* Tool Dropdown */}
                     {showToolDropdown && (
-                        <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
-                            {filteredTools.length > 0 ? (
-                                filteredTools.map(tool => (
-                                    <button
-                                        key={tool.id}
-                                        onClick={() => handleToolSelect(tool)}
-                                        className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
-                                    >
-                                        <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded text-xs font-mono text-gray-700">
-                                            {tool.icon}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="font-medium text-sm text-gray-900">{tool.name}</div>
-                                            <div className="text-xs text-gray-500">{tool.description}</div>
-                                        </div>
-                                    </button>
-                                ))
-                            ) : (
-                                <div className="p-3 text-sm text-gray-500">No tools found</div>
-                            )}
+                        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto z-50">
+                            <div className="p-2">
+                                <div className="text-xs font-medium text-gray-500 px-3 py-2 border-b border-gray-100 mb-1">
+                                    Available Tools
+                                </div>
+                                {filteredTools.length > 0 ? (
+                                    <div className="space-y-1">
+                                        {filteredTools.map(tool => (
+                                            <button
+                                                key={tool.id}
+                                                onClick={() => handleToolSelect(tool)}
+                                                className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200 text-left group"
+                                            >
+                                                <div className="flex items-center justify-center w-10 h-10 bg-gray-100 group-hover:bg-gray-200 rounded-lg text-sm font-mono text-gray-700 transition-colors duration-200">
+                                                    {tool.icon}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-medium text-sm text-gray-900">{tool.name}</div>
+                                                    <div className="text-xs text-gray-500 mt-0.5">{tool.description}</div>
+                                                </div>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                    <polyline points="9,18 15,12 9,6"></polyline>
+                                                </svg>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 text-sm text-gray-500 text-center">No tools found</div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
 
                 {/* Bottom Controls */}
-                <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30">
                     {/* Left Side - @ Button and Mode Toggle */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={handleAtButtonClick}
-                            className="flex items-center justify-center w-7 h-7 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
+                            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-all duration-200 hover:scale-105"
                             title="Mention tools"
                         >
-                            <span className="text-sm font-medium">@</span>
+                            <span className="text-sm font-semibold">@</span>
                         </button>
                         
-                        <div className="flex items-center bg-white border border-gray-200 rounded overflow-hidden">
+                        <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                             <button
                                 onClick={() => setAiMode('agent')}
-                                className={`px-3 py-1 text-xs font-medium transition-colors ${
+                                className={`px-4 py-2 text-xs font-medium transition-all duration-200 ${
                                     aiMode === 'agent'
-                                        ? 'bg-blue-500 text-white'
-                                        : 'text-gray-600 hover:bg-gray-50'
+                                        ? 'bg-blue-500 text-white shadow-sm'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                                 }`}
                             >
                                 Agent
                             </button>
                             <button
                                 onClick={() => setAiMode('ask')}
-                                className={`px-3 py-1 text-xs font-medium transition-colors ${
+                                className={`px-4 py-2 text-xs font-medium transition-all duration-200 ${
                                     aiMode === 'ask'
-                                        ? 'bg-blue-500 text-white'
-                                        : 'text-gray-600 hover:bg-gray-50'
+                                        ? 'bg-blue-500 text-white shadow-sm'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                                 }`}
                             >
                                 Ask
@@ -348,7 +382,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleFileUpload}
-                            className="flex items-center justify-center w-7 h-7 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
+                            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-all duration-200 hover:scale-105"
                             title="Attach file"
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

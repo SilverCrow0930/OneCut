@@ -7,7 +7,7 @@ interface ChatSendButtonProps {
 const ChatSendButton: React.FC<ChatSendButtonProps> = ({ onSend }) => {
     return (
         <button
-            className="flex items-center justify-center w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+            className="flex items-center justify-center w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
             onClick={onSend}
             title="Send message"
         >
