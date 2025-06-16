@@ -4,15 +4,25 @@ import {
     createPartFromUri,
 } from '@google/genai'
 
+console.log('[GenAI Module] Loading Google GenAI integration...');
+console.log('[GenAI Module] Environment check:', {
+    hasGeminiKey: !!process.env.GEMINI_API_KEY,
+    hasGoogleCloudProject: !!process.env.GOOGLE_CLOUD_PROJECT,
+    hasGoogleCloudLocation: !!process.env.GOOGLE_CLOUD_LOCATION
+});
+
 if (!process.env.GEMINI_API_KEY) {
+    console.error('[GenAI Module] GEMINI_API_KEY is not set');
     throw new Error('GEMINI_API_KEY is not set')
 }
 
 if (!process.env.GOOGLE_CLOUD_PROJECT) {
+    console.error('[GenAI Module] GOOGLE_CLOUD_PROJECT is not set');
     throw new Error('GOOGLE_CLOUD_PROJECT is not set')
 }
 
 if (!process.env.GOOGLE_CLOUD_LOCATION) {
+    console.error('[GenAI Module] GOOGLE_CLOUD_LOCATION is not set');
     throw new Error('GOOGLE_CLOUD_LOCATION is not set')
 }
 
@@ -1328,10 +1338,18 @@ export const generateVideoAnalysis = async (signedUrl: string, mimeType: string)
 
 export const generateAIAssistantResponse = async (prompt: string, semanticJSON?: any, currentTimeline?: any) => {
     console.log('=== GOOGLE GENAI AI ASSISTANT RESPONSE STARTED ===');
-    console.log('Input parameters:', {
+    console.log('[GenAI] Function called at:', new Date().toISOString());
+    console.log('[GenAI] Function type check:', typeof generateAIAssistantResponse);
+    console.log('[GenAI] Input parameters:', {
         promptLength: prompt.length,
         hasSemanticJSON: !!semanticJSON,
-        hasTimeline: !!currentTimeline
+        hasTimeline: !!currentTimeline,
+        promptPreview: prompt.substring(0, 100) + '...'
+    });
+    console.log('[GenAI] Environment check:', {
+        hasGeminiKey: !!process.env.GEMINI_API_KEY,
+        geminiKeyLength: process.env.GEMINI_API_KEY?.length || 0,
+        nodeEnv: process.env.NODE_ENV
     });
 
     try {
@@ -1347,6 +1365,10 @@ export const generateAIAssistantResponse = async (prompt: string, semanticJSON?:
         
         contextPrompt += `\n\nBased on the semantic JSON "codebase" and current timeline state, help the user with their request.`;
 
+        console.log('[GenAI] Calling ai.models.generateContent...');
+        console.log('[GenAI] Model:', model);
+        console.log('[GenAI] Context prompt length:', contextPrompt.length);
+        
         const response = await ai.models.generateContent({
             model: model,
             contents: [{ role: 'user', parts: [{ text: contextPrompt }] }],
@@ -1359,7 +1381,13 @@ export const generateAIAssistantResponse = async (prompt: string, semanticJSON?:
             },
         });
 
-        console.log('AI assistant response completed');
+        console.log('[GenAI] AI assistant response completed');
+        console.log('[GenAI] Response details:', {
+            hasCandidates: !!response.candidates,
+            candidateCount: response.candidates?.length || 0,
+            hasContent: !!response.candidates?.[0]?.content,
+            hasParts: !!response.candidates?.[0]?.content?.parts
+        });
 
         if (!response.candidates?.[0]?.content?.parts?.[0]?.text) {
             throw new Error('No response from AI assistant model');
@@ -1378,7 +1406,7 @@ export const generateAIAssistantResponse = async (prompt: string, semanticJSON?:
         };
     } catch (error) {
         console.error('=== GOOGLE GENAI AI ASSISTANT RESPONSE FAILED ===');
-        console.error('Error details:', {
+        console.error('[GenAI] Error details:', {
             error: error instanceof Error ? {
                 name: error.name,
                 message: error.message,
@@ -1389,3 +1417,9 @@ export const generateAIAssistantResponse = async (prompt: string, semanticJSON?:
         throw error;
     }
 }
+
+// Verify exports at module load time
+console.log('[GenAI Module] Verifying exports...');
+console.log('[GenAI Module] generateVideoAnalysis type:', typeof generateVideoAnalysis);
+console.log('[GenAI Module] generateAIAssistantResponse type:', typeof generateAIAssistantResponse);
+console.log('[GenAI Module] Module loaded successfully');
