@@ -270,6 +270,20 @@ const Editor = () => {
                 el = el.parentElement
             }
             setSelectedClipId(null)
+            
+            // Also blur any focused input/textarea to deselect text
+            const activeElement = document.activeElement as HTMLElement
+            if (activeElement && (
+                activeElement.tagName === 'INPUT' || 
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.contentEditable === 'true'
+            )) {
+                // Only blur if the click is outside the assistant panel
+                const assistantPanel = document.querySelector('[data-assistant-panel]')
+                if (assistantPanel && !assistantPanel.contains(e.target as Node)) {
+                    activeElement.blur()
+                }
+            }
         }
         document.addEventListener('click', handleGlobalClick)
         return () => {
@@ -347,7 +361,7 @@ const Editor = () => {
                     >
                         <EditorContent />
                     </div>
-                    <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0" style={{ width: assistantWidth }}>
+                    <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0" style={{ width: assistantWidth }} data-assistant-panel>
                         <ResizeHandle
                             className="absolute -left-2 z-10"
                             onResize={handleAssistantResize}

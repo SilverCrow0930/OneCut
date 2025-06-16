@@ -12,6 +12,7 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onResize, className = '' })
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (isDraggingRef.current) {
+                e.preventDefault()
                 const deltaX = e.clientX - startXRef.current
                 onResize(deltaX)
                 startXRef.current = e.clientX
@@ -19,8 +20,11 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onResize, className = '' })
         }
 
         const handleMouseUp = () => {
-            isDraggingRef.current = false
-            document.body.classList.remove('cursor-ew-resize')
+            if (isDraggingRef.current) {
+                isDraggingRef.current = false
+                document.body.classList.remove('cursor-ew-resize', 'select-none')
+                document.body.style.userSelect = ''
+            }
         }
 
         document.addEventListener('mousemove', handleMouseMove)
@@ -35,17 +39,21 @@ const ResizeHandle: React.FC<ResizeHandleProps> = ({ onResize, className = '' })
     return (
         <div
             className={`
-                w-4 h-full cursor-ew-resize
+                w-4 h-full cursor-ew-resize select-none
                 flex items-center justify-center
+                hover:bg-gray-200/50 transition-colors
                 ${className}
             `}
             onMouseDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
                 isDraggingRef.current = true
                 startXRef.current = e.clientX
-                document.body.classList.add('cursor-ew-resize')
+                document.body.classList.add('cursor-ew-resize', 'select-none')
+                document.body.style.userSelect = 'none'
             }}
         >
-            <div className="w-0.5 h-full opacity-0 transition-all duration-150" />
+            <div className="w-0.5 h-8 bg-gray-400 rounded-full opacity-60 hover:opacity-100 transition-opacity" />
         </div>
     )
 }
