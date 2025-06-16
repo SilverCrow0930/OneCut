@@ -24,12 +24,12 @@ interface AIEdit {
 const AVAILABLE_TOOLS: ToolMention[] = [
     { id: 'captions', name: 'Captions', description: 'Generate and edit video captions', icon: 'CC' },
     { id: 'text', name: 'Text', description: 'Add text overlays and titles', icon: 'T' },
-    { id: 'transitions', name: 'Transitions', description: 'Apply video transitions', icon: 'TR' },
-    { id: 'voiceover', name: 'Voiceover', description: 'Generate AI voiceovers', icon: 'VO' },
-    { id: 'stickers', name: 'Stickers', description: 'Add stickers and emojis', icon: 'ST' },
-    { id: 'timeline', name: 'Timeline', description: 'Edit timeline and clips', icon: 'TL' },
-    { id: 'analysis', name: 'Analysis', description: 'Analyze video content', icon: 'AN' },
-    { id: 'export', name: 'Export', description: 'Export and render video', icon: 'EX' },
+    { id: 'transitions', name: 'Transitions', description: 'Apply video transitions', icon: '→' },
+    { id: 'voiceover', name: 'Voiceover', description: 'Generate AI voiceovers', icon: '🎤' },
+    { id: 'stickers', name: 'Stickers', description: 'Add stickers and emojis', icon: '⭐' },
+    { id: 'timeline', name: 'Timeline', description: 'Edit timeline and clips', icon: '⏱' },
+    { id: 'analysis', name: 'Analysis', description: 'Analyze video content', icon: '📊' },
+    { id: 'export', name: 'Export', description: 'Export and render video', icon: '↗' },
 ];
 
 const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessage }) => {
@@ -81,6 +81,25 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
             }
         } else {
             setShowToolDropdown(false);
+        }
+    };
+
+    // Handle @ Button Click
+    const handleAtButtonClick = () => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            const cursorPos = textarea.selectionStart;
+            const newMessage = message.slice(0, cursorPos) + '@' + message.slice(cursorPos);
+            setMessage(newMessage);
+            setCursorPosition(cursorPos + 1);
+            setShowToolDropdown(true);
+            setToolSearchQuery('');
+            
+            // Focus and set cursor position
+            setTimeout(() => {
+                textarea.focus();
+                textarea.setSelectionRange(cursorPos + 1, cursorPos + 1);
+            }, 0);
         }
     };
 
@@ -190,31 +209,31 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
 
     return (
         <div className="flex flex-col w-full">
-            {/* AI Edits Section - Above Input */}
+            {/* AI Recent Edits Section - Above Input */}
             {pendingEdits.length > 0 && (
                 <div className="mb-3 space-y-2">
                     {pendingEdits.map(edit => (
-                        <div key={edit.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                        <div key={edit.id} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-700 truncate">{edit.description}</p>
-                                <p className="text-xs text-gray-500">{edit.timestamp.toLocaleTimeString()}</p>
+                                <p className="text-sm text-gray-900 font-medium">{edit.description}</p>
+                                <p className="text-xs text-gray-500 mt-1">{edit.timestamp.toLocaleTimeString()}</p>
                             </div>
-                            <div className="flex items-center gap-1 ml-3">
+                            <div className="flex gap-2 flex-shrink-0">
                                 <button
                                     onClick={() => handleEditAction(edit.id, 'accept')}
-                                    className="flex items-center justify-center w-6 h-6 bg-green-100 hover:bg-green-200 text-green-600 rounded transition-colors"
+                                    className="flex items-center justify-center w-7 h-7 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
                                     title="Accept"
                                 >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <polyline points="20,6 9,17 4,12"></polyline>
                                     </svg>
                                 </button>
                                 <button
                                     onClick={() => handleEditAction(edit.id, 'reject')}
-                                    className="flex items-center justify-center w-6 h-6 bg-red-100 hover:bg-red-200 text-red-600 rounded transition-colors"
+                                    className="flex items-center justify-center w-7 h-7 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
                                     title="Reject"
                                 >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <line x1="18" y1="6" x2="6" y2="18"></line>
                                         <line x1="6" y1="6" x2="18" y2="18"></line>
                                     </svg>
@@ -233,17 +252,15 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                         {mentionedTools.map(tool => (
                             <div
                                 key={tool.id}
-                                className="group flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium"
+                                className="group flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium"
                             >
-                                <span className="w-4 h-4 bg-blue-200 text-blue-800 rounded text-xs flex items-center justify-center font-mono">
-                                    {tool.icon}
-                                </span>
+                                <span className="text-xs font-mono">{tool.icon}</span>
                                 <span>{tool.name}</span>
                                 <button
                                     onClick={() => removeTool(tool.id)}
-                                    className="opacity-0 group-hover:opacity-100 ml-1 text-blue-500 hover:text-blue-700 transition-opacity"
+                                    className="ml-1 opacity-60 hover:opacity-100 text-blue-600"
                                 >
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <line x1="18" y1="6" x2="6" y2="18"></line>
                                         <line x1="6" y1="6" x2="18" y2="18"></line>
                                     </svg>
@@ -253,17 +270,16 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                     </div>
                 )}
 
-                {/* Text Input Area */}
+                {/* Input Area */}
                 <div className="relative">
                     <textarea
                         ref={textareaRef}
-                        className="w-full p-3 text-sm resize-none focus:outline-none placeholder-gray-500"
-                        placeholder="Plan, search, build anything"
+                        className="w-full px-3 py-3 text-sm resize-none focus:outline-none placeholder-gray-500"
+                        placeholder="Ask anything or use @ to mention tools..."
                         rows={1}
                         value={message}
                         onChange={handleChange}
                         onKeyDown={handleKeyDown}
-                        style={{ minHeight: '44px' }}
                     />
 
                     {/* Tool Dropdown */}
@@ -276,7 +292,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                                         onClick={() => handleToolSelect(tool)}
                                         className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
                                     >
-                                        <div className="w-6 h-6 bg-gray-100 text-gray-700 rounded text-xs flex items-center justify-center font-mono">
+                                        <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded text-xs font-mono text-gray-700">
                                             {tool.icon}
                                         </div>
                                         <div className="flex-1">
@@ -294,15 +310,23 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
 
                 {/* Bottom Controls */}
                 <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50">
-                    {/* Left Side - AI Mode Toggle */}
-                    <div className="flex items-center">
-                        <div className="flex bg-white border border-gray-200 rounded-md overflow-hidden">
+                    {/* Left Side - @ Button and Mode Toggle */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleAtButtonClick}
+                            className="flex items-center justify-center w-7 h-7 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
+                            title="Mention tools"
+                        >
+                            <span className="text-sm font-medium">@</span>
+                        </button>
+                        
+                        <div className="flex items-center bg-white border border-gray-200 rounded overflow-hidden">
                             <button
                                 onClick={() => setAiMode('agent')}
                                 className={`px-3 py-1 text-xs font-medium transition-colors ${
                                     aiMode === 'agent'
-                                        ? 'bg-gray-900 text-white'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
                                 Agent
@@ -311,8 +335,8 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                                 onClick={() => setAiMode('ask')}
                                 className={`px-3 py-1 text-xs font-medium transition-colors ${
                                     aiMode === 'ask'
-                                        ? 'bg-gray-900 text-white'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
                                 Ask
@@ -320,32 +344,18 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                         </div>
                     </div>
 
-                    {/* Right Side - Controls */}
+                    {/* Right Side - File Upload and Send */}
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleFileUpload}
-                            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
+                            className="flex items-center justify-center w-7 h-7 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
                             title="Attach file"
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.64 16.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path>
                             </svg>
                         </button>
-                        <button
-                            onClick={handleSend}
-                            disabled={!message.trim()}
-                            className={`p-1.5 rounded transition-colors ${
-                                message.trim()
-                                    ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
-                                    : 'text-gray-400 cursor-not-allowed'
-                            }`}
-                            title="Send message"
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
-                            </svg>
-                        </button>
+                        <ChatSendButton onSend={handleSend} />
                     </div>
                 </div>
 

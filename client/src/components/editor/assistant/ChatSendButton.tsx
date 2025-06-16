@@ -7,19 +7,14 @@ interface ChatSendButtonProps {
 const ChatSendButton: React.FC<ChatSendButtonProps> = ({ onSend }) => {
     return (
         <button
-            className='
-                flex flex-row items-center justify-center gap-1 px-2 py-1 
-                bg-blue-500 text-white text-[10px] rounded-lg
-                hover:bg-blue-600 transition-colors
-            '
+            className="flex items-center justify-center w-7 h-7 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
             onClick={onSend}
+            title="Send message"
         >
-            Send
-            <img
-                src="/assets/icons/enter.png"
-                alt="Send"
-                className='w-2 h-2 filter invert'
-            />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+            </svg>
         </button>
     )
 }
