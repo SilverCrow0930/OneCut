@@ -181,18 +181,12 @@ export class AIAssistant {
     const context = this.buildContext();
     
     try {
-      console.log('=== [AI Client] Starting processWithAI ===');
-      console.log('[AI Client] Timestamp:', new Date().toISOString());
-      console.log('[AI Client] Making AI request to /api/ai/assistant');
-      console.log('[AI Client] Request payload:', {
+      console.log('Making AI request to /api/ai/assistant');
+      console.log('Request payload:', {
         prompt: request,
-        promptLength: request.length,
         hasSemanticJSON: !!this.semanticJSON,
-        timelineClips: context.timeline.clips.length,
-        semanticJSONKeys: this.semanticJSON ? Object.keys(this.semanticJSON) : [],
-        contextKeys: Object.keys(context)
+        timelineClips: context.timeline.clips.length
       });
-      console.log('[AI Client] Full request URL will be:', window.location.origin + '/api/ai/assistant');
 
       // Get auth token from Supabase client
       const supabase = createClient(
@@ -200,16 +194,7 @@ export class AIAssistant {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
       
-      console.log('[AI Client] Getting Supabase session...');
       const { data: { session } } = await supabase.auth.getSession();
-      
-      console.log('[AI Client] Session details:', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        tokenLength: session?.access_token?.length || 0,
-        userId: session?.user?.id,
-        userEmail: session?.user?.email
-      });
       
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -218,151 +203,52 @@ export class AIAssistant {
       // Add authorization header if session exists
       if (session?.access_token) {
         headers['Authorization'] = `Bearer ${session.access_token}`;
-        console.log('[AI Client] Authorization header added');
-      } else {
-        console.log('[AI Client] WARNING: No access token available!');
       }
 
-      console.log('[AI Client] Request headers:', { 
-        'Content-Type': headers['Content-Type'],
-        'Authorization': headers.Authorization ? '[PRESENT - ' + headers.Authorization.substring(0, 20) + '...]' : '[MISSING]',
+      console.log('Request headers:', { 
+        ...headers, 
+        Authorization: headers.Authorization ? '[REDACTED]' : 'none',
         hasSession: !!session
       });
 
-      const requestBody = {
-        prompt: request,
-        semanticJSON: this.semanticJSON,
-        currentTimeline: context.timeline,
-        parsedCommand: parsedCommand
-      };
-
-      console.log('[AI Client] Request body details:', {
-        promptLength: request.length,
-        hasSemanticJSON: !!this.semanticJSON,
-        hasCurrentTimeline: !!context.timeline,
-        hasParsedCommand: !!parsedCommand,
-        bodySize: JSON.stringify(requestBody).length + ' bytes'
-      });
-
-      console.log('[AI Client] Making fetch request...');
       const response = await fetch('/api/ai/assistant', {
         method: 'POST',
         headers,
         credentials: 'include', // Include cookies for authentication
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          prompt: request,
+          semanticJSON: this.semanticJSON,
+          currentTimeline: context.timeline,
+          parsedCommand: parsedCommand
+        })
       });
 
-      console.log('[AI Client] Fetch completed');
-      console.log('[AI Client] Response status:', response.status, response.statusText);
-      console.log('[AI Client] Response headers:', Object.fromEntries(response.headers.entries()));
-      console.log('[AI Client] Response ok:', response.ok);
-      console.log('[AI Client] Response type:', response.type);
-      console.log('[AI Client] Response URL:', response.url);
+      console.log('AI API response status:', response.status, response.statusText);
 
       if (!response.ok) {
-        console.log('[AI Client] Response not ok, reading error text...');
         const errorText = await response.text();
-        console.error('[AI Client] AI API error response:', errorText);
-        console.error('[AI Client] Error details:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-          headers: Object.fromEntries(response.headers.entries()),
-          errorText: errorText
-        });
-        
-        // Special handling for 405 errors - try emergency route
-        if (response.status === 405) {
-          console.error('[AI Client] 405 METHOD NOT ALLOWED - This means the route exists but doesn\'t accept POST requests');
-          console.error('[AI Client] This could indicate:');
-          console.error('[AI Client] 1. Route registration failed');
-          console.error('[AI Client] 2. Middleware blocking the request');
-          console.error('[AI Client] 3. Import conflicts in server');
-          console.error('[AI Client] 4. Server not redeployed with fixes');
-          
-          console.log('[AI Client] Attempting emergency fallback route...');
-          
-          try {
-            const emergencyResponse = await fetch('/api/ai/assistant-direct', {
-              method: 'POST',
-              headers,
-              credentials: 'include',
-              body: JSON.stringify(requestBody)
-            });
-            
-            console.log('[AI Client] Emergency route response:', emergencyResponse.status, emergencyResponse.statusText);
-            
-            if (emergencyResponse.ok) {
-              console.log('[AI Client] Emergency route worked! Using emergency response.');
-              const emergencyResult = await emergencyResponse.json();
-              
-              if (!emergencyResult.response) {
-                console.error('[AI Client] No response field in emergency result');
-                throw new Error('No response from AI assistant (emergency route)');
-              }
-              
-              const aiResponse = this.parseAIResponse(emergencyResult.response, request);
-              
-              const finalResponse = {
-                ...aiResponse,
-                searchResults: parsedCommand.searchResults,
-                parsedCommand
-              };
-              
-              console.log('[AI Client] Emergency route success - returning response');
-              return finalResponse;
-            } else {
-              console.error('[AI Client] Emergency route also failed:', emergencyResponse.status);
-            }
-          } catch (emergencyError) {
-            console.error('[AI Client] Emergency route error:', emergencyError);
-          }
-        }
-        
+        console.error('AI API error response:', errorText);
         throw new Error(`AI request failed (${response.status}): ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
       }
 
-      console.log('[AI Client] Reading JSON response...');
       const result = await response.json();
-      console.log('[AI Client] AI API result:', {
-        hasResult: !!result,
-        resultKeys: Object.keys(result || {}),
-        hasResponse: !!result.response,
-        responseLength: result.response?.length || 0
-      });
-      console.log('[AI Client] Full result:', result);
+      console.log('AI API result:', result);
       
       if (!result.response) {
-        console.error('[AI Client] No response field in result');
         throw new Error('No response from AI assistant');
       }
 
-      console.log('[AI Client] Parsing AI response...');
       const aiResponse = this.parseAIResponse(result.response, request);
       
       // Merge with parsed command data
-      const finalResponse = {
+      return {
         ...aiResponse,
         searchResults: parsedCommand.searchResults,
         parsedCommand
       };
       
-      console.log('[AI Client] Final response prepared:', {
-        type: finalResponse.type,
-        hasContent: !!finalResponse.content,
-        hasCommands: !!finalResponse.commands,
-        hasSearchResults: !!finalResponse.searchResults
-      });
-      console.log('=== [AI Client] processWithAI completed successfully ===');
-      
-      return finalResponse;
-      
     } catch (error) {
-      console.error('=== [AI Client] AI request processing failed ===');
-      console.error('[AI Client] Error type:', typeof error);
-      console.error('[AI Client] Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('[AI Client] Error stack:', error instanceof Error ? error.stack : 'No stack');
-      console.error('[AI Client] Full error:', error);
+      console.error('AI request processing failed:', error);
       
       // Provide more specific error messages
       if (error instanceof TypeError && error.message.includes('fetch')) {

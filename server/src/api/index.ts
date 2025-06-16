@@ -4,7 +4,7 @@ import projectsRouter from './projects.js'
 import assetsRouter from './assets.js'
 import timelineRouter from './timeline.js'
 import transcriptionRouter from './transcription.js'
-import falAiRouter from './ai.js'
+import aiRouter from './ai.js'
 import voiceoverRouter from './voiceover.js'
 import exportRouter from './export.js'
 import quickclipsRouter from './quickclips.js'
@@ -16,7 +16,7 @@ apiRouter.use('/timeline', timelineRouter)
 apiRouter.use('/projects', projectsRouter)
 apiRouter.use('/assets', assetsRouter)
 apiRouter.use('/transcription', transcriptionRouter)
-apiRouter.use('/ai', falAiRouter)
+apiRouter.use('/ai', aiRouter)
 apiRouter.use('/voiceover', voiceoverRouter)
 apiRouter.use('/export', exportRouter)
 apiRouter.use('/quickclips', quickclipsRouter)
