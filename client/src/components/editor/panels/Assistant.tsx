@@ -61,7 +61,7 @@ const Assistant = () => {
     const socketRef = useRef<Socket | null>(null)
     const [message, setMessage] = useState<string>("")
     const { session } = useAuth()
-    const { clips, project } = useEditor()
+    const { clips, tracks, project } = useEditor()
     const { assets } = useAssets()
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
@@ -98,93 +98,32 @@ const Assistant = () => {
             return
         }
 
-        // Find the first video asset in the project
-        const videoAssets = assets.filter(asset => 
-            asset.mime_type?.startsWith('video/') && 
-            clips.some(clip => clip.assetId === asset.id)
-        )
-
-        if (videoAssets.length === 0) {
-            setAnalysisError('No video assets found in your project. Please add a video to analyze.')
+        if (clips.length === 0) {
+            setAnalysisError('No clips found in your project. Please add some clips to analyze.')
             return
         }
 
-        const primaryVideo = videoAssets[0] // Use the first video asset
-        
         setIsAnalyzing(true)
         setAnalysisError(null)
         
         try {
-            console.log('Starting video analysis for:', primaryVideo.id)
+            console.log('Starting video analysis export for project:', projectId)
+            console.log('Clips to analyze:', clips.length)
             
-            // Try to find video element in the DOM first
-            const videoElements = document.querySelectorAll('video')
-            let videoBlob: Blob | null = null
-            let videoElement: HTMLVideoElement | null = null
-            
-            // Look for a video element that might be displaying our asset
-            for (const video of videoElements) {
-                if (video.src && (video.src.includes(primaryVideo.id) || video.src.startsWith('blob:'))) {
-                    videoElement = video
-                    break
-                }
+            // Get the current timeline data
+            const timelineData = {
+                clips: clips,
+                tracks: tracks,
+                projectId: projectId
             }
             
-            if (videoElement && videoElement.src.startsWith('blob:')) {
-                // If we have a blob URL, try to convert it back to a blob
-                try {
-                    const response = await fetch(videoElement.src)
-                    videoBlob = await response.blob()
-                    console.log('Successfully captured video from browser blob:', videoBlob.size, 'bytes')
-                } catch (blobError) {
-                    console.warn('Failed to capture video from blob URL:', blobError)
-                    videoBlob = null
-                }
-            }
-            
-            // If we couldn't get the video from the browser, try the storage URL
-            if (!videoBlob) {
-                console.log('Attempting to get video from storage...')
-                
-                // Get the signed URL for the video asset
-                const urlResponse = await fetch(`${API_URL}/api/assets/${primaryVideo.id}/url`, {
-                    headers: {
-                        'Authorization': `Bearer ${session.access_token}`
-                    }
-                })
-                
-                if (!urlResponse.ok) {
-                    throw new Error('Failed to get video URL from storage')
-                }
-                
-                const { url: videoUrl } = await urlResponse.json()
-                
-                // Download the video to create a blob
-                const videoResponse = await fetch(videoUrl)
-                if (!videoResponse.ok) {
-                    throw new Error('Failed to download video from storage')
-                }
-                
-                videoBlob = await videoResponse.blob()
-                console.log('Successfully downloaded video from storage:', videoBlob.size, 'bytes')
-            }
-            
-            if (!videoBlob) {
-                throw new Error('Could not obtain video data from browser or storage')
-            }
-            
-            // Create FormData to send the video blob
-            const formData = new FormData()
-            formData.append('video', videoBlob, 'video.mp4')
-            formData.append('mimeType', primaryVideo.mime_type || 'video/mp4')
-            formData.append('projectId', projectId)
-            
-            const response = await fetch(`${API_URL}/api/ai/analyze-video-blob`, {
+            const response = await fetch(`${API_URL}/api/ai/analyze-video-export`, {
                 method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.access_token}`
                 },
-                body: formData
+                body: JSON.stringify(timelineData)
             })
 
             if (!response.ok) {
