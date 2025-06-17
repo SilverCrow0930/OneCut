@@ -91,7 +91,7 @@ export const setupWebSocket = async (httpServer: HttpServer): Promise<Server> =>
                     
                     // Send the response back
                     socket.emit('chat_message', { 
-                        text: response 
+                        text: response.response 
                     });
                     
                     // Reset state
