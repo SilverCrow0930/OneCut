@@ -146,7 +146,7 @@ router.post('/analyze-video-export', async (req, res) => {
         // Analysis-optimized export settings (fast but complete)
         const analysisExportSettings = {
             resolution: '480p' as const,     // Lower resolution for speed
-            fps: 15,                         // Lower FPS for speed  
+            fps: 24,                         // Minimum allowed FPS (24-60 range)
             quality: 'low' as const,         // Lower quality for speed
             quickExport: true,               // Enable all speed optimizations
         };
