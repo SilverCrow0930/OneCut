@@ -1109,6 +1109,194 @@ export const generateTextStyle = async (stylePrompt: string, sampleText: string 
     }
 }
 
+export const generateVideoAnalysisFromBlob = async (videoBlob: Blob, mimeType: string) => {
+    console.log('=== GOOGLE GENAI VIDEO ANALYSIS FROM BLOB STARTED ===');
+    console.log('Input parameters:', {
+        mimeType,
+        blobSize: videoBlob.size,
+        blobSizeMB: (videoBlob.size / (1024 * 1024)).toFixed(2)
+    });
+
+    try {
+        console.log('Using provided video blob for analysis...');
+        console.log('Blob details:', {
+            size: videoBlob.size,
+            type: videoBlob.type
+        });
+
+        if (videoBlob.size === 0) {
+            throw new Error('Video blob is empty');
+        }
+
+        // Upload the blob directly to Google GenAI
+        console.log('Initiating blob upload to Google GenAI for analysis...');
+        const uploadStartTime = Date.now();
+        const uploadPromise = ai.files.upload({
+            file: videoBlob,
+            config: { mimeType: mimeType }
+        });
+
+        const uploadedFile = await Promise.race([
+            uploadPromise,
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('File upload timeout')), 24 * 60 * 60 * 1000)
+            )
+        ]);
+
+        console.log('Blob upload completed for analysis:', {
+            duration: `${((Date.now() - uploadStartTime) / 1000).toFixed(2)}s`,
+            fileUri: uploadedFile.uri,
+            fileName: uploadedFile.name
+        });
+
+        if (!uploadedFile.uri) {
+            throw new Error('Failed to upload blob to Google GenAI');
+        }
+
+        if (!uploadedFile.name) {
+            throw new Error('File name not returned from upload');
+        }
+
+        console.log('Waiting for file to become active for analysis...');
+        try {
+            await waitForFileActive(uploadedFile.name);
+            console.log('File is now active, proceeding with analysis');
+        } catch (error) {
+            console.error('Error waiting for file to become active:', {
+                error: error instanceof Error ? {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                } : error
+            });
+            throw new Error(`Video processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        const analysisPrompt = `
+        Analyze this video completely and create a semantic JSON file.
+        
+        REQUIREMENTS:
+        1. Create detailed scene descriptions (2-3 sentences each)
+        2. Create detailed visual descriptions (2-3 sentences each) 
+        3. Extract all speech with precise timing
+        4. Identify all scene changes and transitions
+        5. Note any background music or sound effects
+        6. Provide accurate millisecond timing for everything
+        
+        Focus on creating a comprehensive "codebase" that an AI video editor can use to:
+        - Understand the content and context
+        - Make intelligent editing decisions
+        - Find specific moments or content
+        - Apply appropriate effects and transitions
+        
+        Return ONLY the JSON structure, no additional text.
+        `;
+
+        const content = createUserContent([
+            analysisPrompt,
+            createPartFromUri(uploadedFile.uri, mimeType)
+        ]);
+
+        console.log('Sending content to model for analysis...');
+        const modelStartTime = Date.now();
+        const modelResponse = await Promise.race([
+            ai.models.generateContent({
+                model: model,
+                contents: [content],
+                config: {
+                    systemInstruction: videoAnalysisSystemInstruction,
+                    maxOutputTokens: 8192,
+                    temperature: 0.3,
+                    topP: 0.8,
+                    topK: 40,
+                },
+            }).catch((error: any) => {
+                console.error('Gemini API analysis error details:', {
+                    message: error.message,
+                    status: error.status,
+                    code: error.code,
+                    details: error.details,
+                    stack: error.stack
+                });
+                
+                if (error.message?.includes('503') || error.status === 503) {
+                    throw new Error('got status: 503 Service Unavailable. The AI service is temporarily overloaded. Please try again in a few minutes.');
+                } else if (error.message?.includes('quota') || error.message?.includes('limit')) {
+                    throw new Error('API quota or rate limit exceeded. Please try again later.');
+                } else if (error.message?.includes('timeout')) {
+                    throw new Error('Request timed out. Please try with a shorter video.');
+                } else {
+                    throw error;
+                }
+            }),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Model generation timeout after 24 hours')), 24 * 60 * 60 * 1000)
+            )
+        ]);
+
+        console.log('Model analysis completed:', {
+            duration: `${((Date.now() - modelStartTime) / 1000).toFixed(2)}s`,
+            hasCandidates: !!modelResponse.candidates,
+            candidateCount: modelResponse.candidates?.length
+        });
+
+        if (!modelResponse.candidates) {
+            throw new Error('No candidates found in response')
+        }
+
+        if (!modelResponse.candidates?.[0]?.content?.parts) {
+            throw new Error('No parts found in response')
+        }
+
+        const analysisOutput = modelResponse.candidates[0].content.parts
+            .find((part: any) => !('thought' in part))?.text;
+
+        console.log('Model analysis output:', {
+            length: analysisOutput?.length || 0,
+            preview: analysisOutput?.substring(0, 200) + '...'
+        });
+
+        // Parse the JSON output
+        let semanticJSON;
+        try {
+            // Extract JSON from the response (in case there's extra text)
+            const jsonMatch = analysisOutput?.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                semanticJSON = JSON.parse(jsonMatch[0]);
+            } else {
+                semanticJSON = JSON.parse(analysisOutput || '{}');
+            }
+        } catch (parseError) {
+            console.error('Failed to parse analysis JSON:', parseError);
+            throw new Error('AI generated invalid analysis format');
+        }
+
+        // Add metadata
+        semanticJSON.metadata = {
+            ...semanticJSON.metadata,
+            analyzed_at: new Date().toISOString(),
+            file_id: uploadedFile.name
+        };
+
+        console.log('=== GOOGLE GENAI VIDEO ANALYSIS FROM BLOB COMPLETED ===');
+        return {
+            analysis: semanticJSON
+        }
+    }
+    catch (error) {
+        console.error('=== GOOGLE GENAI VIDEO ANALYSIS FROM BLOB FAILED ===');
+        console.error('Error details:', {
+            error: error instanceof Error ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            } : error,
+            timestamp: new Date().toISOString()
+        });
+        throw error;
+    }
+}
+
 export const generateVideoAnalysis = async (signedUrl: string, mimeType: string) => {
     console.log('=== GOOGLE GENAI VIDEO ANALYSIS STARTED ===');
     console.log('Input parameters:', {

@@ -1,8 +1,17 @@
 import express from 'express';
-import { generateVideoAnalysis, generateAIAssistantResponse } from '../integrations/googleGenAI.js';
+import multer from 'multer';
+import { generateVideoAnalysis, generateVideoAnalysisFromBlob, generateAIAssistantResponse } from '../integrations/googleGenAI.js';
 import { supabase } from '../config/supabaseClient.js';
 
 const router = express.Router();
+
+// Configure multer for video uploads
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 500 * 1024 * 1024 // 500MB limit
+    }
+});
 
 // Add debugging middleware
 router.use((req, res, next) => {
@@ -57,6 +66,75 @@ router.post('/analyze-video', async (req, res) => {
         
     } catch (error) {
         console.error('Video analysis API error:', error);
+        res.status(500).json({ 
+            error: error instanceof Error ? error.message : 'Video analysis failed' 
+        });
+    }
+});
+
+// Video Analysis endpoint for blob uploads
+router.post('/analyze-video-blob', upload.single('video'), async (req, res) => {
+    try {
+        console.log('[AI Routes] Video blob analysis endpoint hit');
+        const { mimeType, projectId } = req.body;
+        const videoFile = req.file;
+
+        if (!videoFile) {
+            return res.status(400).json({ 
+                error: 'No video file provided' 
+            });
+        }
+
+        if (!mimeType) {
+            return res.status(400).json({ 
+                error: 'MIME type is required' 
+            });
+        }
+
+        if (!projectId) {
+            return res.status(400).json({ 
+                error: 'Project ID is required' 
+            });
+        }
+
+        console.log('Starting video blob analysis for project:', projectId);
+        console.log('Video file details:', {
+            originalName: videoFile.originalname,
+            mimeType: videoFile.mimetype,
+            size: videoFile.size,
+            sizeMB: (videoFile.size / (1024 * 1024)).toFixed(2)
+        });
+        
+        // Create a blob from the buffer
+        const videoBlob = new Blob([videoFile.buffer], { type: mimeType });
+        
+        // Create a temporary URL for the blob (this won't work for Gemini, so we'll modify the function)
+        const result = await generateVideoAnalysisFromBlob(videoBlob, mimeType);
+        
+        // Save the analysis to the database
+        const { error: dbError } = await supabase
+            .from('video_analyses')
+            .upsert({
+                project_id: projectId,
+                analysis_data: result,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'project_id'
+            });
+
+        if (dbError) {
+            console.error('Failed to save video analysis to database:', dbError);
+            // Still return the result even if DB save fails
+        } else {
+            console.log('Video analysis saved to database for project:', projectId);
+        }
+        
+        console.log('Video blob analysis completed successfully');
+        res.json(result);
+        
+    } catch (error) {
+        console.error('Video blob analysis API error:', error);
         res.status(500).json({ 
             error: error instanceof Error ? error.message : 'Video analysis failed' 
         });

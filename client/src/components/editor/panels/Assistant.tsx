@@ -117,30 +117,74 @@ const Assistant = () => {
         try {
             console.log('Starting video analysis for:', primaryVideo.id)
             
-            // Get the signed URL for the video asset
-            const urlResponse = await fetch(`${API_URL}/api/assets/${primaryVideo.id}/url`, {
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            })
+            // Try to find video element in the DOM first
+            const videoElements = document.querySelectorAll('video')
+            let videoBlob: Blob | null = null
+            let videoElement: HTMLVideoElement | null = null
             
-            if (!urlResponse.ok) {
-                throw new Error('Failed to get video URL')
+            // Look for a video element that might be displaying our asset
+            for (const video of videoElements) {
+                if (video.src && (video.src.includes(primaryVideo.id) || video.src.startsWith('blob:'))) {
+                    videoElement = video
+                    break
+                }
             }
             
-            const { url: videoUrl } = await urlResponse.json()
+            if (videoElement && videoElement.src.startsWith('blob:')) {
+                // If we have a blob URL, try to convert it back to a blob
+                try {
+                    const response = await fetch(videoElement.src)
+                    videoBlob = await response.blob()
+                    console.log('Successfully captured video from browser blob:', videoBlob.size, 'bytes')
+                } catch (blobError) {
+                    console.warn('Failed to capture video from blob URL:', blobError)
+                    videoBlob = null
+                }
+            }
             
-            const response = await fetch(`${API_URL}/api/ai/analyze-video`, {
+            // If we couldn't get the video from the browser, try the storage URL
+            if (!videoBlob) {
+                console.log('Attempting to get video from storage...')
+                
+                // Get the signed URL for the video asset
+                const urlResponse = await fetch(`${API_URL}/api/assets/${primaryVideo.id}/url`, {
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`
+                    }
+                })
+                
+                if (!urlResponse.ok) {
+                    throw new Error('Failed to get video URL from storage')
+                }
+                
+                const { url: videoUrl } = await urlResponse.json()
+                
+                // Download the video to create a blob
+                const videoResponse = await fetch(videoUrl)
+                if (!videoResponse.ok) {
+                    throw new Error('Failed to download video from storage')
+                }
+                
+                videoBlob = await videoResponse.blob()
+                console.log('Successfully downloaded video from storage:', videoBlob.size, 'bytes')
+            }
+            
+            if (!videoBlob) {
+                throw new Error('Could not obtain video data from browser or storage')
+            }
+            
+            // Create FormData to send the video blob
+            const formData = new FormData()
+            formData.append('video', videoBlob, 'video.mp4')
+            formData.append('mimeType', primaryVideo.mime_type || 'video/mp4')
+            formData.append('projectId', projectId)
+            
+            const response = await fetch(`${API_URL}/api/ai/analyze-video-blob`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.access_token}`
                 },
-                body: JSON.stringify({
-                    videoUrl: videoUrl,
-                    mimeType: primaryVideo.mime_type,
-                    projectId: projectId
-                })
+                body: formData
             })
 
             if (!response.ok) {
