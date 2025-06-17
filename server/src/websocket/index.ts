@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { generativeModel } from '../integrations/vertexAI.js';
-import { generateContent } from '../integrations/googleGenAI.js';
+import { generateContent, generateAIAssistantResponse } from '../integrations/googleGenAI.js';
 import { bucket as gcsStorageBucket } from '../integrations/googleStorage.js';
 import { Server as HttpServer } from 'http';
 import { Storage } from '@google-cloud/storage';
@@ -70,19 +70,28 @@ export const setupWebSocket = async (httpServer: HttpServer): Promise<Server> =>
             console.log(`[WebSocket] Client connected: ${socket.id}`);
 
             // Chat message handler for AI assistant
-            socket.on('chat_message', async (data: { message: string, useIdeation?: boolean }) => {
+            socket.on('chat_message', async (data: { 
+                message: string, 
+                useIdeation?: boolean, 
+                videoAnalysis?: any, 
+                projectContext?: any 
+            }) => {
                 console.log(`[WebSocket] Chat message received from ${socket.id}:`, data.message);
                 
                 try {
                     // Emit thinking state
                     socket.emit('state_change', { state: 'thinking' });
                     
-                    // Use the generateContent function with empty signedUrl for chat
-                    const response = await generateContent(data.message, '', '', undefined, undefined);
+                    // Use the enhanced AI assistant response with video analysis context
+                    const response = await generateAIAssistantResponse(
+                        data.message, 
+                        data.videoAnalysis, 
+                        data.projectContext
+                    );
                     
                     // Send the response back
                     socket.emit('chat_message', { 
-                        text: response.textOutput.text 
+                        text: response 
                     });
                     
                     // Reset state

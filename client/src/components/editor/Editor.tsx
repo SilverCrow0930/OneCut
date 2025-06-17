@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Menu from './Menu'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEditor } from '@/contexts/EditorContext'
-import { AIAssistantProvider } from '@/contexts/AIAssistantContext'
+
 import ToolBar from './ToolBar'
 import ToolPanel from './ToolPanel'
 import Assistant from './panels/Assistant'
@@ -336,41 +336,39 @@ const Editor = () => {
     }
 
     return (
-        <AIAssistantProvider projectId={projectId}>
+        <div className="
+            flex flex-col w-screen h-screen overflow-hidden
+            bg-gradient-to-br from-slate-50 to-gray-100
+        ">
+            <Menu />
             <div className="
-                flex flex-col w-screen h-screen overflow-hidden
-                bg-gradient-to-br from-slate-50 to-gray-100
+                flex flex-row flex-1 min-h-0 gap-1 p-1
             ">
-                <Menu />
-                <div className="
-                    flex flex-row flex-1 min-h-0 gap-1 p-1
-                ">
-                    <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
-                        <ToolBar
-                            selectedTool={selectedTool}
-                            onToolSelect={handleToolSelect}
-                        />
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
+                    <ToolBar
+                        selectedTool={selectedTool}
+                        onToolSelect={handleToolSelect}
+                    />
+                </div>
+                {selectedTool && (
+                    <div className="w-96 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
+                        <ToolPanel />
                     </div>
-                    {selectedTool && (
-                        <div className="w-96 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
-                            <ToolPanel />
-                        </div>
-                    )}
-                    <div 
-                        className="flex-1 bg-white/60 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 min-w-0"
-                    >
-                        <EditorContent />
-                    </div>
-                    <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0" style={{ width: assistantWidth }} data-assistant-panel>
-                        <ResizeHandle
-                            className="absolute -left-2 z-10"
-                            onResize={handleAssistantResize}
-                        />
-                        <Assistant />
-                    </div>
+                )}
+                <div 
+                    className="flex-1 bg-white/60 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 min-w-0"
+                >
+                    <EditorContent />
+                </div>
+                <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0" style={{ width: assistantWidth }} data-assistant-panel>
+                    <ResizeHandle
+                        className="absolute -left-2 z-10"
+                        onResize={handleAssistantResize}
+                    />
+                    <Assistant />
                 </div>
             </div>
-        </AIAssistantProvider>
+        </div>
     )
 }
 

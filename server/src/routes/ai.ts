@@ -1,5 +1,6 @@
 import express from 'express';
 import { generateVideoAnalysis, generateAIAssistantResponse } from '../integrations/googleGenAI.js';
+import { supabase } from '../config/supabaseClient.js';
 
 const router = express.Router();
 
@@ -22,9 +23,34 @@ router.post('/analyze-video', async (req, res) => {
             });
         }
 
+        if (!projectId) {
+            return res.status(400).json({ 
+                error: 'Project ID is required' 
+            });
+        }
+
         console.log('Starting video analysis for project:', projectId);
         
         const result = await generateVideoAnalysis(videoUrl, mimeType);
+        
+        // Save the analysis to the database
+        const { error: dbError } = await supabase
+            .from('video_analyses')
+            .upsert({
+                project_id: projectId,
+                analysis_data: result,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'project_id'
+            });
+
+        if (dbError) {
+            console.error('Failed to save video analysis to database:', dbError);
+            // Still return the result even if DB save fails
+        } else {
+            console.log('Video analysis saved to database for project:', projectId);
+        }
         
         console.log('Video analysis completed successfully');
         res.json(result);
@@ -33,6 +59,43 @@ router.post('/analyze-video', async (req, res) => {
         console.error('Video analysis API error:', error);
         res.status(500).json({ 
             error: error instanceof Error ? error.message : 'Video analysis failed' 
+        });
+    }
+});
+
+// Get existing video analysis
+router.get('/video-analysis/:projectId', async (req, res) => {
+    try {
+        const { projectId } = req.params;
+
+        if (!projectId) {
+            return res.status(400).json({ 
+                error: 'Project ID is required' 
+            });
+        }
+
+        const { data, error } = await supabase
+            .from('video_analyses')
+            .select('analysis_data')
+            .eq('project_id', projectId)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                // No analysis found
+                return res.status(404).json({ 
+                    error: 'No video analysis found for this project' 
+                });
+            }
+            throw error;
+        }
+
+        res.json(data.analysis_data);
+        
+    } catch (error) {
+        console.error('Error fetching video analysis:', error);
+        res.status(500).json({ 
+            error: error instanceof Error ? error.message : 'Failed to fetch video analysis' 
         });
     }
 });
