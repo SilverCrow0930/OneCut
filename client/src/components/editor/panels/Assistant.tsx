@@ -187,9 +187,58 @@ const Assistant = () => {
 
         setState('thinking');
 
+        // DEBUGGING: Test different endpoints to identify the issue
+        if (message.toLowerCase().includes('test')) {
+            try {
+                console.log('Testing endpoints...');
+                
+                // Test 1: Health check (no auth)
+                const healthResponse = await fetch('/api/ai/health');
+                console.log('Health check:', healthResponse.status, await healthResponse.text());
+                
+                // Test 2: POST test (no auth)
+                const postTestResponse = await fetch('/api/ai/test-post', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: 'data' })
+                });
+                console.log('POST test:', postTestResponse.status, await postTestResponse.text());
+                
+                // Test 3: Assistant endpoint (with auth)
+                const assistantResponse = await fetch('/api/ai/assistant', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`
+                    },
+                    body: JSON.stringify({ prompt: 'test' })
+                });
+                console.log('Assistant test:', assistantResponse.status, await assistantResponse.text());
+                
+                setChatMessages(prev => [...prev, {
+                    id: prev.length + 1,
+                    message: 'Test completed - check console for results',
+                    sender: 'assistant'
+                }]);
+                setState('idle');
+                return;
+                
+            } catch (error) {
+                console.error('Test failed:', error);
+                setChatMessages(prev => [...prev, {
+                    id: prev.length + 1,
+                    message: `Test failed: ${error}`,
+                    sender: 'assistant'
+                }]);
+                setState('idle');
+                return;
+            }
+        }
+
         // PRIORITY 1: Try HTTP API first (most reliable)
         try {
             console.log('Using HTTP AI assistant API');
+            console.log('Session token:', session?.access_token ? 'Present' : 'Missing');
             
             const response = await fetch('/api/ai/assistant', {
                 method: 'POST',
@@ -204,11 +253,17 @@ const Assistant = () => {
                 })
             });
 
+            console.log('HTTP Response status:', response.status, response.statusText);
+            console.log('HTTP Response headers:', Object.fromEntries(response.headers.entries()));
+
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const errorText = await response.text();
+                console.error('HTTP Error response body:', errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
             }
 
             const data = await response.json();
+            console.log('HTTP Response data:', data);
             
             setChatMessages(prev => [...prev, {
                 id: prev.length + 1,
@@ -221,7 +276,21 @@ const Assistant = () => {
             return; // Success - exit early
             
         } catch (error) {
-            console.log('HTTP AI assistant failed, falling back to WebSocket:', error);
+            console.error('HTTP AI assistant failed with error:', error);
+            
+            // Provide more specific error messages based on the error
+            let errorMessage = 'HTTP AI assistant failed, falling back to WebSocket';
+            if (error instanceof Error) {
+                if (error.message.includes('405')) {
+                    errorMessage = 'Method not allowed (405) - there might be a routing issue';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Authentication failed (401) - please refresh the page';
+                } else if (error.message.includes('404')) {
+                    errorMessage = 'Endpoint not found (404) - server might not be running';
+                }
+            }
+            
+            console.log(errorMessage + ':', error);
             // Don't return here - fall through to WebSocket fallback
         }
 

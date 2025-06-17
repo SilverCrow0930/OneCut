@@ -53,6 +53,26 @@ app.use(bodyParser.json({ limit: '10mb' }))
 
 app.use(morgan('dev'))
 
+// Add test route before authentication to debug routing
+app.get('/api/ai/health', (req, res) => {
+    console.log('[Server] Health check endpoint hit');
+    res.json({ 
+        status: 'ok', 
+        message: 'AI routes are accessible',
+        timestamp: new Date().toISOString() 
+    });
+});
+
+app.post('/api/ai/test-post', (req, res) => {
+    console.log('[Server] Test POST endpoint hit');
+    res.json({ 
+        status: 'ok', 
+        message: 'POST requests are working',
+        body: req.body,
+        timestamp: new Date().toISOString() 
+    });
+});
+
 // protect everything under /api
 app.use(
     '/api/v1',
@@ -67,6 +87,8 @@ app.use(
     authenticate,
     aiRouter
 )
+
+console.log('[Server] AI routes mounted at /api/ai');
 
 const server = http.createServer(app);
 setupWebSocket(server);

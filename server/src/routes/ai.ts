@@ -3,9 +3,17 @@ import { generateVideoAnalysis, generateAIAssistantResponse } from '../integrati
 
 const router = express.Router();
 
+// Add debugging middleware
+router.use((req, res, next) => {
+    console.log(`[AI Routes] ${req.method} ${req.path} - Headers:`, req.headers);
+    console.log(`[AI Routes] Body:`, req.body);
+    next();
+});
+
 // Video Analysis endpoint
 router.post('/analyze-video', async (req, res) => {
     try {
+        console.log('[AI Routes] Video analysis endpoint hit');
         const { videoUrl, mimeType, projectId } = req.body;
 
         if (!videoUrl || !mimeType) {
@@ -32,6 +40,7 @@ router.post('/analyze-video', async (req, res) => {
 // AI Assistant endpoint
 router.post('/assistant', async (req, res) => {
     try {
+        console.log('[AI Routes] Assistant endpoint hit');
         const { prompt, semanticJSON, currentTimeline } = req.body;
 
         if (!prompt) {
@@ -40,7 +49,7 @@ router.post('/assistant', async (req, res) => {
             });
         }
 
-        console.log('Processing AI assistant request');
+        console.log('Processing AI assistant request:', prompt);
         
         const result = await generateAIAssistantResponse(prompt, semanticJSON, currentTimeline);
         
@@ -53,6 +62,22 @@ router.post('/assistant', async (req, res) => {
             error: error instanceof Error ? error.message : 'AI assistant request failed' 
         });
     }
+});
+
+// Add a test endpoint to verify routing
+router.get('/test', (req, res) => {
+    console.log('[AI Routes] Test endpoint hit');
+    res.json({ message: 'AI routes are working!', timestamp: new Date().toISOString() });
+});
+
+// Add a simple assistant test endpoint without authentication
+router.post('/assistant-test', (req, res) => {
+    console.log('[AI Routes] Assistant test endpoint hit');
+    res.json({ 
+        message: 'Assistant endpoint is reachable!', 
+        receivedBody: req.body,
+        timestamp: new Date().toISOString() 
+    });
 });
 
 export default router; 
