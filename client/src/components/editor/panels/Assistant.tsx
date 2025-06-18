@@ -361,59 +361,56 @@ const Assistant = () => {
 
     return (
         <div className="flex flex-col w-full h-full p-2">
-            {/* Header with Status and Video Analysis */}
-            <div className="w-full mb-2 space-y-2">
-                {/* Status Row */}
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <span>{getStatusMessage()}</span>
-                        {isWebSocketConnected && <span className="text-green-600">✅</span>}
-                    </div>
-                    
-                    {/* Compact Video Analysis Button */}
-                    <button
-                        onClick={handleVideoAnalysis}
-                        disabled={isAnalyzing || !assets.some(a => a.mime_type?.startsWith('video/'))}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                            hasVideoAnalysis
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        title={hasVideoAnalysis ? "Re-analyze your video content" : "Analyze video content for better suggestions"}
-                    >
-                        {isAnalyzing ? (
-                            <>
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                                <span>Analyzing...</span>
-                            </>
-                        ) : hasVideoAnalysis ? (
-                            <>
-                                <CheckCircle2 className="w-3 h-3" />
-                                <span>Re-analyze</span>
-                            </>
-                        ) : (
-                            <>
-                                <Brain className="w-3 h-3" />
-                                <span>Analyze Video</span>
-                            </>
-                        )}
-                    </button>
+            {/* Header with Status and Video Analysis Button */}
+            <div className="w-full mb-2 p-2 bg-gray-50 rounded flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <span>{getStatusMessage()}</span>
+                    {isWebSocketConnected && <span className="text-green-600">✅</span>}
                 </div>
-
-                {/* Error/Warning Messages */}
-                {analysisError && (
-                    <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 flex items-center gap-2">
-                        <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                        <span>{analysisError}</span>
-                    </div>
-                )}
                 
-                {!assets.some(a => a.mime_type?.startsWith('video/')) && (
-                    <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-700">
-                        Add a video to your project to enable analysis
-                    </div>
-                )}
+                {/* Video Analysis Button - Compact */}
+                <button
+                    onClick={handleVideoAnalysis}
+                    disabled={isAnalyzing || !assets.some(a => a.mime_type?.startsWith('video/'))}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                        hasVideoAnalysis
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title={hasVideoAnalysis ? "Re-analyze Video" : "Analyze Video"}
+                >
+                    {isAnalyzing ? (
+                        <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>Analyzing</span>
+                        </>
+                    ) : hasVideoAnalysis ? (
+                        <>
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Re-analyze</span>
+                        </>
+                    ) : (
+                        <>
+                            <Brain className="w-3 h-3" />
+                            <span>Analyze</span>
+                        </>
+                    )}
+                </button>
             </div>
+
+            {/* Error Messages */}
+            {analysisError && (
+                <div className="w-full mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                    {analysisError}
+                </div>
+            )}
+            
+            {!assets.some(a => a.mime_type?.startsWith('video/')) && (
+                <div className="w-full mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
+                    Add a video to your project to enable analysis
+                </div>
+            )}
 
             {/* Chat */}
             <div className='w-full flex-1 min-h-0 overflow-hidden'>

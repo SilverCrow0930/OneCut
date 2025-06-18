@@ -214,11 +214,11 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
             <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200">
                 {/* Mentioned Tools - Inside Input Box at Top */}
                 {mentionedTools.length > 0 && (
-                    <div className="flex flex-wrap gap-2 p-2 bg-white rounded-t-xl">
+                    <div className="flex flex-wrap gap-2 p-3 bg-white rounded-t-xl">
                         {mentionedTools.map(tool => (
                             <div
                                 key={tool.id}
-                                className="group flex items-center gap-2 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors duration-200"
+                                className="group flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors duration-200"
                             >
                                 <div className="flex items-center justify-center w-5 h-5 bg-blue-200 rounded text-xs font-mono text-blue-700">
                                     {tool.icon}
@@ -242,7 +242,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                 <div className="relative">
                     <textarea
                         ref={textareaRef}
-                        className="w-full px-4 py-3 text-sm resize-none focus:outline-none placeholder-gray-400 leading-relaxed"
+                        className="w-full px-4 py-4 text-sm resize-none focus:outline-none placeholder-gray-400 leading-relaxed"
                         placeholder="Ask anything or use @ to mention tools..."
                         rows={1}
                         value={message}
@@ -287,21 +287,21 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                 </div>
 
                 {/* Bottom Controls */}
-                <div className={`flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-gray-50/30 ${mentionedTools.length > 0 ? 'rounded-b-xl' : ''}`}>
+                <div className={`flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30 ${mentionedTools.length > 0 ? 'rounded-b-xl' : ''}`}>
                     {/* Left Side - @ Button and Mode Toggle */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={handleAtButtonClick}
-                            className="flex items-center justify-center w-7 h-7 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-md transition-all duration-200 hover:scale-105"
+                            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-all duration-200 hover:scale-105"
                             title="Mention tools"
                         >
                             <span className="text-sm font-semibold">@</span>
                         </button>
                         
-                        <div className="flex items-center bg-white border border-gray-200 rounded-md overflow-hidden shadow-sm">
+                        <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                             <button
                                 onClick={() => setAiMode('agent')}
-                                className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+                                className={`px-4 py-2 text-xs font-medium transition-all duration-200 ${
                                     aiMode === 'agent'
                                         ? 'bg-blue-500 text-white shadow-sm'
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
@@ -311,7 +311,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                             </button>
                             <button
                                 onClick={() => setAiMode('ask')}
-                                className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+                                className={`px-4 py-2 text-xs font-medium transition-all duration-200 ${
                                     aiMode === 'ask'
                                         ? 'bg-blue-500 text-white shadow-sm'
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
@@ -326,26 +326,26 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleFileUpload}
-                            className="flex items-center justify-center w-7 h-7 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-md transition-all duration-200 hover:scale-105"
+                            className="flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-all duration-200 hover:scale-105"
                             title="Attach file"
                         >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.64 16.2a2 2 0 0 1-2.83-2.83l8.49-8.49"></path>
                             </svg>
                         </button>
                         <ChatSendButton onSend={handleSend} />
-                    </div>
                 </div>
             </div>
 
-            {/* Hidden File Input */}
-            <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFileSelect}
-            />
+                {/* Hidden File Input */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                />
+            </div>
         </div>
     );
 };
