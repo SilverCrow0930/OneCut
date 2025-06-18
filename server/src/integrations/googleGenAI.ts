@@ -1519,14 +1519,38 @@ export const generateAIAssistantResponse = async (prompt: string, semanticJSON?:
     console.log('Input parameters:', {
         promptLength: prompt.length,
         hasSemanticJSON: !!semanticJSON,
-        hasTimeline: !!currentTimeline
+        hasTimeline: !!currentTimeline,
+        semanticJSONSize: semanticJSON ? JSON.stringify(semanticJSON).length : 0,
+        timelineSize: currentTimeline ? JSON.stringify(currentTimeline).length : 0
     });
 
     try {
         let contextPrompt = `USER REQUEST: "${prompt}"`;
         
         if (semanticJSON) {
-            contextPrompt += `\n\nSEMANTIC JSON CODEBASE:\n${JSON.stringify(semanticJSON, null, 2)}`;
+            // Truncate semantic JSON if it's too large to prevent token limit issues
+            const semanticJSONString = JSON.stringify(semanticJSON, null, 2);
+            const maxSemanticJSONSize = 50000; // Roughly 12-15k tokens
+            
+            if (semanticJSONString.length > maxSemanticJSONSize) {
+                console.log('Semantic JSON is large, truncating for token limits:', {
+                    originalSize: semanticJSONString.length,
+                    truncatedSize: maxSemanticJSONSize
+                });
+                
+                // Create a truncated version with key information
+                const truncatedJSON = {
+                    summary: semanticJSON.summary || 'Video analysis available',
+                    scenes: semanticJSON.scenes?.slice(0, 5) || [], // First 5 scenes only
+                    keyMoments: semanticJSON.keyMoments?.slice(0, 10) || [], // First 10 key moments
+                    transcript: semanticJSON.transcript?.substring(0, 2000) || '', // First 2000 chars of transcript
+                    metadata: semanticJSON.metadata || {},
+                    note: 'This is a truncated version of the full analysis due to size limits'
+                };
+                contextPrompt += `\n\nSEMANTIC JSON CODEBASE (TRUNCATED):\n${JSON.stringify(truncatedJSON, null, 2)}`;
+            } else {
+                contextPrompt += `\n\nSEMANTIC JSON CODEBASE:\n${semanticJSONString}`;
+            }
         }
         
         if (currentTimeline) {
@@ -1534,6 +1558,8 @@ export const generateAIAssistantResponse = async (prompt: string, semanticJSON?:
         }
         
         contextPrompt += `\n\nBased on the semantic JSON "codebase" and current timeline state, help the user with their request.`;
+
+        console.log('Final prompt size:', contextPrompt.length);
 
         const response = await ai.models.generateContent({
             model: model,
@@ -1545,12 +1571,64 @@ export const generateAIAssistantResponse = async (prompt: string, semanticJSON?:
                 topP: 0.8,
                 topK: 40,
             },
+        }).catch((error: any) => {
+            console.error('Gemini API assistant error details:', {
+                message: error.message,
+                status: error.status,
+                code: error.code,
+                details: error.details,
+                stack: error.stack
+            });
+            
+            if (error.message?.includes('503') || error.status === 503) {
+                throw new Error('AI service is temporarily overloaded. Please try again in a few minutes.');
+            } else if (error.message?.includes('quota') || error.message?.includes('limit')) {
+                throw new Error('API quota or rate limit exceeded. Please try again later.');
+            } else if (error.message?.includes('timeout')) {
+                throw new Error('Request timed out. Please try again.');
+            } else if (error.message?.includes('SAFETY') || error.message?.includes('safety')) {
+                throw new Error('Content was blocked by safety filters. Please try rephrasing your question.');
+            } else {
+                throw error;
+            }
         });
 
-        console.log('AI assistant response completed');
+        console.log('AI assistant response completed:', {
+            hasCandidates: !!response.candidates,
+            candidateCount: response.candidates?.length,
+            hasContent: !!response.candidates?.[0]?.content,
+            hasParts: !!response.candidates?.[0]?.content?.parts,
+            partsCount: response.candidates?.[0]?.content?.parts?.length
+        });
 
-        if (!response.candidates?.[0]?.content?.parts?.[0]?.text) {
-            throw new Error('No response from AI assistant model');
+        if (!response.candidates) {
+            console.error('No candidates in response:', response);
+            throw new Error('AI model returned no response candidates');
+        }
+
+        if (!response.candidates[0]) {
+            console.error('No first candidate in response:', response.candidates);
+            throw new Error('AI model returned empty response');
+        }
+
+        if (!response.candidates[0].content) {
+            console.error('No content in first candidate:', response.candidates[0]);
+            throw new Error('AI model returned no content');
+        }
+
+        if (!response.candidates[0].content.parts) {
+            console.error('No parts in content:', response.candidates[0].content);
+            throw new Error('AI model returned no content parts');
+        }
+
+        if (!response.candidates[0].content.parts[0]) {
+            console.error('No first part in content:', response.candidates[0].content.parts);
+            throw new Error('AI model returned empty content parts');
+        }
+
+        if (!response.candidates[0].content.parts[0].text) {
+            console.error('No text in first part:', response.candidates[0].content.parts[0]);
+            throw new Error('AI model returned no text response');
         }
 
         const responseText = response.candidates[0].content.parts[0].text;

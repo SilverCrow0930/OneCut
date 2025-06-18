@@ -43,20 +43,7 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
     const [toolSearchQuery, setToolSearchQuery] = useState('');
     const [mentionedTools, setMentionedTools] = useState<ToolMention[]>([]);
     const [cursorPosition, setCursorPosition] = useState(0);
-    const [recentAIEdits, setRecentAIEdits] = useState<AIEdit[]>([
-        {
-            id: '1',
-            description: 'Added captions to video segments 0:15-2:30',
-            timestamp: new Date(Date.now() - 5 * 60 * 1000),
-            status: 'pending'
-        },
-        {
-            id: '2', 
-            description: 'Removed silent parts from timeline',
-            timestamp: new Date(Date.now() - 10 * 60 * 1000),
-            status: 'pending'
-        }
-    ]);
+    const [recentAIEdits, setRecentAIEdits] = useState<AIEdit[]>([]);
 
     // Handle Message Change
     const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -220,67 +207,9 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
         }
     }, [message]);
 
-    const pendingEdits = recentAIEdits.filter(edit => edit.status === 'pending');
-
     return (
         <div className="flex flex-col w-full space-y-4">
-            {/* AI Recent Edits Section - Above Input */}
-            {pendingEdits.length > 0 && (
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 px-1">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium text-gray-700">Recent AI Edits</span>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            {pendingEdits.length} pending
-                        </span>
-                    </div>
-                    <div className="space-y-2">
-                        {pendingEdits.map(edit => (
-                            <div key={edit.id} className="group flex items-start gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl hover:shadow-md transition-all duration-200">
-                                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600">
-                                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                                        <path d="M2 17l10 5 10-5"></path>
-                                        <path d="M2 12l10 5 10-5"></path>
-                                    </svg>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-gray-900 font-medium leading-relaxed">{edit.description}</p>
-                                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <circle cx="12" cy="12" r="10"></circle>
-                                            <polyline points="12,6 12,12 16,14"></polyline>
-                                        </svg>
-                                        {edit.timestamp.toLocaleTimeString()}
-                                    </p>
-                                </div>
-                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <button
-                                        onClick={() => handleEditAction(edit.id, 'accept')}
-                                        className="flex items-center justify-center w-8 h-8 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors duration-200 hover:scale-105"
-                                        title="Accept edit"
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                            <polyline points="20,6 9,17 4,12"></polyline>
-                                        </svg>
-                                    </button>
-                                    <button
-                                        onClick={() => handleEditAction(edit.id, 'reject')}
-                                        className="flex items-center justify-center w-8 h-8 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200 hover:scale-105"
-                                        title="Reject edit"
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
+            {/* AI Recent Edits Section - Removed demo, keeping structure for future implementation */}
             {/* Main Input Container */}
             <div className="relative border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200">
                 {/* Mentioned Tools - Inside Input Box at Top */}

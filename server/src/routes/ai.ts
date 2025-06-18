@@ -289,4 +289,130 @@ router.post('/assistant-test', (req, res) => {
     });
 });
 
+// Get chat messages for a project
+router.get('/chat-messages/:projectId', async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.replace('Bearer ', '');
+
+        if (!token) {
+            return res.status(401).json({ error: 'No authorization token provided' });
+        }
+
+        // Verify token and get user
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        // Get user profile
+        const { data: profile, error: profileError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_id', user.id)
+            .single();
+
+        if (profileError || !profile) {
+            return res.status(404).json({ error: 'User profile not found' });
+        }
+
+        // Get chat messages for the project
+        const { data: messages, error: messagesError } = await supabase
+            .from('chat_messages')
+            .select('*')
+            .eq('project_id', projectId)
+            .eq('user_id', profile.id)
+            .order('created_at', { ascending: true });
+
+        if (messagesError) {
+            console.error('Failed to fetch chat messages:', messagesError);
+            return res.status(500).json({ error: 'Failed to fetch chat messages' });
+        }
+
+        // Transform messages to match frontend format
+        const transformedMessages = messages.map((msg, index) => ({
+            id: index + 1, // Frontend expects numeric IDs
+            message: msg.message,
+            sender: msg.sender,
+            type: msg.message_type,
+            commands: msg.metadata?.commands || [],
+            searchResults: msg.metadata?.searchResults || [],
+            toolActions: msg.metadata?.toolActions || [],
+            executionResults: msg.metadata?.executionResults || []
+        }));
+
+        res.json(transformedMessages);
+    } catch (error) {
+        console.error('Error fetching chat messages:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Save a chat message
+router.post('/chat-messages', async (req, res) => {
+    try {
+        const { projectId, message, sender, type = 'text', metadata = {} } = req.body;
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.replace('Bearer ', '');
+
+        if (!token) {
+            return res.status(401).json({ error: 'No authorization token provided' });
+        }
+
+        if (!projectId || !message || !sender) {
+            return res.status(400).json({ error: 'Missing required fields: projectId, message, sender' });
+        }
+
+        if (!['user', 'assistant'].includes(sender)) {
+            return res.status(400).json({ error: 'Invalid sender. Must be "user" or "assistant"' });
+        }
+
+        // Verify token and get user
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        // Get user profile
+        const { data: profile, error: profileError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_id', user.id)
+            .single();
+
+        if (profileError || !profile) {
+            return res.status(404).json({ error: 'User profile not found' });
+        }
+
+        // Save chat message
+        const { data: savedMessage, error: saveError } = await supabase
+            .from('chat_messages')
+            .insert({
+                project_id: projectId,
+                user_id: profile.id,
+                message: message,
+                sender: sender,
+                message_type: type,
+                metadata: metadata
+            })
+            .select()
+            .single();
+
+        if (saveError) {
+            console.error('Failed to save chat message:', saveError);
+            return res.status(500).json({ error: 'Failed to save chat message' });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Chat message saved successfully',
+            id: savedMessage.id
+        });
+    } catch (error) {
+        console.error('Error saving chat message:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 export default router; 

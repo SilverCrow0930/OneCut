@@ -43,14 +43,8 @@ interface VideoAnalysis {
 }
 
 const Assistant = () => {
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-        {
-            id: 1,
-            message: "👋 Welcome to your AI video assistant! I'm here to help you edit your videos intelligently.\n\n🎬 **What I can do:**\n• Answer questions about video editing\n• Provide editing tips and suggestions\n• Help with general video editing guidance\n• Analyze your video content (when you click the analysis button)\n\n💡 **To get started:**\n• Ask me any video editing questions\n• Click \"Analyze Video\" to let me understand your content\n• After analysis, I can give specific suggestions about your video\n\nJust type your question below! ✨",
-            sender: 'assistant',
-            type: 'text'
-        }
-    ])
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+    const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true)
     const [state, setState] = useState<string>('idle')
     const [isWebSocketConnected, setIsWebSocketConnected] = useState<boolean>(false)
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
@@ -66,10 +60,87 @@ const Assistant = () => {
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
 
-    // Check if analysis exists on mount
+    // Load chat history and check for existing analysis on mount
     useEffect(() => {
-        checkExistingAnalysis()
-    }, [projectId])
+        if (projectId && session?.access_token) {
+            loadChatHistory()
+            checkExistingAnalysis()
+        }
+    }, [projectId, session?.access_token])
+
+    const loadChatHistory = async () => {
+        if (!projectId || !session?.access_token) return
+
+        try {
+            setIsLoadingHistory(true)
+            const response = await fetch(`${API_URL}/api/ai/chat-messages/${projectId}`, {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            })
+
+            if (response.ok) {
+                const messages = await response.json()
+                if (messages.length > 0) {
+                    setChatMessages(messages)
+                    console.log('Chat history loaded:', messages.length, 'messages')
+                } else {
+                    // Set welcome message if no history exists
+                    setChatMessages([{
+                        id: 1,
+                        message: "👋 Welcome to your AI video assistant! I'm here to help you edit your videos intelligently.\n\n🎬 **What I can do:**\n• Answer questions about video editing\n• Provide editing tips and suggestions\n• Help with general video editing guidance\n• Analyze your video content (when you click the analysis button)\n\n💡 **To get started:**\n• Ask me any video editing questions\n• Click \"Analyze Video\" to let me understand your content\n• After analysis, I can give specific suggestions about your video\n\nJust type your question below! ✨",
+                        sender: 'assistant',
+                        type: 'text'
+                    }])
+                }
+            } else if (response.status === 404) {
+                // No chat history found, start with welcome message
+                setChatMessages([{
+                    id: 1,
+                    message: "👋 Welcome to your AI video assistant! I'm here to help you edit your videos intelligently.\n\n🎬 **What I can do:**\n• Answer questions about video editing\n• Provide editing tips and suggestions\n• Help with general video editing guidance\n• Analyze your video content (when you click the analysis button)\n\n💡 **To get started:**\n• Ask me any video editing questions\n• Click \"Analyze Video\" to let me understand your content\n• After analysis, I can give specific suggestions about your video\n\nJust type your question below! ✨",
+                    sender: 'assistant',
+                    type: 'text'
+                }])
+            } else {
+                console.error('Failed to load chat history:', response.status)
+            }
+        } catch (error) {
+            console.error('Error loading chat history:', error)
+            // Set welcome message on error
+            setChatMessages([{
+                id: 1,
+                message: "👋 Welcome to your AI video assistant! I'm here to help you edit your videos intelligently.\n\n🎬 **What I can do:**\n• Answer questions about video editing\n• Provide editing tips and suggestions\n• Help with general video editing guidance\n• Analyze your video content (when you click the analysis button)\n\n💡 **To get started:**\n• Ask me any video editing questions\n• Click \"Analyze Video\" to let me understand your content\n• After analysis, I can give specific suggestions about your video\n\nJust type your question below! ✨",
+                sender: 'assistant',
+                type: 'text'
+            }])
+        } finally {
+            setIsLoadingHistory(false)
+        }
+    }
+
+    const saveChatMessage = async (message: string, sender: 'user' | 'assistant', type: string = 'text', metadata: any = {}) => {
+        if (!projectId || !session?.access_token) return
+
+        try {
+            await fetch(`${API_URL}/api/ai/chat-messages`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    projectId,
+                    message,
+                    sender,
+                    type,
+                    metadata
+                })
+            })
+        } catch (error) {
+            console.error('Failed to save chat message:', error)
+            // Don't block the UI if saving fails
+        }
+    }
 
     const checkExistingAnalysis = async () => {
         if (!projectId || !session?.access_token) return
@@ -136,12 +207,15 @@ const Assistant = () => {
             setHasVideoAnalysis(true)
             
             // Add success message to chat
+            const successMessage = "🎉 Video analysis completed! I now understand your video content and can provide specific suggestions. Try asking me about:\n\n• Key moments in your video\n• Editing suggestions\n• Content optimization\n• Specific scenes or topics\n\nWhat would you like to know about your video?";
             setChatMessages(prev => [...prev, {
                 id: prev.length + 1,
-                message: "🎉 Video analysis completed! I now understand your video content and can provide specific suggestions. Try asking me about:\n\n• Key moments in your video\n• Editing suggestions\n• Content optimization\n• Specific scenes or topics\n\nWhat would you like to know about your video?",
+                message: successMessage,
                 sender: 'assistant',
                 type: 'analysis'
             }])
+            // Save success message to database
+            await saveChatMessage(successMessage, 'assistant', 'analysis');
             
             console.log('Video analysis completed successfully')
             
@@ -151,12 +225,15 @@ const Assistant = () => {
             setAnalysisError(errorMessage)
             
             // Add error message to chat
+            const fullErrorMessage = `❌ Video analysis failed: ${errorMessage}\n\nPlease try again or ask me general video editing questions.`;
             setChatMessages(prev => [...prev, {
                 id: prev.length + 1,
-                message: `❌ Video analysis failed: ${errorMessage}\n\nPlease try again or ask me general video editing questions.`,
+                message: fullErrorMessage,
                 sender: 'assistant',
                 type: 'error'
             }])
+            // Save error message to database
+            await saveChatMessage(fullErrorMessage, 'assistant', 'error');
         } finally {
             setIsAnalyzing(false)
         }
@@ -201,12 +278,14 @@ const Assistant = () => {
         });
 
         // Chat message listener
-        socketRef.current.on('chat_message', (data: { text: string }) => {
+        socketRef.current.on('chat_message', async (data: { text: string }) => {
             setChatMessages(prev => [...prev, {
                 id: prev.length + 1,
                 message: data.text,
                 sender: 'assistant'
             }])
+            // Save assistant message to database
+            await saveChatMessage(data.text, 'assistant', 'text');
             setState('idle');
         })
 
@@ -234,6 +313,9 @@ const Assistant = () => {
         };
         setChatMessages(prev => [...prev, userMessage]);
 
+        // Save user message to database
+        await saveChatMessage(message, 'user', 'text');
+
         setState('thinking');
 
         // Send via WebSocket with video analysis context if available
@@ -252,12 +334,15 @@ const Assistant = () => {
             socketRef.current.emit('chat_message', messageData);
         } else {
             // Show error if not connected
+            const errorMessage = "🔌 Not connected to AI service. Please refresh the page and try again.";
             setChatMessages(prev => [...prev, {
                 id: prev.length + 2,
-                message: "🔌 Not connected to AI service. Please refresh the page and try again.",
+                message: errorMessage,
                 sender: 'assistant',
                 type: 'error'
             }]);
+            // Save error message to database
+            await saveChatMessage(errorMessage, 'assistant', 'error');
             setState('idle');
         }
     };
@@ -327,11 +412,20 @@ const Assistant = () => {
 
             {/* Chat */}
             <div className='w-full flex-1 min-h-0 overflow-hidden'>
-                <ChatHistory
-                    chatMessages={chatMessages}
-                    state={state}
-                    onExecuteCommands={() => {}}
-                />
+                {isLoadingHistory ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="flex items-center gap-2 text-gray-500">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-sm">Loading chat history...</span>
+                        </div>
+                    </div>
+                ) : (
+                    <ChatHistory
+                        chatMessages={chatMessages}
+                        state={state}
+                        onExecuteCommands={() => {}}
+                    />
+                )}
             </div>
 
             {/* Input */}
