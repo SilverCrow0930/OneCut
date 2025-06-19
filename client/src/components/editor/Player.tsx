@@ -1,13 +1,35 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useEditor } from '@/contexts/EditorContext'
 import { ClipLayer } from './ClipLayer'
 import type { Clip } from '@/types/editor'
 
+// Snap guides state - shared across components via context would be better, but for now we'll use a simple approach
+let globalSnapGuides = { vertical: [] as number[], horizontal: [] as number[], showGuides: false }
+let forceUpdateCallback: (() => void) | null = null
+
+// Function to update snap guides from ClipLayer
+export const updateSnapGuides = (guides: { vertical: number[], horizontal: number[], showGuides: boolean }) => {
+    globalSnapGuides = guides
+    // Force re-render of Player component
+    if (forceUpdateCallback) {
+        forceUpdateCallback()
+    }
+}
+
 export function Player() {
     const { currentTime } = usePlayback()
     const { clips, tracks, setSelectedClipId, aspectRatio } = useEditor()
     const currentTimeMs = currentTime * 1000
+    const [, forceUpdate] = useState({})
+    
+    // Set the callback for force updates
+    React.useEffect(() => {
+        forceUpdateCallback = () => forceUpdate({})
+        return () => {
+            forceUpdateCallback = null
+        }
+    }, [])
 
     // Performance optimization: Only render clips that are currently visible or about to be visible
     const visibleClips = useMemo(() => {
@@ -74,6 +96,43 @@ export function Player() {
                         sourceTime={clip.sourceTime}
                     />
                 ))}
+                
+                {/* Snap guide lines - only show when dragging */}
+                {globalSnapGuides.showGuides && (
+                    <>
+                        {/* Vertical snap guides */}
+                        {globalSnapGuides.vertical.map((x, index) => (
+                            <div
+                                key={`v-${index}`}
+                                className="absolute pointer-events-none z-50"
+                                style={{
+                                    left: x,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: 1,
+                                    backgroundColor: '#007bff',
+                                    boxShadow: '0 0 3px rgba(0, 123, 255, 0.6)'
+                                }}
+                            />
+                        ))}
+                        
+                        {/* Horizontal snap guides */}
+                        {globalSnapGuides.horizontal.map((y, index) => (
+                            <div
+                                key={`h-${index}`}
+                                className="absolute pointer-events-none z-50"
+                                style={{
+                                    top: y,
+                                    left: 0,
+                                    right: 0,
+                                    height: 1,
+                                    backgroundColor: '#007bff',
+                                    boxShadow: '0 0 3px rgba(0, 123, 255, 0.6)'
+                                }}
+                            />
+                        ))}
+                    </>
+                )}
             </div>
         </div>
     )

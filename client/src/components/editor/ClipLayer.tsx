@@ -5,6 +5,7 @@ import { useEditor } from '@/contexts/EditorContext'
 import { useAudio } from '@/contexts/AudioContext'
 import type { Clip } from '@/types/editor'
 import ClipMenu from './ClipMenu'
+import { updateSnapGuides } from './Player'
 
 interface ClipLayerProps {
     clip: Clip
@@ -57,6 +58,109 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
     const [isDraggingCrop, setIsDraggingCrop] = useState(false)
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 })
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
+
+    // Snap tolerance in pixels
+    const SNAP_TOLERANCE = 8
+
+    // Calculate snap points and apply snapping
+    const calculateSnapPosition = useCallback((newLeft: number, newTop: number, width: number, height: number) => {
+        // Find the player container to get boundaries
+        const player = document.querySelector('[style*="aspectRatio"], [style*="aspect-ratio"]') || 
+                      document.querySelector('.bg-black');
+        if (!player) return { left: newLeft, top: newTop, guides: { vertical: [], horizontal: [], showGuides: false } }
+
+        const playerRect = (player as HTMLElement).getBoundingClientRect()
+        const playerParent = player.parentElement
+        if (!playerParent) return { left: newLeft, top: newTop, guides: { vertical: [], horizontal: [], showGuides: false } }
+
+        const parentRect = playerParent.getBoundingClientRect()
+        
+        // Convert to player-relative coordinates
+        const playerLeft = playerRect.left - parentRect.left
+        const playerTop = playerRect.top - parentRect.top
+        const playerWidth = playerRect.width
+        const playerHeight = playerRect.height
+
+        // Define snap points
+        const snapPoints = {
+            vertical: [
+                playerLeft, // Left edge
+                playerLeft + playerWidth / 2, // Center
+                playerLeft + playerWidth // Right edge
+            ],
+            horizontal: [
+                playerTop, // Top edge  
+                playerTop + playerHeight / 2, // Center
+                playerTop + playerHeight // Bottom edge
+            ]
+        }
+
+        // Calculate clip edges
+        const clipLeft = newLeft
+        const clipRight = newLeft + width
+        const clipCenterX = newLeft + width / 2
+        const clipTop = newTop
+        const clipBottom = newTop + height
+        const clipCenterY = newTop + height / 2
+
+        let snappedLeft = newLeft
+        let snappedTop = newTop
+        const activeGuides: { vertical: number[], horizontal: number[], showGuides: boolean } = { 
+            vertical: [], 
+            horizontal: [], 
+            showGuides: false 
+        }
+
+        // Check vertical snapping (X axis)
+        for (const snapX of snapPoints.vertical) {
+            // Snap left edge
+            if (Math.abs(clipLeft - snapX) <= SNAP_TOLERANCE) {
+                snappedLeft = snapX
+                activeGuides.vertical.push(snapX)
+                activeGuides.showGuides = true
+            }
+            // Snap right edge
+            else if (Math.abs(clipRight - snapX) <= SNAP_TOLERANCE) {
+                snappedLeft = snapX - width
+                activeGuides.vertical.push(snapX)
+                activeGuides.showGuides = true
+            }
+            // Snap center
+            else if (Math.abs(clipCenterX - snapX) <= SNAP_TOLERANCE) {
+                snappedLeft = snapX - width / 2
+                activeGuides.vertical.push(snapX)
+                activeGuides.showGuides = true
+            }
+        }
+
+        // Check horizontal snapping (Y axis)
+        for (const snapY of snapPoints.horizontal) {
+            // Snap top edge
+            if (Math.abs(clipTop - snapY) <= SNAP_TOLERANCE) {
+                snappedTop = snapY
+                activeGuides.horizontal.push(snapY)
+                activeGuides.showGuides = true
+            }
+            // Snap bottom edge
+            else if (Math.abs(clipBottom - snapY) <= SNAP_TOLERANCE) {
+                snappedTop = snapY - height
+                activeGuides.horizontal.push(snapY)
+                activeGuides.showGuides = true
+            }
+            // Snap center
+            else if (Math.abs(clipCenterY - snapY) <= SNAP_TOLERANCE) {
+                snappedTop = snapY - height / 2
+                activeGuides.horizontal.push(snapY)
+                activeGuides.showGuides = true
+            }
+        }
+
+        return {
+            left: snappedLeft,
+            top: snappedTop,
+            guides: activeGuides
+        }
+    }, [])
 
     // Check if clip should be rendered AFTER all hooks are called
     const isVisible = localMs >= 0 && localMs <= durationMs
@@ -478,13 +582,21 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
             } else if (isDraggingCrop) {
                 const dx = e.clientX - dragStart.x
                 const dy = e.clientY - dragStart.y
-                setCrop(crop => ({ ...crop, left: dragStart.left + dx, top: dragStart.top + dy }))
+                const rawLeft = dragStart.left + dx
+                const rawTop = dragStart.top + dy
+                
+                // Apply snap guides
+                const snapped = calculateSnapPosition(rawLeft, rawTop, crop.width, crop.height)
+                updateSnapGuides(snapped.guides)
+                setCrop(crop => ({ ...crop, left: snapped.left, top: snapped.top }))
             }
         }
         const handleMouseUp = () => {
             setIsResizing(false)
             setResizeType(null)
             setIsDraggingCrop(false)
+            // Clear snap guides when dragging ends
+            updateSnapGuides({ vertical: [] as number[], horizontal: [] as number[], showGuides: false })
         }
         if (isResizing || isDraggingCrop) {
             document.addEventListener('mousemove', handleMouseMove)
@@ -494,7 +606,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
             document.removeEventListener('mousemove', handleMouseMove)
             document.removeEventListener('mouseup', handleMouseUp)
         }
-    }, [isResizing, isDraggingCrop, resizeType, resizeStart, dragStart, crop, aspectRatio, clip.type])
+    }, [isResizing, isDraggingCrop, resizeType, resizeStart, dragStart, crop, aspectRatio, clip.type, calculateSnapPosition, updateSnapGuides])
 
     // --- Crop area dragging ---
     const handleCropMouseDown = (e: React.MouseEvent) => {
