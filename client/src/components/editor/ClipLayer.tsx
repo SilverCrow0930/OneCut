@@ -65,7 +65,8 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 })
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
 
-
+    // Track player size for automatic scaling when layout changes
+    const [lastPlayerSize, setLastPlayerSize] = useState<{ width: number, height: number } | null>(null)
 
     // Snap tolerance in pixels
     const SNAP_TOLERANCE = 8
@@ -753,7 +754,93 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         }
     }, [clip.type, clip.properties?.placement]);
 
+    // Monitor player size changes and auto-scale clips
+    useEffect(() => {
+        const player = document.querySelector('[style*="aspectRatio"], [style*="aspect-ratio"]') || 
+                      document.querySelector('.bg-black');
+        if (!player) return;
 
+        const checkPlayerSize = () => {
+            const rect = (player as HTMLElement).getBoundingClientRect();
+            const currentSize = { width: rect.width, height: rect.height };
+
+            if (lastPlayerSize && 
+                (Math.abs(lastPlayerSize.width - currentSize.width) > 1 || 
+                 Math.abs(lastPlayerSize.height - currentSize.height) > 1)) {
+                
+                // Player size changed significantly - scale the clip proportionally
+                const scaleX = currentSize.width / lastPlayerSize.width;
+                const scaleY = currentSize.height / lastPlayerSize.height;
+                const averageScale = (scaleX + scaleY) / 2; // Use average for font scaling
+
+                console.log(`📏 Player size changed from ${lastPlayerSize.width}x${lastPlayerSize.height} to ${currentSize.width}x${currentSize.height}`);
+                console.log(`📐 Scaling clip ${clip.id} by ${scaleX.toFixed(3)}x${scaleY.toFixed(3)}`);
+
+                const newCrop = {
+                    left: crop.left * scaleX,
+                    top: crop.top * scaleY,
+                    width: crop.width * scaleX,
+                    height: crop.height * scaleY
+                };
+
+                // For text and caption clips, also scale font size if explicitly set
+                let updatedProperties = { ...clip.properties };
+                if ((clip.type === 'text' || clip.type === 'caption') && 
+                    clip.properties?.style?.fontSize) {
+                    
+                    const currentFontSize = parseInt(clip.properties.style.fontSize);
+                    if (!isNaN(currentFontSize)) {
+                        const newFontSize = Math.round(currentFontSize * averageScale);
+                        console.log(`📝 Scaling font size from ${currentFontSize}px to ${newFontSize}px`);
+                        
+                        updatedProperties = {
+                            ...updatedProperties,
+                            style: {
+                                ...updatedProperties.style,
+                                fontSize: `${newFontSize}px`
+                            }
+                        };
+                    }
+                }
+
+                // Update local state immediately for responsive UI
+                setCrop(newCrop);
+
+                // Persist to database
+                const updatedClip = {
+                    ...clip,
+                    properties: {
+                        ...updatedProperties,
+                        crop: newCrop
+                    }
+                };
+
+                executeCommand({
+                    type: 'UPDATE_CLIP',
+                    payload: {
+                        before: clip,
+                        after: updatedClip
+                    }
+                });
+            }
+
+            setLastPlayerSize(currentSize);
+        };
+
+        // Check immediately
+        checkPlayerSize();
+
+        // Set up observer for layout changes
+        const resizeObserver = new ResizeObserver(() => {
+            checkPlayerSize();
+        });
+
+        resizeObserver.observe(player as HTMLElement);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [lastPlayerSize, clip.id, crop, clip.properties, executeCommand]);
 
     // --- Main render ---
     if (!isVisible) {
