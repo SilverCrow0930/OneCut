@@ -14,7 +14,13 @@ interface ClipLayerProps {
 
 export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: ClipLayerProps) {
     const { currentTime, isPlaying } = usePlayback()
-    const { selectedClipId, selectedClipIds, setSelectedClipId, setSelectedClipIds } = useEditor()
+    const { 
+        selectedClipId, 
+        setSelectedClipId, 
+        selectedClipIds, 
+        setSelectedClipIds,
+        executeCommand
+    } = useEditor()
     const { registerAudioClip, updateTrackSpeed, unregisterTrack } = useAudio()
     const localMs = currentTime * 1000 - clip.timelineStartMs
     const durationMs = clip.timelineEndMs - clip.timelineStartMs
@@ -58,6 +64,8 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
     const [isDraggingCrop, setIsDraggingCrop] = useState(false)
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 })
     const [aspectRatio, setAspectRatio] = useState(16 / 9)
+
+
 
     // Snap tolerance in pixels
     const SNAP_TOLERANCE = 8
@@ -744,6 +752,8 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
             });
         }
     }, [clip.type, clip.properties?.placement]);
+
+
 
     // --- Main render ---
     if (!isVisible) {
