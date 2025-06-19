@@ -260,7 +260,7 @@ const Editor = () => {
     useEffect(() => {
         const handleGlobalClick = (e: MouseEvent) => {
             // Only deselect if the click is not inside a clip (ClipLayer uses data-clip-layer)
-            // or inside any tool panel (but allow deselection for project name editor)
+            // or inside any tool panel
             let el = e.target as HTMLElement | null
             while (el) {
                 if (el.hasAttribute && (
@@ -272,26 +272,31 @@ const Editor = () => {
             }
             setSelectedClipId(null)
             
-            // Also blur any focused input/textarea to deselect text
+            // Handle input blurring separately - this should NOT affect project name editor
             const activeElement = document.activeElement as HTMLElement
             if (activeElement && (
                 activeElement.tagName === 'INPUT' || 
                 activeElement.tagName === 'TEXTAREA' ||
                 activeElement.contentEditable === 'true'
             )) {
-                // Check if click is inside protected areas
+                // Check if click is inside protected areas (excluding project name editor)
                 const assistantPanel = document.querySelector('[data-assistant-panel]')
                 const toolPanel = document.querySelector('[data-tool-panel]')
-                const projectNameEditor = document.querySelector('[data-project-name-editor]')
                 const clickTarget = e.target as Node
                 
                 const isOutsideAssistant = !assistantPanel || !assistantPanel.contains(clickTarget)
                 const isOutsideToolPanel = !toolPanel || !toolPanel.contains(clickTarget)
-                const isOutsideProjectNameEditor = !projectNameEditor || !projectNameEditor.contains(clickTarget)
                 
-                // Only blur if outside all protected areas
-                if (isOutsideAssistant && isOutsideToolPanel && isOutsideProjectNameEditor) {
-                    activeElement.blur()
+                // Only blur if outside assistant and tool panels
+                // Project name editor will handle its own blur logic via onBlur
+                if (isOutsideAssistant && isOutsideToolPanel) {
+                    // Don't blur if we're inside the project name editor - let it handle its own blur
+                    const projectNameEditor = document.querySelector('[data-project-name-editor]')
+                    const isInsideProjectNameEditor = projectNameEditor && projectNameEditor.contains(clickTarget)
+                    
+                    if (!isInsideProjectNameEditor) {
+                        activeElement.blur()
+                    }
                 }
             }
         }
