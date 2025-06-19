@@ -284,30 +284,9 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                     />
                 )
             case 'audio':
-                // Audio clips are now handled by AudioContext
-                return (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            left: '50%',
-                            top: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            background: 'rgba(34, 197, 94, 0.8)',
-                            borderRadius: '8px',
-                            padding: '20px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: '120px',
-                            minHeight: '60px'
-                        }}
-                        onClick={handleClick}
-                    >
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                        </svg>
-                    </div>
-                )
+                // Audio clips should not be rendered visually in the player
+                // They are handled by AudioContext for playback and by the export system for final video
+                return null
             case 'image':
                 return (
                     <img
