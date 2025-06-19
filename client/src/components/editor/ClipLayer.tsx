@@ -626,10 +626,10 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             {(isPrimarySelection || (isInMultiSelection && isMultiSelectionActive)) && (
                 <div
-                    className="absolute pointer-events-auto"
+                    className="absolute pointer-events-auto z-50"
                     style={{
                         left: crop.left + crop.width / 2,
-                        top: crop.top - 60,
+                        top: Math.max(10, crop.top - 60), // Ensure menu stays at least 10px from top edge
                         transform: 'translateX(-50%)'
                     }}
                 >
@@ -648,7 +648,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                     height: crop.height,
                     left: crop.left,
                     top: crop.top,
-                    overflow: 'visible',
+                    overflow: 'visible', // Keep visible for UI controls (resize handles, selection rings)
                     position: 'absolute',
                     background: clip.type === 'text' ? 'rgba(0, 0, 0, 0)' : 'black',
                     ...transitionStyles // Apply transition effects

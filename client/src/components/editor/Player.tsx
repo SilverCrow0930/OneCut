@@ -56,7 +56,8 @@ export function Player() {
                     aspectRatio: getAspectRatio(),
                     height: '100%',
                     maxHeight: '100%',
-                    width: 'auto'
+                    width: 'auto',
+                    overflow: 'hidden' // Clip content that extends beyond player boundaries - matches professional editor behavior
             }}
             onClick={() => {
                 setSelectedClipId(null)
