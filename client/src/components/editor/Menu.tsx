@@ -82,7 +82,8 @@ const Menu = () => {
                 flex flex-row items-center w-full gap-6
             ">
                 <ChevronLeft
-                    className="cursor-pointer hover:bg-white/10 rounded p-1 transition-colors"
+                    size={32}
+                    className="cursor-pointer hover:bg-white/10 rounded p-2 transition-colors"
                     onClick={() => {
                         router.push(`/creation`)
                     }}
