@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { ChevronLeft, Redo2, Undo2, Edit2 } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import SaveStatusIndicator from './SaveStatusIndicator'
@@ -20,15 +20,22 @@ const Menu = () => {
         updateProjectName
     } = useEditor()
 
+    // Debug state changes
+    useEffect(() => {
+        console.log('🔄 isEditing state changed:', isEditing)
+    }, [isEditing])
+
     // Focus input when editing starts
     useEffect(() => {
+        console.log('📝 useEffect triggered - isEditing:', isEditing, 'inputRef:', !!inputRef.current)
         if (isEditing && inputRef.current) {
+            console.log('🎯 Focusing input')
             inputRef.current.focus()
             inputRef.current.select()
         }
     }, [isEditing])
 
-    const handleTitleClick = (e?: React.MouseEvent) => {
+    const handleTitleClick = useCallback((e?: React.MouseEvent) => {
         console.log('🖱️ Title clicked!', { project: project?.name, isEditing })
         if (e) {
             e.preventDefault()
@@ -40,8 +47,22 @@ const Menu = () => {
         }
         console.log('✅ Setting editing mode')
         setEditedName(project.name)
-        setIsEditing(true)
-    }
+        console.log('📝 About to set isEditing to true')
+        
+        // Use functional update to ensure state change
+        setIsEditing(prev => {
+            console.log('📝 Functional update - prev:', prev, 'new: true')
+            return true
+        })
+        
+        // Also try with a timeout to see if timing is the issue
+        setTimeout(() => {
+            console.log('⏰ Timeout check - isEditing should be true now')
+            setIsEditing(true)
+        }, 0)
+        
+        console.log('📝 setIsEditing calls completed')
+    }, [project, isEditing])
 
     const handleSave = async () => {
         if (!project || editedName.trim() === project.name) {
