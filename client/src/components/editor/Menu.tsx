@@ -28,8 +28,17 @@ const Menu = () => {
         }
     }, [isEditing])
 
-    const handleTitleClick = () => {
-        if (!project) return
+    const handleTitleClick = (e?: React.MouseEvent) => {
+        console.log('🖱️ Title clicked!', { project: project?.name, isEditing })
+        if (e) {
+            e.preventDefault()
+            e.stopPropagation()
+        }
+        if (!project) {
+            console.log('❌ No project found')
+            return
+        }
+        console.log('✅ Setting editing mode')
         setEditedName(project.name)
         setIsEditing(true)
     }
@@ -108,14 +117,19 @@ const Menu = () => {
                     ) : (
                         <div 
                             onClick={handleTitleClick}
+                            onMouseDown={(e) => e.preventDefault()}
                             className="
                                 text-xl font-bold cursor-pointer 
                                 hover:bg-white/10 rounded px-2 py-1 -mx-2 -my-1
                                 transition-colors duration-200
                                 flex items-center gap-2
+                                select-none
+                                min-h-[32px]
                             "
+                            role="button"
+                            tabIndex={0}
                         >
-                            {project?.name}
+                            {project?.name || 'Untitled Project'}
                             <Edit2 size={16} className="opacity-0 group-hover:opacity-50 transition-opacity" />
                         </div>
                     )}
