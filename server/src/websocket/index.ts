@@ -89,9 +89,10 @@ export const setupWebSocket = async (httpServer: HttpServer): Promise<Server> =>
                         data.projectContext
                     );
                     
-                    // Send the response back
+                    // Send the response back with commands if present
                     socket.emit('chat_message', { 
-                        text: response.response 
+                        text: response.response,
+                        commands: response.commands || null
                     });
                     
                     // Reset state

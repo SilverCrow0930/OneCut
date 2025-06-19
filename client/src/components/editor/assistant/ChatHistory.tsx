@@ -5,7 +5,7 @@ interface ChatMessage {
     id: number;
     message: string;
     sender: 'user' | 'assistant';
-    type?: 'text' | 'commands' | 'suggestions' | 'analysis' | 'error' | 'search' | 'tool_actions';
+    type?: 'text' | 'commands' | 'suggestions' | 'analysis' | 'error' | 'search' | 'tool_actions' | 'ai_edit';
     commands?: any[];
     searchResults?: any[];
     toolActions?: any[];
@@ -16,6 +16,8 @@ interface ChatHistoryProps {
     chatMessages: ChatMessage[];
     state: string;
     onExecuteCommands?: (commands: any[]) => void;
+    onAcceptAIEdit?: (messageId: number) => void;
+    onRejectAIEdit?: (messageId: number) => void;
 }
 
 const getCommandDescription = (command: any): string => {
@@ -44,7 +46,7 @@ const formatTime = (ms: number): string => {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecuteCommands }) => {
+const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecuteCommands, onAcceptAIEdit, onRejectAIEdit }) => {
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     // Scroll to bottom when messages change or when state changes
@@ -138,7 +140,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
                         />
                         
                         {/* Render command execution buttons */}
-                        {message.commands && message.commands.length > 0 && onExecuteCommands && (
+                        {message.commands && message.commands.length > 0 && onExecuteCommands && message.type === 'commands' && (
                             <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                 <div className="text-sm text-blue-800 mb-2">
                                     🎬 Editing Commands Ready ({message.commands.length} operations)
@@ -179,6 +181,30 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
                         {message.type === 'error' && (
                             <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">
                                 ⚠️ Error
+                            </div>
+                        )}
+                        
+                        {/* Render AI edit accept/reject buttons */}
+                        {message.type === 'ai_edit' && onAcceptAIEdit && onRejectAIEdit && (
+                            <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="text-sm text-green-800 mb-3">
+                                    AI Edit Applied - Do you want to keep this change?
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => onAcceptAIEdit(message.id)}
+                                        className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center gap-2"
+                                    >
+                                        ✅ Accept Edit
+                                    </button>
+                                    <button
+                                        onClick={() => onRejectAIEdit(message.id)}
+                                        className="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors flex items-center gap-2"
+                                    >
+                                        ❌ Reject & Undo
+                                    </button>
+                                </div>
                             </div>
                         )}
                         

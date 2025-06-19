@@ -8,12 +8,13 @@ import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { useParams } from 'next/navigation'
 import { Brain, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { createCommandExecutor } from '@/services/commandExecutor'
 
 interface ChatMessage {
     id: number;
     message: string;
     sender: 'user' | 'assistant';
-    type?: 'text' | 'commands' | 'suggestions' | 'analysis' | 'error' | 'search' | 'tool_actions';
+    type?: 'text' | 'commands' | 'suggestions' | 'analysis' | 'error' | 'search' | 'tool_actions' | 'ai_edit';
     commands?: any[];
     searchResults?: any[];
     toolActions?: any[];
@@ -55,7 +56,7 @@ const Assistant = () => {
     const socketRef = useRef<Socket | null>(null)
     const [message, setMessage] = useState<string>("")
     const { session } = useAuth()
-    const { clips, tracks, project } = useEditor()
+    const { clips, tracks, project, executeCommand, undo } = useEditor()
     const { assets } = useAssets()
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
@@ -278,14 +279,27 @@ const Assistant = () => {
         });
 
         // Chat message listener
-        socketRef.current.on('chat_message', async (data: { text: string }) => {
-            setChatMessages(prev => [...prev, {
-                id: prev.length + 1,
+        socketRef.current.on('chat_message', async (data: { text: string, commands?: any[] }) => {
+            const messageType = data.commands && data.commands.length > 0 ? 'commands' : 'text';
+            const newMessage: ChatMessage = {
+                id: chatMessages.length + 1,
                 message: data.text,
-                sender: 'assistant'
-            }])
-            // Save assistant message to database
-            await saveChatMessage(data.text, 'assistant', 'text');
+                sender: 'assistant',
+                type: messageType,
+                commands: data.commands || []
+            };
+            
+            setChatMessages(prev => [...prev, newMessage]);
+            
+            // Auto-execute commands if present
+            if (data.commands && data.commands.length > 0) {
+                await handleExecuteCommands(data.commands, true); // true = auto-execute
+            }
+            
+            // Save assistant message to database with commands metadata
+            await saveChatMessage(data.text, 'assistant', messageType, {
+                commands: data.commands || []
+            });
             setState('idle');
         })
 
@@ -359,6 +373,127 @@ const Assistant = () => {
         return "Analyze Video";
     };
 
+    const handleExecuteCommands = async (commands: any[], autoExecute: boolean = false) => {
+        if (!projectId || !executeCommand) {
+            console.error('Missing project ID or execute command function');
+            return;
+        }
+
+        try {
+            // Create command executor instance
+            const executor = createCommandExecutor(
+                projectId,
+                executeCommand,
+                tracks,
+                clips
+            );
+
+            // Execute the AI commands
+            const result = await executor.executeAICommands(commands);
+
+            if (result.success) {
+                if (autoExecute) {
+                    // Add AI edit with accept/reject options
+                    const editMessage = `🤖 **AI Edit Applied**\n\n${result.message}\n\n*You can accept or reject this edit below.*`;
+                    setChatMessages(prev => [...prev, {
+                        id: prev.length + 1,
+                        message: editMessage,
+                        sender: 'assistant',
+                        type: 'ai_edit',
+                        commands: result.commands || []
+                    }]);
+                    
+                    // Save AI edit message to database
+                    await saveChatMessage(editMessage, 'assistant', 'ai_edit', {
+                        commands: result.commands || []
+                    });
+                } else {
+                    // Manual execution - show success
+                    const successMessage = `✅ Commands executed successfully!\n\n${result.message}`;
+                    setChatMessages(prev => [...prev, {
+                        id: prev.length + 1,
+                        message: successMessage,
+                        sender: 'assistant',
+                        type: 'text'
+                    }]);
+                    
+                    // Save success message to database
+                    await saveChatMessage(successMessage, 'assistant', 'text');
+                }
+            } else {
+                // Add error message to chat
+                const errorMessage = `❌ Command execution failed: ${result.error || result.message}`;
+                setChatMessages(prev => [...prev, {
+                    id: prev.length + 1,
+                    message: errorMessage,
+                    sender: 'assistant',
+                    type: 'error'
+                }]);
+                
+                // Save error message to database
+                await saveChatMessage(errorMessage, 'assistant', 'error');
+            }
+        } catch (error) {
+            console.error('Command execution error:', error);
+            
+            const errorMessage = `❌ Failed to execute commands: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            setChatMessages(prev => [...prev, {
+                id: prev.length + 1,
+                message: errorMessage,
+                sender: 'assistant',
+                type: 'error'
+            }]);
+            
+            // Save error message to database
+            await saveChatMessage(errorMessage, 'assistant', 'error');
+        }
+    };
+
+    const handleAcceptAIEdit = async (messageId: number) => {
+        // Update the message to show it was accepted
+        setChatMessages(prev => prev.map(msg => 
+            msg.id === messageId 
+                ? { ...msg, type: 'text' as const, message: msg.message.replace('*You can accept or reject this edit below.*', '✅ **Edit Accepted**') }
+                : msg
+        ));
+        
+        // Add acceptance message
+        const acceptMessage = "✅ AI edit accepted and applied to your video.";
+        setChatMessages(prev => [...prev, {
+            id: prev.length + 1,
+            message: acceptMessage,
+            sender: 'assistant',
+            type: 'text'
+        }]);
+        
+        await saveChatMessage(acceptMessage, 'assistant', 'text');
+    };
+
+    const handleRejectAIEdit = async (messageId: number) => {
+        // Undo the changes
+        if (undo) {
+            undo();
+        }
+        
+        // Update the message to show it was rejected
+        setChatMessages(prev => prev.map(msg => 
+            msg.id === messageId 
+                ? { ...msg, type: 'text' as const, message: msg.message.replace('*You can accept or reject this edit below.*', '❌ **Edit Rejected and Reverted**') }
+                : msg
+        ));
+        
+        // Add rejection message
+        const rejectMessage = "❌ AI edit rejected. Your video has been restored to the previous state.";
+        setChatMessages(prev => [...prev, {
+            id: prev.length + 1,
+            message: rejectMessage,
+            sender: 'assistant',
+            type: 'text'
+        }]);
+        
+        await saveChatMessage(rejectMessage, 'assistant', 'text');
+    };
+
     return (
         <div className="flex flex-col w-full h-full p-2">
             {/* Header with Status and Video Analysis Button */}
@@ -422,11 +557,13 @@ const Assistant = () => {
                         </div>
                     </div>
                 ) : (
-                    <ChatHistory
-                        chatMessages={chatMessages}
-                        state={state}
-                        onExecuteCommands={() => {}}
-                    />
+                <ChatHistory
+                    chatMessages={chatMessages}
+                    state={state}
+                        onExecuteCommands={handleExecuteCommands}
+                        onAcceptAIEdit={handleAcceptAIEdit}
+                        onRejectAIEdit={handleRejectAIEdit}
+                />
                 )}
             </div>
 
@@ -442,4 +579,4 @@ const Assistant = () => {
     )
 }
 
-export default Assistant 
+export default Assistant
