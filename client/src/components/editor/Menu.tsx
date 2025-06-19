@@ -81,6 +81,7 @@ const Menu = () => {
                 bg-gradient-to-r from-indigo-600 to-purple-600 text-white
                 border-b border-indigo-400/20
             "
+            data-menu-panel
         >
             <div className="
                 flex flex-row items-center w-full gap-6

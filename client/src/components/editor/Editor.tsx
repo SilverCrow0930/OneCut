@@ -260,13 +260,14 @@ const Editor = () => {
     useEffect(() => {
         const handleGlobalClick = (e: MouseEvent) => {
             // Only deselect if the click is not inside a clip (ClipLayer uses data-clip-layer)
-            // or inside any tool panel
+            // or inside any tool panel or menu panel
             let el = e.target as HTMLElement | null
             while (el) {
                 if (el.hasAttribute && (
                     el.hasAttribute('data-clip-layer') ||
                     el.closest('[data-text-tool-panel]') ||
-                    el.closest('[data-tool-panel]')
+                    el.closest('[data-tool-panel]') ||
+                    el.closest('[data-menu-panel]')
                 )) return
                 el = el.parentElement
             }
@@ -279,15 +280,17 @@ const Editor = () => {
                 activeElement.tagName === 'TEXTAREA' ||
                 activeElement.contentEditable === 'true'
             )) {
-                // Only blur if the click is outside the assistant panel AND outside any tool panel
+                // Only blur if the click is outside the assistant panel AND outside any tool panel AND outside menu panel
                 const assistantPanel = document.querySelector('[data-assistant-panel]')
                 const toolPanel = document.querySelector('[data-tool-panel]')
+                const menuPanel = document.querySelector('[data-menu-panel]')
                 const clickTarget = e.target as Node
                 
                 const isOutsideAssistant = !assistantPanel || !assistantPanel.contains(clickTarget)
                 const isOutsideToolPanel = !toolPanel || !toolPanel.contains(clickTarget)
+                const isOutsideMenuPanel = !menuPanel || !menuPanel.contains(clickTarget)
                 
-                if (isOutsideAssistant && isOutsideToolPanel) {
+                if (isOutsideAssistant && isOutsideToolPanel && isOutsideMenuPanel) {
                     activeElement.blur()
                 }
             }
