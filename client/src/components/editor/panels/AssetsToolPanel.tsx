@@ -40,7 +40,7 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
 
         // Handle audio types differently from Pexels
         if (selectedTab === 'music' || selectedTab === 'sound') {
-            // Use Freesound API for audio assets - fewer per page for better UX
+            // Use Freesound API for audio assets - fetch fewer items for single column layout
             const freesoundQuery = selectedTab === 'music' ? 'music loop' : 'sound effect'
             const searchTerm = searchQuery || freesoundQuery
             
@@ -250,36 +250,21 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
                         <div className="text-red-500 text-center py-4">{error}</div>
                     )
                 }
-                {/* Different layouts for different asset types */}
-                {selectedTab === 'music' || selectedTab === 'sound' ? (
-                    // Single column layout for audio assets
-                    <div className="space-y-3">
-                        {
-                            assets.map((asset, index) => (
-                                <AssetGridItem
-                                    key={`${selectedTab}-${index}`}
-                                    asset={asset}
-                                    type={selectedTab}
-                                    onUploadAndHighlight={handleUploadAndHighlight}
-                                />
-                            ))
-                        }
-                    </div>
-                ) : (
-                    // Grid layout for images and videos
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {
-                            assets.map((asset, index) => (
-                                <AssetGridItem
-                                    key={`${selectedTab}-${index}`}
-                                    asset={asset}
-                                    type={selectedTab}
-                                    onUploadAndHighlight={handleUploadAndHighlight}
-                                />
-                            ))
-                        }
-                    </div>
-                )}
+                <div className={`${selectedTab === 'music' || selectedTab === 'sound' 
+                    ? 'space-y-3' 
+                    : 'grid grid-cols-2 md:grid-cols-3 gap-3'
+                }`}>
+                    {
+                        assets.map((asset, index) => (
+                            <AssetGridItem
+                                key={`${selectedTab}-${index}`}
+                                asset={asset}
+                                type={selectedTab}
+                                onUploadAndHighlight={handleUploadAndHighlight}
+                            />
+                        ))
+                    }
+                </div>
                 {
                     assets.length > 0 && !loading && (
                         <button
