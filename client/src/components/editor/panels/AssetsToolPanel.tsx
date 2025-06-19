@@ -15,7 +15,7 @@ interface AssetsToolPanelProps {
 }
 
 const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId, setUploadingAssetId }) => {
-    const [selectedTab, setSelectedTab] = useState<'image' | 'video'>('video')
+    const [selectedTab, setSelectedTab] = useState<'image' | 'video' | 'music' | 'sound'>('video')
     const [assets, setAssets] = useState<Asset[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -38,24 +38,42 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
         setLoading(true)
         setError(null)
 
-        const queryParams = new URLSearchParams({
-            type: selectedTab,
-            page: page.toString(),
-            ...(searchQuery && { query: searchQuery }),
-        })
-
-        fetch(apiPath(`assets/pexels?${queryParams}`), {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-        })
-            .then(res => res.json())
-            .then(data => {
-                setAssets(prev => prev.concat(selectedTab === 'image' ? data.photos : data.videos))
+        // Handle audio types differently from Pexels
+        if (selectedTab === 'music' || selectedTab === 'sound') {
+            // Use Freesound API for audio assets
+            const freesoundQuery = selectedTab === 'music' ? 'music loop' : 'sound effect'
+            const searchTerm = searchQuery || freesoundQuery
+            
+            fetch(apiPath(`assets/freesound?query=${encodeURIComponent(searchTerm)}&page=${page}&type=${selectedTab}`), {
+                headers: { Authorization: `Bearer ${session.access_token}` },
             })
-            .catch(() => setError('Failed to fetch assets'))
-            .finally(() => setLoading(false))
+                .then(res => res.json())
+                .then(data => {
+                    setAssets(prev => prev.concat(data.results || []))
+                })
+                .catch(() => setError('Failed to fetch audio assets'))
+                .finally(() => setLoading(false))
+        } else {
+            // Use Pexels for images and videos
+            const queryParams = new URLSearchParams({
+                type: selectedTab,
+                page: page.toString(),
+                ...(searchQuery && { query: searchQuery }),
+            })
+
+            fetch(apiPath(`assets/pexels?${queryParams}`), {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            })
+                .then(res => res.json())
+                .then(data => {
+                    setAssets(prev => prev.concat(selectedTab === 'image' ? data.photos : data.videos))
+                })
+                .catch(() => setError('Failed to fetch assets'))
+                .finally(() => setLoading(false))
+        }
     }, [selectedTab, page, searchQuery, session?.access_token])
 
-    const handleTabChange = (tabId: 'image' | 'video') => {
+    const handleTabChange = (tabId: 'image' | 'video' | 'music' | 'sound') => {
         setSelectedTab(tabId)
         setAssets([])
         setPage(1)
@@ -83,8 +101,8 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
         }
     }
 
-    // Function to download and upload Pexels asset
-    const handlePexelsAssetDownload = async (asset: any, assetType: 'image' | 'video') => {
+    // Function to download and upload asset (Pexels or Freesound)
+    const handleAssetDownload = async (asset: any, assetType: 'image' | 'video' | 'music' | 'sound') => {
         if (!session?.access_token) {
             throw new Error('Not signed in')
         }
@@ -92,10 +110,22 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
         try {
             // 1. Get the media URL based on asset type
             let mediaUrl = ''
+            let fileName = ''
+            let mimeType = ''
+            
             if (assetType === 'image') {
                 mediaUrl = asset.src?.original || asset.src?.large2x || asset.src?.large
-            } else {
+                fileName = `${asset.id}.jpg`
+                mimeType = 'image/jpeg'
+            } else if (assetType === 'video') {
                 mediaUrl = asset.video_files?.[0]?.link || asset.url
+                fileName = `${asset.id}.mp4`
+                mimeType = 'video/mp4'
+            } else if (assetType === 'music' || assetType === 'sound') {
+                // For Freesound assets
+                mediaUrl = asset.previews?.['preview-hq-mp3'] || asset.previews?.['preview-lq-mp3'] || asset.download
+                fileName = `${asset.name || asset.id}.mp3`
+                mimeType = 'audio/mpeg'
             }
 
             if (!mediaUrl) {
@@ -110,11 +140,9 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
 
             // 3. Get the file blob and create a File object
             const blob = await response.blob()
-            const file = new File([blob], `${asset.id}.${assetType === 'video' ? 'mp4' : 'jpg'}`, {
-                type: assetType === 'video' ? 'video/mp4' : 'image/jpeg'
-            })
+            const file = new File([blob], fileName, { type: mimeType })
 
-            // 4. Get media duration if it's a video
+            // 4. Get media duration
             let durationSeconds = 0
             if (assetType === 'video') {
                 const url = URL.createObjectURL(file)
@@ -129,6 +157,9 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
 
                 durationSeconds = video.duration || 0
                 URL.revokeObjectURL(url)
+            } else if (assetType === 'music' || assetType === 'sound') {
+                // For audio files, try to get duration from metadata or use asset duration
+                durationSeconds = asset.duration || 5
             } else {
                 // For images, set a default duration of 5 seconds
                 durationSeconds = 5
@@ -164,11 +195,11 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
     React.useEffect(() => {
         const panel = document.querySelector('[data-assets-panel]')
         if (panel) {
-            (panel as any).handlePexelsAssetDownload = handlePexelsAssetDownload
+            (panel as any).handleAssetDownload = handleAssetDownload
         }
         return () => {
             if (panel) {
-                delete (panel as any).handlePexelsAssetDownload
+                delete (panel as any).handleAssetDownload
             }
         }
     }, [session?.access_token]) // Re-expose when session changes

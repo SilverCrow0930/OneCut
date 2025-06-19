@@ -1,7 +1,7 @@
 import { ElementType } from 'react';
 
 export interface AssetType {
-    id: 'image' | 'video';
+    id: 'image' | 'video' | 'music' | 'sound';
     label: string;
     icon: ElementType;
 }
@@ -20,4 +20,21 @@ export interface PexelsVideo {
     video_files: { link: string }[];
 }
 
-export type Asset = PexelsPhoto | PexelsVideo; 
+export interface FreesoundAudio {
+    id: number;
+    name: string;
+    description: string;
+    duration: number;
+    previews: {
+        'preview-hq-mp3': string;
+        'preview-lq-mp3': string;
+        'preview-hq-ogg': string;
+        'preview-lq-ogg': string;
+    };
+    download: string;
+    tags: string[];
+    license: string;
+    username?: string;
+}
+
+export type Asset = PexelsPhoto | PexelsVideo | FreesoundAudio; 

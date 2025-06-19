@@ -306,6 +306,53 @@ router.get(
     }
 );
 
+// GET /api/v1/assets/freesound — fetch audio assets from Freesound API
+router.get(
+    '/freesound',
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const query = String(req.query.query || 'music');
+            const page = String(req.query.page || '1');
+            const page_size = String(req.query.page_size || '15');
+            const type = String(req.query.type || 'music');
+
+            if (!process.env.FREESOUND_API_KEY) {
+                return res.status(500).json({ error: 'Freesound API key not configured' });
+            }
+
+            // Build search filter based on type
+            let filter = '';
+            if (type === 'music') {
+                filter = 'tag:music OR tag:loop OR tag:background';
+            } else if (type === 'sound') {
+                filter = 'tag:sound-effect OR tag:sfx OR tag:foley';
+            }
+
+            const url = `https://freesound.org/apiv2/search/text/?query=${encodeURIComponent(query)}&page=${page}&page_size=${page_size}&fields=id,name,description,duration,previews,download,tags,license&filter=${encodeURIComponent(filter)}&token=${process.env.FREESOUND_API_KEY}`;
+
+            console.log('FREESOUND API URL:', url);
+
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Token ${process.env.FREESOUND_API_KEY}`
+                }
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Freesound API error: ${response.statusText} - ${text}`);
+            }
+
+            const data = await response.json();
+            res.json(data);
+        }
+        catch (err) {
+            console.error('Freesound API error:', err);
+            next(err);
+        }
+    }
+);
+
 // GET /api/v1/assets/giphy/stickers — fetch stickers from Giphy API
 router.get(
     '/giphy/stickers',

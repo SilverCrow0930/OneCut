@@ -208,7 +208,7 @@ export function addAssetToTrack(
     projectId: string,
     options: {
         isExternal?: boolean,
-        assetType?: 'image' | 'video',
+        assetType?: 'image' | 'video' | 'music' | 'sound',
         trackIndex?: number,
         startTimeMs?: number
     } = {}
@@ -223,8 +223,12 @@ export function addAssetToTrack(
     let externalAsset = null
     
     if (isExternal) {
-        // Handle external assets (Pexels, Giphy stickers)
-        trackType = assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+        // Handle external assets (Pexels, Giphy stickers, Freesound audio)
+        if (assetType === 'music' || assetType === 'sound') {
+            trackType = 'audio'
+        } else {
+            trackType = assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+        }
         
         // Extract the correct URL based on asset type and source
         let mediaUrl = ''
@@ -238,6 +242,9 @@ export function addAssetToTrack(
         } else if (assetType === 'video') {
             // Pexels video
             mediaUrl = asset.video_files?.[0]?.link || asset.url
+        } else if (assetType === 'music' || assetType === 'sound') {
+            // Freesound audio
+            mediaUrl = asset.previews?.['preview-hq-mp3'] || asset.previews?.['preview-lq-mp3'] || asset.download
         }
         
         if (!mediaUrl) {
@@ -249,11 +256,13 @@ export function addAssetToTrack(
         externalAsset = {
             id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             url: mediaUrl,
-            name: asset.title || asset.alt || `External ${assetType}`,
+            name: asset.title || asset.name || asset.alt || `External ${assetType}`,
             mime_type: assetType === 'video' ? 'video/mp4' : 
+                      assetType === 'music' || assetType === 'sound' ? 'audio/mpeg' :
                       (asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
             duration: assetType === 'video' ? 10000 : 
-                     (asset.isSticker || mediaUrl.includes('.gif')) ? 3000 : 5000, // 3s for GIFs, 5s for images
+                     assetType === 'music' || assetType === 'sound' ? (asset.duration ? asset.duration * 1000 : 30000) :
+                     (asset.isSticker || mediaUrl.includes('.gif')) ? 3000 : 5000, // 30s for audio, 3s for GIFs, 5s for images
             isExternal: true,
             originalData: asset
         }
