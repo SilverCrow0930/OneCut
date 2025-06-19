@@ -81,7 +81,6 @@ const Menu = () => {
                 bg-gradient-to-r from-indigo-600 to-purple-600 text-white
                 border-b border-indigo-400/20
             "
-            data-menu-panel
         >
             <div className="
                 flex flex-row items-center w-full gap-6
@@ -94,7 +93,7 @@ const Menu = () => {
                 />
                 
                 {/* Project Title - Editable */}
-                <div className="flex items-center gap-2 group">
+                <div className="flex items-center gap-2 group" data-project-name-editor>
                     {isEditing ? (
                         <input
                             ref={inputRef}

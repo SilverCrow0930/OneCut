@@ -260,14 +260,13 @@ const Editor = () => {
     useEffect(() => {
         const handleGlobalClick = (e: MouseEvent) => {
             // Only deselect if the click is not inside a clip (ClipLayer uses data-clip-layer)
-            // or inside any tool panel or menu panel
+            // or inside any tool panel (but allow deselection for project name editor)
             let el = e.target as HTMLElement | null
             while (el) {
                 if (el.hasAttribute && (
                     el.hasAttribute('data-clip-layer') ||
                     el.closest('[data-text-tool-panel]') ||
-                    el.closest('[data-tool-panel]') ||
-                    el.closest('[data-menu-panel]')
+                    el.closest('[data-tool-panel]')
                 )) return
                 el = el.parentElement
             }
@@ -280,17 +279,18 @@ const Editor = () => {
                 activeElement.tagName === 'TEXTAREA' ||
                 activeElement.contentEditable === 'true'
             )) {
-                // Only blur if the click is outside the assistant panel AND outside any tool panel AND outside menu panel
+                // Check if click is inside protected areas
                 const assistantPanel = document.querySelector('[data-assistant-panel]')
                 const toolPanel = document.querySelector('[data-tool-panel]')
-                const menuPanel = document.querySelector('[data-menu-panel]')
+                const projectNameEditor = document.querySelector('[data-project-name-editor]')
                 const clickTarget = e.target as Node
                 
                 const isOutsideAssistant = !assistantPanel || !assistantPanel.contains(clickTarget)
                 const isOutsideToolPanel = !toolPanel || !toolPanel.contains(clickTarget)
-                const isOutsideMenuPanel = !menuPanel || !menuPanel.contains(clickTarget)
+                const isOutsideProjectNameEditor = !projectNameEditor || !projectNameEditor.contains(clickTarget)
                 
-                if (isOutsideAssistant && isOutsideToolPanel && isOutsideMenuPanel) {
+                // Only blur if outside all protected areas
+                if (isOutsideAssistant && isOutsideToolPanel && isOutsideProjectNameEditor) {
                     activeElement.blur()
                 }
             }
