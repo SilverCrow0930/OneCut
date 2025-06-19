@@ -252,6 +252,18 @@ export function addAssetToTrack(
             return
         }
         
+        // Calculate duration and ensure it's an integer
+        let calculatedDuration = 0
+        if (assetType === 'video') {
+            calculatedDuration = 10000
+        } else if (assetType === 'music' || assetType === 'sound') {
+            calculatedDuration = asset.duration ? Math.round(asset.duration * 1000) : 30000
+        } else if (asset.isSticker || mediaUrl.includes('.gif')) {
+            calculatedDuration = 3000
+        } else {
+            calculatedDuration = 5000
+        }
+
         // Create external asset data
         externalAsset = {
             id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -260,13 +272,11 @@ export function addAssetToTrack(
             mime_type: assetType === 'video' ? 'video/mp4' : 
                       assetType === 'music' || assetType === 'sound' ? 'audio/mpeg' :
                       (asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
-            duration: assetType === 'video' ? 10000 : 
-                     assetType === 'music' || assetType === 'sound' ? (asset.duration ? asset.duration * 1000 : 30000) :
-                     (asset.isSticker || mediaUrl.includes('.gif')) ? 3000 : 5000, // 30s for audio, 3s for GIFs, 5s for images
+            duration: calculatedDuration,
             isExternal: true,
             originalData: asset
         }
-        duration = externalAsset.duration
+        duration = calculatedDuration
     } else {
         // Handle regular uploaded assets
         trackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
@@ -335,11 +345,15 @@ export function addAssetToTrack(
         startTimeMs = 0
     }
     
-    // Final safety check - ensure duration is valid
+    // Final safety check - ensure duration is valid and integer
     if (duration <= 0) {
         duration = 5000 // 5 seconds default
         console.warn('Duration was still 0, using 5s default')
     }
+    
+    // Ensure all duration and time values are integers to prevent database errors
+    duration = Math.round(duration)
+    startTimeMs = Math.round(startTimeMs)
     
     // Create the clip
     const newClip = {

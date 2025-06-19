@@ -29,10 +29,11 @@ export function toDbClip(c: Clip) {
         throw new Error(`Invalid clip timeline positions: start=${c.timelineStartMs}, end=${c.timelineEndMs}`)
     }
     
-    // Handle zero-duration clips (especially for images) by adding default duration
-    let timelineStartMs = c.timelineStartMs
-    let timelineEndMs = c.timelineEndMs
+    // Round all time values to integers to prevent floating-point database errors
+    let timelineStartMs = Math.round(c.timelineStartMs)
+    let timelineEndMs = Math.round(c.timelineEndMs)
     
+    // Handle zero-duration clips (especially for images) by adding default duration
     if (timelineEndMs <= timelineStartMs) {
         // For images and text, add a default 5-second duration
         if (c.type === 'image' || c.type === 'text' || c.type === 'caption') {
@@ -52,7 +53,7 @@ export function toDbClip(c: Clip) {
     
     // Ensure asset_duration_ms is valid - fallback to timeline duration if missing
     const assetDurationMs = c.assetDurationMs && c.assetDurationMs > 0 
-        ? c.assetDurationMs 
+        ? Math.round(c.assetDurationMs)
         : Math.max(timelineDurationMs, 1000) // Minimum 1 second
     
     return {
@@ -60,8 +61,8 @@ export function toDbClip(c: Clip) {
         track_id: c.trackId,             // FK matches the new track's id
         asset_id: (isExternalAsset || isMissingAsset) ? null : c.assetId, // Use null for external and missing assets
         type: c.type === 'caption' ? 'text' : c.type, // Convert caption to text for database
-        source_start_ms: c.sourceStartMs || 0,
-        source_end_ms: c.sourceEndMs || assetDurationMs,
+        source_start_ms: Math.round(c.sourceStartMs || 0),
+        source_end_ms: Math.round(c.sourceEndMs || assetDurationMs),
         timeline_start_ms: timelineStartMs, // Use corrected values
         timeline_end_ms: timelineEndMs,     // Use corrected values
         asset_duration_ms: assetDurationMs,

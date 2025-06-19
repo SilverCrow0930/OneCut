@@ -182,16 +182,18 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
     }
 
     if (loading || isUploading) {
+        const loadingHeight = (type === 'music' || type === 'sound') ? 'h-20' : 'h-40'
         return (
-            <div className="relative w-full h-40 bg-gray-200 rounded-lg flex items-center justify-center">
+            <div className={`relative w-full ${loadingHeight} bg-gray-200 rounded-lg flex items-center justify-center`}>
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
         )
     }
 
     if (error) {
+        const errorHeight = (type === 'music' || type === 'sound') ? 'h-20' : 'h-40'
         return (
-            <div className="relative w-full h-40 bg-red-100 text-red-500 flex items-center justify-center rounded-lg">
+            <div className={`relative w-full ${errorHeight} bg-red-100 text-red-500 flex items-center justify-center rounded-lg`}>
                 {error}
             </div>
         )
@@ -199,8 +201,9 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
 
     const url = getAssetUrl()
     if (!url) {
+        const errorHeight = (type === 'music' || type === 'sound') ? 'h-20' : 'h-40'
         return (
-            <div className="relative w-full h-40 bg-red-100 text-red-500 flex items-center justify-center rounded-lg">
+            <div className={`relative w-full ${errorHeight} bg-red-100 text-red-500 flex items-center justify-center rounded-lg`}>
                 !
             </div>
         )
@@ -211,9 +214,14 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
     const durationMs = getDuration()
     const poster = getVideoPoster()
 
+    // Use different container classes for audio vs other assets
+    const containerClasses = isAudio 
+        ? "relative w-full h-20 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition bg-white border border-gray-200 shadow-sm hover:shadow-md"
+        : "relative w-full h-40 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition bg-gray-100 flex items-center justify-center shadow-sm hover:shadow-md"
+
     return (
         <div
-            className="relative w-full h-40 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition bg-gray-100 flex items-center justify-center shadow-sm hover:shadow-md"
+            className={containerClasses}
             draggable={true}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
@@ -231,35 +239,54 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
                     poster={poster}
                 />
             ) : isAudio ? (
-                <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-purple-50">
-                    <div className="flex items-center justify-center w-16 h-16 bg-white rounded-full shadow-md mb-3">
+                <div className="w-full h-full flex items-center p-3 bg-gradient-to-r from-gray-50 to-white">
+                    {/* Icon Section */}
+                    <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-lg shadow-sm mr-3"
+                         style={{
+                             background: type === 'music' 
+                                 ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                 : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                         }}>
                         {type === 'music' ? (
-                            <Music size={24} className="text-blue-600" />
+                            <Music size={20} className="text-white" />
                         ) : (
-                            <Volume2 size={24} className="text-purple-600" />
+                            <Volume2 size={20} className="text-white" />
                         )}
                     </div>
-                    <div className="text-center mb-3">
-                        <h4 className="text-sm font-medium text-gray-800 truncate max-w-full">
-                            {asset.name || `${type} asset`}
-                        </h4>
-                        {asset.tags && asset.tags.length > 0 && (
-                            <p className="text-xs text-gray-500 truncate">
-                                {asset.tags.slice(0, 2).join(', ')}
-                            </p>
-                        )}
+                    
+                    {/* Content Section */}
+                    <div className="flex-1 min-w-0 flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-gray-900 truncate mb-1">
+                                {asset.name || `${type} asset`}
+                            </h4>
+                            <div className="flex items-center text-xs text-gray-500">
+                                {asset.tags && asset.tags.length > 0 && (
+                                    <span className="truncate mr-2">
+                                        {asset.tags.slice(0, 2).join(', ')}
+                                    </span>
+                                )}
+                                {durationMs > 0 && (
+                                    <span className="text-gray-400">
+                                        {formatTimeMs(durationMs)}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        
+                        {/* Play Button */}
+                        <button
+                            onClick={handleAudioPreview}
+                            className="flex-shrink-0 flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm hover:shadow-md transition-all hover:scale-105 border border-gray-200"
+                            aria-label={isPlaying ? 'Pause preview' : 'Play preview'}
+                        >
+                            {isPlaying ? (
+                                <Pause size={14} className="text-gray-700" />
+                            ) : (
+                                <Play size={14} className="text-gray-700 ml-0.5" />
+                            )}
+                        </button>
                     </div>
-                    <button
-                        onClick={handleAudioPreview}
-                        className="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow"
-                        aria-label={isPlaying ? 'Pause preview' : 'Play preview'}
-                    >
-                        {isPlaying ? (
-                            <Pause size={16} className="text-gray-700" />
-                        ) : (
-                            <Play size={16} className="text-gray-700 ml-0.5" />
-                        )}
-                    </button>
                 </div>
             ) : (
                 <img
@@ -268,7 +295,7 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
                     className="max-w-full max-h-full object-contain rounded"
                 />
             )}
-            {(isVideo || isAudio) && durationMs > 0 && (
+            {isVideo && durationMs > 0 && (
                 <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
                     {formatTimeMs(durationMs)}
                 </div>

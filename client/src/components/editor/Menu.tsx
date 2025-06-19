@@ -29,6 +29,7 @@ const Menu = () => {
     }, [isEditing])
 
     const handleTitleClick = () => {
+        console.log('Title clicked!', project) // Debug log
         if (!project) return
         setEditedName(project.name)
         setIsEditing(true)
@@ -81,7 +82,7 @@ const Menu = () => {
                 flex flex-row items-center w-full gap-6
             ">
                 <ChevronLeft
-                    className="cursor-pointer"
+                    className="cursor-pointer hover:bg-white/10 rounded p-1 transition-colors"
                     onClick={() => {
                         router.push(`/creation`)
                     }}
@@ -106,18 +107,20 @@ const Menu = () => {
                             placeholder="Project name..."
                         />
                     ) : (
-                        <div 
+                        <button 
                             onClick={handleTitleClick}
                             className="
                                 text-xl font-bold cursor-pointer 
-                                hover:bg-white/10 rounded px-2 py-1 -mx-2 -my-1
-                                transition-colors duration-200
+                                hover:bg-white/10 rounded px-3 py-2 -mx-3 -my-2
+                                transition-all duration-200
                                 flex items-center gap-2
+                                border-2 border-transparent hover:border-white/20
                             "
+                            title="Click to edit project name"
                         >
-                            {project?.name}
-                            <Edit2 size={16} className="opacity-0 group-hover:opacity-50 transition-opacity" />
-                        </div>
+                            <span>{project?.name || 'Untitled Project'}</span>
+                            <Edit2 size={16} className="opacity-0 group-hover:opacity-70 transition-opacity" />
+                        </button>
                     )}
                 </div>
 

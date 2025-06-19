@@ -416,7 +416,6 @@ function ProjectCard({
                                     </>
                                 ) : isCompleted ? (
                                     <>
-                                        <Zap className="w-3 h-3" />
                                         {clipCount} clips
                                     </>
                                 ) : hasFailed ? (
@@ -502,11 +501,6 @@ function ProjectCard({
                         <h3 className="font-semibold text-gray-900 truncate text-base flex-1">
                             {project.name || 'Untitled Project'}
                         </h3>
-                        {isQuickClips && (
-                            <div className="ml-2 flex-shrink-0">
-                                <Zap className="w-4 h-4 text-emerald-500" />
-                            </div>
-                        )}
                     </div>
                     <p className="text-sm text-gray-500">
                         {new Date(project.created_at || Date.now()).toLocaleDateString()}

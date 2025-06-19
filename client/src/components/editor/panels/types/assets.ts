@@ -1,9 +1,6 @@
-import { ElementType } from 'react';
-
 export interface AssetType {
     id: 'image' | 'video' | 'music' | 'sound';
     label: string;
-    icon: ElementType;
 }
 
 export interface PexelsPhoto {

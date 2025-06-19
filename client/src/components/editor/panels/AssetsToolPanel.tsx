@@ -216,12 +216,12 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
                             <button
                                 key={index}
                                 onClick={() => handleTabChange(tab.id)}
-                                className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedTab === tab.id
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedTab === tab.id
                                     ? 'bg-blue-50 text-blue-600'
                                     : 'text-gray-600 hover:bg-gray-50'
                                     }`}
                             >
-                                <tab.icon size={16} /> {tab.label}
+                                {tab.label}
                             </button>
                         ))
                     }
