@@ -189,6 +189,9 @@ export class CommandExecutor {
       case 'ADD_VIDEO':
         return this.createAddVideoCommands(aiCommand.payload)
 
+      case 'GENERATE_AI_CONTENT':
+        return this.createGenerateAIContentCommands(aiCommand.payload)
+
       default:
         throw new Error(`Unsupported command type: ${aiCommand.type}`)
     }
@@ -534,7 +537,7 @@ export class CommandExecutor {
     } = payload
 
     // Estimate duration based on script length (rough calculation)
-    const estimatedDuration = Math.max(3, script.split(' ').length * 0.6 / speed) * 1000
+    const estimatedDuration = Math.round(Math.max(3, script.split(' ').length * 0.6 / speed) * 1000)
     const timelineEndMs = timelineStartMs + estimatedDuration
 
     // Find or create audio track for voiceover
@@ -852,6 +855,47 @@ export class CommandExecutor {
     return commands
   }
 
+  // Create commands for generating AI content
+  private createGenerateAIContentCommands(payload: any): Command[] {
+    const {
+      prompt,
+      contentType, // 'image', 'video', 'music'
+      duration = 5000,
+      timelineStartMs = 0,
+      trackIndex = 1,
+      style = 'default',
+      quality = 'normal'
+    } = payload
+
+    // For now, create placeholder clips that would be replaced by actual AI generation
+    // In a real implementation, this would trigger the AI generation API
+    
+    if (contentType === 'image') {
+      return this.createAddImageCommands({
+        imageQuery: prompt,
+        duration,
+        timelineStartMs,
+        trackIndex
+      })
+    } else if (contentType === 'video') {
+      return this.createAddVideoCommands({
+        videoQuery: prompt,
+        duration,
+        timelineStartMs,
+        trackIndex
+      })
+    } else if (contentType === 'music') {
+      return this.createAddMusicCommands({
+        genre: style,
+        duration,
+        timelineStartMs,
+        trackIndex: trackIndex + 1 // Music usually goes on a separate audio track
+      })
+    }
+
+    throw new Error(`Unsupported AI content type: ${contentType}`)
+  }
+
   // Get text style based on style name
   private getTextStyle(styleName: string, styleProperties: any) {
     const styles: Record<string, any> = {
@@ -1015,6 +1059,8 @@ export class CommandExecutor {
         return `✅ Added image`
       case 'ADD_VIDEO':
         return `✅ Added video`
+      case 'GENERATE_AI_CONTENT':
+        return `✅ Generated AI content: ${command.payload.contentType}`
       default:
         return `✅ Executed ${command.type}`
     }

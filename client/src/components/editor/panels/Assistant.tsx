@@ -293,6 +293,13 @@ const Assistant = () => {
             
             // Auto-execute commands if present
             if (data.commands && data.commands.length > 0) {
+                // Remove commands from the original message to prevent showing manual execution UI
+                setChatMessages(prev => prev.map(msg => 
+                    msg.id === newMessage.id 
+                        ? { ...msg, type: 'text' as const, commands: undefined }
+                        : msg
+                ));
+                
                 await handleExecuteCommands(data.commands, true); // true = auto-execute
             }
             

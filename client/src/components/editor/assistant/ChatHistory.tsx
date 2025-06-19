@@ -139,7 +139,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
                             sender={message.sender}
                         />
                         
-                        {/* Render command execution buttons */}
+                        {/* Render command execution buttons - only for manual commands, not auto-executed AI edits */}
                         {message.commands && message.commands.length > 0 && onExecuteCommands && message.type === 'commands' && (
                             <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                 <div className="text-sm text-blue-800 mb-2">
