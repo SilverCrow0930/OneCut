@@ -70,32 +70,26 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         if (!player) return { left: newLeft, top: newTop, guides: { vertical: [], horizontal: [], showGuides: false } }
 
         const playerRect = (player as HTMLElement).getBoundingClientRect()
-        const playerParent = player.parentElement
-        if (!playerParent) return { left: newLeft, top: newTop, guides: { vertical: [], horizontal: [], showGuides: false } }
-
-        const parentRect = playerParent.getBoundingClientRect()
         
-        // Convert to player-relative coordinates
-        const playerLeft = playerRect.left - parentRect.left
-        const playerTop = playerRect.top - parentRect.top
+        // Player dimensions in player coordinate system (0, 0 is top-left of player)
         const playerWidth = playerRect.width
         const playerHeight = playerRect.height
 
-        // Define snap points
+        // Define snap points in player-relative coordinates
         const snapPoints = {
             vertical: [
-                playerLeft, // Left edge
-                playerLeft + playerWidth / 2, // Center
-                playerLeft + playerWidth // Right edge
+                0, // Left edge
+                playerWidth / 2, // Center
+                playerWidth // Right edge
             ],
             horizontal: [
-                playerTop, // Top edge  
-                playerTop + playerHeight / 2, // Center
-                playerTop + playerHeight // Bottom edge
+                0, // Top edge  
+                playerHeight / 2, // Center
+                playerHeight // Bottom edge
             ]
         }
 
-        // Calculate clip edges
+        // Calculate clip edges in player-relative coordinates
         const clipLeft = newLeft
         const clipRight = newLeft + width
         const clipCenterX = newLeft + width / 2
@@ -111,53 +105,129 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
             showGuides: false 
         }
 
-        // Check vertical snapping (X axis)
+        // Check vertical snapping (X axis) - Scenario 1: Edge snapping & Scenario 2: Center snapping
         for (const snapX of snapPoints.vertical) {
-            // Snap left edge
+            let hasSnapped = false
+            
+            // Snap left edge to snap line
             if (Math.abs(clipLeft - snapX) <= SNAP_TOLERANCE) {
                 snappedLeft = snapX
-                activeGuides.vertical.push(snapX)
-                activeGuides.showGuides = true
+                hasSnapped = true
             }
-            // Snap right edge
+            // Snap right edge to snap line
             else if (Math.abs(clipRight - snapX) <= SNAP_TOLERANCE) {
                 snappedLeft = snapX - width
-                activeGuides.vertical.push(snapX)
-                activeGuides.showGuides = true
+                hasSnapped = true
             }
-            // Snap center
+            // Snap center to snap line
             else if (Math.abs(clipCenterX - snapX) <= SNAP_TOLERANCE) {
                 snappedLeft = snapX - width / 2
+                hasSnapped = true
+            }
+            
+            if (hasSnapped) {
                 activeGuides.vertical.push(snapX)
                 activeGuides.showGuides = true
+                break // Only snap to one guide at a time for cleaner UX
             }
         }
 
-        // Check horizontal snapping (Y axis)
+        // Check horizontal snapping (Y axis) - Scenario 1: Edge snapping & Scenario 2: Center snapping
         for (const snapY of snapPoints.horizontal) {
-            // Snap top edge
+            let hasSnapped = false
+            
+            // Snap top edge to snap line
             if (Math.abs(clipTop - snapY) <= SNAP_TOLERANCE) {
                 snappedTop = snapY
-                activeGuides.horizontal.push(snapY)
-                activeGuides.showGuides = true
+                hasSnapped = true
             }
-            // Snap bottom edge
+            // Snap bottom edge to snap line
             else if (Math.abs(clipBottom - snapY) <= SNAP_TOLERANCE) {
                 snappedTop = snapY - height
-                activeGuides.horizontal.push(snapY)
-                activeGuides.showGuides = true
+                hasSnapped = true
             }
-            // Snap center
+            // Snap center to snap line
             else if (Math.abs(clipCenterY - snapY) <= SNAP_TOLERANCE) {
                 snappedTop = snapY - height / 2
+                hasSnapped = true
+            }
+            
+            if (hasSnapped) {
                 activeGuides.horizontal.push(snapY)
                 activeGuides.showGuides = true
+                break // Only snap to one guide at a time for cleaner UX
             }
         }
 
         return {
             left: snappedLeft,
             top: snappedTop,
+            guides: activeGuides
+        }
+    }, [])
+
+    // Calculate snap points for resizing (Scenario 3: Resize snapping)
+    const calculateResizeSnapPosition = useCallback((newLeft: number, newTop: number, newWidth: number, newHeight: number) => {
+        // Find the player container to get boundaries
+        const player = document.querySelector('[style*="aspectRatio"], [style*="aspect-ratio"]') || 
+                      document.querySelector('.bg-black');
+        if (!player) return { left: newLeft, top: newTop, width: newWidth, height: newHeight, guides: { vertical: [], horizontal: [], showGuides: false } }
+
+        const playerRect = (player as HTMLElement).getBoundingClientRect()
+        
+        // Player dimensions in player coordinate system
+        const playerWidth = playerRect.width
+        const playerHeight = playerRect.height
+
+        let snappedLeft = newLeft
+        let snappedTop = newTop
+        let snappedWidth = newWidth
+        let snappedHeight = newHeight
+        const activeGuides: { vertical: number[], horizontal: number[], showGuides: boolean } = { 
+            vertical: [], 
+            horizontal: [], 
+            showGuides: false 
+        }
+
+        // Check if right edge should snap to player right edge
+        const rightEdge = newLeft + newWidth
+        if (Math.abs(rightEdge - playerWidth) <= SNAP_TOLERANCE) {
+            snappedWidth = playerWidth - newLeft
+            activeGuides.vertical.push(playerWidth)
+            activeGuides.showGuides = true
+        }
+
+        // Check if left edge should snap to player left edge
+        if (Math.abs(newLeft - 0) <= SNAP_TOLERANCE) {
+            const adjustment = 0 - newLeft
+            snappedLeft = 0
+            snappedWidth = newWidth - adjustment
+            activeGuides.vertical.push(0)
+            activeGuides.showGuides = true
+        }
+
+        // Check if bottom edge should snap to player bottom edge
+        const bottomEdge = newTop + newHeight
+        if (Math.abs(bottomEdge - playerHeight) <= SNAP_TOLERANCE) {
+            snappedHeight = playerHeight - newTop
+            activeGuides.horizontal.push(playerHeight)
+            activeGuides.showGuides = true
+        }
+
+        // Check if top edge should snap to player top edge
+        if (Math.abs(newTop - 0) <= SNAP_TOLERANCE) {
+            const adjustment = 0 - newTop
+            snappedTop = 0
+            snappedHeight = newHeight - adjustment
+            activeGuides.horizontal.push(0)
+            activeGuides.showGuides = true
+        }
+
+        return {
+            left: snappedLeft,
+            top: snappedTop,
+            width: snappedWidth,
+            height: snappedHeight,
             guides: activeGuides
         }
     }, [])
@@ -578,6 +648,16 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                 newCrop.height = newHeight
                 newCrop.left = newLeft
                 newCrop.top = newTop
+                
+                // Apply resize snap guides (Scenario 3)
+                const resizeSnapped = calculateResizeSnapPosition(newLeft, newTop, newWidth, newHeight)
+                updateSnapGuides(resizeSnapped.guides)
+                
+                newCrop.width = resizeSnapped.width
+                newCrop.height = resizeSnapped.height
+                newCrop.left = resizeSnapped.left
+                newCrop.top = resizeSnapped.top
+                
                 setCrop(newCrop)
             } else if (isDraggingCrop) {
                 const dx = e.clientX - dragStart.x
@@ -606,7 +686,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
             document.removeEventListener('mousemove', handleMouseMove)
             document.removeEventListener('mouseup', handleMouseUp)
         }
-    }, [isResizing, isDraggingCrop, resizeType, resizeStart, dragStart, crop, aspectRatio, clip.type, calculateSnapPosition, updateSnapGuides])
+    }, [isResizing, isDraggingCrop, resizeType, resizeStart, dragStart, crop, aspectRatio, clip.type, calculateSnapPosition, calculateResizeSnapPosition, updateSnapGuides])
 
     // --- Crop area dragging ---
     const handleCropMouseDown = (e: React.MouseEvent) => {
