@@ -78,17 +78,19 @@ const Menu = () => {
                 border-b border-indigo-400/20
             "
         >
-            <div className="
-                flex flex-row items-center w-full gap-6
-            ">
+            {/* Left section - Back arrow gets its own space */}
+            <div className="flex items-center">
                 <ChevronLeft
-                    size={32}
-                    className="cursor-pointer hover:bg-white/10 rounded p-2 transition-colors"
+                    size={36}
+                    className="cursor-pointer hover:bg-white/10 rounded p-2 transition-colors flex-shrink-0"
                     onClick={() => {
                         router.push(`/creation`)
                     }}
                 />
-                
+            </div>
+
+            {/* Center section - Project title and controls */}
+            <div className="flex items-center gap-6 flex-1 justify-center">
                 {/* Project Title - Editable */}
                 <div className="flex items-center gap-2 group">
                     {isEditing ? (
@@ -125,18 +127,6 @@ const Menu = () => {
                     )}
                 </div>
 
-                {/* <div className="flex flex-row items-center gap-3 mb-[2px]">
-                    <Undo2
-                        onClick={undo}
-                        size={24}
-                        className={`cursor-pointer ${!canUndo ? 'opacity-50' : ''}`}
-                    />
-                    <Redo2
-                        onClick={redo}
-                        size={24}
-                        className={`cursor-pointer ${!canRedo ? 'opacity-50' : ''}`}
-                    />
-                </div> */}
                 <div className="flex flex-row items-center gap-6">
                     <SaveStatusIndicator />
                     
@@ -174,6 +164,8 @@ const Menu = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Right section - Share button */}
             <div className="flex flex-row items-center gap-3">
                 <ShareButton />
             </div>
