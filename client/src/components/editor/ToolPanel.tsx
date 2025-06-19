@@ -56,7 +56,7 @@ const ToolPanel = () => {
         <div className="
             flex flex-col w-full h-full
             p-3 rounded-lg overflow-hidden
-        ">
+        " data-tool-panel>
             <div className="flex-1 overflow-y-auto">
                 {
                     ToolComponent ?

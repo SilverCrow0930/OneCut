@@ -260,12 +260,13 @@ const Editor = () => {
     useEffect(() => {
         const handleGlobalClick = (e: MouseEvent) => {
             // Only deselect if the click is not inside a clip (ClipLayer uses data-clip-layer)
-            // or inside the text tool panel
+            // or inside any tool panel
             let el = e.target as HTMLElement | null
             while (el) {
                 if (el.hasAttribute && (
                     el.hasAttribute('data-clip-layer') ||
-                    el.closest('[data-text-tool-panel]')
+                    el.closest('[data-text-tool-panel]') ||
+                    el.closest('[data-tool-panel]')
                 )) return
                 el = el.parentElement
             }
@@ -278,9 +279,15 @@ const Editor = () => {
                 activeElement.tagName === 'TEXTAREA' ||
                 activeElement.contentEditable === 'true'
             )) {
-                // Only blur if the click is outside the assistant panel
+                // Only blur if the click is outside the assistant panel AND outside any tool panel
                 const assistantPanel = document.querySelector('[data-assistant-panel]')
-                if (assistantPanel && !assistantPanel.contains(e.target as Node)) {
+                const toolPanel = document.querySelector('[data-tool-panel]')
+                const clickTarget = e.target as Node
+                
+                const isOutsideAssistant = !assistantPanel || !assistantPanel.contains(clickTarget)
+                const isOutsideToolPanel = !toolPanel || !toolPanel.contains(clickTarget)
+                
+                if (isOutsideAssistant && isOutsideToolPanel) {
                     activeElement.blur()
                 }
             }
