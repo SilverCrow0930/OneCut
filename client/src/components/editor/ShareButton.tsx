@@ -248,10 +248,10 @@ const ShareButton = () => {
                 className="
                     flex items-center gap-2 
                     px-4 py-2
-                    bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600
+                    bg-emerald-500 hover:bg-emerald-600
                     text-white font-medium rounded-lg
                     transition-all duration-200
-                    shadow-md hover:shadow-lg hover:scale-105
+                    shadow-sm hover:shadow-md
                     border border-transparent
                 "
             >
@@ -330,10 +330,10 @@ const ShareButton = () => {
                             disabled={loadingUrls || clips.length === 0}
                             className="
                                 w-full px-4 py-3
-                                bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600
+                                bg-emerald-500 hover:bg-emerald-600
                                 text-white font-semibold rounded-lg
                                 transition-all duration-200 text-lg
-                                shadow-md hover:shadow-lg
+                                shadow-sm hover:shadow-md
                                 disabled:opacity-50 disabled:cursor-not-allowed
                             "
                         >
