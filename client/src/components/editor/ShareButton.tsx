@@ -330,11 +330,11 @@ const ShareButton = () => {
                             disabled={loadingUrls || clips.length === 0}
                             className="
                                 w-full px-4 py-3
-                                bg-white hover:bg-gray-50
-                                text-gray-900 font-semibold rounded-lg
+                                bg-blue-500 hover:bg-blue-600
+                                text-white font-semibold rounded-lg
                                 transition-all duration-200 text-lg
-                                shadow-sm hover:shadow-md
-                                border border-gray-200 hover:border-gray-300
+                                shadow-md hover:shadow-lg
+                                border border-transparent
                                 disabled:opacity-50 disabled:cursor-not-allowed
                             "
                         >
