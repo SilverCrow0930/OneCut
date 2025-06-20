@@ -78,8 +78,8 @@ const Menu = () => {
             className="
                 flex flex-row items-center justify-between w-full 
                 px-6 py-3
-                bg-gradient-to-r from-indigo-600 to-purple-600 text-white
-                border-b border-indigo-400/20
+                bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 text-white
+                border-b border-blue-400/20
             "
         >
             <div className="

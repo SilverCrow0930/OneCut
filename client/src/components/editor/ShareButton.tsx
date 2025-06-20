@@ -248,7 +248,7 @@ const ShareButton = () => {
                 className="
                     flex items-center gap-2 
                     px-4 py-2
-                    bg-emerald-500 hover:bg-emerald-600
+                    bg-slate-600 hover:bg-slate-700
                     text-white font-medium rounded-lg
                     transition-all duration-200
                     shadow-sm hover:shadow-md
@@ -296,7 +296,7 @@ const ShareButton = () => {
 
                     {/* Video Share Type Selection */}
                     <div className="px-6 py-4">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Video Share</h4>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Download Quality</h4>
                         
                         <div className="flex flex-col gap-3">
                             {exportTypeOptions.map((type) => (
@@ -330,14 +330,14 @@ const ShareButton = () => {
                             disabled={loadingUrls || clips.length === 0}
                             className="
                                 w-full px-4 py-3
-                                bg-emerald-500 hover:bg-emerald-600
+                                bg-slate-600 hover:bg-slate-700
                                 text-white font-semibold rounded-lg
                                 transition-all duration-200 text-lg
                                 shadow-sm hover:shadow-md
                                 disabled:opacity-50 disabled:cursor-not-allowed
                             "
                         >
-                            {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Share' : 'Share Video'}
+                            {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Download' : 'Download Video'}
                         </button>
                     </div>
                 </div>
