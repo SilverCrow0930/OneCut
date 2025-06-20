@@ -250,8 +250,24 @@ router.put(
                 if (clipError) {
                     console.error('[Timeline Save] Clip insert failed:', clipError)
                     console.error('[Timeline Save] Failed clip data:', clipRows)
+                    
+                    // Provide more specific error messages based on the constraint violation
+                    let userFriendlyError = `Clip insert failed: ${clipError.message}`
+                    
+                    if (clipError.message.includes('clips_track_id_fkey')) {
+                        userFriendlyError = 'Cannot save clips: Some clips reference tracks that no longer exist. This often happens with AI-generated content. Please remove recently added AI content and try again.'
+                    } else if (clipError.message.includes('clips_asset_id_fkey')) {
+                        userFriendlyError = 'Cannot save clips: Some clips reference assets that no longer exist. Please remove problematic clips and try again.'
+                    } else if (clipError.message.includes('foreign key constraint')) {
+                        userFriendlyError = 'Cannot save clips: Data integrity issue detected. Some clips may reference deleted items. Please refresh the page or remove problematic content.'
+                    } else if (clipError.message.includes('duplicate key')) {
+                        userFriendlyError = 'Cannot save clips: Duplicate clip IDs detected. Please refresh the page to reload your project.'
+                    } else if (clipError.message.includes('check constraint')) {
+                        userFriendlyError = 'Cannot save clips: Invalid clip data detected. Please check that all clips have valid types and timing values.'
+                    }
+                    
                     return res.status(500).json({
-                        error: `Clip insert failed: ${clipError.message}`
+                        error: userFriendlyError
                     })
                 }
                 console.log('[Timeline Save] Successfully inserted clips')

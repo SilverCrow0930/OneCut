@@ -280,22 +280,31 @@ export function EditorProvider({ children }: { children: ReactNode }) {
                 console.log('🔄 [AutoSave] Validating timeline data...')
                 console.log(`🔄 [AutoSave] Tracks: ${tracks.length}, Clips: ${clips.length}`)
                 
+                // Pre-validation: Check for obvious issues
+                const trackIds = new Set(tracks.map(t => t.id))
+                const invalidClips = clips.filter(c => !trackIds.has(c.trackId))
+                
+                if (invalidClips.length > 0) {
+                    console.error('🚨 [AutoSave] Found clips with invalid track references:', invalidClips)
+                    throw new Error(`Found ${invalidClips.length} clips referencing non-existent tracks. This is usually caused by AI-generated content with invalid track references.`)
+                }
+                
                 // Convert to database format with validation
-                const dbTracks = tracks.map(t => {
+                const dbTracks = tracks.map((t, index) => {
                     try {
                         return toDbTrack(t, projectId!)
                     } catch (error) {
                         console.error('🚨 [AutoSave] Track validation failed:', error, t)
-                        throw new Error(`Track validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                        throw new Error(`Track ${index + 1} validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
                     }
                 })
                 
-                const dbClips = clips.map(c => {
+                const dbClips = clips.map((c, index) => {
                     try {
                         return toDbClip(c)
                     } catch (error) {
                         console.error('🚨 [AutoSave] Clip validation failed:', error, c)
-                        throw new Error(`Clip validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                        throw new Error(`Clip ${index + 1} validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
                     }
                 })
                 
@@ -316,9 +325,34 @@ export function EditorProvider({ children }: { children: ReactNode }) {
                 console.log('📬 [AutoSave] response status:', res.status);
 
                 if (!res.ok) {
-                    const err = await res.text();
-                    console.error('🚨 [AutoSave] Server error response:', err)
-                    throw new Error(`Server error (${res.status}): ${err || res.statusText}`);
+                    const errorText = await res.text();
+                    console.error('🚨 [AutoSave] Server error response:', errorText)
+                    
+                    // Parse error details for better user feedback
+                    let userFriendlyError = 'Unknown server error'
+                    try {
+                        const errorData = JSON.parse(errorText)
+                        if (errorData.error) {
+                            if (errorData.error.includes('clips_track_id_fkey')) {
+                                userFriendlyError = 'Cannot save: Some content references invalid tracks. This often happens with AI-generated content. Try removing recently added AI content and try again.'
+                            } else if (errorData.error.includes('foreign key constraint')) {
+                                userFriendlyError = 'Cannot save: Data integrity issue detected. Some content may be referencing deleted items.'
+                            } else if (errorData.error.includes('duplicate')) {
+                                userFriendlyError = 'Cannot save: Duplicate content detected. Try refreshing the page.'
+                            } else {
+                                userFriendlyError = errorData.error
+                            }
+                        }
+                    } catch (parseError) {
+                        // If JSON parsing fails, use the raw error text
+                        if (errorText.includes('clips_track_id_fkey')) {
+                            userFriendlyError = 'Cannot save: AI-generated content has invalid references. Try removing recently added content.'
+                        } else {
+                            userFriendlyError = errorText || `Server error (${res.status})`
+                        }
+                    }
+                    
+                    throw new Error(userFriendlyError);
                 }
 
                 console.log('✅ [AutoSave] saved!')
@@ -330,8 +364,19 @@ export function EditorProvider({ children }: { children: ReactNode }) {
                 console.error('🚨 [AutoSave] Error details:', e);
                 setSaveState('error');
                 
-                // Set a more descriptive error message
-                setError(`Failed to save timeline: ${errorMessage}`)
+                // Set a more descriptive error message with actionable advice
+                let displayError = `Failed to save timeline: ${errorMessage}`
+                
+                // Add helpful suggestions based on error type
+                if (errorMessage.includes('track')) {
+                    displayError += '\n\n💡 Try: Remove recently added AI-generated content, then save again.'
+                } else if (errorMessage.includes('constraint') || errorMessage.includes('foreign key')) {
+                    displayError += '\n\n💡 Try: Refresh the page to reload your project, or contact support if the issue persists.'
+                } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+                    displayError += '\n\n💡 Try: Check your internet connection and try again.'
+                }
+                
+                setError(displayError)
             }
         }, 500);
 
