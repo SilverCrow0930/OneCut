@@ -28,6 +28,7 @@ interface EditorContextType {
     refetch: () => void
     updateProjectName: (name: string) => Promise<void>
     updateProjectThumbnail: (thumbnailUrl: string) => Promise<void>
+    updateProjectNotes: (notes: string) => Promise<void>
     generateThumbnail: () => Promise<void>
 
     // timeline
@@ -404,6 +405,35 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
     }
 
+    const updateProjectNotes = async (notes: string) => {
+        if (!session?.access_token) return
+
+        try {
+            const response = await fetch(apiPath(`projects/${projectId}`), {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    notes
+                }),
+            })
+
+            if (!response.ok) {
+                const text = await response.text()
+                throw new Error(text || response.statusText)
+            }
+
+            const data: Project = await response.json()
+            setProject(data)
+        }
+        catch (error: any) {
+            console.error('Failed to update project notes:', error)
+            throw error
+        }
+    }
+
     const generateThumbnail = async () => {
         if (!session?.access_token || !projectId) return
 
@@ -482,6 +512,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             refetch: fetchProject,
             updateProjectName,
             updateProjectThumbnail,
+            updateProjectNotes,
             generateThumbnail,
 
             // timeline

@@ -6,6 +6,9 @@ export interface Project {
     duration?: number
     is_public: boolean
     
+    // Notes field for user's project notes
+    notes?: string
+    
     // Async processing fields
     processing_status?: 'idle' | 'queued' | 'processing' | 'completed' | 'failed'
     processing_type?: 'quickclips' | 'autocut' | null

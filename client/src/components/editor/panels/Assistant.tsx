@@ -2,6 +2,8 @@ import React, { useRef, useState, useEffect } from 'react'
 import { io, Socket } from 'socket.io-client'
 import ChatHistory from '../assistant/ChatHistory'
 import ChatTextField from '../assistant/ChatTextField'
+import ChatHeader from '../assistant/ChatHeader'
+import NotesPanel from '../assistant/NotesPanel'
 import { API_URL } from '@/lib/config'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEditor } from '@/contexts/EditorContext'
@@ -44,6 +46,7 @@ interface VideoAnalysis {
 }
 
 const Assistant = () => {
+    const [activeView, setActiveView] = useState<'chat' | 'notes'>('chat')
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
     const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true)
     const [state, setState] = useState<string>('idle')
@@ -503,85 +506,103 @@ const Assistant = () => {
 
     return (
         <div className="flex flex-col w-full h-full p-2">
-            {/* Header with Status and Video Analysis Button */}
-            <div className="w-full mb-2 p-2 bg-gray-50 rounded flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                    <span>{getStatusMessage()}</span>
-                    {isWebSocketConnected && <span className="text-green-600">✅</span>}
-                </div>
-                
-                {/* Video Analysis Button - Compact */}
-                <button
-                    onClick={handleVideoAnalysis}
-                    disabled={isAnalyzing || !assets.some(a => a.mime_type?.startsWith('video/'))}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                        hasVideoAnalysis
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    title={hasVideoAnalysis ? "Re-analyze Video" : "Analyze Video"}
-                >
-                    {isAnalyzing ? (
-                        <>
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            <span>Analyzing</span>
-                        </>
-                    ) : hasVideoAnalysis ? (
-                        <>
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>Re-analyze</span>
-                        </>
-                    ) : (
-                        <>
-                            <Brain className="w-3 h-3" />
-                            <span>Analyze</span>
-                        </>
-                    )}
-                </button>
+            {/* Chat/Notes Toggle Header */}
+            <div className="w-full mb-2">
+                <ChatHeader 
+                    activeView={activeView} 
+                    onViewChange={setActiveView} 
+                />
             </div>
 
-            {/* Error Messages */}
-            {analysisError && (
-                <div className="w-full mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-center gap-2">
-                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                    {analysisError}
-                </div>
-            )}
-            
-            {!assets.some(a => a.mime_type?.startsWith('video/')) && (
-                <div className="w-full mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
-                    Add a video to your project to enable analysis
-                </div>
-            )}
-
-            {/* Chat */}
-            <div className='w-full flex-1 min-h-0 overflow-hidden'>
-                {isLoadingHistory ? (
-                    <div className="flex items-center justify-center h-full">
-                        <div className="flex items-center gap-2 text-gray-500">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span className="text-sm">Loading chat history...</span>
+            {/* Conditional Content Based on Active View */}
+            {activeView === 'chat' ? (
+                <>
+                    {/* Header with Status and Video Analysis Button */}
+                    <div className="w-full mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                            <span>{getStatusMessage()}</span>
+                            {isWebSocketConnected && <span className="text-green-600">✅</span>}
                         </div>
+                        
+                        {/* Video Analysis Button - Compact */}
+                        <button
+                            onClick={handleVideoAnalysis}
+                            disabled={isAnalyzing || !assets.some(a => a.mime_type?.startsWith('video/'))}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                hasVideoAnalysis
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50'
+                                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            title={hasVideoAnalysis ? "Re-analyze Video" : "Analyze Video"}
+                        >
+                            {isAnalyzing ? (
+                                <>
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    <span>Analyzing</span>
+                                </>
+                            ) : hasVideoAnalysis ? (
+                                <>
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span>Re-analyze</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Brain className="w-3 h-3" />
+                                    <span>Analyze</span>
+                                </>
+                            )}
+                        </button>
                     </div>
-                ) : (
-                <ChatHistory
-                    chatMessages={chatMessages}
-                    state={state}
-                        onExecuteCommands={handleExecuteCommands}
-                        onAcceptAIEdit={handleAcceptAIEdit}
-                        onRejectAIEdit={handleRejectAIEdit}
-                />
-                )}
-            </div>
 
-            {/* Input */}
-            <div className='w-full'>
-                <ChatTextField
-                    onSend={handleSendMessage}
-                    message={message}
-                    setMessage={setMessage}
-                />
-            </div>
+                    {/* Error Messages */}
+                    {analysisError && (
+                        <div className="w-full mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-center gap-2 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+                            <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                            {analysisError}
+                        </div>
+                    )}
+                    
+                    {!assets.some(a => a.mime_type?.startsWith('video/')) && (
+                        <div className="w-full mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-400">
+                            Add a video to your project to enable analysis
+                        </div>
+                    )}
+
+                    {/* Chat */}
+                    <div className='w-full flex-1 min-h-0 overflow-hidden'>
+                        {isLoadingHistory ? (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="flex items-center gap-2 text-gray-500">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="text-sm">Loading chat history...</span>
+                                </div>
+                            </div>
+                        ) : (
+                        <ChatHistory
+                            chatMessages={chatMessages}
+                            state={state}
+                                onExecuteCommands={handleExecuteCommands}
+                                onAcceptAIEdit={handleAcceptAIEdit}
+                                onRejectAIEdit={handleRejectAIEdit}
+                        />
+                        )}
+                    </div>
+
+                    {/* Input */}
+                    <div className='w-full'>
+                        <ChatTextField
+                            onSend={handleSendMessage}
+                            message={message}
+                            setMessage={setMessage}
+                        />
+                    </div>
+                </>
+            ) : (
+                /* Notes Panel */
+                <div className="w-full flex-1 min-h-0 overflow-hidden">
+                    <NotesPanel className="h-full" />
+                </div>
+            )}
         </div>
     )
 }
