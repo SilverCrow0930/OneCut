@@ -72,10 +72,10 @@ const NotesPanel: React.FC<NotesPanelProps> = ({ className = '' }) => {
     return (
         <div className={`flex flex-col h-full ${className}`}>
             {/* Notes Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
                 <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <FileText className="w-4 h-4 text-black opacity-70" />
+                    <h2 className="text-sm font-medium text-black opacity-80">
                         Project Notes
                     </h2>
                 </div>
@@ -88,7 +88,7 @@ const NotesPanel: React.FC<NotesPanelProps> = ({ className = '' }) => {
                         </div>
                     )}
                     {lastSaved && !isSaving && (
-                        <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                        <div className="flex items-center gap-1 text-xs text-green-600">
                             <Check className="w-3 h-3" />
                             <span>Saved {lastSaved.toLocaleTimeString()}</span>
                         </div>
@@ -113,8 +113,8 @@ const NotesPanel: React.FC<NotesPanelProps> = ({ className = '' }) => {
 
 Ctrl/Cmd + S to save manually"
                     className="w-full h-full resize-none bg-transparent border-none outline-none 
-                             text-sm text-gray-900 dark:text-gray-100 
-                             placeholder-gray-500 dark:placeholder-gray-400
+                             text-sm text-black opacity-80
+                             placeholder-gray-400
                              leading-relaxed
                              font-mono"
                     style={{
@@ -124,8 +124,8 @@ Ctrl/Cmd + S to save manually"
             </div>
 
             {/* Footer with helpful shortcuts */}
-            <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="px-4 py-2 border-t border-gray-100 bg-gray-50/50">
+                <p className="text-xs text-gray-500">
                     Auto-saves after 1 second • Press Ctrl/Cmd + S to save manually
                 </p>
             </div>
