@@ -77,13 +77,14 @@ const Menu = () => {
         <div
             className="
                 flex flex-row items-center justify-between w-full 
-                px-6 py-3
-                bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-500 text-white
+                px-4 py-2
+                text-white
                 border-b border-indigo-400/20
             "
+            style={{ background: 'linear-gradient(to right, #607eff, #6eb3f8)' }}
         >
             <div className="
-                flex flex-row items-center w-full gap-6
+                flex flex-row items-center w-full gap-4
             ">
                 <ChevronLeft
                     className="cursor-pointer"
@@ -103,7 +104,7 @@ const Menu = () => {
                             onBlur={handleSave}
                             onKeyDown={handleKeyDown}
                             className="
-                                text-xl font-bold bg-transparent border-b-2 border-white/50
+                                text-lg font-bold bg-transparent border-b-2 border-white/50
                                 focus:border-white focus:outline-none
                                 text-white placeholder-white/70
                                 min-w-[200px] max-w-[400px]
@@ -115,12 +116,12 @@ const Menu = () => {
                             onClick={handleTitleClick}
                             onMouseDown={(e) => e.preventDefault()}
                             className="
-                                text-xl font-bold cursor-pointer 
+                                text-lg font-bold cursor-pointer 
                                 hover:bg-white/10 rounded px-2 py-1 -mx-2 -my-1
                                 transition-colors duration-200
                                 flex items-center gap-2
                                 select-none
-                                min-h-[32px]
+                                min-h-[28px]
                             "
                             role="button"
                             tabIndex={0}
@@ -143,7 +144,7 @@ const Menu = () => {
                         className={`cursor-pointer ${!canRedo ? 'opacity-50' : ''}`}
                     />
                 </div> */}
-                <div className="flex flex-row items-center gap-6">
+                <div className="flex flex-row items-center gap-4">
                     <SaveStatusIndicator />
                     
                     {/* Undo/Redo buttons */}
@@ -152,7 +153,7 @@ const Menu = () => {
                             onClick={undo}
                             disabled={!canUndo}
                             className={`
-                                p-2 rounded-md transition-all duration-200
+                                p-1.5 rounded-md transition-all duration-200
                                 ${canUndo 
                                     ? 'hover:bg-white/10 text-white' 
                                     : 'text-white/40 cursor-not-allowed'
@@ -160,14 +161,14 @@ const Menu = () => {
                             `}
                             title="Undo"
                         >
-                            <Undo2 size={28} />
+                            <Undo2 size={22} />
                         </button>
                         
                         <button
                             onClick={redo}
                             disabled={!canRedo}
                             className={`
-                                p-2 rounded-md transition-all duration-200
+                                p-1.5 rounded-md transition-all duration-200
                                 ${canRedo 
                                     ? 'hover:bg-white/10 text-white' 
                                     : 'text-white/40 cursor-not-allowed'
@@ -175,7 +176,7 @@ const Menu = () => {
                             `}
                             title="Redo"
                         >
-                            <Redo2 size={28} />
+                            <Redo2 size={22} />
                         </button>
                     </div>
                 </div>
