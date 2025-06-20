@@ -404,7 +404,7 @@ const Assistant = () => {
             if (result.success) {
                 if (autoExecute) {
                     // Add AI edit with accept/reject options
-                    const editMessage = `🤖 **AI Edit Applied**\n\n${result.message}\n\n*You can accept or reject this edit below.*`;
+                    const editMessage = `**AI Edit Applied**\n\n${result.message}\n\n*You can accept or reject this edit below.*`;
                     setChatMessages(prev => [...prev, {
                         id: prev.length + 1,
                         message: editMessage,

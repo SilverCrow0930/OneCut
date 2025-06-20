@@ -248,14 +248,15 @@ const ShareButton = () => {
                 className="
                     flex items-center gap-2 
                     px-4 py-2
-                    bg-blue-500 hover:bg-blue-600
-                    text-white font-medium rounded-xl
+                    bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600
+                    text-white font-medium rounded-lg
                     transition-all duration-200
-                    shadow-md hover:shadow-lg
+                    shadow-md hover:shadow-lg hover:scale-105
+                    border border-transparent
                 "
             >
-                <Share size={20} />
-                Export
+                <Share size={18} />
+                Share
             </button>
 
             {isDropdownOpen && (
@@ -293,31 +294,9 @@ const ShareButton = () => {
                         </div>
                     )}
 
-                    {/* Video Export Type Selection */}
+                    {/* Video Share Type Selection */}
                     <div className="px-6 py-4">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Video Export</h4>
-                        
-                        {/* Quick Export Toggle */}
-                        <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <span className="text-sm font-medium text-gray-700">Quick Export</span>
-                                <p className="text-xs text-gray-500">Lower quality, faster processing</p>
-                            </div>
-                            <button
-                                onClick={() => setQuickExport(!quickExport)}
-                                className={`
-                                    w-12 h-6 rounded-full transition-colors duration-200
-                                    ${quickExport ? 'bg-blue-500' : 'bg-gray-300'}
-                                    relative
-                                `}
-                            >
-                                <div className={`
-                                    w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200
-                                    absolute top-0.5
-                                    ${quickExport ? 'translate-x-6' : 'translate-x-0.5'}
-                                `} />
-                            </button>
-                        </div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Video Share</h4>
                         
                         <div className="flex flex-col gap-3">
                             {exportTypeOptions.map((type) => (
@@ -344,21 +323,21 @@ const ShareButton = () => {
                         </div>
                     </div>
 
-                    {/* Video Export Button */}
+                    {/* Video Share Button */}
                     <div className="px-6 py-4 border-t border-gray-200">
                         <button
                             onClick={handleVideoExport}
                             disabled={loadingUrls || clips.length === 0}
                             className="
                                 w-full px-4 py-3
-                                bg-blue-500 hover:bg-blue-600
-                                text-white font-semibold rounded-xl
-                                transition-colors duration-200 text-lg
-                                shadow-md
+                                bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600
+                                text-white font-semibold rounded-lg
+                                transition-all duration-200 text-lg
+                                shadow-md hover:shadow-lg
                                 disabled:opacity-50 disabled:cursor-not-allowed
                             "
                         >
-                            {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Export' : 'Export Video'}
+                            {loadingUrls ? 'Loading Assets...' : clips.length === 0 ? 'No Clips to Share' : 'Share Video'}
                         </button>
                     </div>
                 </div>

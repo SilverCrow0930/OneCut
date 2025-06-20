@@ -103,17 +103,9 @@ const NotesPanel: React.FC<NotesPanelProps> = ({ className = '' }) => {
                     value={notes}
                     onChange={handleNotesChange}
                     onKeyDown={handleKeyDown}
-                    placeholder="Write your project notes here... 
-
-✨ Tips:
-• Jot down creative ideas and script thoughts
-• Note timestamps for key moments
-• Keep track of editing goals and priorities
-• Use this space for any project-related notes
-
-Ctrl/Cmd + S to save manually"
+                    placeholder="Write your project notes here... "
                     className="w-full h-full resize-none bg-transparent border-none outline-none 
-                             text-sm text-black opacity-80
+                             text-base text-black opacity-80
                              placeholder-gray-400
                              leading-relaxed
                              font-mono"
