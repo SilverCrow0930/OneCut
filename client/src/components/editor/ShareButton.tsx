@@ -248,11 +248,11 @@ const ShareButton = () => {
                 className="
                     flex items-center gap-2 
                     px-4 py-2
-                    bg-slate-600 hover:bg-slate-700
-                    text-white font-medium rounded-lg
+                    bg-white hover:bg-gray-50
+                    text-gray-900 font-medium rounded-lg
                     transition-all duration-200
                     shadow-sm hover:shadow-md
-                    border border-transparent
+                    border border-gray-200 hover:border-gray-300
                 "
             >
                 <Share size={18} />
@@ -330,10 +330,11 @@ const ShareButton = () => {
                             disabled={loadingUrls || clips.length === 0}
                             className="
                                 w-full px-4 py-3
-                                bg-slate-600 hover:bg-slate-700
-                                text-white font-semibold rounded-lg
+                                bg-white hover:bg-gray-50
+                                text-gray-900 font-semibold rounded-lg
                                 transition-all duration-200 text-lg
                                 shadow-sm hover:shadow-md
+                                border border-gray-200 hover:border-gray-300
                                 disabled:opacity-50 disabled:cursor-not-allowed
                             "
                         >
