@@ -29,18 +29,6 @@ export function toDbClip(c: Clip) {
         throw new Error(`Invalid clip timeline positions: start=${c.timelineStartMs}, end=${c.timelineEndMs}`)
     }
     
-    // Check for AI-generated content with placeholder URLs
-    const hasPlaceholderUrl = (url: string) => {
-        return url && (url.startsWith('placeholder://') || url.includes('placeholder'))
-    }
-    
-    const imageUrl = c.properties?.imageUrl
-    const videoUrl = c.properties?.videoUrl
-    
-    if (hasPlaceholderUrl(imageUrl) || hasPlaceholderUrl(videoUrl)) {
-        throw new Error(`Cannot save AI-generated content without actual URLs. Please wait for content generation to complete or remove the placeholder content.`)
-    }
-    
     // Round all time values to integers to prevent floating-point database errors
     let timelineStartMs = Math.round(c.timelineStartMs)
     let timelineEndMs = Math.round(c.timelineEndMs)

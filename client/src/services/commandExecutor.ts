@@ -745,11 +745,6 @@ export class CommandExecutor {
       position = { x: 0, y: 0 }
     } = payload
 
-    // Validate inputs
-    if (!imageQuery && !imageUrl) {
-      throw new Error('Either imageQuery or imageUrl must be provided for image generation')
-    }
-
     // Find or create video track for images (images go on video tracks in Lemona)
     let imageTrack = this.tracks.find(t => t.type === 'video' && t.index === trackIndex)
     const commands: Command[] = []
@@ -769,10 +764,6 @@ export class CommandExecutor {
       })
     }
 
-    // For AI-generated content without URL, create placeholder with clear indication
-    const finalImageUrl = imageUrl || `placeholder://ai-generated-image/${uuid()}`
-    const displayName = imageQuery ? `AI Image: ${imageQuery}` : 'Generated Image'
-
     const imageClip: Clip = {
       id: uuid(),
       trackId: imageTrack.id,
@@ -786,7 +777,7 @@ export class CommandExecutor {
       speed: 1,
       properties: {
         imageQuery,
-        imageUrl: finalImageUrl,
+        imageUrl,
         scale,
         position,
         crop: {
@@ -794,9 +785,7 @@ export class CommandExecutor {
           height: 180,
           left: 0,
           top: 0
-        },
-        isAIGenerated: !imageUrl, // Flag to indicate this is AI-generated content
-        displayName
+        }
       },
       createdAt: new Date().toISOString(),
     }
@@ -820,11 +809,6 @@ export class CommandExecutor {
       volume = 1
     } = payload
 
-    // Validate inputs
-    if (!videoQuery && !videoUrl) {
-      throw new Error('Either videoQuery or videoUrl must be provided for video generation')
-    }
-
     // Find or create video track
     let videoTrack = this.tracks.find(t => t.type === 'video' && t.index === trackIndex)
     const commands: Command[] = []
@@ -844,10 +828,6 @@ export class CommandExecutor {
       })
     }
 
-    // For AI-generated content without URL, create placeholder with clear indication
-    const finalVideoUrl = videoUrl || `placeholder://ai-generated-video/${uuid()}`
-    const displayName = videoQuery ? `AI Video: ${videoQuery}` : 'Generated Video'
-
     const videoClip: Clip = {
       id: uuid(),
       trackId: videoTrack.id,
@@ -861,10 +841,8 @@ export class CommandExecutor {
       speed: 1,
       properties: {
         videoQuery,
-        videoUrl: finalVideoUrl,
-        name: displayName,
-        isAIGenerated: !videoUrl, // Flag to indicate this is AI-generated content
-        displayName
+        videoUrl,
+        name: `Video: ${videoQuery || 'Generated'}`
       },
       createdAt: new Date().toISOString(),
     }
