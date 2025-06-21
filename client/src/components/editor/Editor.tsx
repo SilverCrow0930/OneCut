@@ -260,13 +260,15 @@ const Editor = () => {
     useEffect(() => {
         const handleGlobalClick = (e: MouseEvent) => {
             // Only deselect if the click is not inside a clip (ClipLayer uses data-clip-layer)
-            // or inside any tool panel
+            // or inside any tool panel, or inside the menu area
             let el = e.target as HTMLElement | null
             while (el) {
                 if (el.hasAttribute && (
                     el.hasAttribute('data-clip-layer') ||
+                    el.hasAttribute('data-menu-area') ||
                     el.closest('[data-text-tool-panel]') ||
-                    el.closest('[data-tool-panel]')
+                    el.closest('[data-tool-panel]') ||
+                    el.closest('[data-project-name-editor]')
                 )) return
                 el = el.parentElement
             }

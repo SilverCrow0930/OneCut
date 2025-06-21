@@ -82,13 +82,16 @@ const Menu = () => {
                 border-b border-indigo-400/20
             "
             style={{ background: 'linear-gradient(to right, #607eff, #6eb3f8)' }}
+            data-menu-area
         >
             <div className="
                 flex flex-row items-center w-full gap-4
             ">
                 <ChevronLeft
                     className="cursor-pointer"
-                    onClick={() => {
+                    onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
                         router.push(`/creation`)
                     }}
                 />
@@ -100,9 +103,11 @@ const Menu = () => {
                             ref={inputRef}
                             type="text"
                             value={editedName}
-                            onChange={(e) => setEditedName(e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditedName(e.target.value)}
                             onBlur={handleSave}
                             onKeyDown={handleKeyDown}
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
                             className="
                                 text-lg font-bold bg-transparent border-b-2 border-white/50
                                 focus:border-white focus:outline-none
@@ -114,7 +119,7 @@ const Menu = () => {
                     ) : (
                         <div 
                             onClick={handleTitleClick}
-                            onMouseDown={(e) => e.preventDefault()}
+                            onMouseDown={(e: React.MouseEvent) => e.preventDefault()}
                             className="
                                 text-lg font-bold cursor-pointer 
                                 hover:bg-white/10 rounded px-2 py-1 -mx-2 -my-1
