@@ -30,13 +30,24 @@ const Menu = () => {
 
     const handleBackClick = (e: React.MouseEvent) => {
         console.log('Back button clicked') // Debug log
-        e.stopPropagation()
-        console.log('Attempting to navigate to /creation') // Debug log
+        e.stopPropagation() // Keep stopPropagation but remove preventDefault
         try {
+            console.log('Attempting navigation to /creation')
             router.push('/creation')
-            console.log('Navigation call completed') // Debug log
+            console.log('Navigation to /creation initiated')
+            
+            // Fallback check after a short delay
+            setTimeout(() => {
+                console.log('Current URL:', window.location.pathname)
+                if (window.location.pathname.includes('/projects/')) {
+                    console.log('Navigation might have failed, trying window.location')
+                    window.location.href = '/creation'
+                }
+            }, 500)
         } catch (error) {
-            console.error('Navigation error:', error) // Debug log
+            console.error('Navigation error:', error)
+            // Fallback to window.location
+            window.location.href = '/creation'
         }
     }
 
@@ -122,13 +133,11 @@ const Menu = () => {
             <div className="
                 flex flex-row items-center w-full gap-4
             ">
-                <div className="flex-shrink-0">
-                    <ChevronLeft
-                        className="cursor-pointer hover:bg-white/10 p-1 rounded transition-colors"
-                        size={24}
-                        onClick={handleBackClick}
-                    />
-                </div>
+                <ChevronLeft
+                    className="cursor-pointer hover:bg-white/10 p-1 rounded transition-colors flex-shrink-0"
+                    size={24}
+                    onClick={handleBackClick}
+                />
                 
                 {/* Project Title - Editable */}
                 <div className="flex items-center gap-2 group flex-1 min-w-0" data-project-name-editor>
@@ -146,7 +155,7 @@ const Menu = () => {
                                 text-lg font-bold bg-transparent border-b-2 border-white/50
                                 focus:border-white focus:outline-none
                                 text-white placeholder-white/70
-                                w-full max-w-[300px]
+                                min-w-[200px] max-w-[400px]
                             "
                             placeholder="Project name..."
                         />
