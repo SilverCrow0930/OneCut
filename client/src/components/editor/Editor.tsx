@@ -259,50 +259,32 @@ const Editor = () => {
     // Deselect clip on global click (outside any clip)
     useEffect(() => {
         const handleGlobalClick = (e: MouseEvent) => {
-            // Only deselect if the click is not inside a clip (ClipLayer uses data-clip-layer)
-            // or inside any tool panel, or inside the menu area
-            let el = e.target as HTMLElement | null
-            while (el) {
-                if (el.hasAttribute && (
-                    el.hasAttribute('data-clip-layer') ||
-                    el.hasAttribute('data-menu-area') ||
-                    el.closest('[data-text-tool-panel]') ||
-                    el.closest('[data-tool-panel]') ||
-                    el.closest('[data-project-name-editor]')
-                )) return
-                el = el.parentElement
-            }
-            setSelectedClipId(null)
+            const target = e.target as HTMLElement
             
-            // Handle input blurring separately - this should NOT affect project name editor
-            const activeElement = document.activeElement as HTMLElement
-            if (activeElement && (
-                activeElement.tagName === 'INPUT' || 
-                activeElement.tagName === 'TEXTAREA' ||
-                activeElement.contentEditable === 'true'
-            )) {
-                // Check if click is inside protected areas (excluding project name editor)
-                const assistantPanel = document.querySelector('[data-assistant-panel]')
-                const toolPanel = document.querySelector('[data-tool-panel]')
-                const clickTarget = e.target as Node
-                
-                const isOutsideAssistant = !assistantPanel || !assistantPanel.contains(clickTarget)
-                const isOutsideToolPanel = !toolPanel || !toolPanel.contains(clickTarget)
-                
-                // Only blur if outside assistant and tool panels
-                // Project name editor will handle its own blur logic via onBlur
-                if (isOutsideAssistant && isOutsideToolPanel) {
-                    // Don't blur if we're inside the project name editor - let it handle its own blur
-                    const projectNameEditor = document.querySelector('[data-project-name-editor]')
-                    const isInsideProjectNameEditor = projectNameEditor && projectNameEditor.contains(clickTarget)
-                    
-                    if (!isInsideProjectNameEditor) {
-                        activeElement.blur()
-                    }
+            // Don't interfere with clicks inside protected areas
+            const protectedAreas = [
+                '[data-menu-area]',
+                '[data-clip-layer]', 
+                '[data-text-tool-panel]',
+                '[data-tool-panel]',
+                '[data-project-name-editor]',
+                '[data-assistant-panel]',
+                'button',
+                'input',
+                'textarea'
+            ]
+            
+            // Check if click is inside any protected area
+            for (const selector of protectedAreas) {
+                if (target.closest(selector)) {
+                    return // Don't process this click
                 }
             }
+            
+            // Only deselect clips if we're outside all protected areas
+            setSelectedClipId(null)
         }
-        document.addEventListener('click', handleGlobalClick)
+        document.addEventListener('click', handleGlobalClick, { capture: false })
         return () => {
             document.removeEventListener('click', handleGlobalClick)
         }

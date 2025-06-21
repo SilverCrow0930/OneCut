@@ -28,11 +28,17 @@ const Menu = () => {
         }
     }, [isEditing])
 
-    const handleTitleClick = (e?: React.MouseEvent) => {
-        if (e) {
-            e.preventDefault()
-            e.stopPropagation()
-        }
+    const handleBackClick = (e: React.MouseEvent) => {
+        console.log('Back button clicked') // Debug log
+        e.preventDefault()
+        e.stopPropagation()
+        router.push('/creation')
+    }
+
+    const handleTitleClick = (e: React.MouseEvent) => {
+        console.log('Title clicked') // Debug log
+        e.preventDefault()
+        e.stopPropagation()
         if (!project) return
         
         setEditedName(project.name)
@@ -63,7 +69,7 @@ const Menu = () => {
         }
     }
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault()
             handleSave()
@@ -73,6 +79,27 @@ const Menu = () => {
         }
     }
 
+    const handleUndoClick = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (canUndo) {
+            undo()
+        }
+    }
+
+    const handleRedoClick = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (canRedo) {
+            redo()
+        }
+    }
+
+    // Prevent all menu events from bubbling
+    const handleMenuClick = (e: React.MouseEvent) => {
+        e.stopPropagation()
+    }
+
     return (
         <div
             className="
@@ -80,20 +107,20 @@ const Menu = () => {
                 px-4 py-2
                 text-white
                 border-b border-indigo-400/20
+                relative z-50
             "
             style={{ background: 'linear-gradient(to right, #607eff, #6eb3f8)' }}
             data-menu-area
+            onClick={handleMenuClick}
+            onMouseDown={handleMenuClick}
         >
             <div className="
                 flex flex-row items-center w-full gap-4
             ">
                 <ChevronLeft
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        router.push(`/creation`)
-                    }}
+                    className="cursor-pointer hover:bg-white/10 p-1 rounded transition-colors"
+                    size={24}
+                    onClick={handleBackClick}
                 />
                 
                 {/* Project Title - Editable */}
@@ -106,8 +133,8 @@ const Menu = () => {
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditedName(e.target.value)}
                             onBlur={handleSave}
                             onKeyDown={handleKeyDown}
-                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                            onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
+                            onClick={(e: React.MouseEvent<HTMLInputElement>) => e.stopPropagation()}
+                            onMouseDown={(e: React.MouseEvent<HTMLInputElement>) => e.stopPropagation()}
                             className="
                                 text-lg font-bold bg-transparent border-b-2 border-white/50
                                 focus:border-white focus:outline-none
@@ -119,7 +146,7 @@ const Menu = () => {
                     ) : (
                         <div 
                             onClick={handleTitleClick}
-                            onMouseDown={(e: React.MouseEvent) => e.preventDefault()}
+                            onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => e.preventDefault()}
                             className="
                                 text-lg font-bold cursor-pointer 
                                 hover:bg-white/10 rounded px-2 py-1 -mx-2 -my-1
@@ -137,25 +164,13 @@ const Menu = () => {
                     )}
                 </div>
 
-                {/* <div className="flex flex-row items-center gap-3 mb-[2px]">
-                    <Undo2
-                        onClick={undo}
-                        size={24}
-                        className={`cursor-pointer ${!canUndo ? 'opacity-50' : ''}`}
-                    />
-                    <Redo2
-                        onClick={redo}
-                        size={24}
-                        className={`cursor-pointer ${!canRedo ? 'opacity-50' : ''}`}
-                    />
-                </div> */}
                 <div className="flex flex-row items-center gap-4">
                     <SaveStatusIndicator />
                     
                     {/* Undo/Redo buttons */}
                     <div className="flex items-center gap-1">
                         <button
-                            onClick={undo}
+                            onClick={handleUndoClick}
                             disabled={!canUndo}
                             className={`
                                 p-1.5 rounded-md transition-all duration-200
@@ -170,7 +185,7 @@ const Menu = () => {
                         </button>
                         
                         <button
-                            onClick={redo}
+                            onClick={handleRedoClick}
                             disabled={!canRedo}
                             className={`
                                 p-1.5 rounded-md transition-all duration-200
