@@ -6,7 +6,7 @@ import { formatSecondsAsTimestamp } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Clock, Play, Folder, MoreHorizontal, Trash2, Zap, Video, Eye } from 'lucide-react'
 
-type ProjectFilter = 'all' | 'quickclips'
+type ProjectFilter = 'all' | 'smartcut'
 
 export default function ProjectsList() {
     const router = useRouter()
@@ -22,61 +22,62 @@ export default function ProjectsList() {
     const highlightedProjectId = searchParams.get('highlight')
 
     useEffect(() => {
-        // only fetch once we have a valid token
         if (!session?.access_token) {
+            setLoading(false)
             return
         }
 
-        let cancelled = false
+        let pollInterval: NodeJS.Timeout
 
         async function load() {
-            setLoading(true)
-            setError(null)
             try {
-                const res = await fetch(apiPath('projects'), {
+                console.log('Loading projects...')
+                const response = await fetch(apiPath('projects'), {
                     headers: {
-                        Authorization: `Bearer ${session?.access_token}`,
-                    },
-                })
-                if (!res.ok) {
-                    const text = await res.text()
-                    throw new Error(`Error ${res.status}: ${text}`)
-                }
-                const data: Project[] = await res.json()
-                if (!cancelled) {
-                    setProjects(data)
-                    
-                    // If there's a highlighted project that's processing, start polling
-                    if (highlightedProjectId) {
-                        const highlightedProject = data.find(p => p.id === highlightedProjectId)
-                        if (highlightedProject?.processing_status === 'processing' || 
-                            highlightedProject?.processing_status === 'queued') {
-                            pollProjectStatus(highlightedProjectId)
-                        }
+                        'Authorization': `Bearer ${session!.access_token}`
                     }
+                })
+
+                if (!response.ok) {
+                    throw new Error('Failed to load projects')
                 }
-            }
-            catch (error: any) {
-                if (!cancelled) {
-                    setError(error.message)
+
+                const data = await response.json()
+                console.log('Projects loaded:', data.length)
+                setProjects(data)
+
+                // Set up polling for processing projects
+                const processingProjects = data.filter((p: Project) => 
+                    p.processing_status === 'processing' || p.processing_status === 'queued'
+                )
+
+                if (processingProjects.length > 0) {
+                    console.log(`Found ${processingProjects.length} processing projects, starting polling`)
+                    pollInterval = setInterval(() => {
+                        processingProjects.forEach((project: Project) => {
+                            pollProjectStatus(project.id)
+                        })
+                    }, 3000) // Poll every 3 seconds
                 }
-            }
-            finally {
-                if (!cancelled) {
-                    setLoading(false)
-                }
+
+            } catch (err) {
+                console.error('Error loading projects:', err)
+                setError(err instanceof Error ? err.message : 'Failed to load projects')
+            } finally {
+                setLoading(false)
             }
         }
 
         load()
 
-        // cleanup in case the component unmounts early
         return () => {
-            cancelled = true
+            if (pollInterval) {
+                clearInterval(pollInterval)
+            }
         }
-    }, [session?.access_token, highlightedProjectId])
+    }, [session?.access_token])
 
-    // Poll project status for processing projects
+    // Function to poll individual project status
     const pollProjectStatus = async (projectId: string) => {
         try {
             const response = await fetch(apiPath(`projects/${projectId}`), {
@@ -87,17 +88,9 @@ export default function ProjectsList() {
 
             if (response.ok) {
                 const updatedProject = await response.json()
-                
-                // Update the project in the list
                 setProjects(prev => prev.map(p => 
                     p.id === projectId ? updatedProject : p
                 ))
-
-                // Continue polling if still processing
-                if (updatedProject.processing_status === 'processing' || 
-                    updatedProject.processing_status === 'queued') {
-                    setTimeout(() => pollProjectStatus(projectId), 3000)
-                }
             }
         } catch (error) {
             console.error('Error polling project status:', error)
@@ -106,15 +99,15 @@ export default function ProjectsList() {
 
     // Filter projects based on active filter
     const filteredProjects = projects.filter(project => {
-        if (activeFilter === 'quickclips') {
-            return project.processing_type === 'quickclips'
+        if (activeFilter === 'smartcut') {
+            return project.processing_type === 'smartcut'
         }
         return true // 'all' shows everything
     })
 
-    // Separate QuickClips projects for special handling
-    const quickclipsProjects = projects.filter(project => project.processing_type === 'quickclips')
-    const regularProjects = projects.filter(project => project.processing_type !== 'quickclips')
+    // Separate Smart Cut projects for special handling
+    const smartCutProjects = projects.filter(project => project.processing_type === 'smartcut')
+    const regularProjects = projects.filter(project => project.processing_type !== 'smartcut')
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -147,7 +140,7 @@ export default function ProjectsList() {
             const response = await fetch(apiPath(`projects/${project.id}`), {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`
+                    'Authorization': `Bearer ${session!.access_token}`
                 }
             })
             
@@ -181,11 +174,11 @@ export default function ProjectsList() {
         
         const project = projects.find(p => p.id === projectId)
         
-        // Special handling for QuickClips projects
-        if (project?.processing_type === 'quickclips') {
+        // Special handling for Smart Cut projects
+        if (project?.processing_type === 'smartcut') {
             if (project.processing_status === 'completed' && project.processing_result?.clips) {
                 // Show clips modal or navigate to clips view
-                router.push(`/creation/quickclips/${projectId}`)
+                router.push(`/creation/smartcut/${projectId}`)
                 return
             }
         }
@@ -201,8 +194,8 @@ export default function ProjectsList() {
         // Close the menu
         setShowMenu(null)
         
-        // Navigate to QuickClips view
-        router.push(`/creation/quickclips/${projectId}`)
+        // Navigate to Smart Cut view
+        router.push(`/creation/smartcut/${projectId}`)
     }
 
     if (!session) {
@@ -273,15 +266,15 @@ export default function ProjectsList() {
                         All projects ({projects.length})
                     </button>
                     <button
-                        onClick={() => setActiveFilter('quickclips')}
+                        onClick={() => setActiveFilter('smartcut')}
                         className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                            activeFilter === 'quickclips'
+                            activeFilter === 'smartcut'
                                 ? 'bg-white text-gray-900 shadow-sm'
                                 : 'text-gray-600 hover:text-gray-900'
                         }`}
                     >
                         <Zap className="w-4 h-4" />
-                        QuickClips ({quickclipsProjects.length})
+                        Smart Cut ({smartCutProjects.length})
                     </button>
                 </div>
             </div>
@@ -290,28 +283,28 @@ export default function ProjectsList() {
             {filteredProjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-20 h-20 mb-6 text-gray-300">
-                        {activeFilter === 'quickclips' ? (
+                        {activeFilter === 'smartcut' ? (
                             <Zap className="w-full h-full" strokeWidth={1} />
                         ) : (
                             <Folder className="w-full h-full" strokeWidth={1} />
                         )}
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        {activeFilter === 'quickclips' ? 'No QuickClips yet' : 'No projects found'}
+                        {activeFilter === 'smartcut' ? 'No Smart Cut projects yet' : 'No projects found'}
                     </h3>
                     <p className="text-gray-500 max-w-sm">
-                        {activeFilter === 'quickclips' 
-                            ? 'Create your first AI-powered video clips using QuickClips.' 
-                            : 'Start creating amazing videos by making your first project.'}
+                        {activeFilter === 'smartcut' 
+                            ? 'Create your first AI-powered video clips using Smart Cut.' 
+                            : 'Try adjusting your filters or create a new project.'}
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
-                    {filteredProjects.map((project, index) => (
-                        <ProjectCard 
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredProjects.map((project) => (
+                        <ProjectCard
                             key={project.id}
                             project={project}
-                            isHighlighted={project.id === highlightedProjectId}
+                            isHighlighted={false}
                             onProjectClick={handleProjectClick}
                             onMenuClick={handleMenuClick}
                             onDelete={handleDelete}
@@ -345,7 +338,7 @@ function ProjectCard({
     onViewClips, 
     showMenu 
 }: ProjectCardProps) {
-    const isQuickClips = project.processing_type === 'quickclips'
+    const isSmartCut = project.processing_type === 'smartcut'
     const isProcessing = project.processing_status === 'processing' || project.processing_status === 'queued'
     const isCompleted = project.processing_status === 'completed'
     const hasFailed = project.processing_status === 'failed'
@@ -357,13 +350,13 @@ function ProjectCard({
             onClick={() => onProjectClick(project.id)}
         >
             <div className={`bg-white rounded-2xl border-0 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02] ${
-                isQuickClips ? 'border-l-4 border-l-emerald-500' : ''
+                isSmartCut ? 'border-l-4 border-l-emerald-500' : ''
             }`}>
                 {/* Thumbnail */}
                 <div className="aspect-video relative bg-gray-50">
-                    {project.thumbnail_url ? (
+                    {project.thumbnail ? (
                         <img
-                            src={project.thumbnail_url}
+                            src={project.thumbnail}
                             alt={project.name}
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -380,25 +373,25 @@ function ProjectCard({
                     {/* Fallback content */}
                     <div 
                         className={`fallback-content w-full h-full ${
-                            isQuickClips 
+                            isSmartCut 
                                 ? 'bg-gradient-to-br from-emerald-50 to-teal-100' 
                                 : 'bg-gradient-to-br from-gray-50 to-gray-100'
-                        } flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
+                        } flex flex-col items-center justify-center ${project.thumbnail ? 'hidden' : 'flex'}`}
                     >
-                        <div className={`w-14 h-14 mb-3 ${isQuickClips ? 'text-emerald-400' : 'text-gray-300'}`}>
-                            {isQuickClips ? (
+                        <div className={`w-14 h-14 mb-3 ${isSmartCut ? 'text-emerald-400' : 'text-gray-300'}`}>
+                            {isSmartCut ? (
                                 <Zap className="w-full h-full" strokeWidth={1.5} />
                             ) : (
                                 <Play className="w-full h-full" strokeWidth={1.5} />
                             )}
                         </div>
-                        <span className={`text-sm font-medium ${isQuickClips ? 'text-emerald-600' : 'text-gray-400'}`}>
-                            {isQuickClips ? 'QuickClips' : 'No Preview'}
+                        <span className={`text-sm font-medium ${isSmartCut ? 'text-emerald-600' : 'text-gray-400'}`}>
+                            {isSmartCut ? 'Smart Cut' : 'No Preview'}
                         </span>
                     </div>
 
-                    {/* QuickClips status badge */}
-                    {isQuickClips && (
+                    {/* Smart Cut status badge */}
+                    {isSmartCut && (
                         <div className="absolute top-3 left-3">
                             <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
                                 isProcessing 
@@ -421,7 +414,7 @@ function ProjectCard({
                                 ) : hasFailed ? (
                                     'Failed'
                                 ) : (
-                                    'QuickClips'
+                                    'Smart Cut'
                                 )}
                             </div>
                         </div>
@@ -453,7 +446,7 @@ function ProjectCard({
                         {/* Dropdown menu */}
                         {showMenu === project.id && (
                             <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
-                                {isQuickClips && isCompleted && (
+                                {isSmartCut && isCompleted && (
                                     <button
                                         onClick={(e) => {
                                             console.log('View Clips button clicked')
@@ -486,7 +479,7 @@ function ProjectCard({
                     {/* Hover overlay */}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
                         <div className="bg-white/95 backdrop-blur-sm rounded-full p-4 shadow-lg">
-                            {isQuickClips && isCompleted ? (
+                            {isSmartCut && isCompleted ? (
                                 <Eye className="w-6 h-6 text-gray-600" />
                             ) : (
                                 <Play className="w-6 h-6 text-gray-600" />
@@ -505,7 +498,7 @@ function ProjectCard({
                     <p className="text-sm text-gray-500">
                         {new Date(project.created_at || Date.now()).toLocaleDateString()}
                     </p>
-                    {isQuickClips && project.processing_message && (
+                    {isSmartCut && project.processing_message && (
                         <p className="text-xs text-gray-400 mt-1 truncate">
                             {project.processing_message}
                         </p>

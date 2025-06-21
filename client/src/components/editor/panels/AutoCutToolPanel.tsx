@@ -14,7 +14,7 @@ import PanelHeader from './PanelHeader'
 
 type ProcessingState = 'idle' | 'starting' | 'queued' | 'processing' | 'completed' | 'failed'
 
-interface QuickClipsJob {
+interface SmartCutJob {
     id: string
     projectId: string
     status: ProcessingState
@@ -25,13 +25,13 @@ interface QuickClipsJob {
     description?: string
 }
 
-const AutoCutToolPanel = () => {
+const SmartCutToolPanel = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState<number>(120) // 2 minutes default
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
-    const [currentJob, setCurrentJob] = useState<QuickClipsJob | null>(null)
+    const [currentJob, setCurrentJob] = useState<SmartCutJob | null>(null)
     const [uploadedAsset, setUploadedAsset] = useState<{
         id: string
         mime_type: string
@@ -79,7 +79,7 @@ const AutoCutToolPanel = () => {
 
         const pollInterval = setInterval(async () => {
             try {
-                const response = await fetch(apiPath(`quickclips/status/${currentJob.id}`), {
+                const response = await fetch(apiPath(`smartcut/status/${currentJob.id}`), {
                     headers: {
                         'Authorization': `Bearer ${session?.access_token}`
                     }
@@ -177,7 +177,7 @@ const AutoCutToolPanel = () => {
                 duration: uploadResult.duration || null
             })
 
-            // 2. Start QuickClips processing
+            // 2. Start Smart Cut processing
             let jobResponse;
             const maxRetries = 3;
             let lastError;
@@ -185,7 +185,7 @@ const AutoCutToolPanel = () => {
             // Retry logic for network issues
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    jobResponse = await fetch(apiPath('quickclips/start'), {
+                    jobResponse = await fetch(apiPath('smartcut/start'), {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${session.access_token}`,
@@ -205,7 +205,7 @@ const AutoCutToolPanel = () => {
                     if (attempt === maxRetries) {
                         throw new Error(`Network error after ${maxRetries} attempts: ${fetchError instanceof Error ? fetchError.message : 'Connection failed'}`)
                     }
-                    console.warn(`QuickClips request attempt ${attempt} failed, retrying...`)
+                    console.warn(`Smart Cut request attempt ${attempt} failed, retrying...`)
                     // Wait before retry (exponential backoff)
                     await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
                 }
@@ -219,7 +219,7 @@ const AutoCutToolPanel = () => {
                 let errorMessage = 'Failed to start processing'
                 try {
                     const errorData = await jobResponse.json()
-                    console.error('QuickClips API Error Details:', errorData)
+                    console.error('Smart Cut API Error Details:', errorData)
                     
                     if (errorData.errors && Array.isArray(errorData.errors)) {
                         // Validation errors - show specific messages
@@ -262,7 +262,7 @@ const AutoCutToolPanel = () => {
             // Create new video track for clips
             const newTrack = {
                 id: uuid(),
-                name: `QuickClips - ${selectedFile?.name || 'Video'}`,
+                name: `Smart Cut - ${selectedFile?.name || 'Video'}`,
                 type: 'video' as TrackType,
                 height: 120,
                 isVisible: true,
@@ -369,7 +369,7 @@ const AutoCutToolPanel = () => {
             <div className="flex items-center justify-between">
                 <PanelHeader
                     icon={Brain}
-                    title="QuickClips"
+                    title="Smart Cut"
                     description={getDescription()}
                     iconBgColor="bg-purple-50"
                     iconColor="text-purple-600"
@@ -387,21 +387,91 @@ const AutoCutToolPanel = () => {
             {/* Content */}
             <div className="flex-1 overflow-hidden">
                 {!selectedFile && !uploadedAsset && !currentJob ? (
-                    /* Upload State */
-                    <div className="flex flex-col items-center justify-center h-full space-y-4">
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileUpload}
-                        accept="video/*"
-                        className="hidden"
-                    />
-                        <div>
-                            <UploadButton
-                                onClick={() => fileInputRef.current?.click()}
-                                isUploading={isUploading}
-                            />
-
+                    /* Enhanced Upload State */
+                    <div className="flex flex-col h-full">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                            accept="video/*"
+                            className="hidden"
+                        />
+                        
+                        {/* Main Upload Area */}
+                        <div 
+                            className="flex-1 border-2 border-dashed border-gray-300 hover:border-purple-400 rounded-xl p-8 transition-all duration-200 cursor-pointer group"
+                            onClick={() => fileInputRef.current?.click()}
+                            onDragOver={(e) => {
+                                e.preventDefault()
+                                e.currentTarget.classList.add('border-purple-500', 'bg-purple-50')
+                            }}
+                            onDragLeave={(e) => {
+                                e.preventDefault()
+                                e.currentTarget.classList.remove('border-purple-500', 'bg-purple-50')
+                            }}
+                            onDrop={(e) => {
+                                e.preventDefault()
+                                e.currentTarget.classList.remove('border-purple-500', 'bg-purple-50')
+                                const files = e.dataTransfer.files
+                                if (files[0] && files[0].type.startsWith('video/')) {
+                                    resetState()
+                                    setSelectedFile(files[0])
+                                    setShowConfig(true)
+                                }
+                            }}
+                        >
+                            <div className="flex flex-col items-center justify-center text-center space-y-4">
+                                {/* Icon */}
+                                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform">
+                                    <Brain className="w-8 h-8 text-purple-600" />
+                                </div>
+                                
+                                {/* Main Text */}
+                                <div className="space-y-2">
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        Upload Your Video
+                                    </h3>
+                                    <p className="text-sm text-gray-600 leading-relaxed">
+                                        Drop your video here or click to browse.<br/>
+                                        AI will automatically extract the best clips.
+                                    </p>
+                                </div>
+                                
+                                {/* Upload Button */}
+                                <button className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg">
+                                    <Brain className="w-4 h-4" />
+                                    Choose Video File
+                                </button>
+                                
+                                {/* Format Info */}
+                                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                                    <p className="text-xs text-gray-500 font-medium mb-1">Supported formats:</p>
+                                    <p className="text-xs text-gray-400">MP4, MOV, AVI, WebM • Max 500MB</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Features Preview */}
+                        <div className="mt-6 grid grid-cols-2 gap-3">
+                            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                                <Sparkles className="w-4 h-4 text-blue-600" />
+                                <span className="text-xs font-medium text-blue-800">AI-Powered</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                                <Clock className="w-4 h-4 text-green-600" />
+                                <span className="text-xs font-medium text-green-800">Fast Processing</span>
+                            </div>
+                        </div>
+                        
+                        {/* Example/Preview */}
+                        <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Eye className="w-4 h-4 text-purple-600" />
+                                <span className="text-sm font-medium text-purple-800">How it works</span>
+                            </div>
+                            <p className="text-xs text-purple-700 leading-relaxed">
+                                Upload a long video → AI finds key moments → Get perfectly timed clips → Ready for your timeline
+                            </p>
                         </div>
                     </div>
                 ) : showConfig ? (
@@ -522,4 +592,4 @@ const AutoCutToolPanel = () => {
     )
 }
 
-export default AutoCutToolPanel
+export default SmartCutToolPanel

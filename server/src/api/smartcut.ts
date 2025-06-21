@@ -1,13 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { body, validationResult } from 'express-validator'
 import { AuthenticatedRequest } from '../middleware/authenticate.js'
-import { queueQuickclipsJob, getJobStatus, getUserJobs } from '../services/quickclipsProcessor.js'
+import { queueSmartCutJob, getJobStatus, getUserJobs } from '../services/smartcutProcessor.js'
 import { supabase } from '../config/supabaseClient.js'
 
 const router = Router()
 
 // Validation middleware
-const validateQuickclipsRequest = [
+const validateSmartCutRequest = [
     body('projectId').isUUID().withMessage('Valid project ID is required'),
     body('fileUri').isString().trim().notEmpty().withMessage('File URI is required'),
     body('mimeType').isString().trim().notEmpty().withMessage('MIME type is required'),
@@ -17,8 +17,8 @@ const validateQuickclipsRequest = [
         .withMessage('Target duration must be between 20 seconds and 30 minutes')
 ]
 
-// POST /api/v1/quickclips/start - Start a new Quickclips processing job
-router.post('/start', validateQuickclipsRequest, async (req: Request, res: Response, next: NextFunction) => {
+// POST /api/v1/smartcut/start - Start a new Smart Cut processing job
+router.post('/start', validateSmartCutRequest, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const errors = validationResult(req)
         if (!errors.isEmpty()) {
@@ -31,7 +31,7 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
         const { user } = req as AuthenticatedRequest
         const { projectId, fileUri, mimeType, contentType, targetDuration } = req.body
 
-        console.log('[Quickclips API] Starting job for project:', projectId)
+        console.log('[Smart Cut API] Starting job for project:', projectId)
 
         // 1. Verify user owns the project
         const { data: profile, error: profileError } = await supabase
@@ -41,7 +41,7 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
             .single()
 
         if (profileError || !profile) {
-            console.error('[Quickclips API] Profile lookup failed:', profileError)
+            console.error('[Smart Cut API] Profile lookup failed:', profileError)
             return res.status(500).json({
                 success: false,
                 error: 'Could not load user profile'
@@ -56,7 +56,7 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
             .single()
 
         if (projectError || !project) {
-            console.error('[Quickclips API] Project verification failed:', projectError)
+            console.error('[Smart Cut API] Project verification failed:', projectError)
             return res.status(404).json({
                 success: false,
                 error: 'Project not found or access denied'
@@ -64,7 +64,7 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
         }
 
         // 2. Queue the background job
-        const jobId = await queueQuickclipsJob(
+        const jobId = await queueSmartCutJob(
             projectId,
             fileUri,
             mimeType,
@@ -73,21 +73,21 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
             profile.id
         )
 
-        console.log(`[Quickclips API] Job ${jobId} queued successfully for project ${projectId}`)
+        console.log(`[Smart Cut API] Job ${jobId} queued successfully for project ${projectId}`)
 
         res.json({
             success: true,
             jobId,
-            message: 'Quickclips processing started'
+            message: 'Smart Cut processing started'
         })
 
     } catch (error) {
-        console.error('[Quickclips API] Error starting job:', error)
+        console.error('[Smart Cut API] Error starting job:', error)
         next(error)
     }
 })
 
-// GET /api/v1/quickclips/status/:jobId - Get job status
+// GET /api/v1/smartcut/status/:jobId - Get job status
 router.get('/status/:jobId', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { user } = req as AuthenticatedRequest
@@ -133,7 +133,7 @@ router.get('/status/:jobId', async (req: Request, res: Response, next: NextFunct
                     description = project.processing_result.description || null
                 }
             } catch (error) {
-                console.warn('[Quickclips API] Could not fetch project result:', error)
+                console.warn('[Smart Cut API] Could not fetch project result:', error)
             }
         }
 
@@ -155,12 +155,12 @@ router.get('/status/:jobId', async (req: Request, res: Response, next: NextFunct
         })
 
     } catch (error) {
-        console.error('[Quickclips API] Error getting job status:', error)
+        console.error('[Smart Cut API] Error getting job status:', error)
         next(error)
     }
 })
 
-// GET /api/v1/quickclips/jobs - Get all jobs for the current user
+// GET /api/v1/smartcut/jobs - Get all jobs for the current user
 router.get('/jobs', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { user } = req as AuthenticatedRequest
@@ -196,7 +196,7 @@ router.get('/jobs', async (req: Request, res: Response, next: NextFunction) => {
         })
 
     } catch (error) {
-        console.error('[Quickclips API] Error getting user jobs:', error)
+        console.error('[Smart Cut API] Error getting user jobs:', error)
         next(error)
     }
 })

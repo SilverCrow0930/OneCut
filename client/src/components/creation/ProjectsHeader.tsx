@@ -1,6 +1,6 @@
 import React from 'react'
 import CreateProjectButton from '../ui/buttons/CreateProjectButton'
-import QuickClipsButton from './QuickClipsButton'
+import SmartCutButton from './SmartCutButton'
 
 const ProjectsHeader = () => {
     return (
@@ -18,7 +18,7 @@ const ProjectsHeader = () => {
             {/* Quick Actions */}
             <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="flex flex-col sm:flex-row gap-4">
-                    <QuickClipsButton />
+                    <SmartCutButton />
                 <CreateProjectButton />
                 </div>
                 <p className="text-sm text-gray-500">

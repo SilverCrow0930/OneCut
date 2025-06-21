@@ -7,7 +7,7 @@ import transcriptionRouter from './transcription.js'
 import aiRouter from './ai.js'
 import voiceoverRouter from './voiceover.js'
 import exportRouter from './export.js'
-import quickclipsRouter from './quickclips.js'
+import smartCutRouter from './smartcut.js'
 
 const apiRouter = Router()
 
@@ -19,6 +19,6 @@ apiRouter.use('/transcription', transcriptionRouter)
 apiRouter.use('/ai', aiRouter)
 apiRouter.use('/voiceover', voiceoverRouter)
 apiRouter.use('/export', exportRouter)
-apiRouter.use('/quickclips', quickclipsRouter)
+apiRouter.use('/smartcut', smartCutRouter)
 
 export default apiRouter

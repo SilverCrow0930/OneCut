@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 
-interface QuickClip {
+interface SmartCutClip {
     id: string
     title: string
     description: string
@@ -21,7 +21,7 @@ interface QuickClip {
     aspectRatio: string
 }
 
-const QuickClipsButton = () => {
+const SmartCutButton = () => {
     const { user, session, signIn } = useAuth()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
@@ -32,7 +32,7 @@ const QuickClipsButton = () => {
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingProgress, setProcessingProgress] = useState(0)
     const [processingMessage, setProcessingMessage] = useState('')
-    const [generatedClips, setGeneratedClips] = useState<QuickClip[]>([])
+    const [generatedClips, setGeneratedClips] = useState<SmartCutClip[]>([])
     const [isDragOver, setIsDragOver] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
@@ -135,9 +135,9 @@ const QuickClipsButton = () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    name: `QuickClips - ${selectedFile.name}`,
+                    name: `Smart Cut - ${selectedFile.name}`,
                     processing_status: 'queued',
-                    processing_type: 'quickclips',
+                    processing_type: 'smartcut',
                     processing_progress: 0,
                     processing_message: 'Preparing for processing...',
                     processing_data: {
@@ -201,8 +201,8 @@ const QuickClipsButton = () => {
 
             setIsUploading(false)
 
-            // 3. Start QuickClips processing
-            console.log('Starting QuickClips with data:', {
+            // 3. Start Smart Cut processing
+            console.log('Starting Smart Cut with data:', {
                 projectId: project.id,
                 fileUri,
                 mimeType: selectedFile.type,
@@ -217,19 +217,19 @@ const QuickClipsButton = () => {
             // Retry logic for network issues
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    jobResponse = await fetch(apiPath('quickclips/start'), {
+                    jobResponse = await fetch(apiPath('smartcut/start'), {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${session?.access_token}`,
                             'Content-Type': 'application/json'
                         },
-                                            body: JSON.stringify({
-                        projectId: project.id,
-                        fileUri,
-                        mimeType: selectedFile.type,
-                        contentType: 'talking_video',
-                        targetDuration: parseInt(String(targetDuration))
-                    })
+                        body: JSON.stringify({
+                            projectId: project.id,
+                            fileUri,
+                            mimeType: selectedFile.type,
+                            contentType: 'talking_video',
+                            targetDuration: parseInt(String(targetDuration))
+                        })
                     })
                     break; // Success, exit retry loop
                 } catch (fetchError) {
@@ -237,7 +237,7 @@ const QuickClipsButton = () => {
                     if (attempt === maxRetries) {
                         throw new Error(`Network error after ${maxRetries} attempts: ${fetchError instanceof Error ? fetchError.message : 'Connection failed'}`)
                     }
-                    console.warn(`QuickClips request attempt ${attempt} failed, retrying...`)
+                    console.warn(`Smart Cut request attempt ${attempt} failed, retrying...`)
                     // Wait before retry (exponential backoff)
                     await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
                 }
@@ -251,7 +251,7 @@ const QuickClipsButton = () => {
                 let errorMessage = 'Failed to start processing'
                 try {
                     const errorData = await jobResponse.json()
-                    console.error('QuickClips API Error Details:', errorData)
+                    console.error('Smart Cut API Error Details:', errorData)
                     
                     if (errorData.errors && Array.isArray(errorData.errors)) {
                         // Validation errors - show specific messages
@@ -282,7 +282,7 @@ const QuickClipsButton = () => {
             // Poll for job status
             const pollJob = async () => {
                 try {
-                    const statusResponse = await fetch(apiPath(`quickclips/status/${jobData.jobId}`), {
+                    const statusResponse = await fetch(apiPath(`smartcut/status/${jobData.jobId}`), {
                         headers: {
                             'Authorization': `Bearer ${session?.access_token}`
                         }
@@ -320,7 +320,7 @@ const QuickClipsButton = () => {
         }
     }
 
-    const handleDownload = (clip: QuickClip) => {
+    const handleDownload = (clip: SmartCutClip) => {
         // TODO: Implement actual download when backend provides real URLs
         console.log('Downloading clip:', clip)
         // For now, just open a new tab with the preview
@@ -338,7 +338,7 @@ const QuickClipsButton = () => {
         setError(null)
     }
 
-    const handleEditInTimeline = async (clip: QuickClip) => {
+    const handleEditInTimeline = async (clip: SmartCutClip) => {
         if (!user || !session) {
             signIn()
             return
@@ -396,7 +396,7 @@ const QuickClipsButton = () => {
                 "
             >
                 <Zap className="w-5 h-5" />
-                <span>Quick AI Clips</span>
+                <span>Smart Cut AI</span>
             </button>
 
             {/* Modal */}
@@ -406,7 +406,7 @@ const QuickClipsButton = () => {
                         {/* Header */}
                         <div className="flex items-start justify-between px-8 py-6 border-b border-gray-200">
                             <div className="text-left">
-                                <h2 className="text-2xl font-bold text-gray-900">Quick AI Clips</h2>
+                                <h2 className="text-2xl font-bold text-gray-900">Smart Cut AI</h2>
                                 <p className="text-gray-600 mt-1">Transform Hours into Highlights</p>
                             </div>
                             <button
@@ -445,11 +445,11 @@ const QuickClipsButton = () => {
                                             <div key={clip.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300">
                                                 {/* Thumbnail Section */}
                                                 <div className="relative group">
-                                                                                        <img
-                                        src={clip.thumbnailUrl}
-                                        alt={clip.title}
-                                        className="w-full h-48 object-cover"
-                                    />
+                                                    <img
+                                                        src={clip.thumbnailUrl}
+                                                        alt={clip.title}
+                                                        className="w-full h-48 object-cover"
+                                                    />
                                                     {/* Preview Overlay */}
                                                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                         <button 
@@ -570,11 +570,11 @@ const QuickClipsButton = () => {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                                                                        <div className="text-center">
-                                                            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                                            <p className="text-lg text-gray-600 mb-2">Drop your video here</p>
-                                                            <p className="text-sm text-gray-500">or click to browse</p>
-                                                        </div>
+                                                <div className="text-center">
+                                                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                                    <p className="text-lg text-gray-600 mb-2">Drop your video here</p>
+                                                    <p className="text-sm text-gray-500">or click to browse</p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -662,7 +662,7 @@ const QuickClipsButton = () => {
                                             
                                             <span className="relative z-10 flex items-center justify-center gap-2">
                                                 <Zap className="w-5 h-5" />
-                                                Generate AI Clips
+                                                Generate Smart Cut
                                             </span>
                                         </button>
 
@@ -677,4 +677,4 @@ const QuickClipsButton = () => {
     )
 }
 
-export default QuickClipsButton 
+export default SmartCutButton 
