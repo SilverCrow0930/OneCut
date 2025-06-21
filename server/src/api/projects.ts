@@ -183,6 +183,7 @@ router.put(
     check('thumbnail_url').optional().isString(),
     check('duration').optional().isInt({ min: 0 }),
     check('is_public').optional().isBoolean(),
+    check('notes').optional().isString(),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             const errors = validationResult(req)
