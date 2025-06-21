@@ -90,10 +90,14 @@ app.use(
 
 console.log('[Server] AI routes mounted at /api/ai');
 
-const server = http.createServer(app);
-setupWebSocket(server);
+// Setup WebSocket and get the server instance
+async function startServer() {
+    const { server } = await setupWebSocket(app);
+    
+    server.listen(
+        PORT,
+        () => console.log(`Server listening on port ${PORT}`)
+    )
+}
 
-server.listen(
-    PORT,
-    () => console.log(`Server listening on port ${PORT}`)
-)
+startServer().catch(console.error)

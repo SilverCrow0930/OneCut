@@ -2,14 +2,14 @@
 
 import React from 'react'
 import { AuthProvider } from '@/contexts/AuthContext'
-import { QuickClipsProvider } from '@/contexts/QuickClipsContext'
+import { SmartCutProvider } from '@/contexts/SmartCutContext'
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
         <AuthProvider>
-            <QuickClipsProvider>
+            <SmartCutProvider>
                 {children}
-            </QuickClipsProvider>
+            </SmartCutProvider>
         </AuthProvider>
     )
 }

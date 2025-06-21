@@ -4,7 +4,6 @@ import { generateContent, generateAIAssistantResponse } from '../integrations/go
 import { bucket as gcsStorageBucket } from '../integrations/googleStorage.js';
 import { Server as HttpServer } from 'http';
 import { Storage } from '@google-cloud/storage';
-import { queueQuickclipsJob } from '../services/quickclipsProcessor.js';
 import { supabase } from '../config/supabaseClient.js';
 import { createServer } from 'http'
 import cors from 'cors'
