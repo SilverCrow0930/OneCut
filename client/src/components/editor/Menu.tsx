@@ -30,16 +30,11 @@ const Menu = () => {
 
     const handleBackClick = (e: React.MouseEvent) => {
         console.log('Back button clicked') // Debug log
-        e.stopPropagation() // Keep stopPropagation but remove preventDefault
-        try {
-            console.log('Attempting navigation to /creation')
-            router.push('/creation')
-            console.log('Navigation to /creation initiated')
-        } catch (error) {
-            console.error('Navigation error:', error)
-            // Fallback to window.location
-            window.location.href = '/creation'
-        }
+        e.stopPropagation()
+        
+        // Use window.location.href for reliable navigation
+        console.log('Navigating to /creation')
+        window.location.href = '/creation'
     }
 
     const handleTitleClick = (e: React.MouseEvent) => {
