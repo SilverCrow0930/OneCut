@@ -35,15 +35,6 @@ const Menu = () => {
             console.log('Attempting navigation to /creation')
             router.push('/creation')
             console.log('Navigation to /creation initiated')
-            
-            // Fallback check after a short delay
-            setTimeout(() => {
-                console.log('Current URL:', window.location.pathname)
-                if (window.location.pathname.includes('/projects/')) {
-                    console.log('Navigation might have failed, trying window.location')
-                    window.location.href = '/creation'
-                }
-            }, 500)
         } catch (error) {
             console.error('Navigation error:', error)
             // Fallback to window.location
@@ -131,7 +122,7 @@ const Menu = () => {
             onMouseDown={handleMenuClick}
         >
             <div className="
-                flex flex-row items-center w-full gap-4
+                flex flex-row items-center gap-4 flex-1
             ">
                 <ChevronLeft
                     className="cursor-pointer hover:bg-white/10 p-1 rounded transition-colors flex-shrink-0"
@@ -140,7 +131,7 @@ const Menu = () => {
                 />
                 
                 {/* Project Title - Editable */}
-                <div className="flex items-center gap-2 group flex-1 min-w-0" data-project-name-editor>
+                <div className="flex items-center gap-2 group" data-project-name-editor>
                     {isEditing ? (
                         <input
                             ref={inputRef}
@@ -180,6 +171,7 @@ const Menu = () => {
                     )}
                 </div>
 
+                {/* Save Status and Undo/Redo - On the LEFT side */}
                 <div className="flex flex-row items-center gap-4 flex-shrink-0">
                     <SaveStatusIndicator />
                     
