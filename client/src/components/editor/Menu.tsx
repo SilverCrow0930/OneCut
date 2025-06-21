@@ -119,11 +119,17 @@ const Menu = () => {
             <div className="
                 flex flex-row items-center gap-4 flex-1
             ">
-                <ChevronLeft
-                    className="cursor-pointer hover:bg-white/10 p-1 rounded transition-colors flex-shrink-0"
-                    size={24}
+                <button
                     onClick={handleBackClick}
-                />
+                    className="
+                        cursor-pointer hover:bg-white/10 p-2 rounded transition-colors 
+                        flex-shrink-0 flex items-center justify-center
+                        w-10 h-10
+                    "
+                    title="Back to Projects"
+                >
+                    <ChevronLeft size={24} />
+                </button>
                 
                 {/* Project Title - Editable */}
                 <div className="flex items-center gap-2 group" data-project-name-editor>
