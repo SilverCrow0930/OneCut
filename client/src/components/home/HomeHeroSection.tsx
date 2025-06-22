@@ -138,7 +138,7 @@ const HomeHeroSection = () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    name: `QuickClips - ${selectedFile.name}`,
+                    name: `Smart Cut - ${selectedFile.name}`,
                     processing_status: 'queued',
                     processing_type: 'quickclips',
                     processing_progress: 0,
@@ -548,7 +548,7 @@ const HomeHeroSection = () => {
                                         </>
                                     ) : (
                                         <>
-                                            Create Quick Clips
+                                            Create Smart Cut
                                         </>
                                     )}
                                 </span>

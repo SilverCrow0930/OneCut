@@ -255,7 +255,7 @@ const ClipsModal = ({ project, onClose }: { project: Project, onClose: () => voi
                     <div className="flex items-center justify-between">
                         <div className="flex-1">
                             <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                                Quick Clips Preview
+                                Smart Cut Preview
                             </h2>
                             <p className="text-gray-600 mb-3">
                                 {clips.length} clips from {project.name}
@@ -540,7 +540,7 @@ function ProjectsPageContent() {
                     <div className="text-center py-12">
                         <FileVideo className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <h2 className="text-xl font-semibold text-gray-900 mb-2">No projects yet</h2>
-                        <p className="text-gray-600 mb-6">Create your first Quickclips project to get started</p>
+                        <p className="text-gray-600 mb-6">Create your first Smart Cut project to get started</p>
                         <button
                             onClick={() => router.push('/')}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium"

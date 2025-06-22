@@ -262,7 +262,7 @@ const AutoCutToolPanel = () => {
             // Create new video track for clips
             const newTrack = {
                 id: uuid(),
-                name: `QuickClips - ${selectedFile?.name || 'Video'}`,
+                name: `Smart Cut - ${selectedFile?.name || 'Video'}`,
                 type: 'video' as TrackType,
                 height: 120,
                 isVisible: true,
@@ -369,7 +369,7 @@ const AutoCutToolPanel = () => {
             <div className="flex items-center justify-between">
                 <PanelHeader
                     icon={Brain}
-                    title="QuickClips"
+                    title="Smart Cut"
                     description={getDescription()}
                     iconBgColor="bg-purple-50"
                     iconColor="text-purple-600"

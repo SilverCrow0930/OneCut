@@ -140,7 +140,7 @@ export default function QuickClipsViewPage() {
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="flex items-center space-x-3 text-gray-600">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                        <span className="text-lg">Loading QuickClips...</span>
+                        <span className="text-lg">Loading Smart Cut...</span>
                     </div>
                 </div>
             </div>
@@ -157,7 +157,7 @@ export default function QuickClipsViewPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                         </svg>
                     </div>
-                    <h2 className="text-xl font-semibold text-red-600 mb-2">Error loading QuickClips</h2>
+                    <h2 className="text-xl font-semibold text-red-600 mb-2">Error loading Smart Cut</h2>
                     <p className="text-gray-600 mb-4">{error || 'Project not found'}</p>
                     <button
                         onClick={() => router.push('/creation')}

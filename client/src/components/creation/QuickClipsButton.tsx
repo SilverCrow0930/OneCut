@@ -135,7 +135,7 @@ const QuickClipsButton = () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    name: `QuickClips - ${selectedFile.name}`,
+                    name: `Smart Cut - ${selectedFile.name}`,
                     processing_status: 'queued',
                     processing_type: 'quickclips',
                     processing_progress: 0,
@@ -396,7 +396,7 @@ const QuickClipsButton = () => {
                 "
             >
                 <Zap className="w-5 h-5" />
-                <span>Quick AI Clips</span>
+                                            <span>Smart Cut</span>
             </button>
 
             {/* Modal */}
@@ -406,7 +406,7 @@ const QuickClipsButton = () => {
                         {/* Header */}
                         <div className="flex items-start justify-between px-8 py-6 border-b border-gray-200">
                             <div className="text-left">
-                                <h2 className="text-2xl font-bold text-gray-900">Quick AI Clips</h2>
+                                <h2 className="text-2xl font-bold text-gray-900">Smart Cut</h2>
                                 <p className="text-gray-600 mt-1">Transform Hours into Highlights</p>
                             </div>
                             <button

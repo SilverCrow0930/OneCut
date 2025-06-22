@@ -281,7 +281,7 @@ export default function ProjectsList() {
                         }`}
                     >
                         <Zap className="w-4 h-4" />
-                        QuickClips ({quickclipsProjects.length})
+                        Smart Cut ({quickclipsProjects.length})
                     </button>
                 </div>
             </div>
@@ -297,11 +297,11 @@ export default function ProjectsList() {
                         )}
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        {activeFilter === 'quickclips' ? 'No QuickClips yet' : 'No projects found'}
+                        {activeFilter === 'quickclips' ? 'No Smart Cut projects yet' : 'No projects found'}
                     </h3>
                     <p className="text-gray-500 max-w-sm">
                         {activeFilter === 'quickclips' 
-                            ? 'Create your first AI-powered video clips using QuickClips.' 
+                            ? 'Create your first AI-powered video clips using Smart Cut.' 
                             : 'Start creating amazing videos by making your first project.'}
                     </p>
                 </div>
@@ -393,7 +393,7 @@ function ProjectCard({
                             )}
                         </div>
                         <span className={`text-sm font-medium ${isQuickClips ? 'text-emerald-600' : 'text-gray-400'}`}>
-                            {isQuickClips ? 'QuickClips' : 'No Preview'}
+                                                                    {isQuickClips ? 'Smart Cut' : 'No Preview'}
                         </span>
                     </div>
 
@@ -421,7 +421,7 @@ function ProjectCard({
                                 ) : hasFailed ? (
                                     'Failed'
                                 ) : (
-                                    'QuickClips'
+                                                                                'Smart Cut'
                                 )}
                             </div>
                         </div>
