@@ -124,7 +124,8 @@ const HomeHeroSection = () => {
         }
 
         if (!selectedFile) {
-            alert('Please select a video file first')
+            // Open file picker instead of showing alert
+            fileInputRef.current?.click()
             return
         }
 
@@ -306,8 +307,8 @@ const HomeHeroSection = () => {
                     {/* Left Column - Content */}
                     <div className="text-center lg:text-left">
                         {/* Badge */}
-                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 via-teal-100 to-emerald-100 border border-blue-200 rounded-full px-4 py-2 mb-6">
-                            <Sparkles className="w-4 h-4 text-blue-600" />
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 via-teal-50 to-emerald-50 border border-blue-200/50 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
+                            <Sparkles className="w-4 h-4 text-blue-500" />
                             <span className="text-sm font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent">AI-Native Video Creation</span>
                         </div>
 
@@ -325,17 +326,17 @@ const HomeHeroSection = () => {
                         </p>
 
                         {/* Key Benefits */}
-                        <div className="flex flex-wrap justify-center lg:justify-start gap-6 mb-8">
-                            <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20 shadow-lg">
-                                <Zap className="w-5 h-5 text-emerald-500" />
+                        <div className="flex flex-wrap justify-center lg:justify-start gap-4 mb-8">
+                            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 border border-blue-200/30 shadow-lg">
+                                <Zap className="w-5 h-5 text-blue-500" />
                                 <span className="text-gray-700 font-bold">10x Faster Editing</span>
                             </div>
-                            <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20 shadow-lg">
-                                <Clock className="w-5 h-5 text-blue-500" />
+                            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 border border-teal-200/30 shadow-lg">
+                                <Clock className="w-5 h-5 text-teal-500" />
                                 <span className="text-gray-700 font-bold">Hours to Minutes</span>
                             </div>
-                            <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20 shadow-lg">
-                                <Sparkles className="w-5 h-5 text-teal-500" />
+                            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 border border-emerald-200/30 shadow-lg">
+                                <Sparkles className="w-5 h-5 text-emerald-500" />
                                 <span className="text-gray-700 font-bold">AI-Powered</span>
                             </div>
                         </div>
@@ -350,7 +351,7 @@ const HomeHeroSection = () => {
                             </button>
                             <button
                                 onClick={handleWatchDemo}
-                                className="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 font-bold text-lg px-8 py-4 rounded-xl border-2 border-white/50 hover:border-white transition-all duration-300 shadow-lg hover:shadow-xl"
+                                className="flex items-center justify-center gap-2 bg-white/70 backdrop-blur-sm hover:bg-white text-gray-700 font-bold text-lg px-8 py-4 rounded-xl border-2 border-blue-200/50 hover:border-blue-300 transition-all duration-300 shadow-lg hover:shadow-xl"
                             >
                                 <Play className="w-5 h-5" />
                                 Watch Demo
@@ -397,7 +398,7 @@ const HomeHeroSection = () => {
                                         border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
                                         transition-all duration-300 group relative overflow-hidden
                                         ${selectedFile ? 
-                                            'border-emerald-400 bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-50 shadow-inner' : 
+                                            'border-blue-400 bg-gradient-to-br from-blue-50 via-teal-50 to-emerald-50 shadow-inner' : 
                                             isDragOver ?
                                                 'border-blue-500 bg-gradient-to-br from-blue-100 via-teal-100 to-emerald-100 shadow-lg scale-105' :
                                             'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:via-teal-50 hover:to-emerald-50 hover:shadow-lg'
@@ -413,7 +414,7 @@ const HomeHeroSection = () => {
                                                 <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-2xl flex items-center justify-center shadow-lg">
                                                     <Video className="w-10 h-10 text-white" />
                                                 </div>
-                                                <div className="absolute -top-2 -right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+                                                <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
                                                     <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                     </svg>
@@ -430,8 +431,8 @@ const HomeHeroSection = () => {
                                         </div>
                                     ) : (
                                         <div className="relative z-10">
-                                            <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                                <Upload className="w-10 h-10 text-gray-500 group-hover:text-blue-600 transition-colors duration-300" />
+                                            <div className="w-20 h-20 bg-gradient-to-br from-blue-100 via-teal-100 to-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                                                <Upload className="w-10 h-10 text-blue-500 group-hover:text-blue-600 transition-colors duration-300" />
                                             </div>
                                             <p className="font-bold text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300 text-lg">
                                                 Drop your video here
@@ -439,7 +440,7 @@ const HomeHeroSection = () => {
                                             <p className="text-sm text-gray-500 mb-4">
                                                 or click to browse
                                             </p>
-                                            <div className="flex items-center justify-center gap-4 text-xs text-gray-400 bg-gray-50 rounded-full px-4 py-2">
+                                            <div className="flex items-center justify-center gap-4 text-xs text-gray-500 bg-blue-50/50 rounded-full px-4 py-2 border border-blue-200/30">
                                                 <span>MP4</span>
                                                 <span>•</span>
                                                 <span>MOV</span>
@@ -476,8 +477,8 @@ const HomeHeroSection = () => {
                                                 onClick={() => setTargetDuration(300)}
                                                 className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                                                     targetDuration > 90 
-                                                        ? 'border-emerald-500 bg-white shadow-md' 
-                                                        : 'border-gray-200 hover:border-emerald-300'
+                                                        ? 'border-teal-500 bg-white shadow-md' 
+                                                        : 'border-gray-200 hover:border-teal-300'
                                                 }`}
                                             >
                                                 <div className="text-2xl mb-1">💻</div>
@@ -546,19 +547,18 @@ const HomeHeroSection = () => {
                             {/* Start Button */}
                             <button
                                 onClick={handleStartEditing}
-                                disabled={isUploading || !selectedFile}
-                                className="
-                                    w-full font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 
-                                    hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500
-                                    disabled:from-gray-400 disabled:to-gray-500
-                                    text-white font-bold text-lg
-                                    px-6 py-4 rounded-2xl 
+                                disabled={isUploading}
+                                className={`
+                                    w-full font-bold text-lg px-6 py-4 rounded-2xl 
                                     transition-all duration-300 shadow-xl hover:shadow-2xl 
-                                    disabled:cursor-not-allowed disabled:opacity-50
                                     transform hover:scale-105 active:scale-95
-                                    relative overflow-hidden group
-                                    relative z-10
-                                "
+                                    relative overflow-hidden group relative z-10
+                                    ${selectedFile 
+                                        ? 'bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white'
+                                        : 'bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white cursor-pointer'
+                                    }
+                                    ${isUploading ? 'opacity-70 cursor-not-allowed' : ''}
+                                `}
                             >
                                 {/* Button glow effect */}
                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-300 opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-2xl"></div>
@@ -576,7 +576,8 @@ const HomeHeroSection = () => {
                                         </>
                                     ) : (
                                         <>
-                                            Upload a video first
+                                            <Upload className="w-5 h-5" />
+                                            Smart Cut My Video
                                         </>
                                     )}
                                 </span>
@@ -587,7 +588,7 @@ const HomeHeroSection = () => {
                                 <p className="text-xs font-medium bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent text-center mt-4 relative z-10">
                                     {user ? (
                                         <span className="flex items-center justify-center gap-1">
-                                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                                             Processing starts immediately in background ✨
                                         </span>
                                     ) : (
