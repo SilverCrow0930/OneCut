@@ -337,7 +337,7 @@ const HomeHeroSection = () => {
                             </div>
                             <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 border border-emerald-200/30 shadow-lg">
                                 <Sparkles className="w-5 h-5 text-emerald-500" />
-                                <span className="text-gray-700 font-bold">AI-Powered</span>
+                                <span className="text-gray-700 font-bold">Rich AI Features</span>
                             </div>
                         </div>
 
@@ -345,7 +345,7 @@ const HomeHeroSection = () => {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                             <button
                                 onClick={handleGetStarted}
-                                className="font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white font-semibold text-lg px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                className="font-bold bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-500 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-600 text-white font-semibold text-lg px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
                                 {user ? 'View My Projects' : 'Start Creating'}
                             </button>
@@ -370,7 +370,7 @@ const HomeHeroSection = () => {
 
                             {/* Upload Header */}
                             <div className="text-center mb-6 relative z-10">
-                                <h3 className="text-xl font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent mb-2">
+                                <h3 className="text-xl font-bold bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 bg-clip-text text-transparent mb-2">
                                     Try Smart Cut Now
                                 </h3>
                                 <p className="text-gray-600">
@@ -400,13 +400,17 @@ const HomeHeroSection = () => {
                                         ${selectedFile ? 
                                             'border-blue-400 bg-gradient-to-br from-blue-50 via-teal-50 to-emerald-50 shadow-inner' : 
                                             isDragOver ?
-                                                'border-blue-500 bg-gradient-to-br from-blue-100 via-teal-100 to-emerald-100 shadow-lg scale-105' :
-                                            'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:via-teal-50 hover:to-emerald-50 hover:shadow-lg'
+                                                'border-purple-500 bg-gradient-to-br from-purple-100 via-violet-100 to-indigo-100 shadow-lg scale-105' :
+                                            'border-gray-300 hover:border-purple-400 hover:bg-gradient-to-br hover:from-purple-50 hover:via-violet-50 hover:to-indigo-50 hover:shadow-lg'
                                         }
                                     `}
                                 >
                                     {/* Animated background for hover */}
-                                    <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/10 via-teal-500/10 to-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDragOver ? 'opacity-100' : ''}`}></div>
+                                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDragOver ? 'opacity-100' : ''} ${
+                                        selectedFile 
+                                            ? 'bg-gradient-to-br from-blue-500/10 via-teal-500/10 to-emerald-400/10'
+                                            : 'bg-gradient-to-br from-purple-500/10 via-violet-500/10 to-indigo-500/10'
+                                    }`}></div>
                                     
                                     {selectedFile ? (
                                         <div className="flex flex-col items-center gap-3 relative z-10">
