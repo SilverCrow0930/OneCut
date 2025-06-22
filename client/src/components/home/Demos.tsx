@@ -96,7 +96,7 @@ const Demos = () => {
     }
 
     return (
-        <section id="demos-section" className="py-20 bg-gray-50">
+        <section id="demos-section" className="py-20 bg-transparent">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col md:flex-row w-full h-fit gap-8 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-4 md:px-8 py-4 md:py-8 shadow-lg">
                     <div className="flex flex-col w-full md:w-80 gap-4 flex-none">

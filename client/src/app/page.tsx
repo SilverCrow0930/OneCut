@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import HomeHeroSection from "@/components/home/HomeHeroSection";
-import HomeSocialProof from "@/components/home/HomeSocialProof";
 import HomeHowItWorks from "@/components/home/HomeHowItWorks";
 import HomeNavbar from "@/components/home/HomeNavbar";
 import ConfidentialityButton from "@/components/layout/ConfidentialityButton";
@@ -13,7 +12,7 @@ export default function Home() {
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
 
   return (
-    <div className="relative flex flex-col items-center w-full min-h-screen bg-white overflow-x-hidden">
+    <div className="relative flex flex-col items-center w-full min-h-screen bg-gradient-to-br from-blue-50 via-teal-50 to-emerald-50 overflow-x-hidden">
 
       {/* SEO Content */}
       <p className="absolute opacity-0">
@@ -41,9 +40,6 @@ export default function Home() {
 
         {/* How It Works */}
         <HomeHowItWorks />
-
-        {/* Social Proof */}
-        <HomeSocialProof />
 
         {/* Final CTA */}
         <HomeCTA />
