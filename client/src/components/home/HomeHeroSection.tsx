@@ -431,16 +431,16 @@ const HomeHeroSection = () => {
                                         </div>
                                     ) : (
                                         <div className="relative z-10">
-                                            <div className="w-20 h-20 bg-gradient-to-br from-blue-100 via-teal-100 to-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                                                <Upload className="w-10 h-10 text-blue-500 group-hover:text-blue-600 transition-colors duration-300" />
+                                            <div className="w-20 h-20 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg border border-purple-100">
+                                                <Upload className="w-10 h-10 text-purple-500 group-hover:text-purple-600 transition-colors duration-300" />
                                             </div>
-                                            <p className="font-bold text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300 text-lg">
+                                            <p className="font-bold text-gray-700 mb-2 group-hover:text-purple-700 transition-colors duration-300 text-lg">
                                                 Drop your video here
                                             </p>
                                             <p className="text-sm text-gray-500 mb-4">
                                                 or click to browse
                                             </p>
-                                            <div className="flex items-center justify-center gap-4 text-xs text-gray-500 bg-blue-50/50 rounded-full px-4 py-2 border border-blue-200/30">
+                                            <div className="flex items-center justify-center gap-4 text-xs text-gray-500 bg-purple-50/50 rounded-full px-4 py-2 border border-purple-200/30">
                                                 <span>MP4</span>
                                                 <span>•</span>
                                                 <span>MOV</span>
@@ -555,13 +555,17 @@ const HomeHeroSection = () => {
                                     relative overflow-hidden group relative z-10
                                     ${selectedFile 
                                         ? 'bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white'
-                                        : 'bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white cursor-pointer'
+                                        : 'bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 hover:from-purple-600 hover:via-violet-600 hover:to-indigo-600 text-white cursor-pointer'
                                     }
                                     ${isUploading ? 'opacity-70 cursor-not-allowed' : ''}
                                 `}
                             >
                                 {/* Button glow effect */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-300 opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-2xl"></div>
+                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-2xl ${
+                                    selectedFile 
+                                        ? 'bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-300'
+                                        : 'bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400'
+                                }`}></div>
                                 
                                 <span className="relative z-10 flex items-center justify-center gap-2">
                                     {isUploading ? (
@@ -576,7 +580,6 @@ const HomeHeroSection = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <Upload className="w-5 h-5" />
                                             Smart Cut My Video
                                         </>
                                     )}
