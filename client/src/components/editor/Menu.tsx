@@ -39,8 +39,8 @@ const Menu = () => {
 
     const handleTitleClick = (e: React.MouseEvent) => {
         console.log('Title clicked') // Debug log
-        e.preventDefault()
-        e.stopPropagation()
+            e.preventDefault()
+            e.stopPropagation()
         if (!project) return
         
         setEditedName(project.name)
