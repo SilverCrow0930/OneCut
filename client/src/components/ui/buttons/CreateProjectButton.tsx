@@ -46,9 +46,9 @@ const CreateProjectButton = () => {
             className={`
                 inline-flex items-center justify-center gap-2 
                 px-6 py-3 rounded-lg font-semibold text-white
-                bg-gradient-to-br from-violet-500 to-orange-500
-                hover:from-violet-600 hover:to-orange-600
-                focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2
+                bg-gradient-to-br from-emerald-500 to-green-600
+                hover:from-emerald-600 hover:to-green-700
+                focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2
                 shadow-lg hover:shadow-xl
                 transform transition-all duration-200
                 ${loading ? 'opacity-80 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}
