@@ -32,7 +32,7 @@ export const TOOLS: Tool[] = [
         aiTool: false,
     },
     {
-        label: 'Autocut',
+        label: 'Smart Cut',
         icon: '/assets/icons/scissors.png',
         aiTool: true,
     },
@@ -76,7 +76,7 @@ export const TOOL_PANELS: ToolPanel[] = [
         component: StickersToolPanel
     },
     {
-        label: 'Autocut',
+        label: 'Smart Cut',
         component: AutoCutToolPanel
     },
     {

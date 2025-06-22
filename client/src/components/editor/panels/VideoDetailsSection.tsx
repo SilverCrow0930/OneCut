@@ -54,7 +54,7 @@ const VideoDetailsSection: React.FC<VideoDetailsSectionProps> = ({
             >
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-700">
-                        {processingState !== 'completed' ? 'Clip Details' : 'Autocut Details'}
+                        {processingState !== 'completed' ? 'Clip Details' : 'Smart Cut Details'}
                     </span>
                     <span className="text-xs text-gray-500">
                         {videoName}

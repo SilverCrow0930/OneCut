@@ -17,7 +17,7 @@ const toolComponents: { [key: string]: React.ComponentType<any> } = {
     Stickers: StickersToolPanel,
     Voiceover: VoiceoverToolPanel,
     Captions: CaptionsToolPanel,
-    Autocut: AutoCutToolPanel,
+    'Smart Cut': AutoCutToolPanel,
     Generation: AIGenerationToolPanel,
     Transitions: TransitionsToolPanel,
 }

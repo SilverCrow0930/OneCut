@@ -129,7 +129,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search)
             const toolParam = urlParams.get('tool')
-            if (toolParam && ['Upload', 'Text', 'Assets', 'Stickers', 'Voiceover', 'Captions', 'Autocut', 'Generation', 'Transitions'].includes(toolParam)) {
+            if (toolParam && ['Upload', 'Text', 'Assets', 'Stickers', 'Voiceover', 'Captions', 'Smart Cut', 'Generation', 'Transitions'].includes(toolParam)) {
                 return toolParam
             }
         }
