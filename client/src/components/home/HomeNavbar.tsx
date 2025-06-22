@@ -98,7 +98,7 @@ export default function HomeNavbar() {
                                             className="w-10 h-10 rounded-full object-cover"
                                         />
                                     ) : (
-                                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-full flex items-center justify-center">
                                             <span className="text-white text-sm font-semibold">
                                                 {profile?.email?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
                                             </span>
@@ -119,7 +119,7 @@ export default function HomeNavbar() {
                                                         className="w-8 h-8 rounded-full object-cover"
                                                     />
                                                 ) : (
-                                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-full flex items-center justify-center">
                                                         <span className="text-white text-xs font-semibold">
                                                             {profile?.email?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
                                                         </span>
@@ -150,7 +150,7 @@ export default function HomeNavbar() {
                             </div>
                         ) : (
                             <button
-                                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+                                className="flex items-center space-x-2 font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
                                 onClick={handleSignIn}
                             >
                                 <img

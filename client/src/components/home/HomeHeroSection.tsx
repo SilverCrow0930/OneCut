@@ -13,6 +13,7 @@ const HomeHeroSection = () => {
     const [targetDuration, setTargetDuration] = useState(60) // Default 60 seconds (1 minute)
     const [isUploading, setIsUploading] = useState(false)
     const [isDragOver, setIsDragOver] = useState(false)
+    const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
     
     // Specific time intervals in seconds (20s to 30m)
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
@@ -292,11 +293,12 @@ const HomeHeroSection = () => {
     }
 
     return (
-        <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-24 pb-20">
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-teal-50 to-emerald-50 pt-24 pb-20">
             {/* Background Elements */}
             <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-emerald-400/20 to-blue-400/20 rounded-full blur-3xl"></div>
+                <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-500/30 via-teal-500/20 to-emerald-400/30 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-emerald-400/30 via-teal-500/20 to-blue-500/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-gradient-to-br from-teal-500/30 to-emerald-400/30 rounded-full blur-2xl animate-pulse delay-500"></div>
             </div>
 
             <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
@@ -304,17 +306,17 @@ const HomeHeroSection = () => {
                     {/* Left Column - Content */}
                     <div className="text-center lg:text-left">
                         {/* Badge */}
-                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200 rounded-full px-4 py-2 mb-6">
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 via-teal-100 to-emerald-100 border border-blue-200 rounded-full px-4 py-2 mb-6">
                             <Sparkles className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-700">AI-Native Video Creation</span>
+                            <span className="text-sm font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent">AI-Native Video Creation</span>
                         </div>
 
                         {/* Main Headline */}
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                             Transform 
-                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"> Hours </span>
+                            <span className="font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent"> Hours </span>
                             into 
-                            <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent"> Highlights</span>
+                            <span className="font-bold bg-gradient-to-r from-emerald-400 via-teal-500 to-blue-500 bg-clip-text text-transparent"> Highlights</span>
                         </h1>
 
                         {/* Subtitle */}
@@ -324,17 +326,17 @@ const HomeHeroSection = () => {
 
                         {/* Key Benefits */}
                         <div className="flex flex-wrap justify-center lg:justify-start gap-6 mb-8">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20 shadow-lg">
                                 <Zap className="w-5 h-5 text-emerald-500" />
-                                <span className="text-gray-700 font-medium">10x Faster Editing</span>
+                                <span className="text-gray-700 font-bold">10x Faster Editing</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20 shadow-lg">
                                 <Clock className="w-5 h-5 text-blue-500" />
-                                <span className="text-gray-700 font-medium">Hours to Minutes</span>
+                                <span className="text-gray-700 font-bold">Hours to Minutes</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-purple-500" />
-                                <span className="text-gray-700 font-medium">AI-Powered</span>
+                            <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20 shadow-lg">
+                                <Sparkles className="w-5 h-5 text-teal-500" />
+                                <span className="text-gray-700 font-bold">AI-Powered</span>
                             </div>
                         </div>
 
@@ -342,13 +344,13 @@ const HomeHeroSection = () => {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                             <button
                                 onClick={handleGetStarted}
-                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-lg px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                className="font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white font-semibold text-lg px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
                                 {user ? 'View My Projects' : 'Start Creating'}
                             </button>
                             <button
                                 onClick={handleWatchDemo}
-                                className="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-lg px-8 py-4 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-300"
+                                className="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 font-bold text-lg px-8 py-4 rounded-xl border-2 border-white/50 hover:border-white transition-all duration-300 shadow-lg hover:shadow-xl"
                             >
                                 <Play className="w-5 h-5" />
                                 Watch Demo
@@ -356,17 +358,20 @@ const HomeHeroSection = () => {
                         </div>
                     </div>
 
-                    {/* Right Column - Upload Interface */}
+                    {/* Right Column - Smart Cut Interface */}
                     <div className="relative">
-                        <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 relative overflow-hidden">
+                        <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-white/50 relative overflow-hidden">
                             {/* Background Pattern */}
-                            <div className="absolute inset-0 opacity-5">
-                                <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-xl"></div>
-                                <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-emerald-400 to-blue-500 rounded-full blur-xl"></div>
+                            <div className="absolute inset-0 opacity-10">
+                                <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-full blur-xl"></div>
+                                <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-emerald-400 via-teal-500 to-blue-500 rounded-full blur-xl"></div>
                             </div>
 
                             {/* Upload Header */}
                             <div className="text-center mb-6 relative z-10">
+                                <h3 className="text-xl font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent mb-2">
+                                    Try Smart Cut Now
+                                </h3>
                                 <p className="text-gray-600">
                                     Upload your video and see the magic happen
                                 </p>
@@ -392,49 +397,49 @@ const HomeHeroSection = () => {
                                         border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
                                         transition-all duration-300 group relative overflow-hidden
                                         ${selectedFile ? 
-                                            'border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50 shadow-inner' : 
+                                            'border-emerald-400 bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-50 shadow-inner' : 
                                             isDragOver ?
-                                                'border-blue-500 bg-gradient-to-br from-blue-100 to-purple-100 shadow-lg scale-105' :
-                                            'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 hover:shadow-lg'
+                                                'border-blue-500 bg-gradient-to-br from-blue-100 via-teal-100 to-emerald-100 shadow-lg scale-105' :
+                                            'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:via-teal-50 hover:to-emerald-50 hover:shadow-lg'
                                         }
                                     `}
                                 >
                                     {/* Animated background for hover */}
-                                    <div className={`absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDragOver ? 'opacity-100' : ''}`}></div>
+                                    <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/10 via-teal-500/10 to-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDragOver ? 'opacity-100' : ''}`}></div>
                                     
                                     {selectedFile ? (
                                         <div className="flex flex-col items-center gap-3 relative z-10">
                                             <div className="relative">
-                                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                                                    <Video className="w-8 h-8 text-white" />
+                                                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-2xl flex items-center justify-center shadow-lg">
+                                                    <Video className="w-10 h-10 text-white" />
                                                 </div>
-                                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                <div className="absolute -top-2 -right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+                                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                     </svg>
                                                 </div>
                                             </div>
                                             <div className="text-center">
-                                                <p className="font-semibold text-blue-800 mb-1">
+                                                <p className="font-bold text-gray-800 mb-1">
                                                     {selectedFile.name}
                                                 </p>
-                                                <p className="text-sm text-blue-600">
-                                                    Click to change file
+                                                <p className="text-sm font-medium bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent">
+                                                    Ready for Smart Cut! ✨
                                                 </p>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="relative z-10">
-                                            <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                                <Upload className="w-8 h-8 text-gray-500 group-hover:text-blue-600 transition-colors duration-300" />
+                                            <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                                <Upload className="w-10 h-10 text-gray-500 group-hover:text-blue-600 transition-colors duration-300" />
                                             </div>
-                                            <p className="font-semibold text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300">
+                                            <p className="font-bold text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300 text-lg">
                                                 Drop your video here
                                             </p>
-                                            <p className="text-sm text-gray-500 mb-3">
+                                            <p className="text-sm text-gray-500 mb-4">
                                                 or click to browse
                                             </p>
-                                            <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+                                            <div className="flex items-center justify-center gap-4 text-xs text-gray-400 bg-gray-50 rounded-full px-4 py-2">
                                                 <span>MP4</span>
                                                 <span>•</span>
                                                 <span>MOV</span>
@@ -448,123 +453,148 @@ const HomeHeroSection = () => {
                                 </div>
                             </div>
 
-                            {/* Target Duration */}
-                            <div className="mb-6 relative z-10">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="p-1 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg">
-                                        <Clock className="w-4 h-4 text-white" />
-                                    </div>
-                                    <label className="text-sm font-semibold text-gray-700">
-                                        Target: {formatDuration(targetDuration)}
-                                    </label>
-                                </div>
-                                
-                                {/* Format indicator */}
-                                <div className="mb-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
-                                    <div className="flex items-center justify-between gap-6">
-                                        <div className="flex-1">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {targetDuration < 120 ? 'Short Vertical' : 'Long Horizontal'}
-                                            </div>
-                                            <div className="text-xs text-gray-600 mt-1 mb-2">
-                                                {targetDuration < 120 ? '< 2 minutes' : '2-30 minutes'}
-                                            </div>
-                                            <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                                {targetDuration < 120 ? '9:16' : '16:9'}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-center">
-                                            {targetDuration < 120 ? (
-                                                <span className="text-5xl">📱</span>
-                                            ) : (
-                                                <span className="text-5xl">💻</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div className="relative">
-                                    <input
-                                        type="range"
-                                        min="20"
-                                        max="1800"
-                                        value={targetDuration}
-                                        onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-                                        className="
-                                            w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
-                                            [&::-webkit-slider-thumb]:appearance-none 
-                                            [&::-webkit-slider-thumb]:w-6 
-                                            [&::-webkit-slider-thumb]:h-6 
-                                            [&::-webkit-slider-thumb]:rounded-full 
-                                            [&::-webkit-slider-thumb]:bg-gradient-to-r
-                                            [&::-webkit-slider-thumb]:from-blue-500
-                                            [&::-webkit-slider-thumb]:to-purple-500
-                                            [&::-webkit-slider-thumb]:border-3
-                                            [&::-webkit-slider-thumb]:border-white
-                                            [&::-webkit-slider-thumb]:shadow-lg
-                                            [&::-webkit-slider-thumb]:cursor-pointer
-                                            [&::-webkit-slider-thumb]:hover:scale-110
-                                            [&::-webkit-slider-thumb]:transition-transform
-                                        "
-                                    />
-                                    
-                                    {/* Time interval markers */}
-                                    <div className="flex justify-between text-xs text-gray-500 mt-2">
-                                        <div className="text-center">
-                                            <div className="font-medium">20s</div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="font-medium">30m</div>
+                            {/* Advanced Options - Only show after file upload */}
+                            {selectedFile && (
+                                <div className="mb-6 relative z-10 space-y-4">
+                                    {/* Quick Options */}
+                                    <div className="bg-gradient-to-r from-blue-50 via-teal-50 to-emerald-50 rounded-xl p-4 border border-blue-100">
+                                        <h4 className="font-bold text-gray-800 mb-3">Choose your style:</h4>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => setTargetDuration(60)}
+                                                className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                                                    targetDuration <= 90 
+                                                        ? 'border-blue-500 bg-white shadow-md' 
+                                                        : 'border-gray-200 hover:border-blue-300'
+                                                }`}
+                                            >
+                                                <div className="text-2xl mb-1">📱</div>
+                                                <div className="text-sm font-bold text-gray-800">Short & Snappy</div>
+                                                <div className="text-xs text-gray-600">~1 minute clips</div>
+                                            </button>
+                                            <button
+                                                onClick={() => setTargetDuration(300)}
+                                                className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                                                    targetDuration > 90 
+                                                        ? 'border-emerald-500 bg-white shadow-md' 
+                                                        : 'border-gray-200 hover:border-emerald-300'
+                                                }`}
+                                            >
+                                                <div className="text-2xl mb-1">💻</div>
+                                                <div className="text-sm font-bold text-gray-800">Long Form</div>
+                                                <div className="text-xs text-gray-600">~5 minute highlights</div>
+                                            </button>
                                         </div>
                                     </div>
+
+                                    {/* Show advanced options toggle */}
+                                    <button
+                                        onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                                        className="w-full text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200 py-2"
+                                    >
+                                        {showAdvancedOptions ? '↑ Hide' : '↓ More'} options
+                                    </button>
+
+                                    {/* Advanced Duration Slider */}
+                                    {showAdvancedOptions && (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-1 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-lg">
+                                                    <Clock className="w-4 h-4 text-white" />
+                                                </div>
+                                                <label className="text-sm font-bold text-gray-700">
+                                                    Custom Duration: {formatDuration(targetDuration)}
+                                                </label>
+                                            </div>
+                                            
+                                            <div className="relative">
+                                                <input
+                                                    type="range"
+                                                    min="20"
+                                                    max="1800"
+                                                    value={targetDuration}
+                                                    onChange={(e) => handleDurationChange(parseInt(e.target.value))}
+                                                    className="
+                                                        w-full h-3 bg-gradient-to-r from-blue-100 via-teal-100 to-emerald-100 rounded-full appearance-none cursor-pointer
+                                                        [&::-webkit-slider-thumb]:appearance-none 
+                                                        [&::-webkit-slider-thumb]:w-6 
+                                                        [&::-webkit-slider-thumb]:h-6 
+                                                        [&::-webkit-slider-thumb]:rounded-full 
+                                                        [&::-webkit-slider-thumb]:bg-gradient-to-r
+                                                        [&::-webkit-slider-thumb]:from-blue-500
+                                                        [&::-webkit-slider-thumb]:via-teal-500
+                                                        [&::-webkit-slider-thumb]:to-emerald-400
+                                                        [&::-webkit-slider-thumb]:border-3
+                                                        [&::-webkit-slider-thumb]:border-white
+                                                        [&::-webkit-slider-thumb]:shadow-lg
+                                                        [&::-webkit-slider-thumb]:cursor-pointer
+                                                        [&::-webkit-slider-thumb]:hover:scale-110
+                                                        [&::-webkit-slider-thumb]:transition-transform
+                                                    "
+                                                />
+                                                
+                                                <div className="flex justify-between text-xs text-gray-500 mt-2">
+                                                    <span>20s</span>
+                                                    <span>30m</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            )}
 
                             {/* Start Button */}
                             <button
                                 onClick={handleStartEditing}
                                 disabled={isUploading || !selectedFile}
                                 className="
-                                    w-full bg-gradient-to-r from-blue-600 to-purple-600 
-                                    hover:from-blue-700 hover:to-purple-700
+                                    w-full font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 
+                                    hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500
                                     disabled:from-gray-400 disabled:to-gray-500
                                     text-white font-bold text-lg
                                     px-6 py-4 rounded-2xl 
                                     transition-all duration-300 shadow-xl hover:shadow-2xl 
-                                    disabled:cursor-not-allowed 
+                                    disabled:cursor-not-allowed disabled:opacity-50
                                     transform hover:scale-105 active:scale-95
                                     relative overflow-hidden group
                                     relative z-10
                                 "
                             >
                                 {/* Button glow effect */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-2xl"></div>
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-300 opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-2xl"></div>
                                 
                                 <span className="relative z-10 flex items-center justify-center gap-2">
                                     {isUploading ? (
                                         <>
                                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                            Uploading...
+                                            Processing...
+                                        </>
+                                    ) : selectedFile ? (
+                                        <>
+                                            <Sparkles className="w-5 h-5" />
+                                            Create Smart Cut ✨
                                         </>
                                     ) : (
                                         <>
-                                            Create Smart Cut
+                                            Upload a video first
                                         </>
                                     )}
                                 </span>
                             </button>
 
                             {/* Note */}
-                            <p className="text-xs text-gray-500 text-center mt-4 relative z-10">
-                                {user ? (
-                                    <span className="flex items-center justify-center gap-1">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                        Processing starts immediately in background
-                                    </span>
-                                ) : (
-                                    'Sign in required to process video'
-                                )}
-                            </p>
+                            {selectedFile && (
+                                <p className="text-xs font-medium bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent text-center mt-4 relative z-10">
+                                    {user ? (
+                                        <span className="flex items-center justify-center gap-1">
+                                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                            Processing starts immediately in background ✨
+                                        </span>
+                                    ) : (
+                                        'Sign in required to process video'
+                                    )}
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
