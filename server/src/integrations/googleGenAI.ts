@@ -1,8 +1,5 @@
-import {
-    GoogleGenAI,
-    createUserContent,
-    createPartFromUri,
-} from '@google/genai'
+// Remove the static import and use dynamic imports instead
+// This fixes TypeScript compilation issues
 
 if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not set')
@@ -16,11 +13,24 @@ if (!process.env.GOOGLE_CLOUD_LOCATION) {
     throw new Error('GOOGLE_CLOUD_LOCATION is not set')
 }
 
-const ai = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY
-})
+// Initialize with dynamic import
+let ai: any = null
+let model = "gemini-2.5-flash-preview-05-20"
+let createUserContent: any = null
+let createPartFromUri: any = null
 
-const model = "gemini-2.5-flash-preview-05-20"
+// Initialize Google GenAI with dynamic import
+async function initializeGoogleGenAI() {
+    if (!ai) {
+        const { GoogleGenAI, createUserContent: createUserContentFn, createPartFromUri: createPartFromUriFn } = await import('@google/genai')
+        ai = new GoogleGenAI({
+            apiKey: process.env.GEMINI_API_KEY
+        })
+        createUserContent = createUserContentFn
+        createPartFromUri = createPartFromUriFn
+    }
+    return { ai, createUserContent, createPartFromUri }
+}
 
 const CONTENT_TYPE_INSTRUCTIONS = {
     storytelling: `
@@ -600,6 +610,9 @@ const waitForFileActive = async (fileId: string, delayMs = 5000) => {
 }
 
 export const generateContent = async (prompt: string, signedUrl: string, mimeType: string, contentType?: string, videoFormat?: string) => {
+    // Initialize Google GenAI with dynamic import
+    const { ai, createUserContent, createPartFromUri } = await initializeGoogleGenAI()
+
     // If signedUrl is empty, this is a chat request
     if (!signedUrl) {
         try {
@@ -898,6 +911,9 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
 }
 
 export const generateTranscription = async (signedUrl: string, mimeType: string, videoFormat?: string) => {
+    // Initialize Google GenAI with dynamic import
+    const { ai, createUserContent, createPartFromUri } = await initializeGoogleGenAI()
+
     console.log('=== GOOGLE GENAI TRANSCRIPTION STARTED ===');
     console.log('Input parameters:', {
         mimeType,
@@ -1104,6 +1120,9 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
 }
 
 export const generateTextStyle = async (stylePrompt: string, sampleText: string = 'Sample Text') => {
+    // Initialize Google GenAI with dynamic import
+    const { ai, createUserContent, createPartFromUri } = await initializeGoogleGenAI()
+
     console.log('=== GOOGLE GENAI TEXT STYLE GENERATION STARTED ===');
     console.log('Input parameters:', {
         stylePrompt,
@@ -1182,6 +1201,9 @@ export const generateTextStyle = async (stylePrompt: string, sampleText: string 
 }
 
 export const generateVideoAnalysisFromBlob = async (videoBlob: Blob, mimeType: string) => {
+    // Initialize Google GenAI with dynamic import
+    const { ai, createUserContent, createPartFromUri } = await initializeGoogleGenAI()
+
     console.log('=== GOOGLE GENAI VIDEO ANALYSIS FROM BLOB STARTED ===');
     console.log('Input parameters:', {
         mimeType,
@@ -1370,6 +1392,9 @@ export const generateVideoAnalysisFromBlob = async (videoBlob: Blob, mimeType: s
 }
 
 export const generateVideoAnalysis = async (signedUrl: string, mimeType: string) => {
+    // Initialize Google GenAI with dynamic import
+    const { ai, createUserContent, createPartFromUri } = await initializeGoogleGenAI()
+
     console.log('=== GOOGLE GENAI VIDEO ANALYSIS STARTED ===');
     console.log('Input parameters:', {
         mimeType,
@@ -1587,13 +1612,14 @@ export const generateVideoAnalysis = async (signedUrl: string, mimeType: string)
 }
 
 export const generateAIAssistantResponse = async (prompt: string, semanticJSON?: any, currentTimeline?: any) => {
+    // Initialize Google GenAI with dynamic import
+    const { ai, createUserContent, createPartFromUri } = await initializeGoogleGenAI()
+
     console.log('=== GOOGLE GENAI AI ASSISTANT RESPONSE STARTED ===');
     console.log('Input parameters:', {
         promptLength: prompt.length,
         hasSemanticJSON: !!semanticJSON,
-        hasTimeline: !!currentTimeline,
-        semanticJSONSize: semanticJSON ? JSON.stringify(semanticJSON).length : 0,
-        timelineSize: currentTimeline ? JSON.stringify(currentTimeline).length : 0
+        hasCurrentTimeline: !!currentTimeline
     });
 
     try {
