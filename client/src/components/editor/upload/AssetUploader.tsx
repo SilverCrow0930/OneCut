@@ -67,26 +67,65 @@ export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
             form.append('file', file)
             form.append('duration', String(durationSeconds))
 
-            // 3) upload to server
-            const response = await fetch(apiPath('assets/upload'), {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`,
-                },
-                body: form,
+            // 3) upload to server with progress tracking using XMLHttpRequest
+            const uploadedAsset = await new Promise<any>((resolve, reject) => {
+                const xhr = new XMLHttpRequest()
+
+                // Track upload progress
+                xhr.upload.addEventListener('progress', (event) => {
+                    if (event.lengthComputable) {
+                        const percentComplete = Math.round((event.loaded / event.total) * 100)
+                        console.log(`[Upload Progress] ${file.name}: ${percentComplete}%`)
+                        
+                        setUploadProgress(prev =>
+                            prev.map(p => 
+                                p.fileName === file.name 
+                                    ? { ...p, progress: percentComplete } 
+                                    : p
+                            )
+                        )
+                    }
+                })
+
+                // Handle upload completion
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText)
+                            console.log(`[Upload Complete] ${file.name}`)
+                            
+                            // Ensure progress shows 100%
+                            setUploadProgress(prev =>
+                                prev.map(p => 
+                                    p.fileName === file.name 
+                                        ? { ...p, progress: 100 } 
+                                        : p
+                                )
+                            )
+                            
+                            resolve(response)
+                        } catch (parseError) {
+                            reject(new Error('Invalid server response'))
+                        }
+                    } else {
+                        reject(new Error(`Upload failed ${xhr.status}: ${xhr.responseText}`))
+                    }
+                })
+
+                // Handle upload errors
+                xhr.addEventListener('error', () => {
+                    reject(new Error('Network error during upload'))
+                })
+
+                xhr.addEventListener('abort', () => {
+                    reject(new Error('Upload was cancelled'))
+                })
+
+                // Configure and send the request
+                xhr.open('POST', apiPath('assets/upload'))
+                xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`)
+                xhr.send(form)
             })
-
-            if (!response.ok) {
-                const text = await response.text()
-                throw new Error(`Upload failed ${response.status}: ${text}`)
-            }
-
-            const uploadedAsset = await response.json()
-
-            // Update progress to 100%
-            setUploadProgress(prev =>
-                prev.map(p => p.fileName === file.name ? { ...p, progress: 100 } : p)
-            )
 
             return uploadedAsset
         } catch (err: any) {
