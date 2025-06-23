@@ -191,13 +191,13 @@ const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({ children, disabled 
             >
                 {children}
                 
-                {/* Selection overlay */}
-                {isSelecting && selectionBox && (
+                {/* Selection overlay - render as fixed to avoid clipping by player overflow:hidden */}
+                {isSelecting && selectionBox && containerRef.current && (
                     <div
-                        className="absolute pointer-events-none z-50 border-2 border-blue-500 bg-blue-500/10 rounded-sm"
+                        className="fixed pointer-events-none z-50 border-2 border-blue-500 bg-blue-500/10 rounded-sm"
                         style={{
-                            left: selectionBox.left,
-                            top: selectionBox.top,
+                            left: containerRef.current.getBoundingClientRect().left + selectionBox.left,
+                            top: containerRef.current.getBoundingClientRect().top + selectionBox.top,
                             width: selectionBox.width,
                             height: selectionBox.height,
                         }}
