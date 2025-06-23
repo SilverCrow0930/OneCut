@@ -45,7 +45,7 @@ const Editor = () => {
         canRedo
     } = useEditor()
     const params = useParams()
-    const [assistantWidth, setAssistantWidth] = useState(384)
+    const [assistantWidth, setAssistantWidth] = useState(480)
 
     // Load assistant width from localStorage on mount
     useEffect(() => {

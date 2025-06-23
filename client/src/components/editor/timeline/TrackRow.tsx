@@ -6,7 +6,6 @@ import ClipItem from './ClipItem'
 import { getTimeScale } from '@/lib/constants'
 import { useZoom } from '@/contexts/ZoomContext'
 import type { Track, Clip, TrackType } from '@/types/editor'
-import { X } from 'lucide-react'
 
 export default function TrackRow({
     track,
@@ -30,11 +29,6 @@ export default function TrackRow({
     // drag‐state for this single row
     const [isDragOver, setIsDragOver] = useState(false)
     const dragCounter = useRef(0)
-
-    // context menu state
-    const [showContextMenu, setShowContextMenu] = useState(false)
-    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
-    const [isHovered, setIsHovered] = useState(false)
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault()
@@ -307,63 +301,6 @@ export default function TrackRow({
         })
     }
 
-    const handleContextMenu = (e: React.MouseEvent) => {
-        e.preventDefault()
-        // Don't show context menu for empty tracks
-        if ((track as any).isEmpty) return
-        
-        setContextMenuPosition({ x: e.clientX, y: e.clientY })
-        setShowContextMenu(true)
-    }
-
-    const handleDeleteTrack = () => {
-        // Create a batch command for removing the track and reindexing
-        const remainingTracks = tracks.filter(t => t.id !== track.id)
-        const reindexedTracks = remainingTracks.map((t, index) => ({
-            ...t,
-            index
-        }))
-
-        executeCommand({
-            type: 'BATCH',
-            payload: {
-                commands: [
-                    // First remove the track and its clips
-                    {
-                        type: 'REMOVE_TRACK',
-                        payload: {
-                            track,
-                            affectedClips: clips
-                        }
-                    },
-                    // Then update each track's index
-                    ...reindexedTracks.map(track => ({
-                        type: 'UPDATE_TRACK' as const,
-                        payload: {
-                            before: tracks.find(t => t.id === track.id)!,
-                            after: track
-                        }
-                    }))
-                ]
-            }
-        })
-
-        setShowContextMenu(false)
-    }
-
-    const handleDeleteClick = (e: React.MouseEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        handleDeleteTrack()
-    }
-
-    // Close context menu when clicking outside
-    React.useEffect(() => {
-        const handleClickOutside = () => setShowContextMenu(false)
-        document.addEventListener('click', handleClickOutside)
-        return () => document.removeEventListener('click', handleClickOutside)
-    }, [])
-
     return (
         <>
             <div
@@ -389,9 +326,6 @@ export default function TrackRow({
                     scrollbarWidth: 'none', /* Firefox */
                     msOverflowStyle: 'none', /* IE and Edge */
                 }}
-                onContextMenu={handleContextMenu}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
                 onDragOver={e => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -447,27 +381,6 @@ export default function TrackRow({
                         }
                     </div>
 
-                    {/* Delete button - only show for real tracks and on hover */}
-                    {!((track as any).isEmpty) && isHovered && (
-                        <button
-                            className="
-                                absolute right-2 top-1 
-                                w-6 h-6 
-                                flex items-center justify-center
-                                bg-red-500 hover:bg-red-600 
-                                text-white rounded-full 
-                                transition-all duration-200
-                                pointer-events-auto
-                                shadow-sm hover:shadow-md
-                                z-30
-                            "
-                            onClick={handleDeleteClick}
-                            title="Delete Track"
-                        >
-                            <X size={12} />
-                        </button>
-                    )}
-
                     {/* Background div that receives timeline clicks */}
                     <div
                         className="absolute inset-0 rounded-lg pointer-events-auto"
@@ -522,30 +435,6 @@ export default function TrackRow({
                     </div>
                 </div>
             </div>
-            {
-                showContextMenu && (
-                    <div
-                        className="
-                            fixed 
-                            bg-white shadow-xl rounded-lg py-1 z-50 
-                            border border-gray-100
-                            min-w-[160px]
-                        "
-                        style={{
-                            left: contextMenuPosition.x,
-                            top: contextMenuPosition.y,
-                            zIndex: 9999
-                        }}
-                    >
-                        <button
-                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50"
-                            onClick={handleDeleteTrack}
-                        >
-                            Delete Track
-                        </button>
-                    </div>
-                )
-            }
         </>
     )
 }
