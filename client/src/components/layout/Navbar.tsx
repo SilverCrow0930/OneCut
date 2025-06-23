@@ -38,22 +38,21 @@ const Navbar = () => {
                     <button
                         className="
                             flex flex-row items-center gap-2
-                            bg-gradient-to-r from-blue-600 to-purple-600
-                            hover:from-blue-700 hover:to-purple-700
+                            bg-gradient-to-r from-blue-500 to-purple-600
+                            hover:from-blue-600 hover:to-purple-700
                             text-white px-6 py-3 rounded-2xl
-                            transition-all duration-300
-                            shadow-lg hover:shadow-xl
-                            transform hover:scale-105 active:scale-95
-                            font-medium
+                            font-medium shadow-lg hover:shadow-xl
+                            transform transition-all duration-300
+                            hover:scale-105 active:scale-95
                         "
                         onClick={handleSignIn}
                     >
                         <img
                             src="/assets/icons/google.png"
-                            alt="Google"
-                            className="w-5 h-5"
+                            alt="google"
+                            className="w-6 h-6"
                         />
-                        Sign in with Google
+                        Sign In with Google
                     </button>
                 )
             }
