@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { useEditor } from '@/contexts/EditorContext'
 
 interface MarqueeSelectionProps {
@@ -192,24 +191,17 @@ const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({ children, disabled 
             >
                 {children}
                 
-                {/* Selection overlay - render as portal to document body to avoid any clipping */}
-                {isSelecting && selectionBox && containerRef.current && createPortal(
+                {/* Selection overlay */}
+                {isSelecting && selectionBox && (
                     <div
-                        className="fixed pointer-events-none border-2 border-blue-500 bg-blue-500/10 rounded-sm shadow-lg"
+                        className="absolute pointer-events-none z-50 border-2 border-blue-500 bg-blue-500/10 rounded-sm"
                         style={{
-                            left: containerRef.current.getBoundingClientRect().left + selectionBox.left,
-                            top: containerRef.current.getBoundingClientRect().top + selectionBox.top,
+                            left: selectionBox.left,
+                            top: selectionBox.top,
                             width: selectionBox.width,
                             height: selectionBox.height,
-                            zIndex: 9999,
-                            borderWidth: '2px',
-                            borderStyle: 'solid',
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            boxShadow: '0 0 10px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(59, 130, 246, 0.1)',
                         }}
-                    />,
-                    document.body
+                    />
                 )}
             </div>
         )
