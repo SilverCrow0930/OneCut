@@ -19,7 +19,20 @@ router.post(
     check('trackId').isUUID().withMessage('Invalid track ID'),
     check('aspectRatio').optional().isIn(['vertical', 'horizontal']).withMessage('Invalid aspect ratio'),
     async (req: Request, res: Response, next: NextFunction) => {
+        // Enhanced error handling wrapper
+        const handleError = (error: any, step: string) => {
+            console.error(`❌ Transcription failed at ${step}:`, error)
+            return res.status(500).json({
+                error: `Transcription failed at ${step}`,
+                message: error.message || 'Unknown error',
+                step: step,
+                timestamp: new Date().toISOString()
+            })
+        }
+
         try {
+            console.log('=== TRANSCRIPTION REQUEST STARTED ===')
+            
             // Handle validation errors
             const errors = validationResult(req)
             if (!errors.isEmpty()) {
@@ -31,11 +44,29 @@ router.post(
             const { user } = req as AuthenticatedRequest
             const { trackId, aspectRatio } = req.body
 
-            console.log('=== TRANSCRIPTION REQUEST ===')
             console.log('User:', user.id)
             console.log('Track ID:', trackId)
+            console.log('Aspect Ratio:', aspectRatio)
+
+            // Test GoogleGenAI import availability first
+            console.log('🔍 Testing GoogleGenAI import...')
+            try {
+                const googleGenAI = await import('../integrations/googleGenAI.js')
+                if (!googleGenAI.generateTranscription) {
+                    throw new Error('generateTranscription function not found in GoogleGenAI module')
+                }
+                console.log('✅ GoogleGenAI import successful')
+            } catch (importError: any) {
+                console.error('❌ GoogleGenAI import failed:', importError)
+                return res.status(500).json({
+                    error: 'Server configuration error: AI transcription service unavailable',
+                    details: importError.message,
+                    suggestion: 'Please check server logs and restart the server'
+                })
+            }
 
             // 1) Find the user's profile
+            console.log('🔍 Looking up user profile...')
             const { data: profile, error: profileError } = await supabase
                 .from('users')
                 .select('id')
@@ -292,5 +323,38 @@ router.post(
         }
     }
 )
+
+// GET /api/v1/transcription/health — health check for transcription service
+router.get('/health', async (req: Request, res: Response) => {
+    try {
+        console.log('🔍 Testing transcription service health...')
+        
+        // Test if we can import GoogleGenAI
+        const googleGenAI = await import('../integrations/googleGenAI.js')
+        
+        if (!googleGenAI.generateTranscription) {
+            throw new Error('generateTranscription function not found')
+        }
+
+        console.log('✅ Transcription service is healthy')
+        
+        return res.json({
+            status: 'healthy',
+            service: 'transcription',
+            googleGenAI: 'available',
+            timestamp: new Date().toISOString()
+        })
+        
+    } catch (error: any) {
+        console.error('❌ Transcription service health check failed:', error)
+        
+        return res.status(500).json({
+            status: 'unhealthy',
+            service: 'transcription',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        })
+    }
+})
 
 export default router 
