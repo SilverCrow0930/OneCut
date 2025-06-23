@@ -3,6 +3,10 @@ import { check, validationResult } from 'express-validator'
 import { supabase } from '../config/supabaseClient.js'
 import { AuthenticatedRequest } from '../middleware/authenticate.js'
 import { generateTranscription } from '../integrations/googleGenAI.js'
+import ffmpeg from 'fluent-ffmpeg'
+import fs from 'fs/promises'
+import path from 'path'
+import os from 'os'
 
 const router = Router()
 
@@ -135,7 +139,107 @@ router.post(
 
             console.log('Generated signed URL for transcription')
 
-            // 9) Determine video format based on user-selected aspect ratio
+            // 9) Extract audio from video if needed (COST OPTIMIZATION)
+            let transcriptionUrl = signedUrl
+            let transcriptionMimeType = asset.mime_type
+            let tempFilePath: string | null = null
+
+            if (asset.mime_type.startsWith('video/')) {
+                console.log('🎵 Video file detected - extracting audio for cost optimization')
+                
+                try {
+                    // Create temporary file paths
+                    const tempDir = os.tmpdir()
+                    const inputFileName = `input_${Date.now()}_${Math.random().toString(36).substring(7)}.${asset.mime_type.split('/')[1]}`
+                    const outputFileName = `audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`
+                    const inputPath = path.join(tempDir, inputFileName)
+                    const outputPath = path.join(tempDir, outputFileName)
+                    tempFilePath = outputPath
+
+                    // Download video file to temp storage
+                    console.log('Downloading video file for audio extraction...')
+                    const videoResponse = await fetch(signedUrl)
+                    if (!videoResponse.ok) {
+                        throw new Error(`Failed to download video: ${videoResponse.status}`)
+                    }
+                    
+                    const videoBuffer = await videoResponse.arrayBuffer()
+                    await fs.writeFile(inputPath, Buffer.from(videoBuffer))
+                    
+                    console.log('Extracting audio using FFmpeg...')
+                    
+                    // Extract audio using FFmpeg
+                    await new Promise<void>((resolve, reject) => {
+                        ffmpeg(inputPath)
+                            .toFormat('mp3')
+                            .audioCodec('libmp3lame')
+                            .audioChannels(1) // Mono for smaller file size
+                            .audioFrequency(22050) // Lower frequency for transcription (sufficient quality)
+                            .audioBitrate('64k') // Lower bitrate for cost optimization
+                            .on('end', () => {
+                                console.log('✅ Audio extraction completed')
+                                resolve()
+                            })
+                            .on('error', (err) => {
+                                console.error('❌ FFmpeg audio extraction failed:', err)
+                                reject(new Error(`Audio extraction failed: ${err.message}`))
+                            })
+                            .save(outputPath)
+                    })
+
+                    // Upload extracted audio to temporary GCS location
+                    const audioBuffer = await fs.readFile(outputPath)
+                    const tempAudioKey = `temp/transcription_audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`
+                    
+                    console.log('Uploading extracted audio to GCS...')
+                    const file = bucket.file(tempAudioKey)
+                    await file.save(audioBuffer, {
+                        metadata: {
+                            contentType: 'audio/mpeg',
+                        },
+                    })
+
+                    // Generate signed URL for the audio file
+                    const [audioSignedUrl] = await file.getSignedUrl({
+                        action: 'read',
+                        expires: Date.now() + 60 * 60 * 1000, // 1 hour
+                    })
+
+                    transcriptionUrl = audioSignedUrl
+                    transcriptionMimeType = 'audio/mpeg'
+
+                    // Clean up local temp files
+                    await fs.unlink(inputPath).catch(console.error)
+                    await fs.unlink(outputPath).catch(console.error)
+
+                    // Schedule cleanup of GCS temp file after 2 hours
+                    setTimeout(async () => {
+                        try {
+                            await file.delete()
+                            console.log('🗑️ Cleaned up temporary audio file from GCS')
+                        } catch (error) {
+                            console.error('Failed to clean up temp audio file:', error)
+                        }
+                    }, 2 * 60 * 60 * 1000) // 2 hours
+
+                    console.log('🎵 Audio extraction completed - cost optimized for transcription!')
+                    
+                } catch (audioError) {
+                    console.error('Audio extraction failed, falling back to full video:', audioError)
+                    // Fall back to original video file if audio extraction fails
+                    transcriptionUrl = signedUrl
+                    transcriptionMimeType = asset.mime_type
+                    
+                    // Clean up any temp files
+                    if (tempFilePath) {
+                        await fs.unlink(tempFilePath).catch(console.error)
+                    }
+                }
+            } else {
+                console.log('🎵 Audio file detected - no extraction needed')
+            }
+
+            // 10) Determine video format based on user-selected aspect ratio
             // If no aspect ratio provided, default to horizontal (long-form)
             const selectedAspectRatio = aspectRatio || 'horizontal'
             const videoFormat = selectedAspectRatio === 'vertical' ? 'short_vertical' : 'long_horizontal'
@@ -147,9 +251,9 @@ router.post(
                 reasoning: 'Based on user aspect ratio selection (vertical = short-form, horizontal = long-form)'
             })
 
-            // 10) Generate transcription using Gemini
-            console.log('Starting transcription with Gemini...')
-            const result = await generateTranscription(signedUrl, asset.mime_type, videoFormat)
+            // 11) Generate transcription using Gemini with audio-only file
+            console.log('Starting transcription with Gemini using audio-optimized file...')
+            const result = await generateTranscription(transcriptionUrl, transcriptionMimeType, videoFormat)
 
             console.log('Transcription completed successfully')
 
@@ -158,7 +262,8 @@ router.post(
                 clipId: longestClip.id,
                 transcription: result.transcription,
                 assetName: asset.name,
-                duration: asset.duration
+                duration: asset.duration,
+                optimized: asset.mime_type.startsWith('video/') ? 'audio_extracted' : 'audio_native'
             })
 
         } catch (error) {

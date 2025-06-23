@@ -41,9 +41,10 @@ const Navbar = () => {
                             bg-gradient-to-r from-blue-500 to-purple-600
                             hover:from-blue-600 hover:to-purple-700
                             text-white px-6 py-3 rounded-2xl
-                            font-medium shadow-lg hover:shadow-xl
-                            transform transition-all duration-300
-                            hover:scale-105 active:scale-95
+                            transition-all duration-300
+                            shadow-lg hover:shadow-xl
+                            transform hover:scale-105 active:scale-95
+                            font-medium
                         "
                         onClick={handleSignIn}
                     >
@@ -52,7 +53,7 @@ const Navbar = () => {
                             alt="google"
                             className="w-6 h-6"
                         />
-                        Sign In with Google
+                        Sign In
                     </button>
                 )
             }

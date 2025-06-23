@@ -901,12 +901,17 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
     console.log('=== GOOGLE GENAI TRANSCRIPTION STARTED ===');
     console.log('Input parameters:', {
         mimeType,
-        signedUrlLength: signedUrl.length
+        signedUrlLength: signedUrl.length,
+        isAudioOnly: mimeType.startsWith('audio/'),
+        isVideoFile: mimeType.startsWith('video/'),
+        videoFormat
     });
 
     try {
-        // Download the video/audio file
-        console.log('Starting media file download for transcription...');
+        // Download the audio/video file
+        const fileType = mimeType.startsWith('audio/') ? 'audio' : 'video'
+        console.log(`Starting ${fileType} file download for transcription...`);
+        
         const controller = new AbortController();
         const fileResponse = await fetch(signedUrl, {
             signal: controller.signal,
@@ -918,7 +923,7 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
                 statusText: fileResponse.statusText,
                 headers: Object.fromEntries(fileResponse.headers.entries())
             });
-            throw new Error(`Failed to download media file: ${fileResponse.status} ${fileResponse.statusText}`);
+            throw new Error(`Failed to download ${fileType} file: ${fileResponse.status} ${fileResponse.statusText}`);
         }
 
         console.log('Download successful, reading file buffer...');
@@ -932,21 +937,22 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
         console.log('File details:', {
             sizeBytes: buffer.byteLength,
             sizeMB: (buffer.byteLength / (1024 * 1024)).toFixed(2),
-            mimeType
+            mimeType,
+            optimizationStatus: mimeType.startsWith('audio/') ? 'AUDIO_ONLY_OPTIMIZED' : 'VIDEO_FILE_PROCESSING'
         });
 
         if (buffer.byteLength === 0) {
-            throw new Error('Media file is empty');
+            throw new Error(`${fileType} file is empty`);
         }
 
         const blob = new Blob([buffer], { type: mimeType });
-        console.log('Blob created for transcription:', {
+        console.log(`Blob created for transcription (${fileType}):`, {
             size: blob.size,
             type: blob.type
         });
 
         // Upload the file to Google GenAI
-        console.log('Initiating file upload to Google GenAI for transcription...');
+        console.log(`Initiating ${fileType} file upload to Google GenAI for transcription...`);
         const uploadStartTime = Date.now();
         const uploadPromise = ai.files.upload({
             file: blob,
@@ -960,26 +966,27 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
             )
         ]);
 
-        console.log('File upload completed for transcription:', {
+        console.log(`${fileType} file upload completed for transcription:`, {
             duration: `${((Date.now() - uploadStartTime) / 1000).toFixed(2)}s`,
             fileUri: uploadedFile.uri,
-            fileName: uploadedFile.name
+            fileName: uploadedFile.name,
+            fileSize: `${(blob.size / (1024 * 1024)).toFixed(2)}MB`
         });
 
         if (!uploadedFile.uri) {
-            throw new Error('Failed to upload file to Google GenAI');
+            throw new Error(`Failed to upload ${fileType} file to Google GenAI`);
         }
 
         if (!uploadedFile.name) {
             throw new Error('File name not returned from upload');
         }
 
-        console.log('Waiting for file to become active for transcription...');
+        console.log(`Waiting for ${fileType} file to become active for transcription...`);
         try {
             await waitForFileActive(uploadedFile.name);
-            console.log('File is now active, proceeding with transcription');
+            console.log(`${fileType} file is now active, proceeding with transcription`);
         } catch (error) {
-            console.error('Error waiting for file to become active:', {
+            console.error(`Error waiting for ${fileType} file to become active:`, {
                 error: error instanceof Error ? {
                     name: error.name,
                     message: error.message,
@@ -995,8 +1002,14 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
             ? 'This is SHORT-FORM content (TikTok/Reels/Shorts). Use EXACTLY 4-5 words per caption for consistency and maximum impact.'
             : 'This is LONG-FORM content (YouTube/educational). Use EXACTLY 8-10 words per caption for consistency and better readability.';
 
+        const mediaTypePrompt = mimeType.startsWith('audio/') 
+            ? 'This is an AUDIO-ONLY file. Focus solely on the speech content.'
+            : 'This is a video file. Focus on the speech/audio content for transcription.';
+
         const content = createUserContent([
-            `Please listen to this audio/video content carefully and DETECT the language being spoken. Transcribe it accurately in the ORIGINAL LANGUAGE (do not translate). 
+            `Please listen to this ${fileType} content carefully and DETECT the language being spoken. Transcribe it accurately in the ORIGINAL LANGUAGE (do not translate). 
+            
+            ${mediaTypePrompt}
             
             CRITICAL: Provide timestamped captions in SRT format with MILLISECOND PRECISION timing. Listen for the exact moment each word/phrase starts and ends. Use format HH:MM:SS,mmm (e.g., 00:00:03,450 not 00:00:03,000). 
             
@@ -1004,7 +1017,7 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
             createPartFromUri(uploadedFile.uri, mimeType)
         ]);
 
-        console.log('Sending content to model for transcription...');
+        console.log(`Sending ${fileType} content to model for transcription...`);
         const modelStartTime = Date.now();
         const modelResponse = await Promise.race([
             ai.models.generateContent({
@@ -1042,10 +1055,12 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
             )
         ]);
 
-        console.log('Model transcription completed:', {
+        console.log(`Model transcription completed (${fileType}):`, {
             duration: `${((Date.now() - modelStartTime) / 1000).toFixed(2)}s`,
             hasCandidates: !!modelResponse.candidates,
-            candidateCount: modelResponse.candidates?.length
+            candidateCount: modelResponse.candidates?.length,
+            totalProcessingTime: `${((Date.now() - uploadStartTime) / 1000).toFixed(2)}s`,
+            optimizationStatus: mimeType.startsWith('audio/') ? 'COST_OPTIMIZED' : 'STANDARD_PROCESSING'
         });
 
         if (!modelResponse.candidates) {
@@ -1059,12 +1074,15 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
         const transcriptionOutput = modelResponse.candidates[0].content.parts
             .find((part: any) => !('thought' in part))?.text;
 
-        console.log('Model transcription output:', {
+        console.log(`Model transcription output (${fileType}):`, {
             length: transcriptionOutput?.length || 0,
-            preview: transcriptionOutput?.substring(0, 200) + '...'
+            preview: transcriptionOutput?.substring(0, 200) + '...',
+            processingType: mimeType.startsWith('audio/') ? 'AUDIO_ONLY_OPTIMIZED' : 'VIDEO_PROCESSED'
         });
 
         console.log('=== GOOGLE GENAI TRANSCRIPTION COMPLETED ===');
+        console.log(`💰 COST OPTIMIZATION: ${mimeType.startsWith('audio/') ? 'AUDIO-ONLY processing used - significant cost savings!' : 'Full video processed - consider audio extraction for cost optimization'}`);
+        
         return {
             transcription: transcriptionOutput || ''
         }
@@ -1077,6 +1095,8 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
                 message: error.message,
                 stack: error.stack
             } : error,
+            mimeType,
+            processingType: mimeType.startsWith('audio/') ? 'AUDIO_ONLY' : 'VIDEO_FILE',
             timestamp: new Date().toISOString()
         });
         throw error;
