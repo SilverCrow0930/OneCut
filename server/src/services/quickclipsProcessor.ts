@@ -103,6 +103,304 @@ const FORMAT_CONFIGS = {
 
 // Dedicated AI function for QuickClips with improved narrative-focused prompt
 async function generateQuickClips(signedUrl: string, mimeType: string, job: QuickclipsJob): Promise<any[]> {
+    // Route to appropriate processing method based on content type
+    if (job.contentType === 'talking_video') {
+        console.log(`[QuickClips] Using audio-only processing for cost optimization (95% savings)`)
+        return generateQuickClipsFromAudio(signedUrl, mimeType, job)
+    } else {
+        console.log(`[QuickClips] Using full video+audio processing for visual content`)
+        return generateQuickClipsFromVideo(signedUrl, mimeType, job)
+    }
+}
+
+// Audio-only processing for Talk & Audio content (95% cost savings)
+async function generateQuickClipsFromAudio(signedUrl: string, mimeType: string, job: QuickclipsJob): Promise<any[]> {
+    const { GoogleGenAI, createUserContent, createPartFromUri } = await import('@google/genai')
+    
+    const ai = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY
+    })
+    
+    const formatConfig = FORMAT_CONFIGS[job.videoFormat]
+    
+    // Extract audio from video for cost optimization (same logic as transcription service)
+    let audioUrl = signedUrl
+    let audioMimeType = mimeType
+    let tempAudioFile: string | null = null
+    
+    if (mimeType.startsWith('video/')) {
+        console.log('🎵 Extracting audio from video for cost-optimized processing...')
+        
+        try {
+            const tempDir = os.tmpdir()
+            const inputFileName = `input_${Date.now()}_${Math.random().toString(36).substring(7)}.${mimeType.split('/')[1]}`
+            const outputFileName = `audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`
+            const inputPath = path.join(tempDir, inputFileName)
+            const outputPath = path.join(tempDir, outputFileName)
+            
+            // Download video file
+            const videoResponse = await fetch(signedUrl)
+            if (!videoResponse.ok) {
+                throw new Error(`Failed to download video: ${videoResponse.status}`)
+            }
+            
+            const videoBuffer = await videoResponse.arrayBuffer()
+            await fs.writeFile(inputPath, Buffer.from(videoBuffer))
+            
+            // Extract audio using FFmpeg
+            await new Promise<void>((resolve, reject) => {
+                ffmpeg(inputPath)
+                    .toFormat('mp3')
+                    .audioCodec('libmp3lame')
+                    .audioChannels(1) // Mono for smaller file size
+                    .audioFrequency(22050) // Lower frequency for analysis (sufficient quality)
+                    .audioBitrate('64k') // Lower bitrate for cost optimization
+                    .on('end', () => {
+                        console.log('✅ Audio extraction completed')
+                        resolve()
+                    })
+                    .on('error', (err) => {
+                        console.error('❌ FFmpeg audio extraction failed:', err)
+                        reject(new Error(`Audio extraction failed: ${err.message}`))
+                    })
+                    .save(outputPath)
+            })
+            
+            // Upload extracted audio to temporary GCS location
+            const audioBuffer = await fs.readFile(outputPath)
+            const tempAudioKey = `temp/quickclips_audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`
+            
+            const file = bucket.file(tempAudioKey)
+            await file.save(audioBuffer, {
+                metadata: {
+                    contentType: 'audio/mpeg',
+                },
+            })
+            
+            // Generate signed URL for the audio file
+            const [audioSignedUrl] = await file.getSignedUrl({
+                action: 'read',
+                expires: Date.now() + 60 * 60 * 1000, // 1 hour
+            })
+            
+            audioUrl = audioSignedUrl
+            audioMimeType = 'audio/mpeg'
+            tempAudioFile = tempAudioKey
+            
+            // Clean up local temp files
+            await fs.unlink(inputPath).catch(console.error)
+            await fs.unlink(outputPath).catch(console.error)
+            
+            console.log('🎵 Audio extraction completed - processing with 95% cost savings!')
+            
+        } catch (audioError) {
+            console.error('Audio extraction failed, falling back to full video:', audioError)
+            // Fall back to original video file if audio extraction fails
+            audioUrl = signedUrl
+            audioMimeType = mimeType
+        }
+    }
+    
+    const prompt = `You are an expert audio editor trained to extract the most meaningful and coherent segments from audio content. Your goal is to identify speech-driven segments that capture key insights, compelling stories, emotional moments, and quotable statements.
+
+AUDIO-FOCUSED APPROACH: Since you're analyzing audio-only content, focus on speech patterns, conversation flow, topic changes, and verbal emphasis. Look for natural pauses, topic transitions, and compelling verbal content.
+
+SEGMENT GUIDELINES:
+- Target total duration: ~${job.targetDuration} seconds${formatConfig.totalDuration ? ` (±${formatConfig.totalDuration.tolerance}s)` : ' (flexible)'}
+- For ${formatConfig.name}:
+  * Number of segments: ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max} segments (choose what works best for the content)
+  * Segment length: ${formatConfig.segmentLength ? `${formatConfig.segmentLength.target}s (${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s)` : 'variable - based on natural speech breaks'}
+  * Aspect ratio: ${formatConfig.aspectRatio}
+  * ${job.videoFormat === 'long' ? 'Segments will be combined into a single video' : 'Each segment will be a standalone clip'}
+  * MINIMUM: Each segment must be at least 5 seconds (anything shorter will be filtered out)
+
+AUDIO ANALYSIS FOCUS:
+- Topic changes and natural conversation breaks
+- Key insights, explanations, and quotable moments
+- Emotional emphasis and compelling statements
+- Question-answer sequences
+- Story beginnings and conclusions
+- Natural pauses and speech rhythm changes
+
+${job.videoFormat === 'long' ? `
+LONG FORMAT APPROACH:
+- Focus on natural conversation breaks and topic progression
+- Each segment should represent a complete thought or discussion point
+- Segments can vary in length based on speech content (30 seconds to several minutes)
+- Prioritize conversational flow over exact timing constraints
+- The combined audio should tell a complete, engaging story
+- Aim for approximately ${job.targetDuration} seconds total, but content quality is more important than exact timing
+- Minimum 15 seconds per segment to ensure meaningful content
+` : `
+SHORT FORMAT APPROACH:
+- Target segments between ${formatConfig.segmentLength!.min} and ${formatConfig.segmentLength!.max} seconds (flexible)
+- Target total duration ${job.targetDuration - formatConfig.totalDuration!.tolerance} to ${job.targetDuration + formatConfig.totalDuration!.tolerance} seconds (flexible)
+- Focus on high-impact, quotable moments and key insights
+- Minimum 5 seconds per segment to ensure usability
+- Content quality is more important than exact timing
+`}
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON array with NO additional text:
+
+[
+  {
+    "title": "Opening Statement",
+    "start_time": 15,
+    "end_time": 65,
+    "significance": 8.2,
+    "description": "Speaker introduces main theme with personal anecdote",
+    "narrative_role": "introduction",
+    "transition_note": "Natural pause before topic shift"
+  }
+]
+
+FIELD REQUIREMENTS:
+- start_time, end_time: exact timestamps in seconds
+- significance: 1-10 score based on importance to overall message
+- narrative_role: introduction, development, climax, resolution, supporting
+- transition_note: how this segment connects to the narrative flow
+- NO overlapping timestamps
+- Order segments chronologically (by start_time)
+
+Remember: Focus on speech-driven content that works well as audio/podcast clips. The goal is to create ${job.videoFormat === 'long' ? 'a single cohesive audio experience' : 'standalone audio clips'} that capture the most engaging spoken content.`
+
+    try {
+        // Upload audio file to Gemini
+        const fileResponse = await fetch(audioUrl)
+        if (!fileResponse.ok) {
+            throw new Error(`Failed to download audio: ${fileResponse.status}`)
+        }
+        
+        const buffer = await fileResponse.arrayBuffer()
+        const blob = new Blob([buffer], { type: audioMimeType })
+        
+        const uploadedFile = await ai.files.upload({
+            file: blob,
+            config: { mimeType: audioMimeType }
+        })
+        
+        if (!uploadedFile.name) {
+            throw new Error('Audio file upload failed - no file name returned')
+        }
+        
+        // Wait for file processing
+        let file = await ai.files.get({ name: uploadedFile.name })
+        while (file.state === 'PROCESSING') {
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            file = await ai.files.get({ name: uploadedFile.name })
+        }
+        
+        if (file.state === 'FAILED') {
+            throw new Error('Audio file processing failed')
+        }
+        
+        // Generate content using audio-only analysis
+        const content = createUserContent([
+            prompt,
+            createPartFromUri(uploadedFile.uri || '', audioMimeType)
+        ])
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.0-flash-exp',
+            contents: [content],
+            config: {
+                maxOutputTokens: 4096,
+                temperature: 0.2,
+                topP: 0.8,
+            }
+        })
+        
+        const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        console.log(`[QuickClips Audio] Raw AI response:`, responseText.substring(0, 500))
+        
+        // Parse JSON response (same logic as video processing)
+        let clips = []
+        try {
+            const cleanedResponse = responseText.trim()
+            clips = JSON.parse(cleanedResponse)
+        } catch (e) {
+            console.log(`[QuickClips Audio] Direct parse failed, trying extraction strategies...`)
+            
+            let jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/g)
+            if (jsonMatch) {
+                try {
+                    clips = JSON.parse(jsonMatch[0])
+                } catch (parseError) {
+                    console.log(`[QuickClips Audio] Array extraction failed`)
+                }
+            }
+            
+            if (!clips.length) {
+                const objectPattern = /\{\s*"title"[\s\S]*?"end_time"\s*:\s*\d+[\s\S]*?\}/g
+                const objectMatches = responseText.match(objectPattern)
+                
+                if (objectMatches) {
+                    clips = objectMatches.map(match => {
+                        try {
+                            return JSON.parse(match)
+                        } catch (e) {
+                            return null
+                        }
+                    }).filter(Boolean)
+                }
+            }
+            
+            if (clips.length === 0) {
+                throw new Error(`Failed to parse audio analysis output: ${responseText.substring(0, 200)}...`)
+            }
+        }
+        
+        // Validate and clean clips
+        if (!Array.isArray(clips)) {
+            throw new Error('Audio analysis response is not an array')
+        }
+        
+        clips = clips.filter(clip => {
+            return clip && 
+                   typeof clip.start_time === 'number' && 
+                   typeof clip.end_time === 'number' &&
+                   clip.end_time > clip.start_time &&
+                   (clip.end_time - clip.start_time) >= 5 // Minimum 5 seconds
+        })
+        
+        if (clips.length === 0) {
+            throw new Error('No valid audio clips found after filtering')
+        }
+        
+        // Clean up temporary audio file
+        if (tempAudioFile) {
+            setTimeout(async () => {
+                try {
+                    await bucket.file(tempAudioFile!).delete()
+                    console.log('🗑️ Cleaned up temporary audio file from GCS')
+                } catch (error) {
+                    console.error('Failed to clean up temp audio file:', error)
+                }
+            }, 2 * 60 * 60 * 1000) // 2 hours
+        }
+        
+        console.log(`[QuickClips Audio] Generated ${clips.length} audio-optimized clips`)
+        return clips
+        
+    } catch (error) {
+        console.error('[QuickClips Audio] Audio processing failed:', error)
+        
+        // Clean up temporary audio file on error
+        if (tempAudioFile) {
+            try {
+                await bucket.file(tempAudioFile).delete()
+            } catch (cleanupError) {
+                console.error('Failed to clean up temp audio file on error:', cleanupError)
+            }
+        }
+        
+        throw error
+    }
+}
+
+// Original video+audio processing for Action & Visual content
+async function generateQuickClipsFromVideo(signedUrl: string, mimeType: string, job: QuickclipsJob): Promise<any[]> {
     const { GoogleGenAI, createUserContent, createPartFromUri } = await import('@google/genai')
     
     const ai = new GoogleGenAI({
@@ -371,12 +669,12 @@ Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 
             }
         }
 
-        console.log(`[QuickClips] Successfully extracted ${clips.length} ${job.videoFormat === 'long' ? 'segments for combination' : 'narrative segments'} with total duration ${totalDuration}s`)
+        console.log(`[QuickClips Video] Successfully extracted ${clips.length} ${job.videoFormat === 'long' ? 'segments for combination' : 'narrative segments'} with total duration ${totalDuration}s`)
 
         return clips
         
     } catch (error) {
-        console.error('[QuickClips] AI generation failed:', error)
+        console.error('[QuickClips Video] AI generation failed:', error)
         throw error
     }
 }

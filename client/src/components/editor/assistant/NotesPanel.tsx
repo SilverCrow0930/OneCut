@@ -118,7 +118,7 @@ const NotesPanel: React.FC<NotesPanelProps> = ({ className = '' }) => {
             {/* Footer with helpful shortcuts */}
             <div className="px-4 py-2 border-t border-gray-100 bg-gray-50/50">
                 <p className="text-xs text-gray-500">
-                    Auto-saves after 1 second • Press Ctrl/Cmd + S to save manually
+                    Auto-saves after 1 second
                 </p>
             </div>
         </div>

@@ -11,6 +11,9 @@ import { v4 as uuid } from 'uuid'
 import { useParams } from 'next/navigation'
 import { TrackType } from '@/types/editor'
 import PanelHeader from './PanelHeader'
+import { FilePreview } from './auto-cut/FilePreview'
+import { ActionButtons } from './auto-cut/ActionButtons'
+import { ProcessingStatus } from './auto-cut/ProcessingStatus'
 
 type ProcessingState = 'idle' | 'starting' | 'queued' | 'processing' | 'completed' | 'failed'
 
@@ -25,9 +28,28 @@ interface QuickClipsJob {
     description?: string
 }
 
+// Video type selection constants
+const VIDEO_TYPES = {
+    talk_audio: {
+        label: "Talk & Audio",
+        icon: "🎙️",
+        description: "Podcasts, interviews, tutorials, meetings",
+        contentType: "talking_video",
+        savings: "95% cheaper processing"
+    },
+    action_visual: {
+        label: "Action & Visual", 
+        icon: "🎬",
+        description: "Gaming, reactions, demos, sports",
+        contentType: "visual_content",
+        savings: "Full video analysis"
+    }
+}
+
 const AutoCutToolPanel = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState<number>(120) // 2 minutes default
+    const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio') // Default to cheaper option
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
@@ -122,6 +144,7 @@ const AutoCutToolPanel = () => {
         setError(null)
         setUploadProgress(0)
         setShowConfig(false)
+        setVideoType('talk_audio') // Reset to default cheaper option
     }
 
     const handleStartProcessing = async () => {
@@ -195,7 +218,7 @@ const AutoCutToolPanel = () => {
                             projectId: projectId || '',
                             fileUri,
                             mimeType: selectedFile.type,
-                            contentType: 'talking_video',
+                            contentType: VIDEO_TYPES[videoType].contentType,
                             targetDuration
                         })
                     })
@@ -421,6 +444,39 @@ const AutoCutToolPanel = () => {
                                 </div>
                         </div>
                     )}
+                    
+                        {/* Video Type Selection */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                                Select Video Type
+                            </label>
+                            <div className="grid grid-cols-1 gap-3">
+                                {Object.entries(VIDEO_TYPES).map(([key, type]) => (
+                                    <button
+                                        key={key}
+                                        onClick={() => setVideoType(key as 'talk_audio' | 'action_visual')}
+                                        className={`p-4 rounded-lg border-2 transition-all text-left ${
+                                            videoType === key 
+                                                ? 'border-blue-500 bg-blue-50' 
+                                                : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-2xl">{type.icon}</div>
+                                            <div className="flex-1">
+                                                <div className="font-medium text-gray-800">{type.label}</div>
+                                                <div className="text-sm text-gray-600 mt-1">{type.description}</div>
+                                                <div className={`text-xs font-medium mt-2 ${
+                                                    key === 'talk_audio' ? 'text-green-600' : 'text-blue-600'
+                                                }`}>
+                                                    {key === 'talk_audio' ? '⚡ ' : '🎯 '}{type.savings}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     
                         {/* Target Duration */}
                         <div>
