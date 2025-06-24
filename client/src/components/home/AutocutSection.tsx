@@ -14,6 +14,7 @@ const AutocutSection = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(10) // Default 10 minutes
     const [contentType, setContentType] = useState('meeting')
+    const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16') // Default to vertical
     const [isUploading, setIsUploading] = useState(false)
     
     const contentTypes = [
@@ -84,6 +85,7 @@ const AutocutSection = () => {
             const autocutSettings = {
                 targetDuration,
                 contentType,
+                aspectRatio,
                 filename: selectedFile.name,
                 hasFile: true // 标记已上传文件
             }
@@ -210,6 +212,39 @@ const AutocutSection = () => {
                             <span>5 min</span>
                             <span>30 min</span>
                         </div>
+                    </div>
+                </div>
+
+                {/* Aspect Ratio Selection */}
+                <div className="mb-8">
+                    <h3 className="text-lg font-medium text-gray-700 mb-4">Video Format</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            onClick={() => setAspectRatio('9:16')}
+                            className={`p-4 rounded-xl border-2 transition-all text-center ${
+                                aspectRatio === '9:16' 
+                                    ? 'border-blue-500 bg-blue-50' 
+                                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                            }`}
+                        >
+                            <div className="text-3xl mb-2">📱</div>
+                            <div className="text-sm font-medium text-gray-900">Vertical</div>
+                            <div className="text-xs text-gray-600 mt-1">9:16</div>
+                            <div className="text-xs text-gray-500 mt-1">Mobile/Social</div>
+                        </button>
+                        <button
+                            onClick={() => setAspectRatio('16:9')}
+                            className={`p-4 rounded-xl border-2 transition-all text-center ${
+                                aspectRatio === '16:9' 
+                                    ? 'border-blue-500 bg-blue-50' 
+                                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                            }`}
+                        >
+                            <div className="text-3xl mb-2">💻</div>
+                            <div className="text-sm font-medium text-gray-900">Horizontal</div>
+                            <div className="text-xs text-gray-600 mt-1">16:9</div>
+                            <div className="text-xs text-gray-500 mt-1">Desktop/TV</div>
+                        </button>
                     </div>
                 </div>
 

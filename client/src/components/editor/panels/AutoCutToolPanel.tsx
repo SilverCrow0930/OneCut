@@ -48,6 +48,7 @@ const AutoCutToolPanel = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState<number>(60) // 1 minute default
     const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio') // Default to cheaper option
+    const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16') // Default to vertical
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
@@ -83,8 +84,8 @@ const AutoCutToolPanel = () => {
         }
     }
 
-    const getVideoFormat = (durationSeconds: number) => {
-        return durationSeconds < 120 ? 'short_vertical' : 'long_horizontal'
+    const getVideoFormat = () => {
+        return aspectRatio === '9:16' ? 'short_vertical' : 'long_horizontal'
     }
 
     const getClosestInterval = (value: number) => {
@@ -98,11 +99,11 @@ const AutoCutToolPanel = () => {
         setTargetDuration(closestInterval)
     }
 
-    const getFormatInfo = (durationSeconds: number) => {
-        if (durationSeconds < 120) {
-            return { format: 'Short Vertical', aspectRatio: '9:16', icon: '📱', description: '< 2 minutes' }
+    const getFormatInfo = () => {
+        if (aspectRatio === '9:16') {
+            return { format: 'Vertical', aspectRatio: '9:16', icon: '📱', description: 'Mobile/Social' }
         } else {
-            return { format: 'Long Horizontal', aspectRatio: '16:9', icon: '💻', description: '2-30 minutes' }
+            return { format: 'Horizontal', aspectRatio: '16:9', icon: '💻', description: 'Desktop/TV' }
         }
     }
 
@@ -158,6 +159,7 @@ const AutoCutToolPanel = () => {
         setUploadProgress(0)
         setShowConfig(false)
         setVideoType('talk_audio') // Reset to default cheaper option
+        setAspectRatio('9:16') // Reset to default vertical
     }
 
     const handleStartProcessing = async () => {
@@ -232,7 +234,8 @@ const AutoCutToolPanel = () => {
                             fileUri,
                             mimeType: selectedFile.type,
                             contentType: VIDEO_TYPES[videoType].contentType,
-                            targetDuration
+                            targetDuration,
+                            aspectRatio
                         })
                     })
                     break; // Success, exit retry loop
@@ -479,11 +482,7 @@ const AutoCutToolPanel = () => {
                                             <div className="flex-1">
                                                 <div className="font-medium text-gray-800">{type.label}</div>
                                                 <div className="text-sm text-gray-600 mt-1">{type.description}</div>
-                                                <div className={`text-xs font-medium mt-2 ${
-                                                    key === 'talk_audio' ? 'text-green-600' : 'text-blue-600'
-                                                }`}>
-                                                    {key === 'talk_audio' ? '⚡ 95% cheaper processing' : '🎯 Full video analysis'}
-                                                </div>
+
                                             </div>
                                         </div>
                                     </button>
@@ -500,24 +499,34 @@ const AutoCutToolPanel = () => {
                                 </label>
                             </div>
                             
-                            {/* Format indicator */}
-                            <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100 mb-3">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="text-left">
-                                        <div className="text-sm font-medium text-gray-900">
-                                            {getFormatInfo(targetDuration).format}
-                                        </div>
-                                        <div className="text-xs text-gray-600 mt-1">
-                                            {getFormatInfo(targetDuration).description}
-                                        </div>
-                                        <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-1">
-                                            {getFormatInfo(targetDuration).aspectRatio}
-                                        </div>
-                                    </div>
-                                    <div className="text-4xl">
-                                        {getFormatInfo(targetDuration).icon}
-                                    </div>
-                                </div>
+                            {/* Aspect Ratio Selection */}
+                            <div className="grid grid-cols-2 gap-3 mb-3">
+                                <button
+                                    onClick={() => setAspectRatio('9:16')}
+                                    className={`p-4 rounded-xl border-2 transition-all text-center ${
+                                        aspectRatio === '9:16' 
+                                            ? 'border-blue-500 bg-blue-50' 
+                                            : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <div className="text-3xl mb-2">📱</div>
+                                    <div className="text-sm font-medium text-gray-900">Vertical</div>
+                                    <div className="text-xs text-gray-600 mt-1">9:16</div>
+                                    <div className="text-xs text-gray-500 mt-1">Mobile/Social</div>
+                                </button>
+                                <button
+                                    onClick={() => setAspectRatio('16:9')}
+                                    className={`p-4 rounded-xl border-2 transition-all text-center ${
+                                        aspectRatio === '16:9' 
+                                            ? 'border-blue-500 bg-blue-50' 
+                                            : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <div className="text-3xl mb-2">💻</div>
+                                    <div className="text-sm font-medium text-gray-900">Horizontal</div>
+                                    <div className="text-xs text-gray-600 mt-1">16:9</div>
+                                    <div className="text-xs text-gray-500 mt-1">Desktop/TV</div>
+                                </button>
                             </div>
                             
                             {/* Slider */}

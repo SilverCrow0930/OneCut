@@ -29,6 +29,7 @@ const QuickClipsButton = () => {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60)
+    const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16') // Default to vertical
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingProgress, setProcessingProgress] = useState(0)
     const [processingMessage, setProcessingMessage] = useState('')
@@ -42,8 +43,8 @@ const QuickClipsButton = () => {
 
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
 
-    const getVideoFormat = (durationSeconds: number) => {
-        return durationSeconds < 120 ? 'short_vertical' : 'long_horizontal'
+    const getVideoFormat = () => {
+        return aspectRatio === '9:16' ? 'short_vertical' : 'long_horizontal'
     }
 
     const formatDuration = (seconds: number) => {
@@ -142,8 +143,9 @@ const QuickClipsButton = () => {
                     processing_message: 'Preparing for processing...',
                     processing_data: {
                         contentType: 'talking_video',
-                        videoFormat: getVideoFormat(targetDuration),
+                        videoFormat: getVideoFormat(),
                         targetDuration,
+                        aspectRatio,
                         filename: selectedFile.name
                     }
                 })
@@ -589,23 +591,33 @@ const QuickClipsButton = () => {
                                         </div>
                                         
                                         {/* Format indicator */}
-                                        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className="text-left">
-                                                    <div className="text-sm font-medium text-gray-900">
-                                                        {getVideoFormat(targetDuration) === 'short_vertical' ? 'Short Vertical' : 'Long Horizontal'}
-                                                    </div>
-                                                    <div className="text-xs text-gray-600 mt-1">
-                                                        {targetDuration < 120 ? '< 2 minutes' : '2-30 minutes'}
-                                                    </div>
-                                                    <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-1">
-                                                        {getVideoFormat(targetDuration) === 'short_vertical' ? '9:16' : '16:9'}
-                                                    </div>
-                                                </div>
-                                                <div className="text-4xl">
-                                                    {getVideoFormat(targetDuration) === 'short_vertical' ? '📱' : '💻'}
-                                                </div>
-                                            </div>
+                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                            <button
+                                                onClick={() => setAspectRatio('9:16')}
+                                                className={`p-4 rounded-xl border-2 transition-all text-center ${
+                                                    aspectRatio === '9:16' 
+                                                        ? 'border-blue-500 bg-blue-50' 
+                                                        : 'border-gray-200 hover:border-gray-300'
+                                                }`}
+                                            >
+                                                <div className="text-3xl mb-2">📱</div>
+                                                <div className="text-sm font-medium text-gray-900">Vertical</div>
+                                                <div className="text-xs text-gray-600 mt-1">9:16</div>
+                                                <div className="text-xs text-gray-500 mt-1">Mobile/Social</div>
+                                            </button>
+                                            <button
+                                                onClick={() => setAspectRatio('16:9')}
+                                                className={`p-4 rounded-xl border-2 transition-all text-center ${
+                                                    aspectRatio === '16:9' 
+                                                        ? 'border-blue-500 bg-blue-50' 
+                                                        : 'border-gray-200 hover:border-gray-300'
+                                                }`}
+                                            >
+                                                <div className="text-3xl mb-2">💻</div>
+                                                <div className="text-sm font-medium text-gray-900">Horizontal</div>
+                                                <div className="text-xs text-gray-600 mt-1">16:9</div>
+                                                <div className="text-xs text-gray-500 mt-1">Desktop/TV</div>
+                                            </button>
                                         </div>
                                         
                                         {/* Slider */}
