@@ -424,7 +424,7 @@ const AutoCutToolPanel = () => {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
                 {!selectedFile && !uploadedAsset && !currentJob ? (
                     /* Upload State */
                     <div className="flex flex-col items-center justify-center h-full space-y-4">
