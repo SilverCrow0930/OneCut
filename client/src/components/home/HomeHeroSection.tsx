@@ -513,29 +513,29 @@ const HomeHeroSection = () => {
                                         
                                         {/* Slider */}
                                         <div className="space-y-3">
-                                            <input
-                                                type="range"
-                                                min="20"
-                                                max="1800"
-                                                value={targetDuration}
-                                                onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-                                                className="
+                                                <input
+                                                    type="range"
+                                                    min="20"
+                                                    max="1800"
+                                                    value={targetDuration}
+                                                    onChange={(e) => handleDurationChange(parseInt(e.target.value))}
+                                                    className="
                                                     w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
-                                                    [&::-webkit-slider-thumb]:appearance-none 
-                                                    [&::-webkit-slider-thumb]:w-6 
-                                                    [&::-webkit-slider-thumb]:h-6 
-                                                    [&::-webkit-slider-thumb]:rounded-full 
-                                                    [&::-webkit-slider-thumb]:bg-gradient-to-r
-                                                    [&::-webkit-slider-thumb]:from-blue-500
+                                                        [&::-webkit-slider-thumb]:appearance-none 
+                                                        [&::-webkit-slider-thumb]:w-6 
+                                                        [&::-webkit-slider-thumb]:h-6 
+                                                        [&::-webkit-slider-thumb]:rounded-full 
+                                                        [&::-webkit-slider-thumb]:bg-gradient-to-r
+                                                        [&::-webkit-slider-thumb]:from-blue-500
                                                     [&::-webkit-slider-thumb]:to-purple-500
-                                                    [&::-webkit-slider-thumb]:border-3
-                                                    [&::-webkit-slider-thumb]:border-white
-                                                    [&::-webkit-slider-thumb]:shadow-lg
-                                                    [&::-webkit-slider-thumb]:cursor-pointer
-                                                    [&::-webkit-slider-thumb]:hover:scale-110
-                                                    [&::-webkit-slider-thumb]:transition-transform
-                                                "
-                                            />
+                                                        [&::-webkit-slider-thumb]:border-3
+                                                        [&::-webkit-slider-thumb]:border-white
+                                                        [&::-webkit-slider-thumb]:shadow-lg
+                                                        [&::-webkit-slider-thumb]:cursor-pointer
+                                                        [&::-webkit-slider-thumb]:hover:scale-110
+                                                        [&::-webkit-slider-thumb]:transition-transform
+                                                    "
+                                                />
                                             <div className="flex justify-between text-xs text-gray-500">
                                                 <span className="font-medium">20s</span>
                                                 <span className="font-medium">30m</span>

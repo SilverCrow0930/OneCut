@@ -29,6 +29,7 @@ const QuickClipsButton = () => {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60)
+    const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio')
 
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingProgress, setProcessingProgress] = useState(0)
@@ -45,6 +46,10 @@ const QuickClipsButton = () => {
 
     const getVideoFormat = () => {
         return 'long_horizontal'
+    }
+
+    const getContentType = () => {
+        return videoType === 'talk_audio' ? 'talking_video' : 'visual_content'
     }
 
     const formatDuration = (seconds: number) => {
@@ -142,7 +147,7 @@ const QuickClipsButton = () => {
                     processing_progress: 0,
                     processing_message: 'Preparing for processing...',
                     processing_data: {
-                        contentType: 'talking_video',
+                        contentType: getContentType(),
                         videoFormat: getVideoFormat(),
                         targetDuration,
 
@@ -208,7 +213,7 @@ const QuickClipsButton = () => {
                 projectId: project.id,
                 fileUri,
                 mimeType: selectedFile.type,
-                contentType: 'talking_video',
+                contentType: getContentType(),
                 targetDuration: parseInt(String(targetDuration))
             })
             
@@ -229,7 +234,7 @@ const QuickClipsButton = () => {
                         projectId: project.id,
                         fileUri,
                         mimeType: selectedFile.type,
-                        contentType: 'talking_video',
+                        contentType: getContentType(),
                         targetDuration: parseInt(String(targetDuration))
                     })
                     })
@@ -272,7 +277,7 @@ const QuickClipsButton = () => {
                         projectId: project.id,
                         fileUri,
                         mimeType: selectedFile.type,
-                        contentType: 'talking_video',
+                        contentType: getContentType(),
                         targetDuration: parseInt(String(targetDuration))
                     }
                 })
@@ -331,6 +336,7 @@ const QuickClipsButton = () => {
 
     const handleReset = () => {
         setSelectedFile(null)
+        setVideoType('talk_audio')
         setGeneratedClips([])
         setProcessingProgress(0)
         setProcessingMessage('')
@@ -580,6 +586,49 @@ const QuickClipsButton = () => {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Video Type Selection */}
+                                    {selectedFile && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                Select Video Type
+                                            </label>
+                                            <div className="grid grid-cols-1 gap-3">
+                                                <button
+                                                    onClick={() => setVideoType('talk_audio')}
+                                                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                                                        videoType === 'talk_audio' 
+                                                            ? 'border-emerald-500 bg-emerald-50' 
+                                                            : 'border-gray-200 hover:border-gray-300'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="text-2xl">🎙️</div>
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-gray-800">Talk & Audio</div>
+                                                            <div className="text-sm text-gray-600 mt-1">Podcasts, interviews, tutorials, meetings</div>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                                <button
+                                                    onClick={() => setVideoType('action_visual')}
+                                                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                                                        videoType === 'action_visual' 
+                                                            ? 'border-emerald-500 bg-emerald-50' 
+                                                            : 'border-gray-200 hover:border-gray-300'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="text-2xl">🎬</div>
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-gray-800">Action & Visual</div>
+                                                            <div className="text-sm text-gray-600 mt-1">Gaming, reactions, demos, sports</div>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Target Duration Settings */}
                                     <div className="space-y-4">

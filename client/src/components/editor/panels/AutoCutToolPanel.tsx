@@ -492,16 +492,16 @@ const AutoCutToolPanel = () => {
                                 <Clock className="w-5 h-5 text-blue-600" />
                                 <label className="text-sm font-semibold text-gray-700">
                                     Target Length: {formatDuration(targetDuration)}
-                                </label>
+                            </label>
                             </div>
-                            
+
                             {/* Slider */}
                             <div className="space-y-3">
-                                <input
-                                    type="range"
-                                    min="20"
+                            <input
+                                type="range"
+                                min="20"
                                     max="1800"
-                                    value={targetDuration}
+                                value={targetDuration}
                                     onChange={(e) => handleDurationChange(parseInt(e.target.value))}
                                     className="
                                         w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
