@@ -34,15 +34,13 @@ const VIDEO_TYPES = {
         label: "Talk & Audio",
         icon: "🎙️",
         description: "Podcasts, interviews, tutorials, meetings",
-        contentType: "talking_video",
-        savings: "95% cheaper processing"
+        contentType: "talking_video"
     },
     action_visual: {
         label: "Action & Visual", 
         icon: "🎬",
         description: "Gaming, reactions, demos, sports",
-        contentType: "visual_content",
-        savings: "Full video analysis"
+        contentType: "visual_content"
     }
 }
 
@@ -469,7 +467,7 @@ const AutoCutToolPanel = () => {
                                                 <div className={`text-xs font-medium mt-2 ${
                                                     key === 'talk_audio' ? 'text-green-600' : 'text-blue-600'
                                                 }`}>
-                                                    {key === 'talk_audio' ? '⚡ ' : '🎯 '}{type.savings}
+                                                    {key === 'talk_audio' ? '⚡ 95% cheaper processing' : '🎯 Full video analysis'}
                                                 </div>
                                             </div>
                                         </div>
