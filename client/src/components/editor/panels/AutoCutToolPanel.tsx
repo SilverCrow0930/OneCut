@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { UploadButton } from './auto-cut/UploadButton'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAssets } from '@/contexts/AssetsContext'
@@ -107,6 +107,76 @@ const AutoCutToolPanel = () => {
         }
     }
 
+    const handleClipsReady = useCallback((clips: any[]) => {
+        if (!uploadedAsset || clips.length === 0) return
+
+        try {
+            // Create new video track for clips
+            const newTrack = {
+                id: uuid(),
+                name: `Smart Cut - ${selectedFile?.name || 'Video'}`,
+                type: 'video' as TrackType,
+                height: 120,
+                isVisible: true,
+                isMuted: false,
+                isLocked: false,
+                volume: 1,
+                projectId: projectId || '',
+                index: tracks.length
+            }
+
+            // Create clips for timeline
+            const newClips = clips.map((clip, index) => {
+                const duration = (clip.end_time - clip.start_time) * 1000 // Convert to ms
+                const timelineStartMs = index === 0 ? 0 : clips.slice(0, index).reduce((acc, c) => acc + ((c.end_time - c.start_time) * 1000), 0)
+
+                return {
+                    id: uuid(),
+                    trackId: newTrack.id,
+                    assetId: uploadedAsset.id,
+                    type: 'video' as const,
+                    sourceStartMs: clip.start_time * 1000,
+                    sourceEndMs: clip.end_time * 1000,
+                    timelineStartMs,
+                    timelineEndMs: timelineStartMs + duration,
+                    assetDurationMs: uploadedAsset.duration || 0,
+                    volume: 1,
+                    speed: 1,
+                    properties: {
+                        name: `${clip.title} (${clip.significance || 'N/A'}/10)`,
+                        isLocked: false,
+                        isMuted: false,
+                        isSolo: false,
+                    },
+                    createdAt: new Date().toISOString(),
+                }
+            })
+
+            // Add track and clips to timeline
+            executeCommand({
+                type: 'BATCH',
+                payload: {
+                    commands: [
+                        {
+                            type: 'ADD_TRACK',
+                            payload: { track: newTrack }
+                        },
+                        ...newClips.map(clip => ({
+                            type: 'ADD_CLIP' as const,
+                            payload: { clip }
+                        }))
+                    ]
+                }
+            })
+
+            console.log(`Added ${clips.length} clips to timeline`)
+            
+        } catch (error) {
+            console.error('Error adding clips to timeline:', error)
+            setError('Failed to add clips to timeline')
+        }
+    }, [uploadedAsset, selectedFile, projectId, tracks.length, executeCommand])
+
     // Poll for job status when processing
     useEffect(() => {
         if (!currentJob || !['queued', 'processing'].includes(currentJob.status)) {
@@ -132,6 +202,9 @@ const AutoCutToolPanel = () => {
                             clips: jobData.clips,
                             description: jobData.description 
                         } : null)
+                        
+                        // Add clips to timeline
+                        handleClipsReady(jobData.clips)
                     }
                 }
             } catch (error) {
@@ -140,7 +213,7 @@ const AutoCutToolPanel = () => {
         }, 3000) // Poll every 3 seconds
 
         return () => clearInterval(pollInterval)
-    }, [currentJob?.id, currentJob?.status, session?.access_token])
+    }, [currentJob?.id, currentJob?.status, session?.access_token, handleClipsReady])
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
@@ -235,7 +308,8 @@ const AutoCutToolPanel = () => {
                             mimeType: selectedFile.type,
                             contentType: VIDEO_TYPES[videoType].contentType,
                             targetDuration,
-                            aspectRatio
+                            aspectRatio,
+                            isEditorMode: true // Flag to indicate this is used within the editor
                         })
                     })
                     break; // Success, exit retry loop
@@ -291,76 +365,6 @@ const AutoCutToolPanel = () => {
         } finally {
             setIsUploading(false)
             setUploadProgress(0)
-        }
-    }
-
-    const handleClipsReady = (clips: any[]) => {
-        if (!uploadedAsset || clips.length === 0) return
-
-        try {
-            // Create new video track for clips
-            const newTrack = {
-                id: uuid(),
-                name: `Smart Cut - ${selectedFile?.name || 'Video'}`,
-                type: 'video' as TrackType,
-                height: 120,
-                isVisible: true,
-                isMuted: false,
-                isLocked: false,
-                volume: 1,
-                projectId: projectId || '',
-                index: tracks.length
-            }
-
-            // Create clips for timeline
-            const newClips = clips.map((clip, index) => {
-                const duration = (clip.end_time - clip.start_time) * 1000 // Convert to ms
-                const timelineStartMs = index === 0 ? 0 : clips.slice(0, index).reduce((acc, c) => acc + ((c.end_time - c.start_time) * 1000), 0)
-
-                return {
-                    id: uuid(),
-                    trackId: newTrack.id,
-                    assetId: uploadedAsset.id,
-                    type: 'video' as const,
-                    sourceStartMs: clip.start_time * 1000,
-                    sourceEndMs: clip.end_time * 1000,
-                    timelineStartMs,
-                    timelineEndMs: timelineStartMs + duration,
-                    assetDurationMs: uploadedAsset.duration || 0,
-                    volume: 1,
-                    speed: 1,
-                    properties: {
-                        name: `${clip.title} (${clip.significance || 'N/A'}/10)`,
-                        isLocked: false,
-                        isMuted: false,
-                        isSolo: false,
-                    },
-                    createdAt: new Date().toISOString(),
-                }
-            })
-
-            // Add track and clips to timeline
-            executeCommand({
-                type: 'BATCH',
-                payload: {
-                    commands: [
-                        {
-                            type: 'ADD_TRACK',
-                            payload: { track: newTrack }
-                        },
-                        ...newClips.map(clip => ({
-                            type: 'ADD_CLIP' as const,
-                            payload: { clip }
-                        }))
-                    ]
-                }
-            })
-
-            console.log(`Added ${clips.length} clips to timeline`)
-            
-        } catch (error) {
-            console.error('Error adding clips to timeline:', error)
-            setError('Failed to add clips to timeline')
         }
     }
 

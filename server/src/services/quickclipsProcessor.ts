@@ -35,6 +35,7 @@ interface QuickclipsJob {
     error?: string
     createdAt: Date
     userId: string
+    isEditorMode: boolean
 }
 
 // Clip interface
@@ -780,7 +781,8 @@ export async function queueQuickclipsJob(
     mimeType: string,
     contentType: string,
     targetDuration: number,
-    userId: string
+    userId: string,
+    isEditorMode: boolean = false
 ): Promise<string> {
     const jobId = uuid()
     const videoFormat = targetDuration < 120 ? 'short' : 'long' as 'short' | 'long'
@@ -797,26 +799,29 @@ export async function queueQuickclipsJob(
         progress: 0,
         message: 'Queued for processing...',
         createdAt: new Date(),
-        userId
+        userId,
+        isEditorMode
     }
     
     jobQueue.set(jobId, job)
     
-    // Update project status in database
-    await updateProjectStatus(projectId, {
-        processing_status: 'queued',
-        processing_type: 'quickclips',
-        processing_job_id: jobId,
-        processing_progress: 0,
-        processing_message: 'Queued for processing...',
-        processing_data: {
-            contentType,
-            videoFormat,
-            targetDuration,
-            fileUri
-        },
-        processing_started_at: new Date().toISOString()
-    })
+    // Update project status in database (only for standalone Smart Cut projects, not editor mode)
+    if (!isEditorMode) {
+        await updateProjectStatus(projectId, {
+            processing_status: 'queued',
+            processing_type: 'quickclips',
+            processing_job_id: jobId,
+            processing_progress: 0,
+            processing_message: 'Queued for processing...',
+            processing_data: {
+                contentType,
+                videoFormat,
+                targetDuration,
+                fileUri
+            },
+            processing_started_at: new Date().toISOString()
+        })
+    }
     
     console.log(`[QuickclipsProcessor] Job ${jobId} queued for project ${projectId}`)
     
@@ -893,11 +898,13 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         job.progress = 10
         job.message = 'Analyzing video content and structure...'
         
-        await updateProjectStatus(job.projectId, {
-            processing_status: 'processing',
-            processing_progress: 10,
-            processing_message: job.message
-        })
+        if (!job.isEditorMode) {
+            await updateProjectStatus(job.projectId, {
+                processing_status: 'processing',
+                processing_progress: 10,
+                processing_message: job.message
+            })
+        }
         emitState('analyzing', job.message, 10)
         
         // Step 1: Verify file exists in GCS
@@ -919,10 +926,12 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         
         job.progress = 30
         job.message = 'AI is identifying key narrative segments...'
-        await updateProjectStatus(job.projectId, {
-            processing_progress: 30,
-            processing_message: job.message
-        })
+        if (!job.isEditorMode) {
+            await updateProjectStatus(job.projectId, {
+                processing_progress: 30,
+                processing_message: job.message
+            })
+        }
         emitState('generating', job.message, 30)
         
         // Step 3: Generate clips using dedicated AI function
@@ -930,10 +939,12 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         
         job.progress = 60
         job.message = 'Generating video description...'
-        await updateProjectStatus(job.projectId, {
-            processing_progress: 60,
-            processing_message: job.message
-        })
+        if (!job.isEditorMode) {
+            await updateProjectStatus(job.projectId, {
+                processing_progress: 60,
+                processing_message: job.message
+            })
+        }
         emitState('processing', job.message, 60)
         
         // Step 4: Generate video description
@@ -941,10 +952,12 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         
         job.progress = 75
         job.message = 'Extracting video segments...'
-        await updateProjectStatus(job.projectId, {
-            processing_progress: 75,
-            processing_message: job.message
-        })
+        if (!job.isEditorMode) {
+            await updateProjectStatus(job.projectId, {
+                processing_progress: 75,
+                processing_message: job.message
+            })
+        }
         emitState('processing', job.message, 75)
         
         // Step 5: Process video clips (extract segments)
@@ -952,10 +965,12 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         
         job.progress = 95
         job.message = 'Finalizing clips...'
-        await updateProjectStatus(job.projectId, {
-            processing_progress: 95,
-            processing_message: job.message
-        })
+        if (!job.isEditorMode) {
+            await updateProjectStatus(job.projectId, {
+                processing_progress: 95,
+                processing_message: job.message
+            })
+        }
         emitState('finalizing', job.message, 95)
         
         // Step 6: Complete job
@@ -965,21 +980,23 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         
         const completedAt = new Date().toISOString()
         
-        await updateProjectStatus(job.projectId, {
-            processing_status: 'completed',
-            processing_progress: 100,
-            processing_message: job.message,
-            processing_result: {
-                clips: processedClips,
-                totalClips: processedClips.length,
-                processingTime: Date.now() - job.createdAt.getTime(),
-                videoFormat: job.videoFormat,
-                contentType: job.contentType,
-                approach: 'narrative_coherence',
-                description: videoDescription
-            },
-            processing_completed_at: completedAt
-        })
+        if (!job.isEditorMode) {
+            await updateProjectStatus(job.projectId, {
+                processing_status: 'completed',
+                processing_progress: 100,
+                processing_message: job.message,
+                processing_result: {
+                    clips: processedClips,
+                    totalClips: processedClips.length,
+                    processingTime: Date.now() - job.createdAt.getTime(),
+                    videoFormat: job.videoFormat,
+                    contentType: job.contentType,
+                    approach: 'narrative_coherence',
+                    description: videoDescription
+                },
+                processing_completed_at: completedAt
+            })
+        }
         
         // Emit completion state and response
         emitState('completed', job.message, 100)
@@ -1000,12 +1017,14 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         job.error = error instanceof Error ? error.message : 'Unknown processing error'
         job.message = `Processing failed: ${job.error}`
         
-        await updateProjectStatus(job.projectId, {
-            processing_status: 'failed',
-            processing_error: job.error,
-            processing_message: job.message,
-            processing_completed_at: new Date().toISOString()
-        })
+        if (!job.isEditorMode) {
+            await updateProjectStatus(job.projectId, {
+                processing_status: 'failed',
+                processing_error: job.error,
+                processing_message: job.message,
+                processing_completed_at: new Date().toISOString()
+            })
+        }
         
         // Emit error state
         if (global.io) {

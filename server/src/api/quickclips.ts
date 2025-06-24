@@ -29,7 +29,7 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
         }
 
         const { user } = req as AuthenticatedRequest
-        const { projectId, fileUri, mimeType, contentType, targetDuration } = req.body
+        const { projectId, fileUri, mimeType, contentType, targetDuration, isEditorMode } = req.body
 
         console.log('[Quickclips API] Starting job for project:', projectId)
 
@@ -70,7 +70,8 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
             mimeType,
             contentType,
             targetDuration,
-            profile.id
+            profile.id,
+            isEditorMode || false
         )
 
         console.log(`[Quickclips API] Job ${jobId} queued successfully for project ${projectId}`)
