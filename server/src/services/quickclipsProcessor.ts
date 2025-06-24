@@ -53,7 +53,6 @@ interface ProcessedClip {
     previewUrl: string;
     thumbnailUrl: string;
     format: string;
-    aspectRatio: string;
 }
 
 interface AIGeneratedClip {
@@ -84,7 +83,6 @@ const activeJobs = new Set<string>()
 const FORMAT_CONFIGS = {
     short: {
         name: 'Short Format',
-        aspectRatio: '9:16',
         maxDuration: 120, // < 2 minutes
         segmentCount: { min: 2, max: 14 },
         segmentLength: { min: 30, max: 90, target: 45 },
@@ -93,7 +91,6 @@ const FORMAT_CONFIGS = {
     },
     long: {
         name: 'Long Format', 
-        aspectRatio: '16:9',
         maxDuration: 1800, // 30 minutes
         segmentCount: { min: 2, max: 20 },
         segmentLength: null, // No strict length requirements - trust AI
@@ -211,7 +208,6 @@ SEGMENT GUIDELINES:
 - For ${formatConfig.name}:
   * Number of segments: ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max} segments (choose what works best for the content)
   * Segment length: ${formatConfig.segmentLength ? `${formatConfig.segmentLength.target}s (${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s)` : 'variable - based on natural speech breaks'}
-  * Aspect ratio: ${formatConfig.aspectRatio}
   * ${job.videoFormat === 'long' ? 'Segments will be combined into a single video' : 'Each segment will be a standalone clip'}
   * MINIMUM: Each segment must be at least 5 seconds (anything shorter will be filtered out)
 
@@ -419,7 +415,6 @@ SEGMENT GUIDELINES:
 - For ${formatConfig.name}:
   * Number of segments: ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max} segments (choose what works best for the content)
   * Segment length: ${formatConfig.segmentLength ? `${formatConfig.segmentLength.target}s (${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s)` : 'variable - based on natural content breaks'}
-  * Aspect ratio: ${formatConfig.aspectRatio}
   * ${job.videoFormat === 'long' ? 'Segments will be combined into a single video' : 'Each segment will be a standalone clip'}
   * MINIMUM: Each segment must be at least 5 seconds (anything shorter will be filtered out)
 
@@ -694,7 +689,7 @@ async function generateVideoDescription(signedUrl: string, mimeType: string, job
     
     const prompt = `You are an expert content analyzer. Based on the video content and the key segments extracted, write a compelling description for this video.
 
-VIDEO FORMAT: ${formatConfig.name} (${formatConfig.aspectRatio})
+VIDEO FORMAT: ${formatConfig.name}
 
 EXTRACTED SEGMENTS:
 ${clipSummary}
@@ -1179,8 +1174,7 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 downloadUrl,
                 previewUrl: downloadUrl,
                 thumbnailUrl,
-                format: job.videoFormat,
-                aspectRatio: FORMAT_CONFIGS[job.videoFormat].aspectRatio
+                format: job.videoFormat
             })
 
             // Cleanup
@@ -1310,8 +1304,7 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                     downloadUrl,
                     previewUrl: downloadUrl,
                     thumbnailUrl,
-                    format: job.videoFormat,
-                    aspectRatio: FORMAT_CONFIGS[job.videoFormat].aspectRatio
+                    format: job.videoFormat
                 })
                 
                 // Cleanup temp files

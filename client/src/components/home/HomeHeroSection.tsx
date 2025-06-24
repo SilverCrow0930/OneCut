@@ -4,22 +4,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { Play, Sparkles, Zap, Clock, Upload, Video } from 'lucide-react'
 
-// Video type selection constants (same as AutoCutToolPanel)
-const VIDEO_TYPES = {
-    talk_audio: {
-        label: "Talk & Audio",
-        icon: "🎙️",
-        description: "Podcasts, interviews, tutorials, meetings",
-        contentType: "talking_video"
-    },
-    action_visual: {
-        label: "Action & Visual", 
-        icon: "🎬",
-        description: "Gaming, reactions, demos, sports",
-        contentType: "visual_content"
-    }
-}
-
 const HomeHeroSection = () => {
     const router = useRouter()
     const { user, session, signIn } = useAuth()
@@ -27,12 +11,33 @@ const HomeHeroSection = () => {
     
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60) // Default 60 seconds (1 minute)
-    const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio') // Default to cheaper option
     const [isUploading, setIsUploading] = useState(false)
     const [isDragOver, setIsDragOver] = useState(false)
+    const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
     
     // Specific time intervals in seconds (20s to 30m)
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
+    
+
+
+    // Automatically determine video format based on duration
+    const getVideoFormat = (durationSeconds: number) => {
+        return durationSeconds < 120 ? 'short_vertical' : 'long_horizontal'
+    }
+
+    const getFormatInfo = (durationSeconds: number) => {
+        if (durationSeconds < 120) {
+            return {
+                format: 'Short Vertical',
+                aspectRatio: '9:16'
+            }
+        } else {
+            return {
+                format: 'Long Horizontal', 
+                aspectRatio: '16:9'
+            }
+        }
+    }
 
     const formatDuration = (seconds: number) => {
         if (seconds < 60) {
@@ -141,10 +146,11 @@ const HomeHeroSection = () => {
                     processing_progress: 0,
                     processing_message: 'Preparing for processing...',
                     processing_data: {
-                        contentType: VIDEO_TYPES[videoType].contentType,
+                        contentType: 'talking_video',
                         videoFormat: targetDuration < 120 ? 'short' : 'long',
                         targetDuration,
-                        filename: selectedFile.name
+                        filename: selectedFile.name,
+                        durationRange: targetDuration < 120 ? '< 2 minutes' : '2-30 minutes'
                     }
                 })
             })
@@ -199,24 +205,54 @@ const HomeHeroSection = () => {
                 throw new Error('File upload did not return a valid GCS URI')
             }
 
-            // 3. Start QuickClips processing
-            const jobResponse = await fetch(apiPath('quickclips/start'), {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    projectId: project.id,
-                    fileUri,
-                    mimeType: selectedFile.type,
-                    contentType: VIDEO_TYPES[videoType].contentType,
-                    targetDuration
-                })
+            // 3. Start background processing job
+            console.log('Starting QuickClips with data:', {
+                projectId: project.id,
+                fileUri,
+                mimeType: selectedFile.type,
+                contentType: 'talking_video',
+                targetDuration: parseInt(String(targetDuration))
             })
+            
+            let jobResponse;
+            const maxRetries = 3;
+            let lastError;
+            
+            // Retry logic for network issues
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    jobResponse = await fetch(apiPath('quickclips/start'), {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${session?.access_token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            projectId: project.id,
+                            fileUri,
+                            mimeType: selectedFile.type,
+                            contentType: 'talking_video',
+                            targetDuration: parseInt(String(targetDuration))
+                        })
+                    })
+                    break; // Success, exit retry loop
+                } catch (fetchError) {
+                    lastError = fetchError;
+                    if (attempt === maxRetries) {
+                        throw new Error(`Network error after ${maxRetries} attempts: ${fetchError instanceof Error ? fetchError.message : 'Connection failed'}`)
+                    }
+                    console.warn(`QuickClips request attempt ${attempt} failed, retrying...`)
+                    // Wait before retry (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+                }
+            }
+            
+            if (!jobResponse) {
+                throw lastError || new Error('Failed to make request')
+            }
 
             if (!jobResponse.ok) {
-                let errorMessage = 'Failed to start processing'
+                let errorMessage = 'Failed to start processing job'
                 try {
                     const errorData = await jobResponse.json()
                     console.error('QuickClips API Error Details:', errorData)
@@ -229,82 +265,93 @@ const HomeHeroSection = () => {
                         errorMessage = errorData?.error || errorData?.message || errorMessage
                     }
                 } catch (e) {
+                    // If JSON parsing fails, use the status text or generic message
                     errorMessage = jobResponse.statusText || errorMessage
                 }
+                console.error('Full error context:', {
+                    status: jobResponse.status,
+                    statusText: jobResponse.statusText,
+                    requestData: {
+                        projectId: project.id,
+                        fileUri,
+                        mimeType: selectedFile.type,
+                        contentType: 'talking_video',
+                        targetDuration: parseInt(String(targetDuration))
+                    }
+                })
                 throw new Error(errorMessage)
             }
 
-            const jobData = await jobResponse.json()
-            console.log('Job started:', jobData)
-
-            // 4. Navigate to project
-            router.push(`/projects/${project.id}`)
+            // 4. Navigate to creation page showing the processing project
+            router.push(`/creation?highlight=${project.id}`)
 
         } catch (error) {
-            console.error('Error starting autocut:', error)
-            alert(error instanceof Error ? error.message : 'Processing failed, please try again')
+            console.error('Error starting quickclips:', error)
+            alert(error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.')
         } finally {
             setIsUploading(false)
         }
     }
 
     return (
-        <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 overflow-hidden">
-            {/* Background decorations */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-teal-50 to-emerald-50 min-h-screen flex items-center pt-24 pb-20">
+            {/* Background Elements */}
             <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-                <div className="absolute top-40 left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+                <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-500/30 via-teal-500/20 to-emerald-400/30 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-emerald-400/30 via-teal-500/20 to-blue-500/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-gradient-to-br from-teal-500/30 to-emerald-400/30 rounded-full blur-2xl animate-pulse delay-500"></div>
             </div>
 
-            <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
-                    {/* Left side - Content */}
+                    {/* Left Column - Content */}
                     <div className="text-center lg:text-left">
-                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200 rounded-full px-4 py-2 mb-6">
-                            <Zap className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-700">AI-Native Video Creation</span>
+                        {/* Badge */}
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 via-teal-50 to-emerald-50 border border-blue-200/50 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
+                            <Sparkles className="w-4 h-4 text-blue-500" />
+                            <span className="text-sm font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent">AI-Native Video Creation</span>
                         </div>
-                        
-                        <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                            Transform <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Hours</span>
-                            <br />
-                            into <span className="bg-gradient-to-r from-green-500 to-teal-500 bg-clip-text text-transparent">Highlights</span>
+
+                        {/* Main Headline */}
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                            Transform 
+                            <span className="font-bold bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent"> Hours </span>
+                            into 
+                            <span className="font-bold bg-gradient-to-r from-emerald-400 via-teal-500 to-blue-500 bg-clip-text text-transparent"> Highlights</span>
                         </h1>
-                        
-                        <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                            Turn your long-form content into engaging videos with AI.
-                            Perfect for professionals, educators, and content creators
-                            who want to save time and reach more audiences.
+
+                        {/* Subtitle */}
+                        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
+                            Turn your long-form content into engaging videos with AI. Perfect for professionals, educators, and content creators who want to save time and reach more audiences.
                         </p>
 
-                        {/* Features */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                            <div className="flex items-center gap-2 text-gray-600">
+                        {/* Key Benefits */}
+                        <div className="flex flex-wrap justify-center lg:justify-start gap-4 mb-8">
+                            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 border border-blue-200/30 shadow-lg">
                                 <Zap className="w-5 h-5 text-blue-500" />
-                                <span className="text-sm font-medium">10x Faster Editing</span>
+                                <span className="text-gray-700 font-bold">10x Faster Editing</span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600">
-                                <Clock className="w-5 h-5 text-green-500" />
-                                <span className="text-sm font-medium">Hours to Minutes</span>
+                            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 border border-teal-200/30 shadow-lg">
+                                <Clock className="w-5 h-5 text-teal-500" />
+                                <span className="text-gray-700 font-bold">Hours to Minutes</span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600">
-                                <Sparkles className="w-5 h-5 text-purple-500" />
-                                <span className="text-sm font-medium">Rich AI Features</span>
+                            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 border border-emerald-200/30 shadow-lg">
+                                <Sparkles className="w-5 h-5 text-emerald-500" />
+                                <span className="text-gray-700 font-bold">Rich AI Features</span>
                             </div>
                         </div>
 
-                        {/* CTA Buttons */}
+                        {/* CTAs */}
                         <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                             <button
                                 onClick={handleGetStarted}
-                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-8 py-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                className="font-bold bg-gradient-to-br from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white font-semibold text-lg px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
-                                View My Projects
+                                {user ? 'View My Projects' : 'Start Creating'}
                             </button>
                             <button
                                 onClick={handleWatchDemo}
-                                className="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-medium px-8 py-4 rounded-2xl border border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md"
+                                className="flex items-center justify-center gap-2 bg-white/70 backdrop-blur-sm hover:bg-white text-gray-700 font-bold text-lg px-8 py-4 rounded-xl border-2 border-blue-200/50 hover:border-blue-300 transition-all duration-300 shadow-lg hover:shadow-xl"
                             >
                                 <Play className="w-5 h-5" />
                                 Watch Demo
@@ -312,28 +359,35 @@ const HomeHeroSection = () => {
                         </div>
                     </div>
 
-                    {/* Right side - Upload Interface */}
+                    {/* Right Column - Smart Cut Interface */}
                     <div className="relative">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100">
-                            <div className="text-center mb-6">
-                                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                                    Ready to create your first highlight?
+                        <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-white/50 relative overflow-hidden">
+                            {/* Background Pattern */}
+                            <div className="absolute inset-0 opacity-10">
+                                <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-full blur-xl"></div>
+                                <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-emerald-400 via-teal-500 to-blue-500 rounded-full blur-xl"></div>
+                            </div>
+
+                            {/* Upload Header */}
+                            <div className="text-center mb-6 relative z-10">
+                                <h3 className="text-xl font-bold bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 bg-clip-text text-transparent mb-2">
+                                    Try Smart Cut Now
                                 </h3>
                                 <p className="text-gray-600">
                                     Upload your video and see the magic happen
                                 </p>
                             </div>
 
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileSelect}
-                                accept="video/*"
-                                className="hidden"
-                            />
-
                             {/* Upload Area */}
-                            <div className="mb-6">
+                            <div className="mb-6 relative z-10">
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileSelect}
+                                    accept="video/*"
+                                    className="hidden"
+                                />
+                                
                                 <div 
                                     onClick={() => fileInputRef.current?.click()}
                                     onDragEnter={handleDragEnter}
@@ -341,49 +395,56 @@ const HomeHeroSection = () => {
                                     onDragOver={handleDragOver}
                                     onDrop={handleDrop}
                                     className={`
-                                        border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
-                                        transition-all duration-300 group
+                                        border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
+                                        transition-all duration-300 group relative overflow-hidden
                                         ${selectedFile ? 
-                                            'border-blue-400 bg-blue-50' : 
+                                            'border-blue-400 bg-gradient-to-br from-blue-50 via-teal-50 to-emerald-50 shadow-inner' : 
                                             isDragOver ?
-                                                'border-blue-500 bg-blue-100 scale-105' :
-                                            'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                                                'border-purple-500 bg-gradient-to-br from-purple-100 via-violet-100 to-indigo-100 shadow-lg scale-105' :
+                                            'border-gray-300 hover:border-purple-400 hover:bg-gradient-to-br hover:from-purple-50 hover:via-violet-50 hover:to-indigo-50 hover:shadow-lg'
                                         }
                                     `}
                                 >
+                                    {/* Animated background for hover */}
+                                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDragOver ? 'opacity-100' : ''} ${
+                                        selectedFile 
+                                            ? 'bg-gradient-to-br from-blue-500/10 via-teal-500/10 to-emerald-400/10'
+                                            : 'bg-gradient-to-br from-purple-500/10 via-violet-500/10 to-indigo-500/10'
+                                    }`}></div>
+                                    
                                     {selectedFile ? (
-                                        <div className="flex flex-col items-center gap-3">
+                                        <div className="flex flex-col items-center gap-3 relative z-10">
                                             <div className="relative">
-                                                <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center">
-                                                    <Video className="w-8 h-8 text-white" />
+                                                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-2xl flex items-center justify-center shadow-lg">
+                                                    <Video className="w-10 h-10 text-white" />
                                                 </div>
-                                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                     </svg>
                                                 </div>
                                             </div>
                                             <div className="text-center">
-                                                <p className="font-medium text-gray-900 mb-1">
+                                                <p className="font-bold text-gray-800 mb-1">
                                                     {selectedFile.name}
                                                 </p>
-                                                <p className="text-sm text-blue-600 font-medium">
+                                                <p className="text-sm font-medium bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent">
                                                     Ready for Smart Cut!
                                                 </p>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div>
-                                            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                                <Upload className="w-8 h-8 text-gray-400 group-hover:text-blue-500 transition-colors duration-300" />
+                                        <div className="relative z-10">
+                                            <div className="w-20 h-20 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg border border-purple-100">
+                                                <Upload className="w-10 h-10 text-purple-500 group-hover:text-purple-600 transition-colors duration-300" />
                                             </div>
-                                            <p className="font-medium text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300">
+                                            <p className="font-bold text-gray-700 mb-2 group-hover:text-purple-700 transition-colors duration-300 text-lg">
                                                 Drop your video here
                                             </p>
                                             <p className="text-sm text-gray-500 mb-4">
                                                 or click to browse
                                             </p>
-                                            <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                                            <div className="flex items-center justify-center gap-4 text-xs text-gray-500 bg-purple-50/50 rounded-full px-4 py-2 border border-purple-200/30">
                                                 <span>MP4</span>
                                                 <span>•</span>
                                                 <span>MOV</span>
@@ -397,34 +458,47 @@ const HomeHeroSection = () => {
                                 </div>
                             </div>
 
-                            {/* Configuration Options - Only show after file upload */}
+                            {/* Options - Only show after file upload */}
                             {selectedFile && (
-                                <div className="space-y-6 mb-6">
+                                <div className="mb-6 relative z-10 space-y-4">
                                     {/* Video Type Selection */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-3">
                                             Select Video Type
                                         </label>
                                         <div className="grid grid-cols-1 gap-3">
-                                            {Object.entries(VIDEO_TYPES).map(([key, type]) => (
-                                                <button
-                                                    key={key}
-                                                    onClick={() => setVideoType(key as 'talk_audio' | 'action_visual')}
-                                                    className={`p-4 rounded-lg border-2 transition-all text-left ${
-                                                        videoType === key 
-                                                            ? 'border-blue-500 bg-blue-50' 
-                                                            : 'border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="text-2xl">{type.icon}</div>
-                                                        <div className="flex-1">
-                                                            <div className="font-medium text-gray-800">{type.label}</div>
-                                                            <div className="text-sm text-gray-600 mt-1">{type.description}</div>
-                                                        </div>
+                                            <button
+                                                onClick={() => setTargetDuration(60)}
+                                                className={`p-4 rounded-lg border-2 transition-all text-left ${
+                                                    targetDuration <= 90 
+                                                        ? 'border-blue-500 bg-blue-50' 
+                                                        : 'border-gray-200 hover:border-gray-300'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-2xl">🎙️</div>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium text-gray-800">Talk & Audio</div>
+                                                        <div className="text-sm text-gray-600 mt-1">Podcasts, interviews, tutorials, meetings</div>
                                                     </div>
-                                                </button>
-                                            ))}
+                                                </div>
+                                            </button>
+                                            <button
+                                                onClick={() => setTargetDuration(300)}
+                                                className={`p-4 rounded-lg border-2 transition-all text-left ${
+                                                    targetDuration > 90 
+                                                        ? 'border-blue-500 bg-blue-50' 
+                                                        : 'border-gray-200 hover:border-gray-300'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-2xl">🎬</div>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium text-gray-800">Action & Visual</div>
+                                                        <div className="text-sm text-gray-600 mt-1">Gaming, reactions, demos, sports</div>
+                                                    </div>
+                                                </div>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -432,11 +506,12 @@ const HomeHeroSection = () => {
                                     <div>
                                         <div className="flex items-center gap-2 mb-3">
                                             <Clock className="w-5 h-5 text-blue-600" />
-                                            <label className="text-sm font-medium text-gray-700">
+                                            <label className="text-sm font-semibold text-gray-700">
                                                 Target Length: {formatDuration(targetDuration)}
                                             </label>
                                         </div>
                                         
+                                        {/* Slider */}
                                         <div className="space-y-3">
                                             <input
                                                 type="range"
@@ -462,8 +537,8 @@ const HomeHeroSection = () => {
                                                 "
                                             />
                                             <div className="flex justify-between text-xs text-gray-500">
-                                                <span>20s</span>
-                                                <span>30m</span>
+                                                <span className="font-medium">20s</span>
+                                                <span className="font-medium">30m</span>
                                             </div>
                                         </div>
                                     </div>
@@ -476,16 +551,23 @@ const HomeHeroSection = () => {
                                 disabled={isUploading}
                                 className={`
                                     w-full font-bold text-lg px-6 py-4 rounded-2xl 
-                                    transition-all duration-300 shadow-lg hover:shadow-xl 
+                                    transition-all duration-300 shadow-xl hover:shadow-2xl 
                                     transform hover:scale-105 active:scale-95
-                                    relative overflow-hidden group
+                                    relative overflow-hidden group relative z-10
                                     ${selectedFile 
-                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'
-                                        : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-pointer'
+                                        ? 'bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white'
+                                        : 'bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 hover:from-purple-600 hover:via-violet-600 hover:to-indigo-600 text-white cursor-pointer'
                                     }
                                     ${isUploading ? 'opacity-70 cursor-not-allowed' : ''}
                                 `}
                             >
+                                {/* Button glow effect */}
+                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-2xl ${
+                                    selectedFile 
+                                        ? 'bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-300'
+                                        : 'bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400'
+                                }`}></div>
+                                
                                 <span className="relative z-10 flex items-center justify-center gap-2">
                                     {isUploading ? (
                                         <>
@@ -507,7 +589,7 @@ const HomeHeroSection = () => {
 
                             {/* Note */}
                             {selectedFile && (
-                                <p className="text-xs text-blue-600 text-center mt-4">
+                                <p className="text-xs font-medium bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent text-center mt-4 relative z-10">
                                     {user ? (
                                         <span className="flex items-center justify-center gap-1">
                                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { apiPath } from '@/lib/config'
 
-import { CheckCircle2, AlertCircle, Loader2, Brain, Play, Download, RefreshCw, Clock, Eye } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, Brain, Sparkles, Play, Download, RefreshCw, Clock, Eye } from 'lucide-react'
 import VideoDetailsSection from './VideoDetailsSection'
 import { useEditor } from '@/contexts/EditorContext'
 import { v4 as uuid } from 'uuid'
@@ -45,19 +45,17 @@ const VIDEO_TYPES = {
 }
 
 const AutoCutToolPanel = () => {
+    const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio')
+    const [targetDuration, setTargetDuration] = useState(60) // Default 60 seconds (1 minute)
+    const [showConfig, setShowConfig] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
-    const [targetDuration, setTargetDuration] = useState<number>(60) // 1 minute default
-    const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio') // Default to cheaper option
+    const [uploadedAsset, setUploadedAsset] = useState<any>(null)
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
     const [currentJob, setCurrentJob] = useState<QuickClipsJob | null>(null)
-    const [uploadedAsset, setUploadedAsset] = useState<{
-        id: string
-        mime_type: string
-        duration: number | null
-    } | null>(null)
-    const [showConfig, setShowConfig] = useState(false)
+    const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+    const [processedClips, setProcessedClips] = useState<any[]>([])
     
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { session } = useAuth()
@@ -66,7 +64,7 @@ const AutoCutToolPanel = () => {
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
 
-    // Time intervals for duration selection (same as creation page)
+    // Specific time intervals in seconds (20s to 30m)
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
 
     const formatDuration = (seconds: number) => {
@@ -83,7 +81,9 @@ const AutoCutToolPanel = () => {
         }
     }
 
-
+    const getVideoFormat = () => {
+        return 'long_horizontal'
+    }
 
     const getClosestInterval = (value: number) => {
         return timeIntervals.reduce((prev, curr) => 
@@ -96,7 +96,9 @@ const AutoCutToolPanel = () => {
         setTargetDuration(closestInterval)
     }
 
-
+    const getFormatInfo = () => {
+        return { format: 'Horizontal', aspectRatio: '16:9', icon: '💻', description: 'Desktop/TV' }
+    }
 
     const handleClipsReady = useCallback((clips: any[]) => {
         if (!uploadedAsset || clips.length === 0) return
@@ -223,6 +225,7 @@ const AutoCutToolPanel = () => {
         setUploadProgress(0)
         setShowConfig(false)
         setVideoType('talk_audio') // Reset to default cheaper option
+        setTargetDuration(60) // Reset to default 60 seconds (1 minute)
     }
 
     const handleStartProcessing = async () => {
@@ -492,8 +495,6 @@ const AutoCutToolPanel = () => {
                                 </label>
                             </div>
                             
-
-                            
                             {/* Slider */}
                             <div className="space-y-3">
                                 <input
@@ -546,7 +547,7 @@ const AutoCutToolPanel = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <Brain className="w-4 h-4" />
+                                        <Sparkles className="w-4 h-4" />
                                         Start Processing
                                     </>
                                 )}
