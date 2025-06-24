@@ -46,7 +46,7 @@ const VIDEO_TYPES = {
 
 const AutoCutToolPanel = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
-    const [targetDuration, setTargetDuration] = useState<number>(120) // 2 minutes default
+    const [targetDuration, setTargetDuration] = useState<number>(60) // 1 minute default
     const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio') // Default to cheaper option
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
@@ -66,28 +66,43 @@ const AutoCutToolPanel = () => {
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
 
-    // Time intervals for duration selection
-    const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600]
+    // Time intervals for duration selection (same as creation page)
+    const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
 
     const formatDuration = (seconds: number) => {
         if (seconds < 60) {
             return `${seconds}s`
-        } else {
+        } else if (seconds < 3600) {
             const minutes = Math.floor(seconds / 60)
             const remainingSeconds = seconds % 60
             return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
+        } else {
+            const hours = Math.floor(seconds / 3600)
+            const minutes = Math.floor((seconds % 3600) / 60)
+            return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
         }
     }
 
     const getVideoFormat = (durationSeconds: number) => {
-        return durationSeconds < 120 ? 'short' : 'long'
+        return durationSeconds < 120 ? 'short_vertical' : 'long_horizontal'
+    }
+
+    const getClosestInterval = (value: number) => {
+        return timeIntervals.reduce((prev, curr) => 
+            Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+        )
+    }
+
+    const handleDurationChange = (value: number) => {
+        const closestInterval = getClosestInterval(value)
+        setTargetDuration(closestInterval)
     }
 
     const getFormatInfo = (durationSeconds: number) => {
         if (durationSeconds < 120) {
-            return { format: 'Short', aspectRatio: '9:16', icon: '📱' }
+            return { format: 'Short Vertical', aspectRatio: '9:16', icon: '📱', description: '< 2 minutes' }
         } else {
-            return { format: 'Long', aspectRatio: '16:9', icon: '🖥️' }
+            return { format: 'Long Horizontal', aspectRatio: '16:9', icon: '💻', description: '2-30 minutes' }
         }
     }
 
@@ -478,29 +493,62 @@ const AutoCutToolPanel = () => {
                     
                         {/* Target Duration */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Target Duration: {formatDuration(targetDuration)}
-                            </label>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Clock className="w-5 h-5 text-blue-600" />
+                                <label className="text-sm font-semibold text-gray-700">
+                                    Target Length: {formatDuration(targetDuration)}
+                                </label>
+                            </div>
                             
-                            <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
-                                <div className="flex items-center gap-3 text-sm">
-                                    <span>{getFormatInfo(targetDuration).icon}</span>
-                                    <span className="font-medium">{getFormatInfo(targetDuration).format} Format</span>
-                                    <span className="text-gray-600">({getFormatInfo(targetDuration).aspectRatio})</span>
+                            {/* Format indicator */}
+                            <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100 mb-3">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="text-left">
+                                        <div className="text-sm font-medium text-gray-900">
+                                            {getFormatInfo(targetDuration).format}
+                                        </div>
+                                        <div className="text-xs text-gray-600 mt-1">
+                                            {getFormatInfo(targetDuration).description}
+                                        </div>
+                                        <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-1">
+                                            {getFormatInfo(targetDuration).aspectRatio}
+                                        </div>
+                                    </div>
+                                    <div className="text-4xl">
+                                        {getFormatInfo(targetDuration).icon}
+                                    </div>
                                 </div>
                             </div>
-
-                            <input
-                                type="range"
-                                min="20"
-                                max="600"
-                                value={targetDuration}
-                                onChange={(e) => setTargetDuration(parseInt(e.target.value))}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                            />
-                            <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                <span>20s</span>
-                                <span>10m</span>
+                            
+                            {/* Slider */}
+                            <div className="space-y-3">
+                                <input
+                                    type="range"
+                                    min="20"
+                                    max="1800"
+                                    value={targetDuration}
+                                    onChange={(e) => handleDurationChange(parseInt(e.target.value))}
+                                    className="
+                                        w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
+                                        [&::-webkit-slider-thumb]:appearance-none 
+                                        [&::-webkit-slider-thumb]:w-6 
+                                        [&::-webkit-slider-thumb]:h-6 
+                                        [&::-webkit-slider-thumb]:rounded-full 
+                                        [&::-webkit-slider-thumb]:bg-gradient-to-r
+                                        [&::-webkit-slider-thumb]:from-blue-500
+                                        [&::-webkit-slider-thumb]:to-purple-500
+                                        [&::-webkit-slider-thumb]:border-3
+                                        [&::-webkit-slider-thumb]:border-white
+                                        [&::-webkit-slider-thumb]:shadow-lg
+                                        [&::-webkit-slider-thumb]:cursor-pointer
+                                        [&::-webkit-slider-thumb]:hover:scale-110
+                                        [&::-webkit-slider-thumb]:transition-transform
+                                    "
+                                />
+                                <div className="flex justify-between text-xs text-gray-500">
+                                    <span className="font-medium">20s</span>
+                                    <span className="font-medium">30m</span>
+                                </div>
                             </div>
                         </div>
 
