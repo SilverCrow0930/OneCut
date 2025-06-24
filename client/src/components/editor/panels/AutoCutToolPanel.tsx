@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { apiPath } from '@/lib/config'
 
-import { CheckCircle2, AlertCircle, Loader2, Brain, Sparkles, Play, Download, RefreshCw, Clock, Eye } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, Brain, Play, Download, RefreshCw, Clock, Eye } from 'lucide-react'
 import VideoDetailsSection from './VideoDetailsSection'
 import { useEditor } from '@/contexts/EditorContext'
 import { v4 as uuid } from 'uuid'
@@ -48,7 +48,6 @@ const AutoCutToolPanel = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState<number>(60) // 1 minute default
     const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio') // Default to cheaper option
-    const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16') // Default to vertical
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
@@ -84,9 +83,7 @@ const AutoCutToolPanel = () => {
         }
     }
 
-    const getVideoFormat = () => {
-        return aspectRatio === '9:16' ? 'short_vertical' : 'long_horizontal'
-    }
+
 
     const getClosestInterval = (value: number) => {
         return timeIntervals.reduce((prev, curr) => 
@@ -99,13 +96,7 @@ const AutoCutToolPanel = () => {
         setTargetDuration(closestInterval)
     }
 
-    const getFormatInfo = () => {
-        if (aspectRatio === '9:16') {
-            return { format: 'Vertical', aspectRatio: '9:16', icon: '📱', description: 'Mobile/Social' }
-        } else {
-            return { format: 'Horizontal', aspectRatio: '16:9', icon: '💻', description: 'Desktop/TV' }
-        }
-    }
+
 
     const handleClipsReady = useCallback((clips: any[]) => {
         if (!uploadedAsset || clips.length === 0) return
@@ -232,7 +223,6 @@ const AutoCutToolPanel = () => {
         setUploadProgress(0)
         setShowConfig(false)
         setVideoType('talk_audio') // Reset to default cheaper option
-        setAspectRatio('9:16') // Reset to default vertical
     }
 
     const handleStartProcessing = async () => {
@@ -308,7 +298,6 @@ const AutoCutToolPanel = () => {
                             mimeType: selectedFile.type,
                             contentType: VIDEO_TYPES[videoType].contentType,
                             targetDuration,
-                            aspectRatio,
                             isEditorMode: true // Flag to indicate this is used within the editor
                         })
                     })
@@ -503,35 +492,7 @@ const AutoCutToolPanel = () => {
                                 </label>
                             </div>
                             
-                            {/* Aspect Ratio Selection */}
-                            <div className="grid grid-cols-2 gap-3 mb-3">
-                                <button
-                                    onClick={() => setAspectRatio('9:16')}
-                                    className={`p-4 rounded-xl border-2 transition-all text-center ${
-                                        aspectRatio === '9:16' 
-                                            ? 'border-blue-500 bg-blue-50' 
-                                            : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <div className="text-3xl mb-2">📱</div>
-                                    <div className="text-sm font-medium text-gray-900">Vertical</div>
-                                    <div className="text-xs text-gray-600 mt-1">9:16</div>
-                                    <div className="text-xs text-gray-500 mt-1">Mobile/Social</div>
-                                </button>
-                                <button
-                                    onClick={() => setAspectRatio('16:9')}
-                                    className={`p-4 rounded-xl border-2 transition-all text-center ${
-                                        aspectRatio === '16:9' 
-                                            ? 'border-blue-500 bg-blue-50' 
-                                            : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <div className="text-3xl mb-2">💻</div>
-                                    <div className="text-sm font-medium text-gray-900">Horizontal</div>
-                                    <div className="text-xs text-gray-600 mt-1">16:9</div>
-                                    <div className="text-xs text-gray-500 mt-1">Desktop/TV</div>
-                                </button>
-                            </div>
+
                             
                             {/* Slider */}
                             <div className="space-y-3">
@@ -585,7 +546,7 @@ const AutoCutToolPanel = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <Sparkles className="w-4 h-4" />
+                                        <Brain className="w-4 h-4" />
                                         Start Processing
                                     </>
                                 )}

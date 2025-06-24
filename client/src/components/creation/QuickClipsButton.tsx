@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Zap, Upload, Clock, Video, Download, Play, X, Edit, Sparkles } from 'lucide-react'
+import { Zap, Upload, Clock, Video, Download, Play, X, Edit } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -21,6 +21,22 @@ interface QuickClip {
     aspectRatio: string
 }
 
+// Video type selection constants (same as AutoCutToolPanel and HomeHeroSection)
+const VIDEO_TYPES = {
+    talk_audio: {
+        label: "Talk & Audio",
+        icon: "🎙️",
+        description: "Podcasts, interviews, tutorials, meetings",
+        contentType: "talking_video"
+    },
+    action_visual: {
+        label: "Action & Visual", 
+        icon: "🎬",
+        description: "Gaming, reactions, demos, sports",
+        contentType: "visual_content"
+    }
+}
+
 const QuickClipsButton = () => {
     const { user, session, signIn } = useAuth()
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -29,7 +45,7 @@ const QuickClipsButton = () => {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60)
-    const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16') // Default to vertical
+    const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio') // Default to cheaper option
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingProgress, setProcessingProgress] = useState(0)
     const [processingMessage, setProcessingMessage] = useState('')
@@ -38,14 +54,8 @@ const QuickClipsButton = () => {
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
-    
-
 
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
-
-    const getVideoFormat = () => {
-        return aspectRatio === '9:16' ? 'short_vertical' : 'long_horizontal'
-    }
 
     const formatDuration = (seconds: number) => {
         if (seconds < 60) {
@@ -142,10 +152,9 @@ const QuickClipsButton = () => {
                     processing_progress: 0,
                     processing_message: 'Preparing for processing...',
                     processing_data: {
-                        contentType: 'talking_video',
-                        videoFormat: getVideoFormat(),
+                        contentType: VIDEO_TYPES[videoType].contentType,
+                        videoFormat: targetDuration < 120 ? 'short' : 'long',
                         targetDuration,
-                        aspectRatio,
                         filename: selectedFile.name
                     }
                 })
@@ -201,53 +210,21 @@ const QuickClipsButton = () => {
                 throw new Error('File upload did not return a valid GCS URI')
             }
 
-            setIsUploading(false)
-
             // 3. Start QuickClips processing
-            console.log('Starting QuickClips with data:', {
-                projectId: project.id,
-                fileUri,
-                mimeType: selectedFile.type,
-                contentType: 'talking_video',
-                targetDuration: parseInt(String(targetDuration))
+            const jobResponse = await fetch(apiPath('quickclips/start'), {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    projectId: project.id,
+                    fileUri,
+                    mimeType: selectedFile.type,
+                    contentType: VIDEO_TYPES[videoType].contentType,
+                    targetDuration
+                })
             })
-            
-            let jobResponse;
-            const maxRetries = 3;
-            let lastError;
-            
-            // Retry logic for network issues
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    jobResponse = await fetch(apiPath('quickclips/start'), {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${session?.access_token}`,
-                            'Content-Type': 'application/json'
-                        },
-                                            body: JSON.stringify({
-                        projectId: project.id,
-                        fileUri,
-                        mimeType: selectedFile.type,
-                        contentType: 'talking_video',
-                        targetDuration: parseInt(String(targetDuration))
-                    })
-                    })
-                    break; // Success, exit retry loop
-                } catch (fetchError) {
-                    lastError = fetchError;
-                    if (attempt === maxRetries) {
-                        throw new Error(`Network error after ${maxRetries} attempts: ${fetchError instanceof Error ? fetchError.message : 'Connection failed'}`)
-                    }
-                    console.warn(`QuickClips request attempt ${attempt} failed, retrying...`)
-                    // Wait before retry (exponential backoff)
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
-                }
-            }
-            
-            if (!jobResponse) {
-                throw lastError || new Error('Failed to make request')
-            }
 
             if (!jobResponse.ok) {
                 let errorMessage = 'Failed to start processing'
@@ -265,23 +242,15 @@ const QuickClipsButton = () => {
                 } catch (e) {
                     errorMessage = jobResponse.statusText || errorMessage
                 }
-                console.error('Full error context:', {
-                    status: jobResponse.status,
-                    statusText: jobResponse.statusText,
-                    requestData: {
-                        projectId: project.id,
-                        fileUri,
-                        mimeType: selectedFile.type,
-                        contentType: 'talking_video',
-                        targetDuration: parseInt(String(targetDuration))
-                    }
-                })
                 throw new Error(errorMessage)
             }
 
             const jobData = await jobResponse.json()
-            
-            // Poll for job status
+            console.log('Job started:', jobData)
+
+            setIsUploading(false)
+
+            // 4. Poll for job completion
             const pollJob = async () => {
                 try {
                     const statusResponse = await fetch(apiPath(`quickclips/status/${jobData.jobId}`), {
@@ -295,90 +264,61 @@ const QuickClipsButton = () => {
                         setProcessingProgress(status.progress || 0)
                         setProcessingMessage(status.message || 'Processing...')
 
-                        if (status.status === 'completed') {
-                            setGeneratedClips(status.clips || [])
+                        if (status.status === 'completed' && status.clips) {
+                            setGeneratedClips(status.clips)
                             setIsProcessing(false)
+                            clearInterval(pollInterval)
                         } else if (status.status === 'failed') {
-                            setError(status.error || 'Processing failed')
-                            setIsProcessing(false)
-                        } else if (status.status === 'processing' || status.status === 'queued') {
-                            setTimeout(pollJob, 3000) // Poll every 3 seconds
+                            throw new Error(status.error || 'Processing failed')
                         }
                     }
                 } catch (error) {
                     console.error('Error polling job status:', error)
-                    setTimeout(pollJob, 5000) // Retry after 5 seconds
+                    setError('Failed to check processing status')
+                    setIsProcessing(false)
+                    clearInterval(pollInterval)
                 }
             }
 
-            // Start polling
-            pollJob()
+            const pollInterval = setInterval(pollJob, 3000)
+            pollJob() // Initial call
 
         } catch (error) {
-            console.error('Error processing video:', error)
-            setError(error instanceof Error ? error.message : 'Processing failed')
-            setIsUploading(false)
+            console.error('Error starting processing:', error)
+            setError(error instanceof Error ? error.message : 'Processing failed, please try again')
             setIsProcessing(false)
+            setIsUploading(false)
         }
     }
 
     const handleDownload = (clip: QuickClip) => {
-        // TODO: Implement actual download when backend provides real URLs
-        console.log('Downloading clip:', clip)
-        // For now, just open a new tab with the preview
-        window.open(clip.previewUrl, '_blank')
+        // Create a temporary link to download the file
+        const link = document.createElement('a')
+        link.href = clip.downloadUrl
+        link.download = `${clip.title}.mp4`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
     }
 
     const handleReset = () => {
         setSelectedFile(null)
         setGeneratedClips([])
+        setIsProcessing(false)
         setProcessingProgress(0)
         setProcessingMessage('')
-        setIsProcessing(false)
+        setError(null)
         setIsUploading(false)
         setUploadProgress(0)
-        setError(null)
     }
 
     const handleEditInTimeline = async (clip: QuickClip) => {
-        if (!user || !session) {
-            signIn()
-            return
-        }
-
         try {
-            // Create a new project for editing this clip
-            const response = await fetch(apiPath('projects'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({
-                    name: `Edit: ${clip.title}`,
-                    initial_clip_data: {
-                        clipId: clip.id,
-                        start_time: clip.start_time,
-                        end_time: clip.end_time,
-                        videoUrl: clip.previewUrl,
-                        title: clip.title,
-                        description: clip.description
-                    }
-                }),
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to create project for editing')
-            }
-
-            const project = await response.json()
-            
-            // Navigate to the new project with clip data in URL params
-            router.push(`/projects/${project.id}?clipId=${clip.id}&start=${clip.start_time}&end=${clip.end_time}&url=${encodeURIComponent(clip.previewUrl)}`)
-            
+            // Navigate to editor with the clip data
+            router.push(`/projects/new?clip=${encodeURIComponent(JSON.stringify(clip))}`)
         } catch (error) {
-            console.error('Failed to create edit project:', error)
-            alert('Failed to create project for editing. Please try again.')
+            console.error('Error navigating to editor:', error)
+            alert('Failed to open editor')
         }
     }
 
@@ -386,16 +326,7 @@ const QuickClipsButton = () => {
         <>
             <button
                 onClick={() => setIsModalOpen(true)}
-                className="
-                    inline-flex items-center justify-center gap-2 
-                    px-6 py-3 rounded-lg font-semibold text-white
-                    bg-gradient-to-br from-blue-500 to-teal-500
-                    hover:from-blue-600 hover:to-teal-600
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                    shadow-lg hover:shadow-xl
-                    transform transition-all duration-200
-                    hover:scale-105 active:scale-95
-                "
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
                 <Zap className="w-5 h-5" />
                                             <span>Smart Cut</span>
@@ -465,9 +396,8 @@ const QuickClipsButton = () => {
                                                     <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
                                                         {formatDuration(clip.duration)}
                                                     </div>
-                                                    {/* Viral Score */}
+                                                    {/* Viral Score - Removed star emoji */}
                                                     <div className="absolute top-2 left-2 flex items-center gap-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-                                                        <Sparkles className="w-3 h-3" />
                                                         <span>{clip.significance}</span>
                                                     </div>
                                                 </div>
@@ -534,7 +464,7 @@ const QuickClipsButton = () => {
                                     </div>
                                 </div>
                             ) : (
-                                /* Upload View - Same as before */
+                                /* Upload View */
                                 <div className="space-y-6">
                                     {/* Upload Area */}
                                     <div>
@@ -581,76 +511,78 @@ const QuickClipsButton = () => {
                                         </div>
                                     </div>
 
-                                    {/* Target Duration Settings */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Clock className="w-5 h-5 text-blue-600" />
-                                            <label className="text-sm font-semibold text-gray-700">
-                                                Target Length: {formatDuration(targetDuration)}
-                                            </label>
-                                        </div>
-                                        
-                                        {/* Format indicator */}
-                                        <div className="grid grid-cols-2 gap-3 mb-3">
-                                            <button
-                                                onClick={() => setAspectRatio('9:16')}
-                                                className={`p-4 rounded-xl border-2 transition-all text-center ${
-                                                    aspectRatio === '9:16' 
-                                                        ? 'border-blue-500 bg-blue-50' 
-                                                        : 'border-gray-200 hover:border-gray-300'
-                                                }`}
-                                            >
-                                                <div className="text-3xl mb-2">📱</div>
-                                                <div className="text-sm font-medium text-gray-900">Vertical</div>
-                                                <div className="text-xs text-gray-600 mt-1">9:16</div>
-                                                <div className="text-xs text-gray-500 mt-1">Mobile/Social</div>
-                                            </button>
-                                            <button
-                                                onClick={() => setAspectRatio('16:9')}
-                                                className={`p-4 rounded-xl border-2 transition-all text-center ${
-                                                    aspectRatio === '16:9' 
-                                                        ? 'border-blue-500 bg-blue-50' 
-                                                        : 'border-gray-200 hover:border-gray-300'
-                                                }`}
-                                            >
-                                                <div className="text-3xl mb-2">💻</div>
-                                                <div className="text-sm font-medium text-gray-900">Horizontal</div>
-                                                <div className="text-xs text-gray-600 mt-1">16:9</div>
-                                                <div className="text-xs text-gray-500 mt-1">Desktop/TV</div>
-                                            </button>
-                                        </div>
-                                        
-                                        {/* Slider */}
-                                        <div className="space-y-3">
-                                            <input
-                                                type="range"
-                                                min="20"
-                                                max="1800"
-                                                value={targetDuration}
-                                                onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-                                                className="
-                                                    w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
-                                                    [&::-webkit-slider-thumb]:appearance-none 
-                                                    [&::-webkit-slider-thumb]:w-6 
-                                                    [&::-webkit-slider-thumb]:h-6 
-                                                    [&::-webkit-slider-thumb]:rounded-full 
-                                                    [&::-webkit-slider-thumb]:bg-gradient-to-r
-                                                    [&::-webkit-slider-thumb]:from-blue-500
-                                                    [&::-webkit-slider-thumb]:to-purple-500
-                                                    [&::-webkit-slider-thumb]:border-3
-                                                    [&::-webkit-slider-thumb]:border-white
-                                                    [&::-webkit-slider-thumb]:shadow-lg
-                                                    [&::-webkit-slider-thumb]:cursor-pointer
-                                                    [&::-webkit-slider-thumb]:hover:scale-110
-                                                    [&::-webkit-slider-thumb]:transition-transform
-                                                "
-                                            />
-                                            <div className="flex justify-between text-xs text-gray-500">
-                                                <span className="font-medium">20s</span>
-                                                <span className="font-medium">30m</span>
+                                    {/* Configuration Options - Only show after file upload */}
+                                    {selectedFile && (
+                                        <div className="space-y-6">
+                                            {/* Video Type Selection */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                    Select Video Type
+                                                </label>
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {Object.entries(VIDEO_TYPES).map(([key, type]) => (
+                                                        <button
+                                                            key={key}
+                                                            onClick={() => setVideoType(key as 'talk_audio' | 'action_visual')}
+                                                            className={`p-4 rounded-lg border-2 transition-all text-left ${
+                                                                videoType === key 
+                                                                    ? 'border-blue-500 bg-blue-50' 
+                                                                    : 'border-gray-200 hover:border-gray-300'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="text-2xl">{type.icon}</div>
+                                                                <div className="flex-1">
+                                                                    <div className="font-medium text-gray-800">{type.label}</div>
+                                                                    <div className="text-sm text-gray-600 mt-1">{type.description}</div>
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Target Duration */}
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <Clock className="w-5 h-5 text-blue-600" />
+                                                    <label className="text-sm font-medium text-gray-700">
+                                                        Target Length: {formatDuration(targetDuration)}
+                                                    </label>
+                                                </div>
+                                                
+                                                <div className="space-y-3">
+                                                    <input
+                                                        type="range"
+                                                        min="20"
+                                                        max="1800"
+                                                        value={targetDuration}
+                                                        onChange={(e) => handleDurationChange(parseInt(e.target.value))}
+                                                        className="
+                                                            w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
+                                                            [&::-webkit-slider-thumb]:appearance-none 
+                                                            [&::-webkit-slider-thumb]:w-6 
+                                                            [&::-webkit-slider-thumb]:h-6 
+                                                            [&::-webkit-slider-thumb]:rounded-full 
+                                                            [&::-webkit-slider-thumb]:bg-gradient-to-r
+                                                            [&::-webkit-slider-thumb]:from-blue-500
+                                                            [&::-webkit-slider-thumb]:to-purple-500
+                                                            [&::-webkit-slider-thumb]:border-3
+                                                            [&::-webkit-slider-thumb]:border-white
+                                                            [&::-webkit-slider-thumb]:shadow-lg
+                                                            [&::-webkit-slider-thumb]:cursor-pointer
+                                                            [&::-webkit-slider-thumb]:hover:scale-110
+                                                            [&::-webkit-slider-thumb]:transition-transform
+                                                        "
+                                                    />
+                                                    <div className="flex justify-between text-xs text-gray-500">
+                                                        <span className="font-medium">20s</span>
+                                                        <span className="font-medium">30m</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
 
                                     {/* Generate Button */}
                                     <div className="pt-2">
