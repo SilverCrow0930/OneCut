@@ -14,7 +14,9 @@ const validateQuickclipsRequest = [
     body('contentType').isString().trim().notEmpty()
         .withMessage('Content type is required'),
     body('targetDuration').isInt({ min: 20, max: 1800 })
-        .withMessage('Target duration must be between 20 seconds and 30 minutes')
+        .withMessage('Target duration must be between 20 seconds and 30 minutes'),
+    body('userPrompt').optional().isString().trim().isLength({ max: 500 })
+        .withMessage('User prompt must be a string with maximum 500 characters')
 ]
 
 // POST /api/v1/quickclips/start - Start a new Quickclips processing job
@@ -29,7 +31,7 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
         }
 
         const { user } = req as AuthenticatedRequest
-        const { projectId, fileUri, mimeType, contentType, targetDuration, isEditorMode } = req.body
+        const { projectId, fileUri, mimeType, contentType, targetDuration, isEditorMode, userPrompt } = req.body
 
         console.log('[Quickclips API] Starting job for project:', projectId)
 
@@ -71,7 +73,8 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
             contentType,
             targetDuration,
             profile.id,
-            isEditorMode || false
+            isEditorMode || false,
+            userPrompt
         )
 
         console.log(`[Quickclips API] Job ${jobId} queued successfully for project ${projectId}`)

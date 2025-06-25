@@ -30,6 +30,7 @@ const QuickClipsButton = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60)
     const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio')
+    const [userPrompt, setUserPrompt] = useState('') // Optional user prompt for Smart Cut
 
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingProgress, setProcessingProgress] = useState(0)
@@ -235,7 +236,8 @@ const QuickClipsButton = () => {
                         fileUri,
                         mimeType: selectedFile.type,
                         contentType: getContentType(),
-                        targetDuration: parseInt(String(targetDuration))
+                        targetDuration: parseInt(String(targetDuration)),
+                        userPrompt: userPrompt.trim() || undefined
                     })
                     })
                     break; // Success, exit retry loop
@@ -337,6 +339,7 @@ const QuickClipsButton = () => {
     const handleReset = () => {
         setSelectedFile(null)
         setVideoType('talk_audio')
+        setUserPrompt('')
         setGeneratedClips([])
         setProcessingProgress(0)
         setProcessingMessage('')
@@ -672,6 +675,31 @@ const QuickClipsButton = () => {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Optional User Prompt */}
+                                    {selectedFile && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Custom Instructions (Optional)
+                                            </label>
+                                            <textarea
+                                                value={userPrompt}
+                                                onChange={(e) => setUserPrompt(e.target.value)}
+                                                placeholder="Tell AI what to focus on... e.g., 'Extract the main discussion points and key insights' or 'Focus on the most engaging moments with good visual content'"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none text-sm"
+                                                rows={3}
+                                                maxLength={500}
+                                            />
+                                            <div className="flex justify-between items-center mt-1">
+                                                <p className="text-xs text-gray-500">
+                                                    Give AI specific guidance for better results
+                                                </p>
+                                                <p className="text-xs text-gray-400">
+                                                    {userPrompt.length}/500
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Generate Button */}
                                     <div className="pt-2">

@@ -47,6 +47,7 @@ const VIDEO_TYPES = {
 const AutoCutToolPanel = () => {
     const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio')
     const [targetDuration, setTargetDuration] = useState(60) // Default 60 seconds (1 minute)
+    const [userPrompt, setUserPrompt] = useState('') // Optional user prompt for Smart Cut
     const [showConfig, setShowConfig] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [uploadedAsset, setUploadedAsset] = useState<any>(null)
@@ -226,6 +227,7 @@ const AutoCutToolPanel = () => {
         setShowConfig(false)
         setVideoType('talk_audio') // Reset to default cheaper option
         setTargetDuration(60) // Reset to default 60 seconds (1 minute)
+        setUserPrompt('') // Reset user prompt
     }
 
     const handleStartProcessing = async () => {
@@ -301,6 +303,7 @@ const AutoCutToolPanel = () => {
                             mimeType: selectedFile.type,
                             contentType: VIDEO_TYPES[videoType].contentType,
                             targetDuration,
+                            userPrompt: userPrompt.trim() || undefined,
                             isEditorMode: true // Flag to indicate this is used within the editor
                         })
                     })
@@ -524,6 +527,29 @@ const AutoCutToolPanel = () => {
                                     <span className="font-medium">20s</span>
                                     <span className="font-medium">30m</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Optional User Prompt */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Custom Instructions (Optional)
+                            </label>
+                            <textarea
+                                value={userPrompt}
+                                onChange={(e) => setUserPrompt(e.target.value)}
+                                placeholder="Tell AI what to focus on... e.g., 'Extract the main discussion points and key insights' or 'Focus on the most engaging moments with good visual content'"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                                rows={3}
+                                maxLength={500}
+                            />
+                            <div className="flex justify-between items-center mt-1">
+                                <p className="text-xs text-gray-500">
+                                    Give AI specific guidance for better results
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                    {userPrompt.length}/500
+                                </p>
                             </div>
                         </div>
 

@@ -11,6 +11,7 @@ const HomeHeroSection = () => {
     
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60) // Default 60 seconds (1 minute)
+    const [userPrompt, setUserPrompt] = useState('') // Optional user prompt for Smart Cut
     const [isUploading, setIsUploading] = useState(false)
     const [isDragOver, setIsDragOver] = useState(false)
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
@@ -232,7 +233,8 @@ const HomeHeroSection = () => {
                             fileUri,
                             mimeType: selectedFile.type,
                             contentType: 'talking_video',
-                            targetDuration: parseInt(String(targetDuration))
+                            targetDuration: parseInt(String(targetDuration)),
+                            userPrompt: userPrompt.trim() || undefined
                         })
                     })
                     break; // Success, exit retry loop
@@ -510,7 +512,7 @@ const HomeHeroSection = () => {
                                                 Target Length: {formatDuration(targetDuration)}
                                             </label>
                                         </div>
-                                        
+
                                         {/* Slider */}
                                         <div className="space-y-3">
                                                 <input
@@ -540,6 +542,29 @@ const HomeHeroSection = () => {
                                                 <span className="font-medium">20s</span>
                                                 <span className="font-medium">30m</span>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Optional User Prompt */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Custom Instructions (Optional)
+                                        </label>
+                                        <textarea
+                                            value={userPrompt}
+                                            onChange={(e) => setUserPrompt(e.target.value)}
+                                            placeholder="Tell AI what to focus on... e.g., 'Extract the main discussion points and key insights' or 'Focus on the most engaging moments with good visual content'"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                                            rows={3}
+                                            maxLength={500}
+                                        />
+                                        <div className="flex justify-between items-center mt-1">
+                                            <p className="text-xs text-gray-500">
+                                                Give AI specific guidance for better results
+                                            </p>
+                                            <p className="text-xs text-gray-400">
+                                                {userPrompt.length}/500
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

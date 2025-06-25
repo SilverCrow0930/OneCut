@@ -29,6 +29,7 @@ interface QuickclipsJob {
     contentType: string
     videoFormat: 'short' | 'long'
     targetDuration: number
+    userPrompt?: string // Optional user prompt for custom instructions
     status: 'queued' | 'processing' | 'completed' | 'failed'
     progress: number
     message: string
@@ -96,6 +97,73 @@ const FORMAT_CONFIGS = {
         segmentLength: null, // No strict length requirements - trust AI
         totalDuration: null, // No strict duration requirements - trust AI
         approach: 'Develop a comprehensive narrative that explores themes in depth while maintaining viewer engagement throughout. Segments will be combined into a single cohesive video. Focus on natural content breaks and meaningful storytelling.'
+    }
+}
+
+// Helper function to get transcription from audio
+async function getTranscriptionFromAudio(audioUrl: string, mimeType: string): Promise<string> {
+    try {
+        const { GoogleGenAI, createUserContent, createPartFromUri } = await import('@google/genai')
+        
+        const ai = new GoogleGenAI({
+            apiKey: process.env.GEMINI_API_KEY
+        })
+        
+        // Upload audio file to Gemini
+        const fileResponse = await fetch(audioUrl)
+        if (!fileResponse.ok) {
+            throw new Error(`Failed to download audio for transcription: ${fileResponse.status}`)
+        }
+        
+        const buffer = await fileResponse.arrayBuffer()
+        const blob = new Blob([buffer], { type: mimeType })
+        
+        const uploadedFile = await ai.files.upload({
+            file: blob,
+            config: { mimeType }
+        })
+        
+        if (!uploadedFile.name) {
+            throw new Error('Audio file upload for transcription failed')
+        }
+        
+        // Wait for file processing
+        let file = await ai.files.get({ name: uploadedFile.name })
+        while (file.state === 'PROCESSING') {
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            file = await ai.files.get({ name: uploadedFile.name })
+        }
+        
+        if (file.state === 'FAILED') {
+            throw new Error('Audio file processing for transcription failed')
+        }
+        
+        // Generate transcription
+        const transcriptionPrompt = `Please provide a clean, accurate transcription of this audio. Include natural speech patterns, pauses (indicated by ... or [pause]), and speaker changes if multiple speakers. Format as readable text with proper punctuation.`
+        
+        const content = createUserContent([
+            transcriptionPrompt,
+            createPartFromUri(uploadedFile.uri || '', mimeType)
+        ])
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.0-flash-exp',
+            contents: [content],
+            config: {
+                maxOutputTokens: 8192,
+                temperature: 0.1,
+                topP: 0.8,
+            }
+        })
+        
+        const transcript = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        console.log(`📝 Transcription completed: ${transcript.length} characters`)
+        
+        return transcript
+        
+    } catch (error) {
+        console.error('Transcription failed, proceeding without transcript:', error)
+        return 'Transcription unavailable - proceeding with audio-only analysis.'
     }
 }
 
@@ -199,7 +267,18 @@ async function generateQuickClipsFromAudio(signedUrl: string, mimeType: string, 
         }
     }
     
+    // Step 1: Get transcript for better analysis quality
+    console.log('📝 Getting transcript for enhanced audio analysis...')
+    const transcript = await getTranscriptionFromAudio(audioUrl, audioMimeType)
+    
+    const userInstructions = job.userPrompt ? `\n\nUSER INSTRUCTIONS: ${job.userPrompt}\nPlease incorporate these specific requirements into your analysis while maintaining the core quality standards.` : ''
+    
     const prompt = `You are an expert audio editor trained to extract the most meaningful and coherent segments from audio content. Your goal is to identify speech-driven segments that capture key insights, compelling stories, emotional moments, and quotable statements.
+
+TRANSCRIPTION-ENHANCED APPROACH: You have access to both the audio file and its transcript. Use the transcript to identify precise topic boundaries, key phrases, and content structure, while using the audio to assess tone, emphasis, and natural speech patterns.
+
+TRANSCRIPT PREVIEW:
+${transcript.substring(0, 2000)}${transcript.length > 2000 ? '...' : ''}
 
 AUDIO-FOCUSED APPROACH: Since you're analyzing audio-only content, focus on speech patterns, conversation flow, topic changes, and verbal emphasis. Look for natural pauses, topic transitions, and compelling verbal content.
 
@@ -260,7 +339,16 @@ FIELD REQUIREMENTS:
 - NO overlapping timestamps
 - Order segments chronologically (by start_time)
 
-Remember: Focus on speech-driven content that works well as audio/podcast clips. The goal is to create ${job.videoFormat === 'long' ? 'a single cohesive audio experience' : 'standalone audio clips'} that capture the most engaging spoken content.`
+Remember: Focus on speech-driven content that works well as audio/podcast clips. The goal is to create ${job.videoFormat === 'long' ? 'a single cohesive audio experience' : 'standalone audio clips'} that capture the most engaging spoken content.
+
+Use the transcript to identify:
+- Exact topic boundaries and natural conversation breaks
+- Key phrases and quotable moments
+- Question-answer sequences and their precise timing
+- Story beginnings and conclusions
+- Natural speech patterns and emphasis points
+
+${userInstructions}`
 
     try {
         // Upload audio file to Gemini
@@ -406,6 +494,8 @@ async function generateQuickClipsFromVideo(signedUrl: string, mimeType: string, 
     
     const formatConfig = FORMAT_CONFIGS[job.videoFormat]
     
+    const userInstructions = job.userPrompt ? `\n\nUSER INSTRUCTIONS: ${job.userPrompt}\nPlease incorporate these specific requirements into your analysis while maintaining the core quality standards.` : ''
+    
     const prompt = `You are an expert video editor trained to extract the most meaningful and coherent segments from long-form videos. Your goal is to select sequences that best represent the overall narrative, emotion, or information in the source material.
 
 EDITORIAL APPROACH: Focus on the most engaging and meaningful segments that capture the essence of the video content. Look for key insights, compelling stories, emotional moments, clear explanations, and quotable statements.
@@ -465,7 +555,7 @@ FIELD REQUIREMENTS:
 - NO overlapping timestamps
 - Order segments chronologically (by start_time)
 
-Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 'long' ? 'a single cohesive video' : 'standalone clips'} that capture the most engaging and meaningful content from the source material.`
+Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 'long' ? 'a single cohesive video' : 'standalone clips'} that capture the most engaging and meaningful content from the source material.${userInstructions}`
 
     try {
         // Download and upload file to Gemini
@@ -777,7 +867,8 @@ export async function queueQuickclipsJob(
     contentType: string,
     targetDuration: number,
     userId: string,
-    isEditorMode: boolean = false
+    isEditorMode: boolean = false,
+    userPrompt?: string
 ): Promise<string> {
     const jobId = uuid()
     const videoFormat = targetDuration < 120 ? 'short' : 'long' as 'short' | 'long'
@@ -790,6 +881,7 @@ export async function queueQuickclipsJob(
         contentType,
         videoFormat,
         targetDuration,
+        userPrompt,
         status: 'queued',
         progress: 0,
         message: 'Queued for processing...',
