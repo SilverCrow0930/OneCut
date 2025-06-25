@@ -120,9 +120,10 @@ router.get('/status/:jobId', async (req: Request, res: Response, next: NextFunct
             })
         }
 
-        // If completed, get clips and description from project processing_result
+        // If completed, get clips, description, and transcript from project processing_result
         let clips = null
         let description = null
+        let transcript = null
         
         if (job.status === 'completed') {
             try {
@@ -135,6 +136,7 @@ router.get('/status/:jobId', async (req: Request, res: Response, next: NextFunct
                 if (project?.processing_result) {
                     clips = project.processing_result.clips || null
                     description = project.processing_result.description || null
+                    transcript = project.processing_result.transcript || null
                 }
             } catch (error) {
                 console.warn('[Quickclips API] Could not fetch project result:', error)
@@ -154,7 +156,8 @@ router.get('/status/:jobId', async (req: Request, res: Response, next: NextFunct
                 contentType: job.contentType,
                 videoFormat: job.videoFormat,
                 ...(clips && { clips }),
-                ...(description && { description })
+                ...(description && { description }),
+                ...(transcript && { transcript })
             })
         })
 
