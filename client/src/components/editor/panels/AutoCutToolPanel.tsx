@@ -26,6 +26,7 @@ interface QuickClipsJob {
     error?: string
     clips?: any[]
     description?: string
+    transcript?: string
 }
 
 // Video type selection constants
@@ -57,6 +58,7 @@ const AutoCutToolPanel = () => {
     const [currentJob, setCurrentJob] = useState<QuickClipsJob | null>(null)
     const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
     const [processedClips, setProcessedClips] = useState<any[]>([])
+    const [transcript, setTranscript] = useState<string>('')
     
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { session } = useAuth()
@@ -197,6 +199,11 @@ const AutoCutToolPanel = () => {
                             description: jobData.description 
                         } : null)
                         
+                        // Store transcript if available
+                        if (jobData.transcript) {
+                            setTranscript(jobData.transcript)
+                        }
+                        
                         // Add clips to timeline
                         handleClipsReady(jobData.clips)
                     }
@@ -228,6 +235,7 @@ const AutoCutToolPanel = () => {
         setVideoType('talk_audio') // Reset to default cheaper option
         setTargetDuration(60) // Reset to default 60 seconds (1 minute)
         setUserPrompt('') // Reset user prompt
+        setTranscript('') // Reset transcript
     }
 
     const handleStartProcessing = async () => {
@@ -618,6 +626,34 @@ const AutoCutToolPanel = () => {
                             showThoughts={false}
                             showResponse={false}
                         />
+
+                        {/* Transcript Section - Only show for Talk & Audio content when completed */}
+                        {transcript && videoType === 'talk_audio' && currentJob?.status === 'completed' && (
+                            <div className="border border-gray-200 rounded-lg p-4">
+                                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                    <span className="text-lg">📝</span>
+                                    Transcript
+                                </h4>
+                                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                    <div className="max-h-48 overflow-y-auto">
+                                        <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-wrap">
+                                            {transcript}
+                                        </p>
+                                    </div>
+                                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
+                                        <span className="text-xs text-gray-500">
+                                            {transcript.length} characters
+                                        </span>
+                                        <button
+                                            onClick={() => navigator.clipboard.writeText(transcript)}
+                                            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                        >
+                                            Copy
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

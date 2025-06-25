@@ -76,12 +76,6 @@ interface FFmpegProgress {
     percent?: number;
 }
 
-// QuickClips generation result interface
-interface QuickClipsResult {
-    clips: AIGeneratedClip[];
-    transcript?: string;
-}
-
 // In-memory job queue (in production, use Redis or similar)
 const jobQueue = new Map<string, QuickclipsJob>()
 const activeJobs = new Set<string>()
@@ -174,7 +168,7 @@ async function getTranscriptionFromAudio(audioUrl: string, mimeType: string): Pr
 }
 
 // Dedicated AI function for QuickClips with improved narrative-focused prompt
-async function generateQuickClips(signedUrl: string, mimeType: string, job: QuickclipsJob): Promise<QuickClipsResult> {
+async function generateQuickClips(signedUrl: string, mimeType: string, job: QuickclipsJob): Promise<{ clips: any[], transcript?: string }> {
     // Route to appropriate processing method based on content type
     if (job.contentType === 'talking_video') {
         console.log(`[QuickClips] Using audio-only processing for cost optimization (95% savings)`)
@@ -182,12 +176,12 @@ async function generateQuickClips(signedUrl: string, mimeType: string, job: Quic
     } else {
         console.log(`[QuickClips] Using full video+audio processing for visual content`)
         const clips = await generateQuickClipsFromVideo(signedUrl, mimeType, job)
-        return { clips, transcript: undefined } // Video processing doesn't include transcript
+        return { clips }
     }
 }
 
 // Audio-only processing for Talk & Audio content (95% cost savings)
-async function generateQuickClipsFromAudio(signedUrl: string, mimeType: string, job: QuickclipsJob): Promise<QuickClipsResult> {
+async function generateQuickClipsFromAudio(signedUrl: string, mimeType: string, job: QuickclipsJob): Promise<{ clips: any[], transcript: string }> {
     const { GoogleGenAI, createUserContent, createPartFromUri } = await import('@google/genai')
     
     const ai = new GoogleGenAI({
@@ -473,8 +467,6 @@ ${userInstructions}`
         }
         
         console.log(`[QuickClips Audio] Generated ${clips.length} audio-optimized clips`)
-        
-        // Return both clips and transcript for storage
         return { clips, transcript }
         
     } catch (error) {
@@ -1032,7 +1024,8 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         
         // Step 3: Generate clips using dedicated AI function
         const result = await generateQuickClips(signedUrl, job.mimeType, job)
-        const { clips, transcript } = result
+        const clips = result.clips
+        const transcript = result.transcript
         
         job.progress = 60
         job.message = 'Generating video description...'
@@ -1090,7 +1083,7 @@ async function processQuickclipsJob(job: QuickclipsJob) {
                     contentType: job.contentType,
                     approach: 'narrative_coherence',
                     description: videoDescription,
-                    transcript: transcript || undefined // Include transcript for Talk & Audio content
+                    ...(transcript && { transcript })
                 },
                 processing_completed_at: completedAt
             })
