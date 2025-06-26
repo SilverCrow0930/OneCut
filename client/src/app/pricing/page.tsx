@@ -32,42 +32,38 @@ export default function PricingPage() {
       price: 2.00,
       unit: 'per video',
       description: 'AI-powered video editing with automatic cuts and transitions',
-      icon: '✂️',
-      color: 'from-blue-500 to-blue-600'
+      icon: '✂️'
     },
     {
       id: 'ai-voiceover',
       name: 'AI Voiceover',
       price: 0.50,
       unit: 'per minute',
-      description: 'Natural-sounding AI voice generation in multiple languages',
-      icon: '🎤',
-      color: 'from-purple-500 to-purple-600'
+      description: 'Natural-sounding AI voice generation',
+      icon: '🎤'
     },
     {
       id: 'ai-images',
       name: 'AI Images',
       price: 0.25,
       unit: 'per image',
-      description: 'AI-generated images, graphics, and visual elements',
-      icon: '🎨',
-      color: 'from-pink-500 to-pink-600'
+      description: 'AI-generated images and graphics',
+      icon: '🎨'
     },
     {
       id: 'video-generation',
       name: 'Video Generation',
       price: 4.00,
       unit: 'per 5-second clip',
-      description: 'AI-generated video clips using state-of-the-art models',
-      icon: '🎬',
-      color: 'from-emerald-500 to-emerald-600'
+      description: 'AI-generated video clips using advanced models',
+      icon: '🎬'
     }
   ];
 
   const bundles: Bundle[] = [
     {
       id: 'starter',
-      name: 'Content Creator',
+      name: 'Content Creator Bundle',
       description: 'Perfect for regular content creation',
       items: [
         { name: 'Smart Cut', quantity: 10 },
@@ -80,8 +76,8 @@ export default function PricingPage() {
     },
     {
       id: 'pro',
-      name: 'Professional',
-      description: 'For serious video creators and teams',
+      name: 'Professional Bundle',
+      description: 'For serious video creators',
       items: [
         { name: 'Smart Cut', quantity: 25 },
         { name: 'AI Voiceover', quantity: 60 },
@@ -159,119 +155,99 @@ export default function PricingPage() {
     return 0;
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <HomeNavbar />
-      
+    return (
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
+            <HomeNavbar />
+
       <div className="max-w-7xl mx-auto px-4 pt-32 pb-16">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-2xl mb-6 shadow-lg">
-            <span className="text-2xl">🍋</span>
-          </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-teal-600 to-emerald-600 bg-clip-text text-transparent mb-6">
-            Simple, Transparent Pricing
-          </h1>
-          <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-            Start with everything you need, then pay only for the AI features you use. 
-            No surprises, no waste - just powerful tools when you need them.
+                {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            🍋 Lemona Pricing Menu
+                    </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Like ordering at your favorite restaurant - pick what you need, when you need it. 
+            Start with our foundation plan, then add AI features à la carte.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Foundation Plan */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center">
-                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-2xl flex items-center justify-center mr-6 shadow-lg">
-                    <span className="text-2xl">🏗️</span>
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900">Foundation Plan</h2>
-                    <p className="text-gray-600 text-lg">Everything you need to get started</p>
-                  </div>
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border-2 border-yellow-200">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mr-4">
+                  <span className="text-2xl">🏗️</span>
                 </div>
-                <div className="text-right">
-                  <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">$5</div>
-                  <div className="text-gray-500 font-medium">/month</div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Foundation Plan</h2>
+                  <p className="text-gray-600">Everything you need to get started</p>
+                </div>
+                <div className="ml-auto text-right">
+                  <div className="text-3xl font-bold text-yellow-600">$5</div>
+                  <div className="text-sm text-gray-500">/month</div>
                 </div>
               </div>
               
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-green-600 font-bold">✓</span>
-                  </div>
-                  <span className="font-medium text-gray-800">Unlimited Projects</span>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Unlimited Projects</span>
                 </div>
-                <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-green-600 font-bold">✓</span>
-                  </div>
-                  <span className="font-medium text-gray-800">Cloud Storage</span>
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Cloud Storage</span>
                 </div>
-                <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-green-600 font-bold">✓</span>
-                  </div>
-                  <span className="font-medium text-gray-800">Full Video Editor</span>
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Full Video Editor</span>
                 </div>
-                <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-green-600 font-bold">✓</span>
-                  </div>
-                  <span className="font-medium text-gray-800">400 Assistant Messages</span>
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>400 Assistant Messages</span>
                 </div>
               </div>
             </div>
 
             {/* AI Features Menu */}
-            <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-              <div className="flex items-center mb-8">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mr-6 shadow-lg">
-                  <span className="text-2xl">🤖</span>
-                </div>
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">AI Features</h2>
-                  <p className="text-gray-600 text-lg">Pay only for what you use</p>
-                </div>
-              </div>
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                <span className="mr-3">🤖</span>
+                AI Features Menu
+              </h2>
               
-              <div className="grid gap-6">
+              <div className="space-y-6">
                 {aiFeatures.map((feature) => (
-                  <div key={feature.id} className="group p-6 border border-gray-200 rounded-2xl hover:border-gray-300 hover:shadow-lg transition-all duration-300">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center flex-1">
-                        <div className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center mr-4 shadow-md`}>
-                          <span className="text-xl">{feature.icon}</span>
+                  <div key={feature.id} className="border-b border-gray-100 pb-6 last:border-b-0">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <span className="text-2xl mr-3">{feature.icon}</span>
+                          <h3 className="text-lg font-semibold text-gray-900">{feature.name}</h3>
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-gray-900 mb-1">{feature.name}</h3>
-                          <p className="text-gray-600 text-sm mb-2">{feature.description}</p>
-                          <div className="flex items-baseline">
-                            <span className="text-2xl font-bold text-gray-900">${feature.price}</span>
-                            <span className="text-gray-500 ml-2 font-medium">{feature.unit}</span>
-                          </div>
+                        <p className="text-gray-600 text-sm mb-3">{feature.description}</p>
+                        <div className="flex items-center">
+                          <span className="text-2xl font-bold text-blue-600">${feature.price}</span>
+                          <span className="text-gray-500 ml-2">{feature.unit}</span>
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-3 ml-6">
+                      <div className="flex items-center space-x-2 ml-4">
                         <button
                           onClick={() => addToCart(feature, 1)}
-                          className="bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                         >
-                          Add 1
+                          Add to Cart
                         </button>
                         <button
                           onClick={() => addToCart(feature, 5)}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-xl font-semibold transition-all duration-200"
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                         >
                           +5
                         </button>
                         <button
                           onClick={() => addToCart(feature, 10)}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-xl font-semibold transition-all duration-200"
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                         >
                           +10
                         </button>
@@ -283,59 +259,44 @@ export default function PricingPage() {
             </div>
 
             {/* Smart Bundles */}
-            <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center">
-                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mr-6 shadow-lg">
-                    <span className="text-2xl">📦</span>
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900">Smart Bundles</h2>
-                    <p className="text-gray-600 text-lg">Save more with bundles</p>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
-                  UP TO 25% OFF
-                </div>
-              </div>
+            <div className="mt-8 bg-white rounded-2xl shadow-lg p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                <span className="mr-3">📦</span>
+                Smart Bundles
+                <span className="ml-3 bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">Save More</span>
+              </h2>
               
               <div className="grid md:grid-cols-2 gap-6">
                 {bundles.map((bundle) => (
                   <div 
                     key={bundle.id} 
-                    className={`relative p-6 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
+                    className={`border-2 rounded-xl p-6 cursor-pointer transition-all ${
                       selectedBundle === bundle.id 
-                        ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-400 shadow-xl' 
-                        : 'bg-gray-50 border-2 border-gray-200 hover:border-gray-300 hover:shadow-lg'
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-200 hover:border-gray-300'
                     }`}
                     onClick={() => selectBundle(bundle.id)}
                   >
-                    {selectedBundle === bundle.id && (
-                      <div className="absolute -top-3 -right-3 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                        <span className="text-white text-sm font-bold">✓</span>
-                      </div>
-                    )}
-                    
                     <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-xl font-bold text-gray-900">{bundle.name}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">{bundle.name}</h3>
                       <div className="text-right">
                         <div className="text-sm text-gray-500 line-through">${bundle.originalPrice}</div>
-                        <div className="text-2xl font-bold text-green-600">${bundle.bundlePrice}</div>
+                        <div className="text-xl font-bold text-green-600">${bundle.bundlePrice}</div>
                       </div>
                     </div>
                     
-                    <p className="text-gray-600 mb-4">{bundle.description}</p>
+                    <p className="text-gray-600 text-sm mb-4">{bundle.description}</p>
                     
                     <div className="space-y-2 mb-4">
                       {bundle.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center text-sm">
-                          <span className="text-gray-700">{item.name}</span>
-                          <span className="font-semibold text-gray-900">{item.quantity}x</span>
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span>{item.name}</span>
+                          <span className="font-medium">{item.quantity}x</span>
                         </div>
                       ))}
                     </div>
                     
-                    <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-center py-3 rounded-xl font-bold shadow-lg">
+                    <div className="bg-green-100 text-green-800 text-sm px-3 py-2 rounded-lg text-center font-medium">
                       Save ${bundle.savings}
                     </div>
                   </div>
@@ -346,197 +307,151 @@ export default function PricingPage() {
 
           {/* Shopping Cart */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl shadow-xl p-6 sticky top-24 border border-gray-100">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                  <span className="text-xl">🛒</span>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900">Your Order</h2>
-              </div>
+            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                <span className="mr-3">🛒</span>
+                Your Order
+              </h2>
               
               {/* Foundation Plan in Cart */}
-              <div className="bg-gradient-to-r from-blue-50 to-teal-50 p-4 rounded-xl mb-6 border border-blue-200">
+              <div className="border-b border-gray-100 pb-4 mb-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-semibold text-gray-900">Foundation Plan</div>
-                    <div className="text-sm text-gray-600">Monthly subscription</div>
+                    <div className="font-medium text-gray-900">Foundation Plan</div>
+                    <div className="text-sm text-gray-500">Monthly subscription</div>
                   </div>
-                  <div className="text-xl font-bold text-blue-600">$5.00</div>
+                  <div className="text-lg font-semibold">$5.00</div>
                 </div>
               </div>
 
               {/* Selected Bundle */}
               {selectedBundle && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4 mb-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-green-800">
-                      {bundles.find(b => b.id === selectedBundle)?.name} Bundle
+                    <span className="font-medium text-green-800">
+                      {bundles.find(b => b.id === selectedBundle)?.name}
                     </span>
-                    <button 
+                    <button
                       onClick={() => {setSelectedBundle(null); setCart([]);}}
-                      className="text-green-600 hover:text-green-800 w-6 h-6 rounded-full bg-green-100 hover:bg-green-200 flex items-center justify-center transition-colors"
+                      className="text-green-600 hover:text-green-800"
                     >
                       ✕
                     </button>
                   </div>
-                  <div className="text-sm text-green-700 font-medium">Bundle savings applied!</div>
+                  <div className="text-sm text-green-600">Bundle savings applied!</div>
                 </div>
               )}
               
               {/* Cart Items */}
               {cart.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="text-6xl mb-4 opacity-50">🎯</div>
-                  <p className="font-medium text-gray-600">No AI features selected</p>
-                  <p className="text-sm text-gray-500 mt-1">Add features from the menu above</p>
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-4xl mb-2">🍽️</div>
+                  <p>Your AI features cart is empty</p>
+                  <p className="text-sm">Add some delicious AI features!</p>
                 </div>
               ) : (
                 <div className="space-y-4 mb-6">
                   {cart.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                    <div key={item.id} className="flex justify-between items-center">
                       <div className="flex-1">
-                        <div className="font-semibold text-gray-900">{item.name}</div>
-                        <div className="text-sm text-gray-600">${item.price} {item.unit}</div>
+                        <div className="font-medium text-gray-900">{item.name}</div>
+                        <div className="text-sm text-gray-500">${item.price} {item.unit}</div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-8 h-8 rounded-full bg-white border-2 border-gray-200 hover:border-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                          className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600"
                         >
                           −
                         </button>
-                        <span className="w-8 text-center font-bold text-gray-900">{item.quantity}</span>
+                        <span className="w-8 text-center font-medium">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-8 h-8 rounded-full bg-white border-2 border-gray-200 hover:border-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                          className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600"
                         >
                           +
                         </button>
                       </div>
-                      <div className="ml-4 font-bold text-gray-900 w-16 text-right">
+                      <div className="ml-4 font-semibold text-gray-900 w-16 text-right">
                         ${(item.price * item.quantity).toFixed(2)}
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
-              
+                                </div>
+                            )}
+                            
               {/* Total */}
-              <div className="border-t-2 border-gray-100 pt-6">
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Foundation Plan</span>
-                    <span className="font-semibold">$5.00</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">AI Features</span>
-                    <span className="font-semibold">${getTotalPrice().toFixed(2)}</span>
-                  </div>
-                  {getSavings() > 0 && (
-                    <div className="flex justify-between items-center text-green-600">
-                      <span className="font-medium">Bundle Savings</span>
-                      <span className="font-semibold">-${getSavings().toFixed(2)}</span>
-                    </div>
-                  )}
+              <div className="border-t border-gray-200 pt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-600">Foundation Plan</span>
+                  <span>$5.00</span>
                 </div>
-                
-                <div className="flex justify-between items-center text-2xl font-bold border-t-2 border-gray-100 pt-4 mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-600">AI Features</span>
+                  <span>${getTotalPrice().toFixed(2)}</span>
+                            </div>
+                {getSavings() > 0 && (
+                  <div className="flex justify-between items-center mb-2 text-green-600">
+                    <span>Bundle Savings</span>
+                    <span>-${getSavings().toFixed(2)}</span>
+                        </div>
+                )}
+                <div className="flex justify-between items-center text-lg font-bold border-t border-gray-200 pt-2">
                   <span>Total Monthly</span>
-                  <span className="bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">
-                    ${(5 + getTotalPrice()).toFixed(2)}
-                  </span>
+                  <span>${(5 + getTotalPrice()).toFixed(2)}</span>
                 </div>
-                
-                <button className="w-full bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 mb-4">
-                  Get Started Now
-                </button>
-                
-                <p className="text-xs text-gray-500 text-center leading-relaxed">
-                  Start with Foundation Plan. AI features are charged only when used. Cancel anytime.
-                </p>
               </div>
+              
+              <button className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-4 rounded-lg mt-6 transition-colors">
+                Get Started
+              </button>
+              
+              <p className="text-xs text-gray-500 text-center mt-4">
+                You'll only be charged for AI features you actually use
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Trust & FAQ Section */}
-        <div className="mt-20 grid md:grid-cols-2 gap-8">
-          {/* Trust Indicators */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-              <span className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                <span className="text-green-600">🛡️</span>
-              </span>
-              Why Choose Lemona?
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-1">
-                  <span className="text-blue-600 text-sm">✓</span>
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">No Hidden Fees</div>
-                  <div className="text-gray-600 text-sm">What you see is what you pay. Always.</div>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-1">
-                  <span className="text-blue-600 text-sm">✓</span>
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Cancel Anytime</div>
-                  <div className="text-gray-600 text-sm">No contracts, no commitments.</div>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-1">
-                  <span className="text-blue-600 text-sm">✓</span>
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Free Trial</div>
-                  <div className="text-gray-600 text-sm">Try AI features before you buy.</div>
-                </div>
-              </div>
+        {/* FAQ Section */}
+        <div className="mt-16 bg-white rounded-2xl shadow-lg p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
+            Frequently Asked Questions
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">How does billing work?</h3>
+              <p className="text-gray-600 text-sm">
+                Pay $5/month for the foundation plan, then only pay for AI features you actually use. 
+                No surprises, no waste.
+              </p>
             </div>
-          </div>
-
-          {/* FAQ */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-              <span className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                <span className="text-purple-600">❓</span>
-              </span>
-              Common Questions
-            </h3>
             
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">How does billing work?</h4>
-                <p className="text-gray-600 text-sm">
-                  Pay $5/month for the foundation plan, then only pay for AI features you actually use.
-                </p>
-              </div>
-              
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Can I change my plan?</h4>
-                <p className="text-gray-600 text-sm">
-                  Yes! Add or remove AI features anytime. Bundles can be activated monthly.
-                </p>
-              </div>
-              
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">What about unused credits?</h4>
-                <p className="text-gray-600 text-sm">
-                  Bundle credits roll over for up to 3 months, so you never lose what you've paid for.
-                </p>
-              </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">Can I change my usage anytime?</h3>
+              <p className="text-gray-600 text-sm">
+                Absolutely! Add or remove AI features as needed. Bundles can be activated or 
+                deactivated monthly.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">What if I don't use all my bundle credits?</h3>
+              <p className="text-gray-600 text-sm">
+                Unused bundle credits roll over for up to 3 months, so you never lose what you've paid for.
+              </p>
+                </div>
+            
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">Is there a free trial?</h3>
+              <p className="text-gray-600 text-sm">
+                Yes! New users get 1 free Smart Cut, 5 minutes of AI voiceover, and 3 AI images to try our features.
+              </p>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
+            </div>
+        </div>
+    );
 } 
