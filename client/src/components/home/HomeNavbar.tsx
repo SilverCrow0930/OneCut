@@ -67,8 +67,8 @@ export default function HomeNavbar() {
                     <div className="flex items-center space-x-8">
                         {/* Navigation Links */}
                         <div className="hidden md:flex items-center space-x-8">
-                            <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
-                                Product
+                            <a href="/" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
+                                Home
                             </a>
                             <a href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
                                 Pricing

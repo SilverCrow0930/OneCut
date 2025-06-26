@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Navbar from '@/components/layout/Navbar';
+import HomeNavbar from '@/components/home/HomeNavbar';
 
 interface CartItem {
   id: string;
@@ -155,16 +155,16 @@ export default function PricingPage() {
     return 0;
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        {/* Header */}
+      <HomeNavbar />
+
+      <div className="max-w-7xl mx-auto px-4 pt-32 pb-16">
+                {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             🍋 Lemona Pricing Menu
-          </h1>
+                    </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Like ordering at your favorite restaurant - pick what you need, when you need it. 
             Start with our foundation plan, then add AI features à la carte.
@@ -331,7 +331,7 @@ export default function PricingPage() {
                     <span className="font-medium text-green-800">
                       {bundles.find(b => b.id === selectedBundle)?.name}
                     </span>
-                    <button 
+                    <button
                       onClick={() => {setSelectedBundle(null); setCart([]);}}
                       className="text-green-600 hover:text-green-800"
                     >
@@ -377,9 +377,9 @@ export default function PricingPage() {
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
-              
+                                </div>
+                            )}
+                            
               {/* Total */}
               <div className="border-t border-gray-200 pt-4">
                 <div className="flex justify-between items-center mb-2">
@@ -389,12 +389,12 @@ export default function PricingPage() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-600">AI Features</span>
                   <span>${getTotalPrice().toFixed(2)}</span>
-                </div>
+                            </div>
                 {getSavings() > 0 && (
                   <div className="flex justify-between items-center mb-2 text-green-600">
                     <span>Bundle Savings</span>
                     <span>-${getSavings().toFixed(2)}</span>
-                  </div>
+                        </div>
                 )}
                 <div className="flex justify-between items-center text-lg font-bold border-t border-gray-200 pt-2">
                   <span>Total Monthly</span>
@@ -441,7 +441,7 @@ export default function PricingPage() {
               <p className="text-gray-600 text-sm">
                 Unused bundle credits roll over for up to 3 months, so you never lose what you've paid for.
               </p>
-            </div>
+                </div>
             
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Is there a free trial?</h3>
@@ -451,7 +451,7 @@ export default function PricingPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
+            </div>
+        </div>
+    );
 } 
