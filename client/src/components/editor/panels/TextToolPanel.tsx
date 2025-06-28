@@ -244,161 +244,152 @@ export default function TextToolPanel() {
             <PanelHeader icon={Type} title={selectedClip ? "Edit Text" : "Add Text"} />
             <div className="space-y-6 flex-1">
                 <div className="space-y-2">
-                    <label htmlFor="text" className="block text-base font-medium text-black/50">
-                        Content
+                    <label htmlFor="text" className="block text-sm font-medium text-black/50">
+                        Text Content
                     </label>
                     <textarea
-                        ref={textareaRef}
                         id="text"
+                        ref={textareaRef}
                         value={text}
                         onChange={handleTextChange}
-                        onMouseDown={(e) => e.stopPropagation()}
                         placeholder="Enter your text here"
                         className="
-                            w-full px-4 py-4 text-base border border-gray-200 rounded-lg 
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                            w-full px-4 py-3 text-sm border border-gray-200 rounded-lg
+                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                             transition-all duration-200 placeholder:text-black/50 overflow-hidden
-                            resize-none text-black/50
+                            resize-none min-h-[80px]
                         "
                     />
                 </div>
 
-                {/* Style Selection Toggle */}
                 <div className="space-y-3">
-                    <label className="block text-base font-medium text-black/50">
-                        Style
+                    <label className="block text-sm font-medium text-black/50">
+                        Style Options
                     </label>
-                    <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
-                        <button
-                            onClick={() => setUseAIStyle(false)}
-                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-all duration-200 ${
-                                !useAIStyle ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                        >
-                            <Type size={16} />
-                            <span className="text-sm font-medium">Presets</span>
-                        </button>
-                        <button
-                            onClick={() => setUseAIStyle(true)}
-                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-all duration-200 ${
-                                useAIStyle ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                        >
-                            <Sparkles size={16} />
-                            <span className="text-sm font-medium">AI Style</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Preset Styles */}
-                {!useAIStyle && (
-                    <TextStyleSelector
-                        selectedStyleIdx={selectedStyleIdx}
-                        setSelectedStyleIdx={setSelectedStyleIdx}
-                    />
-                )}
-
-                {/* AI Style Generator */}
-                {useAIStyle && (
-                    <div className="space-y-4 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center gap-2">
-                            <Wand2 size={16} className="text-blue-600" />
-                            <h6 className="font-semibold text-blue-700">AI Style Generator</h6>
-                        </div>
-                        
-                        <div className="space-y-3">
-                            <textarea
-                                value={stylePrompt}
-                                onChange={(e) => setStylePrompt(e.target.value)}
-                                placeholder="Bold neon cyberpunk style with glowing edges or Elegant gold text with shadow for luxury brand"
-                                className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                rows={3}
+                    
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="styleType"
+                                checked={!useAIStyle}
+                                onChange={() => setUseAIStyle(false)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                             />
+                            <span className="text-sm font-medium">Presets</span>
+                        </label>
+                        
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="styleType"
+                                checked={useAIStyle}
+                                onChange={() => setUseAIStyle(true)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-medium">AI Style</span>
+                        </label>
+                    </div>
+
+                    {useAIStyle ? (
+                        <div className="space-y-3">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Describe your desired style
+                                </label>
+                                <textarea
+                                    value={stylePrompt}
+                                    onChange={(e) => setStylePrompt(e.target.value)}
+                                    placeholder="Bold neon cyberpunk style with glowing edges or Elegant gold text with shadow for luxury brand"
+                                    className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    rows={3}
+                                />
+                            </div>
                             
                             <button
                                 onClick={generateAIStyle}
-                                disabled={!stylePrompt.trim() || isGeneratingStyle}
-                                className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                                disabled={isGeneratingStyle || !stylePrompt.trim()}
+                                className={`
+                                    w-full px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                                    ${isGeneratingStyle || !stylePrompt.trim()
+                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
+                                    }
+                                `}
                             >
                                 {isGeneratingStyle ? (
-                                    <>
-                                        <RefreshCw size={16} className="animate-spin" />
-                                        Generating...
-                                    </>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                        Generating Style...
+                                    </div>
                                 ) : (
-                                    <>
-                                        <Sparkles size={16} />
-                                        Generate Style
-                                    </>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Wand2 className="w-4 h-4" />
+                                        Generate AI Style
+                                    </div>
                                 )}
                             </button>
-
+                            
                             {styleError && (
-                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                                    <p className="text-sm text-red-600">{styleError}</p>
-                                </div>
-                            )}
-
-                            {/* Style Preview */}
-                            {aiGeneratedStyle && (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">Preview</label>
-                                    <div className="p-4 bg-black rounded-lg">
-                                        <div
-                                            style={aiGeneratedStyle}
-                                            className="text-center"
-                                        >
-                                            {text || 'Sample Text'}
-                                        </div>
-                                    </div>
-                                </div>
+                                <p className="text-sm text-red-600">{styleError}</p>
                             )}
                         </div>
-                    </div>
-                )}
-
-                {/* Live Preview */}
-                {(text || (!useAIStyle || aiGeneratedStyle)) && (
+                    ) : (
+                        <TextStyleSelector selectedStyleIdx={selectedStyleIdx} setSelectedStyleIdx={setSelectedStyleIdx} />
+                    )}
+                    
                     <div className="space-y-2">
-                        <label className="block text-base font-medium text-black/50">
-                            Preview
-                        </label>
-                        <div className="p-4 bg-black rounded-lg">
-                            <div
-                                style={getCurrentStyle()}
-                                className="text-center"
-                            >
-                                {text || 'Sample Text'}
+                        <label className="text-sm font-medium text-gray-700">Preview</label>
+                        <div className="bg-gray-900 rounded-lg p-4 min-h-[60px] flex items-center justify-center">
+                            <div style={getCurrentStyle()}>
+                                {text || 'Your text will appear here'}
                             </div>
                         </div>
                     </div>
-                )}
-            </div>
-                
-            {/* Apply Button - Fixed at bottom */}
-            <div className="pt-4 border-t border-gray-200 bg-white">
+                </div>
+
+                <div className="space-y-3">
+                    <label className="block text-sm font-medium text-black/50">
+                        Timeline Options
+                    </label>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                            <label className="text-sm text-gray-600">Duration</label>
+                            <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="3">3 seconds</option>
+                                <option value="5" selected>5 seconds</option>
+                                <option value="10">10 seconds</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <label className="text-sm text-gray-600">Position</label>
+                            <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="start">Start of timeline</option>
+                                <option value="cursor">At cursor</option>
+                                <option value="end">End of timeline</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddOrUpdateText();
-                    }}
-                    disabled={!text.trim() || (useAIStyle && !aiGeneratedStyle)}
-                    className="
-                        flex items-center justify-center w-full gap-2 px-4 py-3 
-                        text-base font-medium text-white bg-blue-600 rounded-lg 
-                        hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 
-                        disabled:opacity-50 disabled:cursor-not-allowed 
-                        transition-all duration-200 shadow-sm hover:shadow-md
-                    "
+                    onClick={handleAddOrUpdateText}
+                    disabled={!text.trim()}
+                    className={`
+                        w-full px-4 py-3 rounded-lg font-medium transition-all duration-200
+                        ${!text.trim()
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 active:scale-95'
+                        }
+                    `}
                 >
-                    {selectedClip ? (
-                        "Apply Edit"
-                    ) : (
-                        <>
-                            <Plus className="w-6 h-6" />
-                            Add Text Clip
-                        </>
-                    )}
+                    <div className="flex items-center justify-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        {selectedClip ? 'Update Text' : 'Add Text to Timeline'}
+                    </div>
                 </button>
             </div>
         </div>

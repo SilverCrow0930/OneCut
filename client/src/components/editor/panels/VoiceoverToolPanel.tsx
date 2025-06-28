@@ -317,56 +317,51 @@ const VoiceoverToolPanel = () => {
                 {/* Script Section */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                        <label className="block text-base font-medium text-gray-700">Script</label>
-                        <button
-                            onClick={() => setShowTemplates(!showTemplates)}
-                            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
-                        >
-                            <FileText size={16} />
-                            Templates
-                        </button>
+                        <label className="block text-sm font-medium text-gray-700">Script</label>
+                        <div className="flex items-center justify-between mb-2">
+                            <div></div>
+                            <button
+                                onClick={() => setShowTemplates(!showTemplates)}
+                                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                            >
+                                <FileText className="w-4 h-4" />
+                                {showTemplates ? 'Hide' : 'Show'} Templates
+                            </button>
+                        </div>
                     </div>
-
+                    
                     {showTemplates && (
-                        <div className="p-4 bg-gray-50 rounded-lg space-y-2">
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                             <h6 className="text-sm font-semibold text-gray-700">Script Templates</h6>
-                            <div className="grid gap-2">
-                                {SCRIPT_TEMPLATES.map((template, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => applyTemplate(template)}
-                                        className="p-3 text-left bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
-                                    >
-                                        <div className="font-medium text-gray-900">{template.name}</div>
-                                        <div className="text-xs text-gray-500 mt-1 line-clamp-2">{template.content}</div>
-                                        <div className="flex gap-1 mt-2">
+                            <div className="mt-2 space-y-2">
+                                {SCRIPT_TEMPLATES.map((template, index) => (
+                                    <div key={index} className="p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer"
+                                         onClick={() => applyTemplate(template)}>
+                                        <div className="font-medium text-sm text-gray-800">{template.name}</div>
+                                        <div className="text-xs text-gray-600 mt-1">{template.content.substring(0, 80)}...</div>
+                                        <div className="flex gap-1 mt-1">
                                             {template.tags.map(tag => (
-                                                <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                                <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
                                                     {tag}
                                                 </span>
                                             ))}
                                         </div>
-                                    </button>
+                                    </div>
                                 ))}
                             </div>
                         </div>
                     )}
-
-                    <div className="relative">
-                        <textarea
-                            value={script}
-                            onChange={(e) => setScript(e.target.value)}
-                            placeholder="Enter your script here"
-                            maxLength={5000}
-                            className="w-full h-32 p-4 border border-gray-200 rounded-lg 
-                                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                                     transition-all duration-200 placeholder:text-gray-400 resize-none"
-                        />
-                    </div>
                     
-                    <div className="flex justify-between text-xs text-gray-500">
-                        <span>{script.length}/5000 characters</span>
-                    </div>
+                    <textarea
+                        value={script}
+                        onChange={(e) => setScript(e.target.value)}
+                        placeholder="Enter your script here"
+                        className="
+                            w-full p-3 border border-gray-300 rounded-lg text-sm
+                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                            transition-all duration-200 placeholder:text-gray-400 resize-none"
+                        rows={4}
+                    />
                 </div>
 
                 {/* Voice Selection */}
@@ -378,23 +373,22 @@ const VoiceoverToolPanel = () => {
                     {/* Voice Tabs */}
                     <div className="flex border-b border-gray-200">
                         {[
-                            { key: 'all', label: 'All', icon: Globe },
-                            { key: 'recent', label: 'Recent', icon: Clock }
+                            { id: 'all', label: 'All Voices', count: voices.length },
+                            { id: 'recent', label: 'Recent', count: recentVoices.length }
                         ].map(tab => (
                             <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key as any)}
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as 'all' | 'recent')}
                                 className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                                    activeTab === tab.key
+                                    activeTab === tab.id
                                         ? 'border-blue-500 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                             >
-                                <tab.icon size={16} />
                                 {tab.label}
-                                {tab.key === 'recent' && recentVoices.length > 0 && (
-                                    <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">
-                                        {recentVoices.length}
+                                {tab.count > 0 && (
+                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                        {tab.count}
                                     </span>
                                 )}
                             </button>
@@ -480,22 +474,22 @@ const VoiceoverToolPanel = () => {
                 <button
                     onClick={generateVoiceover}
                     disabled={!script.trim() || !selectedVoice || isGenerating}
-                    className="
-                        flex items-center justify-center w-full gap-2 px-4 py-3 
-                        text-base font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg 
-                        hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 
-                        disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500
-                        transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5
-                    "
+                    className={`
+                        w-full px-4 py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2
+                        ${!script.trim() || !selectedVoice || isGenerating
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 active:scale-95'
+                        }
+                    `}
                 >
                     {isGenerating ? (
                         <>
-                            <RefreshCw className="w-5 h-5 animate-spin" />
-                            Generating with AI...
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Generating...
                         </>
                     ) : (
                         <>
-                            <Sparkles className="w-5 h-5" />
+                            <Mic className="w-4 h-4" />
                             Generate Voiceover
                         </>
                     )}

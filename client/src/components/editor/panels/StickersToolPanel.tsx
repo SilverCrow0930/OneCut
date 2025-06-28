@@ -148,7 +148,7 @@ const StickersToolPanel = () => {
                     placeholder="Search stickers"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 />
             </div>
             <div className="flex-1 overflow-y-auto p-4 hide-scrollbar">

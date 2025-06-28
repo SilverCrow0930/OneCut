@@ -194,55 +194,43 @@ const AIGenerationToolPanel = () => {
     const renderImageGeneration = () => (
         <div className="space-y-4">
             <div className="space-y-3">
-                <label className="block text-xs font-medium text-gray-700">Describe your image</label>
+                <label className="block text-sm font-medium text-gray-700">Describe your image</label>
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="A majestic mountain landscape at sunset with golden light, photorealistic, highly detailed..."
-                    className="w-full h-24 p-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                    rows={3}
                 />
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-600">Model</label>
-                    <select 
-                        value={quality}
-                        onChange={(e) => setQuality(e.target.value)}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Style</label>
+                    <select
+                        value={imageStyle}
+                        onChange={(e) => setImageStyle(e.target.value)}
                         className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
-                        <option value="normal">Flux Dev (Normal)</option>
-                        <option value="premium">Lumina V2 (Premium)</option>
-                        <option value="high_quality">Flux Pro 1.1 (High Quality)</option>
+                        <option value="realistic">Realistic</option>
+                        <option value="artistic">Artistic</option>
+                        <option value="cartoon">Cartoon</option>
+                        <option value="abstract">Abstract</option>
                     </select>
                 </div>
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-600">Aspect Ratio</label>
-                    <select 
+                
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Aspect Ratio</label>
+                    <select
                         value={aspectRatio}
                         onChange={(e) => setAspectRatio(e.target.value)}
                         className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
-                        <option value="1:1">Square (1:1)</option>
-                        <option value="16:9">Landscape (16:9)</option>
-                        <option value="9:16">Portrait (9:16)</option>
-                        <option value="4:3">Classic (4:3)</option>
+                        <option value="16:9">16:9 (Landscape)</option>
+                        <option value="9:16">9:16 (Portrait)</option>
+                        <option value="1:1">1:1 (Square)</option>
                     </select>
                 </div>
-            </div>
-            
-            <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-600">Style</label>
-                <select 
-                    value={imageStyle}
-                    onChange={(e) => setImageStyle(e.target.value)}
-                    className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value="realistic">Realistic</option>
-                    <option value="artistic">Artistic</option>
-                    <option value="cartoon">Cartoon</option>
-                    <option value="abstract">Abstract</option>
-                </select>
             </div>
         </div>
     )
@@ -250,30 +238,20 @@ const AIGenerationToolPanel = () => {
     const renderVideoGeneration = () => (
         <div className="space-y-4">
             <div className="space-y-3">
-                <label className="block text-xs font-medium text-gray-700">Describe your video</label>
+                <label className="block text-sm font-medium text-gray-700">Describe your video</label>
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="A serene lake with gentle ripples moving across the surface, soft morning light..."
-                    className="w-full h-24 p-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full p-3 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 resize-none"
+                    rows={3}
                 />
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-600">Model</label>
-                    <select 
-                        value={quality}
-                        onChange={(e) => setQuality(e.target.value)}
-                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                        <option value="normal">LTX Video 13B (Normal)</option>
-                        <option value="high_quality">Kling Video V1.6 (High Quality)</option>
-                    </select>
-                </div>
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-600">Duration</label>
-                    <select 
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Duration</label>
+                    <select
                         value={videoDuration}
                         onChange={(e) => setVideoDuration(e.target.value)}
                         className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500"
@@ -283,19 +261,19 @@ const AIGenerationToolPanel = () => {
                         <option value="10">10 seconds</option>
                     </select>
                 </div>
-            </div>
-            
-            <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-600">Motion Level</label>
-                <select 
-                    value={videoMotion}
-                    onChange={(e) => setVideoMotion(e.target.value)}
-                    className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500"
-                >
-                    <option value="subtle">Subtle Motion</option>
-                    <option value="moderate">Moderate Motion</option>
-                    <option value="dynamic">Dynamic Motion</option>
-                </select>
+                
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Motion</label>
+                    <select
+                        value={videoMotion}
+                        onChange={(e) => setVideoMotion(e.target.value)}
+                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    >
+                        <option value="low">Low Motion</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="high">High Motion</option>
+                    </select>
+                </div>
             </div>
         </div>
     )
@@ -303,47 +281,45 @@ const AIGenerationToolPanel = () => {
     const renderMusicGeneration = () => (
         <div className="space-y-4">
             <div className="space-y-3">
-                <label className="block text-xs font-medium text-gray-700">Describe your music</label>
+                <label className="block text-sm font-medium text-gray-700">Describe your music</label>
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="Upbeat electronic music with a driving beat, synthesizer melodies, perfect for a tech video..."
-                    className="w-full h-24 p-3 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full p-3 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 resize-none"
+                    rows={3}
                 />
+                
+                <div className="w-full p-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                    Note: Music generation may take 2-3 minutes to complete
+                </div>
             </div>
             
-            <div className="space-y-3">
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-600">Model</label>
-                    <div className="w-full p-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
-                        Lyria 2
-                    </div>
-                </div>
-                
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-600">Duration</label>
-                    <select 
-                        value={musicDuration}
-                        onChange={(e) => setMusicDuration(e.target.value)}
-                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500"
-                    >
-                        <option value="15">15 seconds</option>
-                        <option value="30">30 seconds</option>
-                    </select>
-                </div>
-                
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-600">Genre</label>
-                    <select 
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Genre</label>
+                    <select
                         value={musicGenre}
                         onChange={(e) => setMusicGenre(e.target.value)}
                         className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500"
                     >
                         <option value="ambient">Ambient</option>
                         <option value="electronic">Electronic</option>
-                        <option value="cinematic">Cinematic</option>
                         <option value="acoustic">Acoustic</option>
-                        <option value="upbeat">Upbeat</option>
+                        <option value="cinematic">Cinematic</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Duration</label>
+                    <select
+                        value={musicDuration}
+                        onChange={(e) => setMusicDuration(e.target.value)}
+                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500"
+                    >
+                        <option value="15">15 seconds</option>
+                        <option value="30">30 seconds</option>
+                        <option value="60">60 seconds</option>
                     </select>
                 </div>
             </div>
@@ -423,20 +399,20 @@ const AIGenerationToolPanel = () => {
                                 key={type.id}
                                 onClick={() => {
                                     setActiveTab(type.id)
-                                    setPrompt('') // Clear prompt when switching tabs
-                                    setResult(null) // Clear previous results
-                                    setError(null) // Clear errors
-                                    setQuality('normal') // Reset quality to normal
+                                    setPrompt('')
+                                    setError(null)
+                                    setResult(null)
                                 }}
                                 className={`
                                     flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium
                                     ${activeTab === type.id 
-                                        ? `bg-white shadow-sm ${type.color}` 
-                                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                                        ? `${type.bgColor} ${type.color} border-2 border-current` 
+                                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                                     }
                                 `}
                             >
-                                <span>{type.name}</span>
+                                <type.icon className="w-4 h-4" />
+                                {type.name}
                             </button>
                         )
                     })}
@@ -460,24 +436,16 @@ const AIGenerationToolPanel = () => {
                 <button
                     onClick={handleGenerate}
                     disabled={!prompt.trim() || isGenerating}
-                    className={`
-                        flex items-center justify-center w-full gap-3 px-6 py-4 rounded-lg 
-                        font-semibold text-white transition-all duration-200 
-                        transform hover:scale-[1.02] active:scale-[0.98]
-                        disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
-                        ${activeTab === 'image' ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                        ${activeTab === 'video' ? 'bg-purple-600 hover:bg-purple-700' : ''}
-                        ${activeTab === 'music' ? 'bg-green-600 hover:bg-green-700' : ''}
-                    `}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full justify-center"
                 >
                     {isGenerating ? (
                         <>
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            Generating {activeType.name}...
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Generating...
                         </>
                     ) : (
                         <>
-                            <Wand2 size={20} />
+                            <activeType.icon className="w-4 h-4" />
                             Generate {activeType.name}
                         </>
                     )}

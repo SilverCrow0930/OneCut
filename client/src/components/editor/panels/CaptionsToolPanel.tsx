@@ -752,7 +752,7 @@ const CaptionsToolPanel = () => {
                                     </div>
                                     <div>
                                         <div className="text-sm font-semibold text-blue-800">
-                                            Track {selectedTrack.index + 1} • {selectedTrack.type} 
+                                            {selectedTrack.type === 'video' ? '🎥' : '🎵'} {selectedTrack.type === 'video' ? 'Video' : 'Audio'} Track {selectedTrack.index + 1}
                                         </div>
                                         <div className="text-xs text-blue-600">
                                             {selectedTrackClips.length} clip{selectedTrackClips.length !== 1 ? 's' : ''} • Total duration: {Math.round(selectedTrackClips.reduce((sum, clip) => sum + (clip.timelineEndMs - clip.timelineStartMs), 0) / 1000)}s
@@ -772,12 +772,16 @@ const CaptionsToolPanel = () => {
 
                     {/* Generate Button */}
                         <button 
+                            className="
+                                w-full px-4 py-3 rounded-lg transition-all duration-200 
+                                flex items-center justify-center gap-2 
+                                bg-gradient-to-r from-blue-600 to-blue-700 text-white 
+                                hover:from-blue-700 hover:to-blue-800 
+                                hover:scale-[1.02] font-medium shadow-md text-sm"
                             onClick={handleOneClickGenerate}
-                        disabled={isGenerating || !selectedTrackId}
-                        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] font-medium shadow-md text-base"
-                    >
-                        <Sparkles size={20} />
-                        {isGenerating ? 'Generating...' : 'Generate Captions'}
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            Generate Captions
                         </button>
                     </div>
             )}
@@ -813,10 +817,10 @@ const CaptionsToolPanel = () => {
                         </h4>
                         <button
                             onClick={handleRegenerateCaption}
-                            className="flex items-center gap-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors text-sm"
+                            className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors text-sm"
                             title="Regenerate captions"
                         >
-                            <RefreshCw size={16} />
+                            <RotateCcw className="w-4 h-4 mr-2" />
                             Regenerate
                         </button>
                     </div>
@@ -1043,9 +1047,14 @@ const CaptionsToolPanel = () => {
                     <div className="flex gap-3">
                         <button
                             onClick={handleAddToTimeline}
-                            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 transform hover:scale-[1.02] font-medium shadow-md text-base"
+                            className="
+                                w-full px-4 py-3 rounded-lg transition-all duration-200 
+                                flex items-center justify-center gap-2 
+                                bg-gradient-to-r from-blue-600 to-blue-700 text-white 
+                                hover:from-blue-700 hover:to-blue-800 
+                                hover:scale-[1.02] font-medium shadow-md text-sm"
                         >
-                            <Plus size={20} />
+                            <Plus className="w-4 h-4" />
                             Add to Timeline
                         </button>
                     </div>
