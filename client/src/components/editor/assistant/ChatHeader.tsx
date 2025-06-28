@@ -12,24 +12,24 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ activeView, onViewChange }) => 
             <div className='flex flex-row justify-center w-full gap-1'>
                 <button
                     onClick={() => onViewChange('chat')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
                         activeView === 'chat' 
                             ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm' 
                             : 'text-black opacity-70 hover:opacity-90 hover:bg-gray-100/70 border border-transparent'
                     }`}
                 >
-                    <MessageCircle className="w-4 h-4" />
+                    <MessageCircle className="w-3 h-3" />
                     Chat
                 </button>
                 <button
                     onClick={() => onViewChange('notes')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
                         activeView === 'notes' 
                             ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm' 
                             : 'text-black opacity-70 hover:opacity-90 hover:bg-gray-100/70 border border-transparent'
                     }`}
                 >
-                    <FileText className="w-4 h-4" />
+                    <FileText className="w-3 h-3" />
                     Notes
                 </button>
             </div>

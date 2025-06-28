@@ -507,7 +507,7 @@ const Assistant = () => {
     return (
         <div className="flex flex-col w-full h-full p-1">
             {/* Chat/Notes Toggle Header */}
-            <div className="w-full mb-2">
+            <div className="w-full mb-1">
                 <ChatHeader 
                     activeView={activeView} 
                     onViewChange={setActiveView} 
@@ -518,8 +518,8 @@ const Assistant = () => {
             {activeView === 'chat' ? (
                 <>
                     {/* Header with Status and Video Analysis Button */}
-                    <div className="w-full mb-2 p-2 bg-gray-50 rounded flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <div className="w-full mb-1 p-1.5 bg-gray-50 rounded flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
                             <span>{getStatusMessage()}</span>
                             {isWebSocketConnected && <span className="text-green-600">✅</span>}
                         </div>
@@ -528,7 +528,7 @@ const Assistant = () => {
                         <button
                             onClick={handleVideoAnalysis}
                             disabled={isAnalyzing || !assets.some(a => a.mime_type?.startsWith('video/'))}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
                                 hasVideoAnalysis
                                     ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                     : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
@@ -556,14 +556,14 @@ const Assistant = () => {
 
                     {/* Error Messages */}
                     {analysisError && (
-                        <div className="w-full mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-center gap-2">
+                        <div className="w-full mb-1 p-1.5 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-center gap-1.5">
                             <AlertCircle className="w-3 h-3 flex-shrink-0" />
                             {analysisError}
                         </div>
                     )}
                     
                     {!assets.some(a => a.mime_type?.startsWith('video/')) && (
-                        <div className="w-full mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
+                        <div className="w-full mb-1 p-1.5 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
                             Add a video to your project to enable analysis
                         </div>
                     )}
@@ -589,7 +589,7 @@ const Assistant = () => {
                     </div>
 
                     {/* Input */}
-                    <div className='w-full'>
+                    <div className='w-full mt-1'>
                         <ChatTextField
                             onSend={handleSendMessage}
                             message={message}

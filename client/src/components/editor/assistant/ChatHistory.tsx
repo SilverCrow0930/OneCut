@@ -63,8 +63,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
         switch (state) {
             case 'generating_output':
                 return (
-                    <div className='flex flex-row w-full text-sm px-3 py-2 items-center bg-gray-50 rounded-lg'>
-                        <div className="flex flex-row items-center gap-2">
+                    <div className='flex flex-row w-full text-xs px-2 py-1.5 items-center bg-gray-50 rounded'>
+                        <div className="flex flex-row items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
                             <span className="text-gray-600 font-medium">Thinking</span>
                         </div>
@@ -92,36 +92,36 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
         >
             {/* Welcome message when no chat messages */}
             {chatMessages.length === 0 && state === 'idle' && (
-                <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                    <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-col items-center justify-center h-full text-center px-3">
+                    <div className="flex flex-col items-center gap-3">
                         
                         {/* Welcome text */}
-                        <div className="flex flex-col gap-2">
-                            <h3 className="text-lg font-semibold text-gray-700">
+                        <div className="flex flex-col gap-1.5">
+                            <h3 className="text-base font-semibold text-gray-700">
                                 🎬 AI Video Assistant
                             </h3>
-                            <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
+                            <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
                                 I can help you edit your video intelligently. Upload a video and I'll analyze it to understand the content.
                             </p>
                         </div>
                         
                         {/* Suggestion bubbles */}
-                        <div className="flex flex-col gap-2 mt-2">
+                        <div className="flex flex-col gap-1.5 mt-1">
                             <div className="text-xs text-gray-400 font-medium">Try asking:</div>
                             <div className="flex flex-col gap-1">
-                                <div className="bg-blue-50 text-blue-600 text-xs px-3 py-1 rounded-full">
+                                <div className="bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded-full">
                                     "Remove all silent parts"
                                 </div>
-                                <div className="bg-purple-50 text-purple-600 text-xs px-3 py-1 rounded-full">
+                                <div className="bg-purple-50 text-purple-600 text-xs px-2 py-1 rounded-full">
                                     "Find scenes where John is speaking"
                                 </div>
-                                <div className="bg-green-50 text-green-600 text-xs px-3 py-1 rounded-full">
+                                <div className="bg-green-50 text-green-600 text-xs px-2 py-1 rounded-full">
                                     "Add captions to the entire video"
                                 </div>
-                                <div className="bg-orange-50 text-orange-600 text-xs px-3 py-1 rounded-full">
+                                <div className="bg-orange-50 text-orange-600 text-xs px-2 py-1 rounded-full">
                                     "Add title 'Welcome' at the beginning"
                                 </div>
-                                <div className="bg-pink-50 text-pink-600 text-xs px-3 py-1 rounded-full">
+                                <div className="bg-pink-50 text-pink-600 text-xs px-2 py-1 rounded-full">
                                     "Add smooth transitions between clips"
                                 </div>
                             </div>
@@ -141,28 +141,28 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
                         
                         {/* Render command execution buttons - only for manual commands, not auto-executed AI edits */}
                         {message.commands && message.commands.length > 0 && onExecuteCommands && message.type === 'commands' && (
-                            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <div className="text-sm text-blue-800 mb-2">
+                            <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded">
+                                <div className="text-xs text-blue-800 mb-1">
                                     🎬 Editing Commands Ready ({message.commands.length} operations)
                                 </div>
                                 
-                                <div className="space-y-1 mb-3">
+                                <div className="space-y-0.5 mb-2">
                                     {message.commands.map((cmd, index) => (
-                                        <div key={index} className="text-xs text-blue-600 bg-white px-2 py-1 rounded">
+                                        <div key={index} className="text-xs text-blue-600 bg-white px-1.5 py-0.5 rounded">
                                             {getCommandDescription(cmd)}
                                         </div>
                                     ))}
                                 </div>
                                 
-                                <div className="flex gap-2">
+                                <div className="flex gap-1.5">
                                     <button
                                         onClick={() => onExecuteCommands(message.commands!)}
-                                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                                        className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
                                     >
                                         Execute Commands
                                     </button>
                                     <button
-                                        className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400 transition-colors"
+                                        className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
                                     >
                                         Review First
                                     </button>
@@ -172,35 +172,35 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
                         
                         {/* Render analysis status */}
                         {message.type === 'analysis' && (
-                            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+                            <div className="mt-1 p-1.5 bg-green-50 border border-green-200 rounded text-xs text-green-800">
                                 📊 Video Analysis Update
                             </div>
                         )}
                         
                         {/* Render error status */}
                         {message.type === 'error' && (
-                            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+                            <div className="mt-1 p-1.5 bg-red-50 border border-red-200 rounded text-xs text-red-800">
                                 ⚠️ Error
                             </div>
                         )}
                         
                         {/* Render AI edit accept/reject buttons */}
                         {message.type === 'ai_edit' && onAcceptAIEdit && onRejectAIEdit && (
-                            <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <div className="text-sm text-green-800 mb-3">
+                            <div className="mt-1 p-2 bg-green-50 border border-green-200 rounded">
+                                <div className="text-xs text-green-800 mb-2">
                                     AI Edit Applied - Do you want to keep this change?
                                 </div>
                                 
-                                <div className="flex gap-2">
+                                <div className="flex gap-1.5">
                                     <button
                                         onClick={() => onAcceptAIEdit(message.id)}
-                                        className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center gap-2"
+                                        className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors flex items-center gap-1"
                                     >
                                         ✅ Accept Edit
                                     </button>
                                     <button
                                         onClick={() => onRejectAIEdit(message.id)}
-                                        className="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors flex items-center gap-2"
+                                        className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors flex items-center gap-1"
                                     >
                                         ❌ Reject & Undo
                                     </button>
@@ -210,20 +210,20 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
                         
                         {/* Render search results */}
                         {message.type === 'search' && message.searchResults && message.searchResults.length > 0 && (
-                            <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                                <div className="text-sm text-purple-800 mb-2">
+                            <div className="mt-1 p-2 bg-purple-50 border border-purple-200 rounded">
+                                <div className="text-xs text-purple-800 mb-1">
                                     🔍 Search Results ({message.searchResults.length} found)
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-1">
                                     {message.searchResults.slice(0, 5).map((result, index) => (
-                                        <div key={index} className="bg-white p-2 rounded border">
+                                        <div key={index} className="bg-white p-1.5 rounded border">
                                             <div className="text-xs text-purple-600 font-medium">
                                                 {formatTime(result.startMs)} - {formatTime(result.endMs)}
                                             </div>
-                                            <div className="text-sm text-gray-700 mt-1">
+                                            <div className="text-xs text-gray-700 mt-0.5">
                                                 {result.content.substring(0, 100)}...
                                             </div>
-                                            <div className="text-xs text-gray-500 mt-1">
+                                            <div className="text-xs text-gray-500 mt-0.5">
                                                 Type: {result.type} • Confidence: {Math.round(result.confidence * 100)}%
                                             </div>
                                         </div>
@@ -239,17 +239,17 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
                         
                         {/* Render tool actions */}
                         {message.type === 'tool_actions' && message.toolActions && message.toolActions.length > 0 && (
-                            <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <div className="text-sm text-green-800 mb-2">
+                            <div className="mt-1 p-2 bg-green-50 border border-green-200 rounded">
+                                <div className="text-xs text-green-800 mb-1">
                                     🛠️ Tool Actions Executed ({message.toolActions.length} actions)
                                 </div>
-                                <div className="space-y-1">
+                                <div className="space-y-0.5">
                                     {message.toolActions.map((action, index) => (
-                                        <div key={index} className="bg-white p-2 rounded border">
+                                        <div key={index} className="bg-white p-1.5 rounded border">
                                             <div className="text-xs text-green-600 font-medium">
                                                 {action.toolName} • {action.action}
                                             </div>
-                                            <div className="text-sm text-gray-700">
+                                            <div className="text-xs text-gray-700">
                                                 {action.description}
                                             </div>
                                         </div>
@@ -258,8 +258,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
                                 
                                 {/* Show execution results if available */}
                                 {message.executionResults && (
-                                    <div className="mt-2 pt-2 border-t border-green-200">
-                                        <div className="text-xs text-green-700 mb-1">Execution Results:</div>
+                                    <div className="mt-1 pt-1 border-t border-green-200">
+                                        <div className="text-xs text-green-700 mb-0.5">Execution Results:</div>
                                         {message.executionResults.map((result, index) => (
                                             <div key={index} className={`text-xs p-1 rounded ${
                                                 result.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
