@@ -24,8 +24,8 @@ async function initializeGoogleGenAI() {
     if (!ai) {
         const { GoogleGenAI, createUserContent: createUserContentFn, createPartFromUri: createPartFromUriFn } = await import('@google/genai')
         ai = new GoogleGenAI({
-            apiKey: process.env.GEMINI_API_KEY
-        })
+    apiKey: process.env.GEMINI_API_KEY
+})
         createUserContent = createUserContentFn
         createPartFromUri = createPartFromUriFn
     }

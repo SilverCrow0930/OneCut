@@ -530,7 +530,7 @@ const AutoCutToolPanel = () => {
                                         [&::-webkit-slider-thumb]:hover:scale-110
                                         [&::-webkit-slider-thumb]:transition-transform
                                     "
-                                />
+                            />
                                 <div className="flex justify-between text-xs text-gray-500">
                                     <span className="font-medium">20s</span>
                                     <span className="font-medium">30m</span>

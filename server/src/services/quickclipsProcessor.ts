@@ -895,20 +895,20 @@ export async function queueQuickclipsJob(
     
     // Update project status in database (only for standalone Smart Cut projects, not editor mode)
     if (!isEditorMode) {
-        await updateProjectStatus(projectId, {
-            processing_status: 'queued',
-            processing_type: 'quickclips',
-            processing_job_id: jobId,
-            processing_progress: 0,
-            processing_message: 'Queued for processing...',
-            processing_data: {
-                contentType,
-                videoFormat,
-                targetDuration,
-                fileUri
-            },
-            processing_started_at: new Date().toISOString()
-        })
+    await updateProjectStatus(projectId, {
+        processing_status: 'queued',
+        processing_type: 'quickclips',
+        processing_job_id: jobId,
+        processing_progress: 0,
+        processing_message: 'Queued for processing...',
+        processing_data: {
+            contentType,
+            videoFormat,
+            targetDuration,
+            fileUri
+        },
+        processing_started_at: new Date().toISOString()
+    })
     }
     
     console.log(`[QuickclipsProcessor] Job ${jobId} queued for project ${projectId}`)
@@ -987,11 +987,11 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         job.message = 'Analyzing video content and structure...'
         
         if (!job.isEditorMode) {
-            await updateProjectStatus(job.projectId, {
-                processing_status: 'processing',
-                processing_progress: 10,
-                processing_message: job.message
-            })
+        await updateProjectStatus(job.projectId, {
+            processing_status: 'processing',
+            processing_progress: 10,
+            processing_message: job.message
+        })
         }
         emitState('analyzing', job.message, 10)
         
@@ -1015,10 +1015,10 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         job.progress = 30
         job.message = 'AI is identifying key narrative segments...'
         if (!job.isEditorMode) {
-            await updateProjectStatus(job.projectId, {
-                processing_progress: 30,
-                processing_message: job.message
-            })
+        await updateProjectStatus(job.projectId, {
+            processing_progress: 30,
+            processing_message: job.message
+        })
         }
         emitState('generating', job.message, 30)
         
@@ -1030,10 +1030,10 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         job.progress = 60
         job.message = 'Generating video description...'
         if (!job.isEditorMode) {
-            await updateProjectStatus(job.projectId, {
-                processing_progress: 60,
-                processing_message: job.message
-            })
+        await updateProjectStatus(job.projectId, {
+            processing_progress: 60,
+            processing_message: job.message
+        })
         }
         emitState('processing', job.message, 60)
         
@@ -1043,10 +1043,10 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         job.progress = 75
         job.message = 'Extracting video segments...'
         if (!job.isEditorMode) {
-            await updateProjectStatus(job.projectId, {
-                processing_progress: 75,
-                processing_message: job.message
-            })
+        await updateProjectStatus(job.projectId, {
+            processing_progress: 75,
+            processing_message: job.message
+        })
         }
         emitState('processing', job.message, 75)
         
@@ -1056,10 +1056,10 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         job.progress = 95
         job.message = 'Finalizing clips...'
         if (!job.isEditorMode) {
-            await updateProjectStatus(job.projectId, {
-                processing_progress: 95,
-                processing_message: job.message
-            })
+        await updateProjectStatus(job.projectId, {
+            processing_progress: 95,
+            processing_message: job.message
+        })
         }
         emitState('finalizing', job.message, 95)
         
@@ -1071,22 +1071,22 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         const completedAt = new Date().toISOString()
         
         if (!job.isEditorMode) {
-            await updateProjectStatus(job.projectId, {
-                processing_status: 'completed',
-                processing_progress: 100,
-                processing_message: job.message,
-                processing_result: {
-                    clips: processedClips,
-                    totalClips: processedClips.length,
-                    processingTime: Date.now() - job.createdAt.getTime(),
-                    videoFormat: job.videoFormat,
-                    contentType: job.contentType,
-                    approach: 'narrative_coherence',
+        await updateProjectStatus(job.projectId, {
+            processing_status: 'completed',
+            processing_progress: 100,
+            processing_message: job.message,
+            processing_result: {
+                clips: processedClips,
+                totalClips: processedClips.length,
+                processingTime: Date.now() - job.createdAt.getTime(),
+                videoFormat: job.videoFormat,
+                contentType: job.contentType,
+                approach: 'narrative_coherence',
                     description: videoDescription,
                     ...(transcript && { transcript })
-                },
-                processing_completed_at: completedAt
-            })
+            },
+            processing_completed_at: completedAt
+        })
         }
         
         // Emit completion state and response
@@ -1109,12 +1109,12 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         job.message = `Processing failed: ${job.error}`
         
         if (!job.isEditorMode) {
-            await updateProjectStatus(job.projectId, {
-                processing_status: 'failed',
-                processing_error: job.error,
-                processing_message: job.message,
-                processing_completed_at: new Date().toISOString()
-            })
+        await updateProjectStatus(job.projectId, {
+            processing_status: 'failed',
+            processing_error: job.error,
+            processing_message: job.message,
+            processing_completed_at: new Date().toISOString()
+        })
         }
         
         // Emit error state

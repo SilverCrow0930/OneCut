@@ -15,7 +15,7 @@ const AutocutSection = () => {
     const [targetDuration, setTargetDuration] = useState(10) // Default 10 minutes
     const [contentType, setContentType] = useState('meeting')
     const [isUploading, setIsUploading] = useState(false)
-
+    
     const contentTypes = [
         { id: 'meeting', label: 'Meeting', icon: Users },
         { id: 'interview', label: 'Interview', icon: Users },

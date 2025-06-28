@@ -510,9 +510,9 @@ const HomeHeroSection = () => {
                                             <Clock className="w-5 h-5 text-blue-600" />
                                             <label className="text-sm font-semibold text-gray-700">
                                                 Target Length: {formatDuration(targetDuration)}
-                                            </label>
-                                        </div>
-
+                                                </label>
+                                            </div>
+                                            
                                         {/* Slider */}
                                         <div className="space-y-3">
                                                 <input
