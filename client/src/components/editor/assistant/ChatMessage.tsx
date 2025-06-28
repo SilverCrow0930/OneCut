@@ -89,7 +89,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
 
             if (!hasListChild) {
                 return (
-                    <li {...props} className="bg-gray-50 border border-gray-200 rounded-xl shadow-sm px-5 py-4 min-w-[220px] max-w-full flex-1 transition hover:shadow-md flex flex-col items-start">
+                    <li {...props} className="bg-gray-50 border border-gray-200 rounded-lg shadow-sm px-3 py-2 min-w-[220px] max-w-full flex-1 transition hover:shadow-md flex flex-col items-start">
                         <div className="flex items-center w-full">
                             <span className="text-black flex-1">{children}</span>
                         </div>
@@ -144,11 +144,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
             <span className={`mb-1 text-xs font-medium px-3 py-0.5 rounded ${sender === 'user' ? 'text-blue-500 pl-3' : 'text-gray-500 pr-3'}`}>{sender === 'user' ? 'You' : 'Assistant'}</span>
             {
                 sender === 'user' ? (
-                    <div className="w-fit max-w-full bg-gradient-to-br from-blue-500 to-blue-400 text-white rounded-t-2xl rounded-bl-2xl rounded-br-lg px-5 py-3 shadow-md">
+                    <div className="w-fit max-w-full bg-gradient-to-br from-blue-500 to-blue-400 text-white rounded-t-2xl rounded-bl-2xl rounded-br-lg px-3 py-2 shadow-md">
                         {message}
                     </div>
                 ) : (
-                    <div className="w-fit max-w-full bg-white text-gray-900 border border-gray-200 rounded-t-2xl rounded-br-2xl rounded-bl-lg px-5 py-3 shadow-sm">
+                    <div className="w-fit max-w-full bg-white text-gray-900 border border-gray-200 rounded-t-2xl rounded-br-2xl rounded-bl-lg px-3 py-2 shadow-sm">
                         {renderContent()}
                     </div>
                 )

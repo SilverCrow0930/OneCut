@@ -9,6 +9,14 @@ interface ToolButtonProps {
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({ label, icon, onClick, isSelected, aiTool }) => {
+    // Make Assets and Smart Cut icons slightly smaller for better visual consistency
+    const getIconSize = (label: string) => {
+        if (label === 'Assets' || label === 'Smart Cut') {
+            return 'w-5 h-5' // Slightly smaller than default w-6 h-6
+        }
+        return 'w-6 h-6' // Default size for other icons
+    }
+
     return (
         <button
             className={`
@@ -34,7 +42,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon, onClick, isSelecte
             <img 
                 src={icon} 
                 alt={label} 
-                className={`w-6 h-6 object-contain transition-all duration-300 ${
+                className={`${getIconSize(label)} object-contain transition-all duration-300 ${
                     isSelected ? 'opacity-90' : 'opacity-70 group-hover:opacity-85'
                 }`} 
             />

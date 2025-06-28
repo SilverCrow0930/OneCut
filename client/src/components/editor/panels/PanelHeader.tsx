@@ -17,14 +17,14 @@ export default function PanelHeader({
     iconColor = 'text-blue-600'
 }: PanelHeaderProps) {
     return (
-        <div className="flex items-center gap-3 pb-6 border-b border-gray-100">
-            <div className={`p-2 ${iconBgColor} rounded-lg`}>
-                <Icon className={`w-6 h-6 ${iconColor}`} />
+        <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
+            <div className={`p-1.5 ${iconBgColor} rounded-md`}>
+                <Icon className={`w-4 h-4 ${iconColor}`} />
             </div>
             <div className="flex flex-col">
-                <span className="text-lg font-semibold text-black/50">{title}</span>
+                <span className="text-sm font-semibold text-black/50">{title}</span>
                 {description && (
-                    <span className="text-sm text-gray-500">{description}</span>
+                    <span className="text-xs text-gray-500">{description}</span>
                 )}
             </div>
         </div>

@@ -63,7 +63,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
         switch (state) {
             case 'generating_output':
                 return (
-                    <div className='flex flex-row w-full text-sm px-4 py-3 items-center bg-gray-50 rounded-lg'>
+                    <div className='flex flex-row w-full text-sm px-3 py-2 items-center bg-gray-50 rounded-lg'>
                         <div className="flex flex-row items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
                             <span className="text-gray-600 font-medium">Thinking</span>
@@ -85,7 +85,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ chatMessages, state, onExecut
             ref={chatContainerRef}
             className="
                 flex flex-col w-full h-full
-                gap-2 pr-2 pb-4
+                gap-1 pr-2 pb-2
                 overflow-y-auto
                 elegant-scrollbar
             "

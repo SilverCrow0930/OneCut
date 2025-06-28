@@ -55,20 +55,20 @@ const ToolPanel = () => {
     return (
         <div className="
             flex flex-col w-full h-full
-            p-3 rounded-lg overflow-hidden
+            p-2 rounded-lg overflow-hidden
         " data-tool-panel>
             <div className="flex-1 overflow-y-auto">
                 {
                     ToolComponent ?
                         ToolComponent :
-                        <div className='flex flex-col w-full h-full items-center justify-center p-6'>
-                            <div className="flex flex-col items-center gap-4 text-center">
-                                <div className="w-16 h-16 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center">
-                                    <div className="text-2xl">🛠️</div>
+                        <div className='flex flex-col w-full h-full items-center justify-center p-4'>
+                            <div className="flex flex-col items-center gap-3 text-center">
+                                <div className="w-12 h-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl flex items-center justify-center">
+                                    <div className="text-xl">🛠️</div>
                                 </div>
-                                <div className="space-y-2">
-                                    <h3 className="text-base font-semibold text-gray-700">Choose a Tool</h3>
-                                    <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-semibold text-gray-700">Choose a Tool</h3>
+                                    <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
                                         Select a tool from the sidebar to start creating amazing content
                                     </p>
                                 </div>
