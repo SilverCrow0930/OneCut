@@ -128,16 +128,35 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     // 2) Selected tool - check URL params for initial tool
     const getInitialTool = () => {
         if (typeof window !== 'undefined') {
+            // First check URL parameters
             const urlParams = new URLSearchParams(window.location.search)
             const toolParam = urlParams.get('tool')
             if (toolParam && ['Upload', 'Text', 'Assets', 'Stickers', 'Voiceover', 'Captions', 'Smart Cut', 'Generation', 'Transitions'].includes(toolParam)) {
                 return toolParam
+            }
+            
+            // Then check localStorage for last selected tool
+            const savedTool = localStorage.getItem('lemona-selected-tool')
+            if (savedTool && ['Upload', 'Text', 'Assets', 'Stickers', 'Voiceover', 'Captions', 'Smart Cut', 'Generation', 'Transitions'].includes(savedTool)) {
+                return savedTool
             }
         }
         return 'Upload' // Default fallback
     }
 
     const [selectedTool, setSelectedTool] = useState<string | null>(getInitialTool())
+    
+    // Create a wrapper for setSelectedTool that also saves to localStorage
+    const setSelectedToolWithPersistence = (tool: string | null) => {
+        setSelectedTool(tool)
+        if (typeof window !== 'undefined') {
+            if (tool) {
+                localStorage.setItem('lemona-selected-tool', tool)
+            } else {
+                localStorage.removeItem('lemona-selected-tool')
+            }
+        }
+    }
 
     // 3) History + Timeline
     const [history, dispatch] = useReducer(historyReducer, initialHistory)
@@ -536,7 +555,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     return (
         <EditorContext.Provider value={{
             project, loading, error,
-            selectedTool, setSelectedTool,
+            selectedTool, setSelectedTool: setSelectedToolWithPersistence,
             refetch: fetchProject,
             updateProjectName,
             updateProjectThumbnail,

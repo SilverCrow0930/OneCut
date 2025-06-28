@@ -486,26 +486,55 @@ const AutoCutToolPanel = () => {
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
                         className={`
-                            border-2 border-dashed rounded-lg p-3 text-center cursor-pointer
-                            transition-all duration-200
+                            relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer
+                            transition-all duration-200 group overflow-hidden
                             ${isDragOver ?
-                                'border-blue-400 bg-blue-50' :
-                                'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                                'border-blue-400 bg-blue-50 shadow-sm' :
+                                'border-gray-300 hover:border-blue-300 hover:bg-blue-50/30'
                             }
                         `}
                     >
-                        <div className="flex flex-col items-center space-y-2">
-                            <div className={`p-2 rounded-full ${isDragOver ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                                <Upload className={`w-4 h-4 ${isDragOver ? 'text-blue-600' : 'text-gray-500'}`} />
+                        {/* Subtle gradient background */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 to-purple-50/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                        
+                        <div className="relative z-10 flex flex-col items-center space-y-3">
+                            <div className={`
+                                p-3 rounded-xl transition-all duration-200 
+                                ${isDragOver ? 
+                                    'bg-blue-100 shadow-sm scale-105' : 
+                                    'bg-gray-100 group-hover:bg-blue-100/70 group-hover:scale-105'
+                                }
+                            `}>
+                                <Upload className={`
+                                    w-5 h-5 transition-colors duration-200
+                                    ${isDragOver ? 
+                                        'text-blue-600' : 
+                                        'text-gray-500 group-hover:text-blue-500'
+                                    }
+                                `} />
                             </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-700 mb-1">
+                            
+                            <div className="space-y-1">
+                                <p className={`
+                                    text-sm font-medium transition-colors duration-200
+                                    ${isDragOver ? 
+                                        'text-blue-700' : 
+                                        'text-gray-700 group-hover:text-blue-600'
+                                    }
+                                `}>
                                     Drop video here
                                 </p>
-                                <p className="text-xs text-gray-500 mb-2">or click to browse</p>
-                                <div className="text-xs text-gray-500">
-                                    MP4, MOV, AVI • 2GB max
-                                </div>
+                                <p className="text-xs text-gray-500">or click to browse</p>
+                            </div>
+                            
+                            <div className={`
+                                px-3 py-1 rounded-full text-xs transition-all duration-200
+                                ${isDragOver ?
+                                    'bg-blue-100 text-blue-700 border border-blue-200' :
+                                    'bg-gray-100 text-gray-600 group-hover:bg-blue-100/70 group-hover:text-blue-600'
+                                }
+                            `}>
+                                MP4, MOV, AVI • 2GB max
                             </div>
                         </div>
                     </div>
