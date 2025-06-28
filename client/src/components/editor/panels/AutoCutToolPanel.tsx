@@ -486,35 +486,26 @@ const AutoCutToolPanel = () => {
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
                         className={`
-                            border-2 border-dashed rounded-xl p-6 text-center cursor-pointer
-                            transition-all duration-300 group relative overflow-hidden
+                            border-2 border-dashed rounded-lg p-3 text-center cursor-pointer
+                            transition-all duration-200
                             ${isDragOver ?
-                                'border-blue-500 bg-blue-50 shadow-lg scale-105' :
-                                'border-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-lg'
+                                'border-blue-400 bg-blue-50' :
+                                'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                             }
                         `}
                     >
-                        {/* Animated background for hover */}
-                        <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDragOver ? 'opacity-100' : ''} bg-blue-500/10`}></div>
-                        
-                        <div className="relative z-10">
-                            <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg border border-blue-100">
-                                <Upload className="w-8 h-8 text-blue-500 group-hover:text-blue-600 transition-colors duration-300" />
+                        <div className="flex flex-col items-center space-y-2">
+                            <div className={`p-2 rounded-full ${isDragOver ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                                <Upload className={`w-4 h-4 ${isDragOver ? 'text-blue-600' : 'text-gray-500'}`} />
                             </div>
-                            <p className="font-medium text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300">
-                                Drop your video here
-                            </p>
-                            <p className="text-sm text-gray-500 mb-4">
-                                or click to browse
-                            </p>
-                            <div className="flex items-center justify-center gap-4 text-xs text-gray-500 bg-blue-50/50 rounded-full px-4 py-2 border border-blue-200/30">
-                                <span>MP4</span>
-                                <span>•</span>
-                                <span>MOV</span>
-                                <span>•</span>
-                                <span>AVI</span>
-                                <span>•</span>
-                                <span>Up to 2GB</span>
+                            <div>
+                                <p className="text-sm font-medium text-gray-700 mb-1">
+                                    Drop video here
+                                </p>
+                                <p className="text-xs text-gray-500 mb-2">or click to browse</p>
+                                <div className="text-xs text-gray-500">
+                                    MP4, MOV, AVI • 2GB max
+                                </div>
                             </div>
                         </div>
                     </div>
