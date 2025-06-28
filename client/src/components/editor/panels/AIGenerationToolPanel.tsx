@@ -290,9 +290,6 @@ const AIGenerationToolPanel = () => {
                     rows={3}
                 />
                 
-                <div className="w-full p-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
-                    Note: Music generation may take 2-3 minutes to complete
-                </div>
             </div>
             
             <div className="grid grid-cols-2 gap-3">

@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { UploadButton } from './auto-cut/UploadButton'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { apiPath } from '@/lib/config'
 
-import { CheckCircle2, AlertCircle, Loader2, Brain, Sparkles, Play, Download, RefreshCw, Clock, Eye } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, Brain, Sparkles, Play, Download, RefreshCw, Clock, Eye, Upload, Video } from 'lucide-react'
 import VideoDetailsSection from './VideoDetailsSection'
 import { useEditor } from '@/contexts/EditorContext'
 import { v4 as uuid } from 'uuid'
@@ -59,6 +58,9 @@ const AutoCutToolPanel = () => {
     const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
     const [processedClips, setProcessedClips] = useState<any[]>([])
     const [transcript, setTranscript] = useState<string>('')
+    
+    // Drag and drop state
+    const [isDragOver, setIsDragOver] = useState(false)
     
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { session } = useAuth()
@@ -219,9 +221,42 @@ const AutoCutToolPanel = () => {
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (file && file.type.startsWith('video/')) {
-            resetState()
             setSelectedFile(file)
             setShowConfig(true)
+            setError(null)
+        }
+    }
+
+    // Drag and drop handlers
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragOver(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragOver(false)
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+    }
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragOver(false)
+
+        const files = Array.from(e.dataTransfer.files)
+        const videoFile = files.find(file => file.type.startsWith('video/'))
+        
+        if (videoFile) {
+            setSelectedFile(videoFile)
+            setShowConfig(true)
+            setError(null)
         }
     }
 
@@ -442,14 +477,48 @@ const AutoCutToolPanel = () => {
                         accept="video/*"
                         className="hidden"
                     />
-                        <div>
-                            <UploadButton
-                                onClick={() => fileInputRef.current?.click()}
-                                isUploading={isUploading}
-                            />
-
+                    
+                    {/* Drag and Drop Upload Area */}
+                    <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        className={`
+                            border-2 border-dashed rounded-xl p-6 text-center cursor-pointer
+                            transition-all duration-300 group relative overflow-hidden
+                            ${isDragOver ?
+                                'border-blue-500 bg-blue-50 shadow-lg scale-105' :
+                                'border-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-lg'
+                            }
+                        `}
+                    >
+                        {/* Animated background for hover */}
+                        <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDragOver ? 'opacity-100' : ''} bg-blue-500/10`}></div>
+                        
+                        <div className="relative z-10">
+                            <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg border border-blue-100">
+                                <Upload className="w-8 h-8 text-blue-500 group-hover:text-blue-600 transition-colors duration-300" />
+                            </div>
+                            <p className="font-medium text-gray-700 mb-2 group-hover:text-blue-700 transition-colors duration-300">
+                                Drop your video here
+                            </p>
+                            <p className="text-sm text-gray-500 mb-4">
+                                or click to browse
+                            </p>
+                            <div className="flex items-center justify-center gap-4 text-xs text-gray-500 bg-blue-50/50 rounded-full px-4 py-2 border border-blue-200/30">
+                                <span>MP4</span>
+                                <span>•</span>
+                                <span>MOV</span>
+                                <span>•</span>
+                                <span>AVI</span>
+                                <span>•</span>
+                                <span>Up to 2GB</span>
+                            </div>
                         </div>
                     </div>
+                </div>
                 ) : showConfig ? (
                     /* Configuration State */
                     <div className="space-y-4">
