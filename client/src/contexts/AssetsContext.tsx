@@ -38,6 +38,24 @@ export function useAssets() {
     return context
 }
 
+// Helper function to sort assets by most recent first
+const sortAssetsByMostRecent = (assets: Asset[]): Asset[] => {
+    return assets.sort((a: Asset, b: Asset) => {
+        // First sort by last_used (most recent first, nulls last)
+        if (a.last_used && b.last_used) {
+            return new Date(b.last_used).getTime() - new Date(a.last_used).getTime()
+        }
+        if (a.last_used && !b.last_used) {
+            return -1 // a (with last_used) comes first
+        }
+        if (!a.last_used && b.last_used) {
+            return 1 // b (with last_used) comes first
+        }
+        // Both have null last_used, sort by created_at descending (most recent first)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+}
+
 export function AssetsProvider({ children }: { children: ReactNode }) {
     const { session } = useAuth()
     const [assets, setAssets] = useState<Asset[]>([])
@@ -80,8 +98,12 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
             }
             
             const assetsData = await response.json()
-            console.log('[AssetsContext] Assets loaded:', { count: assetsData.length, assets: assetsData })
-            setAssets(assetsData)
+            
+            // Sort assets by most recent first to ensure consistent ordering
+            const sortedAssets = sortAssetsByMostRecent(assetsData)
+            
+            console.log('[AssetsContext] Assets loaded and sorted:', { count: sortedAssets.length, assets: sortedAssets })
+            setAssets(sortedAssets)
         }
         catch (err: any) {
             console.error('[AssetsContext] Refresh error:', err)
@@ -94,7 +116,11 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
 
     // Optimistic asset addition
     const addAsset = useCallback((asset: Asset) => {
-        setAssets(prev => [asset, ...prev])
+        setAssets(prev => {
+            // Add new asset and re-sort to maintain proper order
+            const newAssets = [asset, ...prev]
+            return sortAssetsByMostRecent(newAssets)
+        })
     }, [])
 
     // Optimistic asset update
