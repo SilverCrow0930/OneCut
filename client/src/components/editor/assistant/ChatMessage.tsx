@@ -146,7 +146,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
                         {message}
                     </div>
                 ) : (
-                    <div className="w-fit max-w-full text-gray-900 px-1 py-1">
+                    <div className="w-fit max-w-full text-gray-900 px-3 py-1">
                         {renderContent()}
                     </div>
                 )

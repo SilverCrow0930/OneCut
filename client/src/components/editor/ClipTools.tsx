@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { SquareSplitHorizontal, Trash2, Gauge } from 'lucide-react'
+import { SquareSplitHorizontal, Trash2, Gauge, Volume2 } from 'lucide-react'
 import { useEditor } from '@/contexts/EditorContext'
 import { usePlayback } from '@/contexts/PlaybackContext'
 import { useAudio } from '@/contexts/AudioContext'
@@ -114,11 +114,9 @@ const ClipTools = () => {
         }
     }, [selectedClip, selectedClips, hasSelectedClip, hasMultipleSelection, primarySelectedClip])
 
-    // Get volume icon based on current volume level
+    // Get volume icon based on current volume level - now using Lucide icon
     const getVolumeIcon = (volume: number) => {
-        if (volume === 0) return '/assets/icons/volume-mute.png'
-        if (volume <= 0.5) return '/assets/icons/volume-low.png'
-        return '/assets/icons/volume-high.png'
+        return Volume2 // Using single Lucide icon for all volume levels
     }
 
     const handleSpeedChange = (newSpeed: number) => {
@@ -520,11 +518,7 @@ const ClipTools = () => {
                         }}
                         disabled={!canAdjustVolume || !hasAnySelection}
                     >
-                        <img 
-                            src={getVolumeIcon(sliderVolume)} 
-                            alt="Volume" 
-                            className="w-[26px] h-[26px] object-contain"
-                        />
+                        <Volume2 size={26} />
                     </button>
                 </Tooltip>
 
