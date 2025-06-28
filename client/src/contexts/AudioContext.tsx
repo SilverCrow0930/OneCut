@@ -20,7 +20,7 @@ interface AudioContextType {
 
 const AudioContext = createContext<AudioContextType | null>(null)
 
-// Pool of reusable audio elements
+// Pool of reusable audio elements.
 const AUDIO_POOL_SIZE = 8
 const audioPool: HTMLAudioElement[] = []
 const activeAudio = new Map<string, HTMLAudioElement>()
