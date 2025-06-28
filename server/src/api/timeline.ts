@@ -219,8 +219,26 @@ router.put(
                 if (!c.track_id) {
                     throw new Error(`Clip ${index} (${c.id}) missing track_id`)
                 }
+                
+                // IMPROVED: Check against both the trackIdSet (new tracks) AND verify track exists
                 if (!trackIdSet.has(c.track_id)) {
+                    console.error(`[Timeline Save] Clip ${index} (${c.id}) references track ${c.track_id} which is not in the new tracks list`)
+                    console.error(`[Timeline Save] Available track IDs:`, Array.from(trackIdSet))
                     throw new Error(`Clip ${index} (${c.id}) references non-existent track: ${c.track_id}`)
+                }
+                
+                // Validate clip type
+                if (!['video', 'image', 'audio', 'text', 'caption'].includes(c.type)) {
+                    throw new Error(`Clip ${index} (${c.id}) has invalid type: ${c.type}`)
+                }
+                
+                // Validate timeline positions
+                if (typeof c.timeline_start_ms !== 'number' || typeof c.timeline_end_ms !== 'number') {
+                    throw new Error(`Clip ${index} (${c.id}) has invalid timeline positions`)
+                }
+                
+                if (c.timeline_end_ms <= c.timeline_start_ms) {
+                    throw new Error(`Clip ${index} (${c.id}) has invalid duration: end must be after start`)
                 }
 
                 return {
@@ -242,6 +260,7 @@ router.put(
 
             if (clipRows.length > 0) {
                 console.log(`[Timeline Save] Inserting ${clipRows.length} clips`)
+                console.log(`[Timeline Save] Clip track references:`, clipRows.map(c => ({ clipId: c.id, trackId: c.track_id })))
                 
                 const { error: clipError } = await supabase
                     .from('clips')
@@ -250,6 +269,15 @@ router.put(
                 if (clipError) {
                     console.error('[Timeline Save] Clip insert failed:', clipError)
                     console.error('[Timeline Save] Failed clip data:', clipRows)
+                    
+                    // Provide more specific error message for foreign key constraint violations
+                    if (clipError.message.includes('violates foreign key constraint') && clipError.message.includes('clips_track_id_fkey')) {
+                        const invalidTrackIds = clipRows.map(c => c.track_id).filter(trackId => !trackIdSet.has(trackId))
+                        return res.status(500).json({
+                            error: `Clip insert failed: Some clips reference tracks that don't exist. Invalid track IDs: ${invalidTrackIds.join(', ')}`
+                        })
+                    }
+                    
                     return res.status(500).json({
                         error: `Clip insert failed: ${clipError.message}`
                     })

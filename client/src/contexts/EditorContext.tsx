@@ -30,6 +30,7 @@ interface EditorContextType {
     updateProjectThumbnail: (thumbnailUrl: string) => Promise<void>
     updateProjectNotes: (notes: string) => Promise<void>
     generateThumbnail: () => Promise<void>
+    clearError: () => void
 
     // timeline
     tracks: Track[]
@@ -275,10 +276,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         console.log('🔄 [AutoSave] scheduling PUT…')
 
         const timer = setTimeout(async () => {
-            console.log(`🔄 [AutoSave] PUT /timeline/${projectId}`)
             try {
-                // Validate data before sending
-                console.log('🔄 [AutoSave] Validating timeline data...')
+                console.log(`🔄 [AutoSave] Validating timeline data...`)
                 console.log(`🔄 [AutoSave] Tracks: ${tracks.length}, Clips: ${clips.length}`)
                 
                 // Convert to database format with validation
@@ -300,7 +299,21 @@ export function EditorProvider({ children }: { children: ReactNode }) {
                     }
                 })
                 
+                // ADDITIONAL VALIDATION: Check for track ID consistency
+                const trackIdSet = new Set(dbTracks.map(t => t.id))
+                const invalidClips = dbClips.filter(c => !trackIdSet.has(c.track_id))
+                
+                if (invalidClips.length > 0) {
+                    console.error('🚨 [AutoSave] Clips reference non-existent tracks!')
+                    console.error('🚨 [AutoSave] Available track IDs:', Array.from(trackIdSet))
+                    console.error('🚨 [AutoSave] Invalid clips:', invalidClips.map(c => ({ clipId: c.id, trackId: c.track_id })))
+                    console.error('🚨 [AutoSave] Original tracks:', tracks.map(t => ({ id: t.id, index: t.index, type: t.type })))
+                    console.error('🚨 [AutoSave] Original clips:', clips.map(c => ({ id: c.id, trackId: c.trackId, type: c.type })))
+                    throw new Error(`Data consistency error: ${invalidClips.length} clips reference non-existent tracks`)
+                }
+                
                 console.log('✅ [AutoSave] Data validation passed')
+                console.log(`🔄 [AutoSave] Sending ${dbTracks.length} tracks and ${dbClips.length} clips`)
                 
                 const res = await fetch(apiPath(`timeline/${projectId}`), {
                     method: 'PUT',
@@ -505,6 +518,21 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
     }, [aspectRatio])
 
+    const clearError = () => {
+        setError(null)
+    }
+
+    // Auto-dismiss errors after 15 seconds
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => {
+                setError(null)
+            }, 15000) // 15 seconds
+            
+            return () => clearTimeout(timer)
+        }
+    }, [error])
+
     return (
         <EditorContext.Provider value={{
             project, loading, error,
@@ -514,6 +542,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             updateProjectThumbnail,
             updateProjectNotes,
             generateThumbnail,
+            clearError,
 
             // timeline
             tracks, clips, loadingTimeline, timelineError,
