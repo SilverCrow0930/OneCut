@@ -344,7 +344,7 @@ const Editor = () => {
                     />
                 </div>
                 {selectedTool && (
-                    <div className="w-96 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
+                    <div className="w-80 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/60 flex-shrink-0">
                         <ToolPanel />
                     </div>
                 )}
