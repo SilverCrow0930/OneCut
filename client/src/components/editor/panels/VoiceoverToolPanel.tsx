@@ -414,7 +414,7 @@ const VoiceoverToolPanel = () => {
                                     onClick={() => handleVoiceSelect(voice)}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <div className="font-semibold text-gray-900">{voice.name}</div>
+                                        <div className="text-sm font-semibold text-gray-900">{voice.name}</div>
                                         {voice.previewUrl && (
                                             <button
                                                 onClick={(e) => {

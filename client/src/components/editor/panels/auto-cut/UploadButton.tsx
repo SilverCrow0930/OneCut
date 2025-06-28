@@ -36,7 +36,7 @@ export const UploadButton: React.FC<UploadButtonProps> = ({ onClick, isUploading
                     <Video className="w-5 h-5" />
                 )}
             </div>
-            <span className="text-base">{isUploading ? 'Uploading...' : 'Upload Video'}</span>
+            <span className="text-sm">{isUploading ? 'Uploading...' : 'Upload Video'}</span>
         </div>
     </button>
 ); 

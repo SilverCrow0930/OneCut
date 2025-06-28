@@ -411,7 +411,6 @@ const AIGenerationToolPanel = () => {
                                     }
                                 `}
                             >
-                                <type.icon className="w-4 h-4" />
                                 {type.name}
                             </button>
                         )
