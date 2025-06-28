@@ -26,11 +26,12 @@ router.get('/', (async (req: Request, res: Response, next: NextFunction) => {
             return res.status(500).json({ error: 'Could not load profile' })
         }
 
-        // 2) Now fetch projects by that profile id
+        // 2) Now fetch projects by that profile id, sorted by last_opened (most recent first)
         const { data, error } = await supabase
             .from('projects')
             .select('*')
             .eq('user_id', profile.id)
+            .order('last_opened', { ascending: false, nullsFirst: false })
             .order('created_at', { ascending: false })
 
         if (error) {
@@ -94,7 +95,21 @@ router.get(
                 })
             }
 
-            // 5) Return the project
+            // 5) Update last_opened timestamp (fire and forget - don't wait for it)
+            ;(async () => {
+                try {
+                    await supabase
+                        .from('projects')
+                        .update({ last_opened: new Date().toISOString() })
+                        .eq('id', id)
+                        .eq('user_id', profile.id)
+                    console.log(`Updated last_opened for project ${id}`)
+                } catch (err) {
+                    console.error(`Failed to update last_opened for project ${id}:`, err)
+                }
+            })()
+
+            // 6) Return the project
             return res.json(data)
         }
         catch (err) {

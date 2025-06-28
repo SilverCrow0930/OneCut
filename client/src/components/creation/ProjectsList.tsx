@@ -44,7 +44,22 @@ export default function ProjectsList() {
                 }
                 const data: Project[] = await res.json()
                 if (!cancelled) {
-                    setProjects(data)
+                    // Sort projects by last_opened (most recent first), fallback to created_at
+                    const sortedProjects = data.sort((a, b) => {
+                        // First sort by last_opened (most recent first, nulls last)
+                        if (a.last_opened && b.last_opened) {
+                            return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
+                        }
+                        if (a.last_opened && !b.last_opened) {
+                            return -1 // a (with last_opened) comes first
+                        }
+                        if (!a.last_opened && b.last_opened) {
+                            return 1 // b (with last_opened) comes first
+                        }
+                        // Both have null last_opened, sort by created_at descending (most recent first)
+                        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                    })
+                    setProjects(sortedProjects)
                     
                     // If there's a highlighted project that's processing, start polling
                     if (highlightedProjectId) {
@@ -180,6 +195,28 @@ export default function ProjectsList() {
         }
         
         const project = projects.find(p => p.id === projectId)
+        
+        // Update last_opened optimistically in the UI
+        setProjects(prev => {
+            const updatedProjects = prev.map(p => 
+                p.id === projectId 
+                    ? { ...p, last_opened: new Date().toISOString() }
+                    : p
+            )
+            // Re-sort after updating last_opened
+            return updatedProjects.sort((a, b) => {
+                if (a.last_opened && b.last_opened) {
+                    return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
+                }
+                if (a.last_opened && !b.last_opened) {
+                    return -1
+                }
+                if (!a.last_opened && b.last_opened) {
+                    return 1
+                }
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            })
+        })
         
         // Special handling for QuickClips projects
         if (project?.processing_type === 'quickclips') {

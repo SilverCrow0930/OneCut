@@ -23,4 +23,5 @@ export interface Project {
     
     created_at: string
     updated_at: string
+    last_opened?: string
 }
