@@ -140,15 +140,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ id, message, sender, fullWidt
         <div
             className={`flex flex-col w-full text-sm mt-3 ${sender === 'user' ? 'items-end' : 'items-start'} transition-all duration-300 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
         >
-            {/* Sender label (optional, can be removed if not needed) */}
-            <span className={`mb-1 text-xs font-medium px-3 py-0.5 rounded ${sender === 'user' ? 'text-blue-500 pl-3' : 'text-gray-500 pr-3'}`}>{sender === 'user' ? 'You' : 'Assistant'}</span>
             {
                 sender === 'user' ? (
                     <div className="w-fit max-w-full bg-gradient-to-br from-blue-500 to-blue-400 text-white rounded-t-2xl rounded-bl-2xl rounded-br-lg px-3 py-2 shadow-md">
                         {message}
                     </div>
                 ) : (
-                    <div className="w-fit max-w-full bg-white text-gray-900 border border-gray-200 rounded-t-2xl rounded-br-2xl rounded-bl-lg px-3 py-2 shadow-sm">
+                    <div className="w-fit max-w-full text-gray-900 px-1 py-1">
                         {renderContent()}
                     </div>
                 )
