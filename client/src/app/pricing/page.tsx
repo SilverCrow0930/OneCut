@@ -33,6 +33,28 @@ export default function PricingPage() {
   const [currentCredits] = useState(47);
   const [maxCredits] = useState(150); // Based on current subscriptions
   const [cart, setCart] = useState<CartItem[]>([]);
+  
+  // Simulated current subscriptions - in real app this would come from user's subscription data
+  const [currentSubscriptions, setCurrentSubscriptions] = useState([
+    {
+      id: 'foundation-active',
+      name: 'Foundation Plan',
+      credits: 10,
+      price: 5,
+      type: 'foundation' as const,
+      nextBilling: '2024-02-15',
+      status: 'active'
+    },
+    {
+      id: 'creator-credits-active',
+      name: 'Creator Credits',
+      credits: 150,
+      price: 20,
+      type: 'credits' as const,
+      nextBilling: '2024-02-15',
+      status: 'active'
+    }
+  ]);
 
   const plans: Plan[] = [
     {
@@ -171,6 +193,10 @@ export default function PricingPage() {
     setCart(prev => {
       const existing = prev.find(item => item.plan.id === plan.id);
       if (existing) {
+        // Foundation plan can only be bought once
+        if (plan.type === 'foundation') {
+          return prev;
+        }
         return prev.map(item =>
           item.plan.id === plan.id
             ? { ...item, quantity: item.quantity + 1 }
@@ -203,6 +229,16 @@ export default function PricingPage() {
     return cart.reduce((sum, item) => sum + (item.plan.credits * item.quantity), 0);
   };
 
+  const cancelSubscription = (subscriptionId: string) => {
+    setCurrentSubscriptions(prev => 
+      prev.map(sub => 
+        sub.id === subscriptionId 
+          ? { ...sub, status: 'cancelled' }
+          : sub
+      )
+    );
+  };
+
   const creditPercentage = (currentCredits / maxCredits) * 100;
 
   const foundationPlan = plans.find(p => p.type === 'foundation');
@@ -223,28 +259,97 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* Current Credits Display */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 max-w-md mx-auto">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-900">Your Credits</h3>
-            <span className="text-2xl font-bold text-blue-600">{currentCredits}</span>
-          </div>
-          
-          {/* Credit Bar */}
-          <div className="relative">
-            <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-300"
-                style={{ width: `${creditPercentage}%` }}
-              ></div>
+        {/* Current Status Display */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8 max-w-4xl mx-auto">
+          {/* Current Credits */}
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-gray-900">Your Credits</h3>
+              <span className="text-2xl font-bold text-blue-600">{currentCredits}</span>
             </div>
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>0</span>
-              <span className="font-medium">{currentCredits} / {maxCredits} credits</span>
-              <span>{maxCredits}</span>
+            
+            {/* Credit Bar */}
+            <div className="relative">
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${creditPercentage}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>0</span>
+                <span className="font-medium">{currentCredits} / {maxCredits} credits</span>
+                <span>{maxCredits}</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 text-center mt-2">Credits reset monthly</p>
+          </div>
+
+          {/* Current Plans */}
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Plans</h3>
+            
+            {currentSubscriptions.length === 0 ? (
+              <div className="text-center py-4 text-gray-500">
+                <p className="text-sm">No active subscriptions</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {currentSubscriptions.map((subscription) => (
+                  <div key={subscription.id} className="border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 text-sm">{subscription.name}</h4>
+                        <p className="text-xs text-gray-600">
+                          {subscription.credits} credits/month • ${subscription.price}/month
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {subscription.status === 'active' ? (
+                          <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">
+                            Cancelled
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-500">
+                        {subscription.status === 'active' 
+                          ? `Next billing: ${subscription.nextBilling}`
+                          : 'Ends at current period'
+                        }
+                      </p>
+                      {subscription.status === 'active' && (
+                        <button
+                          onClick={() => cancelSubscription(subscription.id)}
+                          className="text-xs text-red-600 hover:text-red-700 font-medium"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Monthly Total:</span>
+                <span className="font-semibold text-gray-900">
+                  ${currentSubscriptions
+                    .filter(sub => sub.status === 'active')
+                    .reduce((sum, sub) => sum + sub.price, 0)
+                  }/month
+                </span>
+              </div>
             </div>
           </div>
-          <p className="text-xs text-gray-500 text-center mt-2">Credits reset monthly</p>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-8">
@@ -253,10 +358,8 @@ export default function PricingPage() {
             {/* Foundation Plan */}
             {foundationPlan && (
               <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <span className="mr-3">🏗️</span>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Foundation Plan
-                  <span className="ml-3 text-sm font-normal text-gray-500">Required</span>
                 </h2>
                 
                 <div className="border-2 border-blue-200 rounded-xl p-6">
@@ -292,8 +395,7 @@ export default function PricingPage() {
 
             {/* Credit Plans */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="mr-3">💎</span>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
                 Credit Subscriptions
                 <span className="ml-3 text-sm font-normal text-gray-500">Monthly billing</span>
               </h2>
@@ -356,8 +458,7 @@ export default function PricingPage() {
 
             {/* AI Features */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="mr-3">🤖</span>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
                 AI Features
                 <span className="ml-3 text-sm font-normal text-gray-500">Use your credits</span>
               </h2>
@@ -429,26 +530,32 @@ export default function PricingPage() {
                           </button>
                         </div>
                         
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => updateQuantity(item.plan.id, item.quantity - 1)}
-                              className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-sm"
-                            >
-                              −
-                            </button>
-                            <span className="w-8 text-center font-medium">{item.quantity}</span>
-                            <button
-                              onClick={() => updateQuantity(item.plan.id, item.quantity + 1)}
-                              className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-sm"
-                            >
-                              +
-                            </button>
-                          </div>
-                          <div className="font-semibold text-gray-900">
-                            ${(item.plan.price * item.quantity).toFixed(2)}
-                          </div>
-                        </div>
+                                                 <div className="flex items-center justify-between">
+                           {item.plan.type === 'foundation' ? (
+                             <div className="text-sm text-gray-500">
+                               Single subscription
+                             </div>
+                           ) : (
+                             <div className="flex items-center space-x-2">
+                               <button
+                                 onClick={() => updateQuantity(item.plan.id, item.quantity - 1)}
+                                 className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-sm"
+                               >
+                                 −
+                               </button>
+                               <span className="w-8 text-center font-medium">{item.quantity}</span>
+                               <button
+                                 onClick={() => updateQuantity(item.plan.id, item.quantity + 1)}
+                                 className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-sm"
+                               >
+                                 +
+                               </button>
+                             </div>
+                           )}
+                           <div className="font-semibold text-gray-900">
+                             ${(item.plan.price * item.quantity).toFixed(2)}
+                           </div>
+                         </div>
                       </div>
                     ))}
                   </div>
