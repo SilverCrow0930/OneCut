@@ -24,16 +24,16 @@ export default function PricingPage() {
   const [currentCredits] = useState(47);
   const [maxCredits] = useState(150);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [showAIFeatures, setShowAIFeatures] = useState(false);
   const [showEditorFeatures, setShowEditorFeatures] = useState(false);
+  const [showAIFeatures, setShowAIFeatures] = useState(false);
   
   // Simulated current subscriptions
   const [currentSubscriptions, setCurrentSubscriptions] = useState([
     {
       id: 'foundation-active',
-      name: 'Foundation',
-      credits: 10,
-      price: 5,
+      name: 'Video Editor',
+      credits: 15,
+      price: 8,
       type: 'foundation' as const,
       nextBilling: 'Feb 15',
       status: 'active'
@@ -160,23 +160,13 @@ export default function PricingPage() {
   const foundationPlan = plans.find(p => p.type === 'foundation');
   const creditPlans = plans.filter(p => p.type === 'credits');
 
-    return (
+  return (
     <div className="min-h-screen bg-gray-50">
       <HomeNavbar />
 
-      <div className="max-w-7xl mx-auto px-4 pt-24 pb-16">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Simple Monthly Pricing
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Start with our Complete Video Editing Suite, then add AI credits as needed.
-          </p>
-        </div>
-
+      <div className="max-w-7xl mx-auto px-4 pt-16 pb-16">
         {/* Current Status */}
-        <div className="grid md:grid-cols-2 gap-6 mb-16 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
           {/* Credits */}
           <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -225,32 +215,57 @@ export default function PricingPage() {
         {/* Main Content */}
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Plans Section */}
-          <div className="lg:col-span-3 space-y-12">
+          <div className="lg:col-span-3 space-y-10">
             
             {/* Video Editor Plan */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">🎬 Video Editor</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">🎬 Video Editor</h2>
+                <button 
+                  onClick={() => setShowEditorFeatures(!showEditorFeatures)}
+                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
+                >
+                  {showEditorFeatures ? 'Hide' : 'Show'} features
+                  <svg className={`w-4 h-4 ml-1 transition-transform ${showEditorFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+
               {foundationPlan && (
                 <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
                     <div className="mb-4 md:mb-0">
                       <h3 className="text-2xl font-bold text-gray-900 mb-2">{foundationPlan.name}</h3>
-                      <p className="text-gray-600 mb-3">{foundationPlan.description}</p>
-                      <button 
-                        onClick={() => setShowEditorFeatures(true)}
-                        className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center"
-                      >
-                        View all features 
-                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
+                      <p className="text-gray-600">{foundationPlan.description}</p>
                     </div>
                     <div className="text-center md:text-right">
                       <div className="text-4xl font-bold text-gray-900">${foundationPlan.price}</div>
                       <div className="text-gray-500">/month</div>
                     </div>
                   </div>
+
+                  {/* Expandable Features */}
+                  {showEditorFeatures && (
+                    <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                      <h4 className="font-semibold text-gray-900 mb-3">What's included:</h4>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {foundationPlan.features.map((feature, idx) => (
+                          <div key={idx} className="flex items-center text-sm text-gray-700">
+                            <svg className="w-4 h-4 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {feature}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 p-3 bg-white rounded-lg">
+                        <p className="text-sm text-gray-600">
+                          <strong>Plus:</strong> Timeline editing, multi-track support, transitions, effects, and everything you need for professional video editing.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <button 
                     onClick={() => addToCart(foundationPlan)}
@@ -264,38 +279,54 @@ export default function PricingPage() {
 
             {/* AI Features Plans */}
             <div>
-              <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">✨ AI Features</h2>
-                  <p className="text-gray-600">Add credits to unlock powerful AI capabilities</p>
+                  <h2 className="text-2xl font-bold text-gray-900">✨ AI Features</h2>
+                  <p className="text-gray-600 mt-1">Add credits to unlock powerful AI capabilities</p>
                 </div>
                 <button
-                  onClick={() => setShowAIFeatures(true)}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center mt-3 md:mt-0"
+                  onClick={() => setShowAIFeatures(!showAIFeatures)}
+                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
                 >
-                  What can I do with credits?
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  {showAIFeatures ? 'Hide' : 'Show'} AI features
+                  <svg className={`w-4 h-4 ml-1 transition-transform ${showAIFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
               </div>
+
+              {/* AI Features Expandable Section */}
+              {showAIFeatures && (
+                <div className="mb-6 p-6 bg-purple-50 rounded-xl border border-purple-100">
+                  <h4 className="font-semibold text-gray-900 mb-4">What you can do with credits:</h4>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {aiFeatures.map((feature, idx) => (
+                      <div key={idx} className="flex items-start justify-between p-3 bg-white rounded-lg border border-purple-100">
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900 text-sm">{feature.name}</h5>
+                          <p className="text-xs text-gray-600 mt-1">{feature.description}</p>
+                        </div>
+                        <div className="ml-3 text-right">
+                          <div className="text-sm font-bold text-purple-600">{feature.cost}</div>
+                          <div className="text-xs text-gray-500">credits</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 p-3 bg-white rounded-lg border border-purple-100">
+                    <p className="text-sm text-gray-600">
+                      <strong>💡 Pro Tip:</strong> Credits reset monthly, so you always have fresh AI power to work with. Start with a smaller pack and upgrade as needed!
+                    </p>
+                  </div>
+                </div>
+              )}
               
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {creditPlans.map((plan) => (
                   <div 
                     key={plan.id} 
-                    className={`relative bg-white rounded-xl border-2 p-6 transition-all hover:shadow-md ${
-                      plan.popular ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200'
-                    }`}
+                    className="relative bg-white rounded-xl border-2 border-gray-200 p-6 transition-all hover:shadow-md"
                   >
-                    {plan.popular && (
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <span className="bg-blue-500 text-white text-sm font-semibold px-3 py-1 rounded-full">
-                          Popular
-                        </span>
-                      </div>
-                    )}
-                    
                     <div className="text-center mb-4">
                       <h4 className="text-xl font-bold text-gray-900 mb-1">{plan.name}</h4>
                       <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
@@ -324,13 +355,9 @@ export default function PricingPage() {
 
           {/* Cart Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 sticky top-8 shadow-sm">
+            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 sticky top-24 shadow-sm">
               <div className="flex items-center mb-6">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 11-4 0v-6m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-                  </svg>
-                </div>
+                <span className="mr-3 text-2xl">🛒</span>
                 <h3 className="text-xl font-bold text-gray-900">Cart</h3>
               </div>
               
@@ -417,7 +444,7 @@ export default function PricingPage() {
               <p className="text-sm text-gray-600">
                 Credits reset monthly. Use them for AI features like voiceover, generation, and smart editing.
               </p>
-                </div>
+            </div>
             
             <div className="bg-white rounded-xl p-4 border border-gray-100">
               <h3 className="font-medium text-gray-900 mb-2">Can I cancel anytime?</h3>
@@ -428,121 +455,6 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
-
-      {/* Editor Features Modal */}
-      {showEditorFeatures && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
-                  <span className="text-2xl mr-3">🎬</span>
-                  <h2 className="text-2xl font-bold text-gray-900">Editor Features</h2>
-                </div>
-                <button
-                  onClick={() => setShowEditorFeatures(false)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <p className="text-gray-600 mb-6">
-                Everything you need to create professional videos with our complete editing suite.
-              </p>
-              
-              <div className="grid gap-4">
-                {foundationPlan?.features.map((feature, idx) => (
-                  <div key={idx} className="flex items-center p-4 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                      <span className="text-blue-600 text-lg">✓</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{feature}</h3>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-                <div className="flex items-center mb-2">
-                  <span className="text-blue-600 mr-2">💡</span>
-                  <h4 className="font-semibold text-blue-900">Plus More</h4>
-                </div>
-                <p className="text-sm text-blue-800">
-                  Timeline editing, multi-track support, transitions, effects, and everything you need for professional video editing.
-                </p>
-              </div>
-              
-              <button
-                onClick={() => setShowEditorFeatures(false)}
-                className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors"
-              >
-                Got it!
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* AI Features Modal */}
-      {showAIFeatures && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
-                  <span className="text-2xl mr-3">✨</span>
-                  <h2 className="text-2xl font-bold text-gray-900">AI Features</h2>
-                </div>
-                <button
-                  onClick={() => setShowAIFeatures(false)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <p className="text-gray-600 mb-6">
-                Use your credits to unlock powerful AI features that enhance your video editing workflow.
-              </p>
-              
-              <div className="grid gap-4">
-                {aiFeatures.map((feature, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">{feature.name}</h3>
-                      <p className="text-sm text-gray-600">{feature.description}</p>
-                    </div>
-                    <div className="ml-4 text-right">
-                      <div className="text-lg font-bold text-blue-600">{feature.cost}</div>
-                      <div className="text-xs text-gray-500">credits</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-                <div className="flex items-center mb-2">
-                  <span className="text-blue-600 mr-2">💡</span>
-                  <h4 className="font-semibold text-blue-900">Pro Tip</h4>
-                </div>
-                <p className="text-sm text-blue-800">
-                  Credits reset monthly, so you always have fresh AI power to work with. 
-                  Start with a smaller pack and upgrade as needed!
-                </p>
-              </div>
-              
-              <button
-                onClick={() => setShowAIFeatures(false)}
-                className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors"
-              >
-                Got it!
-              </button>
-            </div>
-            </div>
-        </div>
-      )}
-        </div>
-    );
+    </div>
+  );
 } 
