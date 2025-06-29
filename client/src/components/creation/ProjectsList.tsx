@@ -218,7 +218,7 @@ export default function ProjectsList() {
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 })
             })
-        }, 1000) // Delay re-sorting by 100ms to let navigation start first
+        }, 5000) // Delay re-sorting by 5000ms to let navigation start first
         
         // Special handling for QuickClips projects
         if (project?.processing_type === 'quickclips') {
