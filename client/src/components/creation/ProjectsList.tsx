@@ -196,27 +196,29 @@ export default function ProjectsList() {
         
         const project = projects.find(p => p.id === projectId)
         
-        // Update last_opened optimistically in the UI
-        setProjects(prev => {
-            const updatedProjects = prev.map(p => 
-                p.id === projectId 
-                    ? { ...p, last_opened: new Date().toISOString() }
-                    : p
-            )
-            // Re-sort after updating last_opened
-            return updatedProjects.sort((a, b) => {
-                if (a.last_opened && b.last_opened) {
-                    return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
-                }
-                if (a.last_opened && !b.last_opened) {
-                    return -1
-                }
-                if (!a.last_opened && b.last_opened) {
-                    return 1
-                }
-                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        // Update last_opened optimistically in the UI with a delay to prevent flash
+        setTimeout(() => {
+            setProjects(prev => {
+                const updatedProjects = prev.map(p => 
+                    p.id === projectId 
+                        ? { ...p, last_opened: new Date().toISOString() }
+                        : p
+                )
+                // Re-sort after updating last_opened
+                return updatedProjects.sort((a, b) => {
+                    if (a.last_opened && b.last_opened) {
+                        return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
+                    }
+                    if (a.last_opened && !b.last_opened) {
+                        return -1
+                    }
+                    if (!a.last_opened && b.last_opened) {
+                        return 1
+                    }
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                })
             })
-        })
+        }, 1000) // Delay re-sorting by 100ms to let navigation start first
         
         // Special handling for QuickClips projects
         if (project?.processing_type === 'quickclips') {
