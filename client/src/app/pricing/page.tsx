@@ -52,48 +52,48 @@ export default function PricingPage() {
     {
       id: 'unlimited-editor',
       name: 'Unlimited Editor',
-      credits: 10,
-      price: 5,
+      credits: 15,
+      price: 8,
       description: 'Complete video editing suite',
       type: 'foundation',
-      features: ['Unlimited Projects', 'Cloud Storage', 'Full Editor', '4K Export', '10 AI Credits']
+      features: ['Unlimited Projects', 'Cloud Storage', 'Full Editor', '4K Export', '15 AI Credits']
     },
     {
       id: 'starter-credits',
       name: 'Starter Pack',
-      credits: 50,
-      price: 5,
-      description: 'Light AI usage',
+      credits: 75,
+      price: 12,
+      description: 'Perfect for beginners',
       type: 'credits',
-      features: ['50 AI Credits', 'Monthly Reset']
+      features: ['75 AI Credits', 'Monthly Reset', 'Email Support']
     },
     {
       id: 'creator-credits',
       name: 'Creator Pack',
       credits: 200,
-      price: 20,
-      description: 'Regular content creation',
+      price: 29,
+      description: 'Most popular choice',
       type: 'credits',
       popular: true,
-      features: ['200 AI Credits', 'Priority Support']
+      features: ['200 AI Credits', 'Priority Support', 'Advanced Features']
     },
     {
       id: 'pro-credits',
       name: 'Pro Pack',
       credits: 500,
-      price: 45,
-      description: 'Heavy AI usage',
+      price: 69,
+      description: 'For power users',
       type: 'credits',
-      features: ['500 AI Credits', 'Early Access']
+      features: ['500 AI Credits', 'Priority Support', 'Early Access']
     },
     {
       id: 'enterprise-credits',
       name: 'Enterprise Pack',
-      credits: 1200,
-      price: 200,
+      credits: 1500,
+      price: 199,
       description: 'Maximum AI power',
       type: 'credits',
-      features: ['1200 AI Credits', 'Dedicated Support']
+      features: ['1500 AI Credits', 'Dedicated Support', 'Custom Integrations']
     }
   ];
 
@@ -159,16 +159,16 @@ export default function PricingPage() {
   const foundationPlan = plans.find(p => p.type === 'foundation');
   const creditPlans = plans.filter(p => p.type === 'credits');
 
-  return (
+    return (
     <div className="min-h-screen bg-gray-50">
-      <HomeNavbar />
+            <HomeNavbar />
 
       <div className="max-w-6xl mx-auto px-4 pt-24 pb-16">
-        {/* Header */}
+                {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
             Simple Monthly Pricing
-          </h1>
+                    </h1>
           <p className="text-gray-600 max-w-2xl mx-auto mb-4">
             Start with Unlimited Editor, add credits for AI features. Cancel anytime.
           </p>
@@ -240,7 +240,7 @@ export default function PricingPage() {
                     <div className="text-xs text-gray-500">/month</div>
                   </div>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-2 mb-4">
                   {foundationPlan.features.map((feature, idx) => (
                     <span key={idx} className="text-xs bg-gray-50 text-gray-700 px-2 py-1 rounded">
@@ -248,7 +248,7 @@ export default function PricingPage() {
                     </span>
                   ))}
                 </div>
-                
+
                 <button 
                   onClick={() => addToCart(foundationPlan)}
                   className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
@@ -271,10 +271,10 @@ export default function PricingPage() {
                     <div className="absolute -top-2 left-4">
                       <span className="bg-blue-500 text-white text-xs font-medium px-2 py-1 rounded">
                         Popular
-                      </span>
-                    </div>
-                  )}
-                  
+                                    </span>
+                                </div>
+                            )}
+                            
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h4 className="font-semibold text-gray-900">{plan.name}</h4>
@@ -284,8 +284,8 @@ export default function PricingPage() {
                       <div className="text-xl font-bold text-gray-900">${plan.price}</div>
                       <div className="text-xs text-gray-500">/month</div>
                     </div>
-                  </div>
-                  
+                            </div>
+
                   <div className="mb-3">
                     <div className="text-sm font-medium text-blue-600 mb-1">
                       {plan.credits} credits/month
@@ -298,8 +298,8 @@ export default function PricingPage() {
                       ))}
                     </div>
                   </div>
-                  
-                  <button 
+
+                            <button
                     onClick={() => addToCart(plan)}
                     className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
                       plan.popular 
@@ -342,7 +342,7 @@ export default function PricingPage() {
                             className="text-gray-400 hover:text-red-500 text-sm"
                           >
                             ×
-                          </button>
+                            </button>
                         </div>
                         
                         <div className="flex items-center justify-between">
@@ -369,7 +369,7 @@ export default function PricingPage() {
                             ${(item.plan.price * item.quantity).toFixed(2)}
                           </div>
                         </div>
-                      </div>
+                        </div>
                     ))}
                   </div>
 
@@ -409,7 +409,7 @@ export default function PricingPage() {
               <p className="text-sm text-gray-600">
                 Credits reset monthly. Use them for AI features like voiceover, generation, and smart editing.
               </p>
-            </div>
+                </div>
             
             <div className="bg-white rounded-xl p-4 border border-gray-100">
               <h3 className="font-medium text-gray-900 mb-2">Can I cancel anytime?</h3>
@@ -476,9 +476,9 @@ export default function PricingPage() {
                 Got it!
               </button>
             </div>
-          </div>
+            </div>
         </div>
       )}
-    </div>
-  );
-}
+        </div>
+    );
+} 

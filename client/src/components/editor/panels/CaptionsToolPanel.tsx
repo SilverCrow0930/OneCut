@@ -779,7 +779,7 @@ const CaptionsToolPanel = () => {
                                 hover:from-blue-700 hover:to-blue-800 
                                 hover:scale-[1.02] font-medium shadow-md text-sm"
                             onClick={handleOneClickGenerate}
-                        >
+                    >
                             <Sparkles className="w-4 h-4" />
                             Generate Captions
                         </button>
