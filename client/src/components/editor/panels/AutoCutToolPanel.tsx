@@ -480,7 +480,7 @@ const AutoCutToolPanel = () => {
                     
                     {/* Drag and Drop Upload Area */}
                     <div 
-                        onClick={() => fileInputRef.current?.click()}
+                                onClick={() => fileInputRef.current?.click()}
                         onDragEnter={handleDragEnter}
                         onDragLeave={handleDragLeave}
                         onDragOver={handleDragOver}
@@ -537,8 +537,8 @@ const AutoCutToolPanel = () => {
                                 MP4, MOV, AVI • 2GB max
                             </div>
                         </div>
+                        </div>
                     </div>
-                </div>
                 ) : showConfig ? (
                     /* Configuration State */
                     <div className="space-y-4">

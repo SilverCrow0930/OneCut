@@ -334,8 +334,8 @@ const ChatTextField: React.FC<ChatTextFieldProps> = ({ onSend, message, setMessa
                             </svg>
                         </button>
                         <ChatSendButton onSend={handleSend} />
-                    </div>
                 </div>
+            </div>
 
                 {/* Hidden File Input */}
                 <input
