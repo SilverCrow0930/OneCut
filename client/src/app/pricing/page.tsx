@@ -166,17 +166,17 @@ export default function PricingPage() {
 
       <div className="max-w-7xl mx-auto px-4 pt-16 pb-16">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-right mb-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
             Pricing
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="text-gray-600 max-w-2xl ml-auto">
             Start with our complete video editor, then add AI credits as you need them.
           </p>
         </div>
 
         {/* Current Status */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl ml-auto">
           {/* Credits */}
           <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -367,7 +367,7 @@ export default function PricingPage() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 sticky top-24 shadow-sm">
               <div className="flex items-center mb-6">
-                <span className="mr-3 text-2xl">🛒</span>
+                <span className="mr-3 text-2xl transform scale-x-[-1]">🛒</span>
                 <h3 className="text-xl font-bold text-gray-900">Cart</h3>
               </div>
               
