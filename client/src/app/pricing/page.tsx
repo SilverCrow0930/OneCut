@@ -165,6 +165,16 @@ export default function PricingPage() {
       <HomeNavbar />
 
       <div className="max-w-7xl mx-auto px-4 pt-16 pb-16">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+            Pricing
+          </h1>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Start with our complete video editor, then add AI credits as you need them.
+          </p>
+        </div>
+
         {/* Current Status */}
         <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
           {/* Credits */}
@@ -225,7 +235,7 @@ export default function PricingPage() {
                   onClick={() => setShowEditorFeatures(!showEditorFeatures)}
                   className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
                 >
-                  {showEditorFeatures ? 'Hide' : 'Show'} features
+                  {showEditorFeatures ? 'Hide' : 'Show'} all features
                   <svg className={`w-4 h-4 ml-1 transition-transform ${showEditorFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -288,7 +298,7 @@ export default function PricingPage() {
                   onClick={() => setShowAIFeatures(!showAIFeatures)}
                   className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
                 >
-                  {showAIFeatures ? 'Hide' : 'Show'} AI features
+                  {showAIFeatures ? 'Hide' : 'Show'} AI features & credits
                   <svg className={`w-4 h-4 ml-1 transition-transform ${showAIFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
