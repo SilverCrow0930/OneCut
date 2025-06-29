@@ -25,6 +25,7 @@ export default function PricingPage() {
   const [maxCredits] = useState(150);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showAIFeatures, setShowAIFeatures] = useState(false);
+  const [showEditorFeatures, setShowEditorFeatures] = useState(false);
   
   // Simulated current subscriptions
   const [currentSubscriptions, setCurrentSubscriptions] = useState([
@@ -51,16 +52,16 @@ export default function PricingPage() {
   const plans: Plan[] = [
     {
       id: 'unlimited-editor',
-      name: 'Unlimited Editor',
+      name: 'Complete Video Editing Suite',
       credits: 15,
       price: 8,
-      description: 'Complete video editing suite',
+      description: 'Everything you need to create professional videos',
       type: 'foundation',
-      features: ['Unlimited Projects', 'Cloud Storage', 'Full Editor', '4K Export', '15 AI Credits']
+      features: ['Unlimited Projects', 'Cloud Storage', 'Full Editor', '1080p Export', '15 AI Credits']
     },
     {
       id: 'starter-credits',
-      name: 'Starter Pack',
+      name: 'Starter',
       credits: 75,
       price: 12,
       description: 'Perfect for beginners',
@@ -69,7 +70,7 @@ export default function PricingPage() {
     },
     {
       id: 'creator-credits',
-      name: 'Creator Pack',
+      name: 'Creator',
       credits: 200,
       price: 29,
       description: 'Most popular choice',
@@ -79,7 +80,7 @@ export default function PricingPage() {
     },
     {
       id: 'pro-credits',
-      name: 'Pro Pack',
+      name: 'Pro',
       credits: 500,
       price: 69,
       description: 'For power users',
@@ -88,7 +89,7 @@ export default function PricingPage() {
     },
     {
       id: 'enterprise-credits',
-      name: 'Enterprise Pack',
+      name: 'Enterprise',
       credits: 1500,
       price: 199,
       description: 'Maximum AI power',
@@ -170,17 +171,8 @@ export default function PricingPage() {
             Simple Monthly Pricing
                     </h1>
           <p className="text-gray-600 max-w-2xl mx-auto mb-4">
-            Start with Unlimited Editor, add credits for AI features. Cancel anytime.
+            Start with Complete Video Editing Suite, add AI credits as needed.
           </p>
-          
-          {/* AI Features Info Button */}
-          <button
-            onClick={() => setShowAIFeatures(true)}
-            className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
-          >
-            <span className="mr-1">✨</span>
-            What can I do with credits?
-          </button>
         </div>
 
         {/* Current Status - Compact */}
@@ -202,51 +194,57 @@ export default function PricingPage() {
 
           {/* Current Plans */}
           <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Active Plans</span>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-gray-700">Active Subscriptions</span>
               <span className="text-lg font-bold text-gray-900">
                 ${currentSubscriptions.filter(s => s.status === 'active').reduce((sum, s) => sum + s.price, 0)}/mo
               </span>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               {currentSubscriptions.filter(s => s.status === 'active').map(sub => (
-                <div key={sub.id} className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">{sub.name}</span>
-                  <button
-                    onClick={() => cancelSubscription(sub.id)}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    Cancel
-                  </button>
+                <div key={sub.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-800">{sub.name}</span>
+                    <div className="text-xs text-gray-500">Next billing: {sub.nextBilling}</div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-semibold text-gray-900">${sub.price}/mo</span>
+                    <button
+                      onClick={() => cancelSubscription(sub.id)}
+                      className="text-xs text-red-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Plans */}
+        {/* Editor Section */}
+        <div className="grid lg:grid-cols-4 gap-6 mb-12">
           <div className="lg:col-span-3">
-            {/* Foundation Plan */}
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Video Editor</h2>
             {foundationPlan && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900">{foundationPlan.name}</h3>
                     <p className="text-sm text-gray-600">{foundationPlan.description}</p>
+                    <div className="mt-2">
+                      <button 
+                        onClick={() => setShowEditorFeatures(true)}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        View all features →
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right ml-6">
                     <div className="text-2xl font-bold text-gray-900">${foundationPlan.price}</div>
                     <div className="text-xs text-gray-500">/month</div>
                   </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {foundationPlan.features.map((feature, idx) => (
-                    <span key={idx} className="text-xs bg-gray-50 text-gray-700 px-2 py-1 rounded">
-                      {feature}
-                    </span>
-                  ))}
                 </div>
 
                 <button 
@@ -257,61 +255,6 @@ export default function PricingPage() {
                 </button>
               </div>
             )}
-
-            {/* Credit Plans */}
-            <div className="grid md:grid-cols-2 gap-4">
-              {creditPlans.map((plan) => (
-                <div 
-                  key={plan.id} 
-                  className={`relative bg-white rounded-xl border p-4 transition-all hover:shadow-md ${
-                    plan.popular ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200'
-                  }`}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-2 left-4">
-                      <span className="bg-blue-500 text-white text-xs font-medium px-2 py-1 rounded">
-                        Popular
-                                    </span>
-                                </div>
-                            )}
-                            
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{plan.name}</h4>
-                      <p className="text-xs text-gray-600">{plan.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-gray-900">${plan.price}</div>
-                      <div className="text-xs text-gray-500">/month</div>
-                    </div>
-                            </div>
-
-                  <div className="mb-3">
-                    <div className="text-sm font-medium text-blue-600 mb-1">
-                      {plan.credits} credits/month
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {plan.features.map((feature, idx) => (
-                        <span key={idx} className="text-xs bg-gray-50 text-gray-600 px-2 py-1 rounded">
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                            <button
-                    onClick={() => addToCart(plan)}
-                    className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                      plan.popular 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    Add to Cart
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Cart */}
@@ -335,7 +278,6 @@ export default function PricingPage() {
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex-1">
                             <h4 className="text-sm font-medium text-gray-900">{item.plan.name}</h4>
-                            <p className="text-xs text-gray-600">{item.plan.credits} credits</p>
                           </div>
                           <button
                             onClick={() => removeFromCart(item.plan.id)}
@@ -374,10 +316,6 @@ export default function PricingPage() {
                   </div>
 
                   <div className="border-t border-gray-100 pt-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Credits</span>
-                      <span className="font-medium">{getTotalCredits()}/mo</span>
-                    </div>
                     <div className="flex justify-between text-base font-bold">
                       <span>Total</span>
                       <span>${getTotalPrice()}/mo</span>
@@ -387,13 +325,68 @@ export default function PricingPage() {
                   <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg mt-4 transition-colors">
                     Subscribe
                   </button>
-                  
-                  <p className="text-xs text-gray-500 text-center mt-3">
-                    Cancel anytime
-                  </p>
                 </>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* AI Features Section */}
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">AI Features</h2>
+              <p className="text-sm text-gray-600 mt-1">Add credits to unlock powerful AI capabilities</p>
+            </div>
+            <button
+              onClick={() => setShowAIFeatures(true)}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              What can I do with credits? →
+            </button>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {creditPlans.map((plan) => (
+              <div 
+                key={plan.id} 
+                className={`relative bg-white rounded-xl border p-4 transition-all hover:shadow-md ${
+                  plan.popular ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200'
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-2 left-4">
+                    <span className="bg-blue-500 text-white text-xs font-medium px-2 py-1 rounded">
+                      Popular
+                                  </span>
+                              </div>
+                          )}
+                          
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{plan.name}</h4>
+                    <p className="text-xs text-gray-600">{plan.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-gray-900">${plan.price}</div>
+                    <div className="text-xs text-gray-500">/month</div>
+                  </div>
+                          </div>
+
+                <div className="mb-3">
+                  <div className="text-sm font-medium text-blue-600 mb-1">
+                    {plan.credits} credits/month
+                  </div>
+                </div>
+
+                          <button
+                  onClick={() => addToCart(plan)}
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Add to Cart
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -420,6 +413,62 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      {/* Editor Features Modal */}
+      {showEditorFeatures && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <span className="text-2xl mr-3">🎬</span>
+                  <h2 className="text-2xl font-bold text-gray-900">Editor Features</h2>
+                </div>
+                <button
+                  onClick={() => setShowEditorFeatures(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                Everything you need to create professional videos with our complete editing suite.
+              </p>
+              
+              <div className="grid gap-4">
+                {foundationPlan?.features.map((feature, idx) => (
+                  <div key={idx} className="flex items-center p-4 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                      <span className="text-blue-600 text-lg">✓</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">{feature}</h3>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-6 p-4 bg-blue-50 rounded-xl">
+                <div className="flex items-center mb-2">
+                  <span className="text-blue-600 mr-2">💡</span>
+                  <h4 className="font-semibold text-blue-900">Plus More</h4>
+                </div>
+                <p className="text-sm text-blue-800">
+                  Timeline editing, multi-track support, transitions, effects, and everything you need for professional video editing.
+                </p>
+              </div>
+              
+              <button
+                onClick={() => setShowEditorFeatures(false)}
+                className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors"
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Features Modal */}
       {showAIFeatures && (
