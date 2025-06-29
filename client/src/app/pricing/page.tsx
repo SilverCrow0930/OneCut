@@ -24,6 +24,7 @@ export default function PricingPage() {
   const [currentCredits] = useState(47);
   const [maxCredits] = useState(150);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [showAIFeatures, setShowAIFeatures] = useState(false);
   
   // Simulated current subscriptions
   const [currentSubscriptions, setCurrentSubscriptions] = useState([
@@ -49,42 +50,62 @@ export default function PricingPage() {
 
   const plans: Plan[] = [
     {
-      id: 'foundation',
-      name: 'Foundation',
+      id: 'unlimited-editor',
+      name: 'Unlimited Editor',
       credits: 10,
       price: 5,
-      description: 'Everything to get started',
+      description: 'Complete video editing suite',
       type: 'foundation',
-      features: ['Unlimited Projects', 'Cloud Storage', 'Video Editor', '1080p Export']
+      features: ['Unlimited Projects', 'Cloud Storage', 'Full Editor', '4K Export', '10 AI Credits']
     },
     {
       id: 'starter-credits',
-      name: 'Starter',
+      name: 'Starter Pack',
       credits: 50,
-      price: 8,
+      price: 5,
       description: 'Light AI usage',
       type: 'credits',
       features: ['50 AI Credits', 'Monthly Reset']
     },
     {
       id: 'creator-credits',
-      name: 'Creator',
-      credits: 150,
+      name: 'Creator Pack',
+      credits: 200,
       price: 20,
       description: 'Regular content creation',
       type: 'credits',
       popular: true,
-      features: ['150 AI Credits', 'Priority Support']
+      features: ['200 AI Credits', 'Priority Support']
     },
     {
       id: 'pro-credits',
-      name: 'Pro',
-      credits: 400,
+      name: 'Pro Pack',
+      credits: 500,
       price: 45,
-      description: 'Power users & teams',
+      description: 'Heavy AI usage',
       type: 'credits',
-      features: ['400 AI Credits', 'Early Access']
+      features: ['500 AI Credits', 'Early Access']
+    },
+    {
+      id: 'enterprise-credits',
+      name: 'Enterprise Pack',
+      credits: 1200,
+      price: 200,
+      description: 'Maximum AI power',
+      type: 'credits',
+      features: ['1200 AI Credits', 'Dedicated Support']
     }
+  ];
+
+  const aiFeatures = [
+    { name: 'Smart Cut', cost: 15, description: 'AI-powered video editing with automatic cuts' },
+    { name: 'AI Voiceover', cost: 3, description: 'Natural voice generation per minute' },
+    { name: 'Auto Captions', cost: 5, description: 'Automatic caption generation' },
+    { name: 'AI Images', cost: 2, description: 'AI-generated images and graphics' },
+    { name: 'Video Generation', cost: 25, description: 'AI video clips (5-second)' },
+    { name: 'Background Removal', cost: 8, description: 'AI background replacement' },
+    { name: 'Style Transfer', cost: 12, description: 'Apply artistic styles to videos' },
+    { name: 'Audio Enhancement', cost: 4, description: 'AI audio cleanup and enhancement' }
   ];
 
   const addToCart = (plan: Plan) => {
@@ -148,9 +169,18 @@ export default function PricingPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
             Simple Monthly Pricing
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Start with Foundation, add credits as needed. Cancel anytime.
+          <p className="text-gray-600 max-w-2xl mx-auto mb-4">
+            Start with Unlimited Editor, add credits for AI features. Cancel anytime.
           </p>
+          
+          {/* AI Features Info Button */}
+          <button
+            onClick={() => setShowAIFeatures(true)}
+            className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            <span className="mr-1">✨</span>
+            What can I do with credits?
+          </button>
         </div>
 
         {/* Current Status - Compact */}
@@ -223,7 +253,7 @@ export default function PricingPage() {
                   onClick={() => addToCart(foundationPlan)}
                   className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
                 >
-                  Add Foundation
+                  Add to Cart
                 </button>
               </div>
             )}
@@ -277,7 +307,7 @@ export default function PricingPage() {
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                     }`}
                   >
-                    Add Credits
+                    Add to Cart
                   </button>
                 </div>
               ))}
@@ -390,6 +420,65 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      {/* AI Features Modal */}
+      {showAIFeatures && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <span className="text-2xl mr-3">✨</span>
+                  <h2 className="text-2xl font-bold text-gray-900">AI Features</h2>
+                </div>
+                <button
+                  onClick={() => setShowAIFeatures(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                Use your credits to unlock powerful AI features that enhance your video editing workflow.
+              </p>
+              
+              <div className="grid gap-4">
+                {aiFeatures.map((feature, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">{feature.name}</h3>
+                      <p className="text-sm text-gray-600">{feature.description}</p>
+                    </div>
+                    <div className="ml-4 text-right">
+                      <div className="text-lg font-bold text-blue-600">{feature.cost}</div>
+                      <div className="text-xs text-gray-500">credits</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-6 p-4 bg-blue-50 rounded-xl">
+                <div className="flex items-center mb-2">
+                  <span className="text-blue-600 mr-2">💡</span>
+                  <h4 className="font-semibold text-blue-900">Pro Tip</h4>
+                </div>
+                <p className="text-sm text-blue-800">
+                  Credits reset monthly, so you always have fresh AI power to work with. 
+                  Start with a smaller pack and upgrade as needed!
+                </p>
+              </div>
+              
+              <button
+                onClick={() => setShowAIFeatures(false)}
+                className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors"
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
