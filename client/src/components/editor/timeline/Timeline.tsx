@@ -386,8 +386,21 @@ export default function Timeline() {
         const rawIndex = Math.floor(y / rowHeight)
         const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
 
-        // For audio tracks, always place at the bottom
-        let newIndex = trackType === 'audio' ? tracks.length : Math.max(0, Math.min(tracks.length, rawIndex))
+        // For audio tracks, always place at the bottom, for others place at the top
+        let newIndex = trackType === 'audio' ? tracks.length : 0;
+
+        // For non-audio tracks, shift all tracks down
+        if (trackType !== 'audio') {
+            for (const track of tracks) {
+                executeCommand({
+                    type: 'UPDATE_TRACK',
+                    payload: { 
+                        before: track,
+                        after: { ...track, index: track.index + 1 }
+                    }
+                });
+            }
+        }
 
         const newTrack = {
             id: uuid(),

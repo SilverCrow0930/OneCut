@@ -73,9 +73,22 @@ export default function TrackRow({
             const newTrack = {
                 id: uuid(),
                 projectId: track.projectId,
-                index: trackType === 'audio' ? tracks.length : track.index,
+                index: trackType === 'audio' ? tracks.length : 0,
                 type: trackType,
                 createdAt: new Date().toISOString(),
+            }
+
+            // For non-audio tracks, shift all tracks down
+            if (trackType !== 'audio') {
+                for (const track of tracks) {
+                    executeCommand({
+                        type: 'UPDATE_TRACK',
+                        payload: { 
+                            before: track,
+                            after: { ...track, index: track.index + 1 }
+                        }
+                    });
+                }
             }
 
             console.log('Creating real track for empty track:', newTrack)

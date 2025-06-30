@@ -305,8 +305,18 @@ export function addAssetToTrack(
         targetTrack = tracks.find(t => t.type === 'stickers');
         
         if (!targetTrack) {
-            // If no stickers track exists, create one at the current index
-            targetTrackIndex = tracks.length; // Add at the end
+            // If no stickers track exists, create one at index 0 (top)
+            targetTrackIndex = 0;
+            // Shift all tracks down by 1
+            for (const track of tracks) {
+                executeCommand({
+                    type: 'UPDATE_TRACK',
+                    payload: { 
+                        before: track,
+                        after: { ...track, index: track.index + 1 }
+                    }
+                });
+            }
             targetTrack = null; // Force creation of new track
             trackType = 'stickers'; // Set track type to stickers
         } else {
@@ -315,36 +325,32 @@ export function addAssetToTrack(
     } else {
         // Special handling for audio tracks - always place at the bottom
         if (trackType === 'audio') {
-            // Find the highest non-audio track index
-            const nonAudioTracks = tracks.filter(t => t.type !== 'audio');
-            const highestNonAudioIndex = nonAudioTracks.length > 0 
-                ? Math.max(...nonAudioTracks.map(t => t.index))
-                : -1;
-            
-            // Place audio track below all non-audio tracks
-            targetTrackIndex = highestNonAudioIndex + 1;
-            
-            // Shift any existing audio tracks down by 1
-            const audioTracksToShift = tracks.filter(t => t.type === 'audio' && t.index >= targetTrackIndex);
-            for (const track of audioTracksToShift) {
-                executeCommand({
-                    type: 'UPDATE_TRACK',
-                    payload: { track: { ...track, index: track.index + 1 } }
-                });
-            }
-            
-            // Try to find an existing audio track at this position
-            targetTrack = tracks.find(t => t.type === 'audio' && t.index === targetTrackIndex);
+            targetTrackIndex = tracks.length; // Add at the end (bottom)
+            targetTrack = null; // Force creation of new track
         } else {
-            // If no specific track index provided, try to find an existing track of the same type
+            // For non-audio tracks, add at the top (index 0) and shift others down
             if (trackIndex === undefined) {
-                const existingTrack = tracks.find(t => t.type === trackType)
-                if (existingTrack) {
-                    targetTrack = existingTrack
-                    targetTrackIndex = existingTrack.index
+                // Try to find an existing track of the same type
+                targetTrack = tracks.find(t => t.type === trackType)
+                if (targetTrack) {
+                    targetTrackIndex = targetTrack.index
+                } else {
+                    // Create at top and shift everything down
+                    targetTrackIndex = 0;
+                    // Shift all tracks down by 1
+                    for (const track of tracks) {
+                        executeCommand({
+                            type: 'UPDATE_TRACK',
+                            payload: { 
+                                before: track,
+                                after: { ...track, index: track.index + 1 }
+                            }
+                        });
+                    }
                 }
             } else if (trackIndex < tracks.length) {
                 targetTrack = tracks[trackIndex]
+                targetTrackIndex = trackIndex
             }
         }
         
