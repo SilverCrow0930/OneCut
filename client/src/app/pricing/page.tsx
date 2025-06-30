@@ -52,7 +52,7 @@ export default function PricingPage() {
   const plans: Plan[] = [
     {
       id: 'unlimited-editor',
-      name: 'Complete Video Editing Suite',
+      name: 'Video Editing Suite',
       credits: 15,
       price: 8,
       description: 'Everything you need to create professional videos',
