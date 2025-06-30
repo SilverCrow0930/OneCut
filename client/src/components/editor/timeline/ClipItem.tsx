@@ -376,10 +376,10 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             let newStartMs = resizeStartMs + deltaMs
             if (clip.sourceStartMs === 0) {
                 const timelineRatio = (newStartMs - clip.timelineStartMs) / (clip.timelineEndMs - clip.timelineStartMs)
-            const sourceDuration = clip.sourceEndMs - clip.sourceStartMs
+                const sourceDuration = clip.sourceEndMs - clip.sourceStartMs
                 const newSourceStartMs = Math.round(clip.sourceStartMs + (sourceDuration * timelineRatio))
                 if (newSourceStartMs < clip.sourceStartMs) {
-                newStartMs = clip.timelineStartMs
+                    newStartMs = clip.timelineStartMs
                 }
             }
 
@@ -407,18 +407,18 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
 
             const newSourceEndMs = Math.round(clip.sourceStartMs + (newEndMs - clip.timelineStartMs))
 
-        executeCommand({
-            type: 'UPDATE_CLIP',
-            payload: {
-                before: clip,
-                after: {
-                    ...clip,
-                    timelineEndMs: newEndMs,
+            executeCommand({
+                type: 'UPDATE_CLIP',
+                payload: {
+                    before: clip,
+                    after: {
+                        ...clip,
+                        timelineEndMs: newEndMs,
                         sourceEndMs: Math.min(assetDuration, newSourceEndMs)
                     }
                 }
             })
-            }
+        }
 
         setIsResizing(false)
         setResizeType(null)
@@ -727,30 +727,26 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     select-none overflow-hidden
                 `}
                 style={{
-                    left: `${left}px`,
-                    width: `${Math.max(width, 20)}px`,
+                    left: isResizing ? `${currentLeft}px` : `${left}px`,
+                    width: isResizing ? `${currentWidth}px` : `${Math.max(width, 20)}px`,
                     transform: dragState.isDragging ? 'translateY(-1px)' : 'translateY(0)',
                 }}
                 onClick={onClick}
                 onContextMenu={handleContextMenu}
                 onMouseDown={handleMouseDown}
-                draggable={isShiftHeld} // Only enable HTML5 drag when Shift is held
+                draggable={isShiftHeld}
                 onDragStart={handleDragStart}
                 title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move - overlapping clips will be automatically pushed forward'}
             >
                 {/* Resize handles */}
                 <div
-                    className="absolute left-0 top-0 w-4 h-full cursor-ew-resize hover:bg-white/20 transition-colors group"
+                    className="absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
                     onMouseDown={(e) => handleResizeStart(e, 'start')}
-                >
-                    <div className="absolute left-0 top-0 w-0.5 h-full bg-white/20 group-hover:bg-white/40" />
-                </div>
+                />
                 <div
-                    className="absolute right-0 top-0 w-4 h-full cursor-ew-resize hover:bg-white/20 transition-colors group"
+                    className="absolute right-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
-                >
-                    <div className="absolute right-0 top-0 w-0.5 h-full bg-white/20 group-hover:bg-white/40" />
-                </div>
+                />
 
                 {/* Enhanced Content based on type */}
                 {isVideo && mediaUrl && (
