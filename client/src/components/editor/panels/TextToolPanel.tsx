@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useParams } from 'next/navigation'
@@ -18,6 +18,7 @@ export default function TextToolPanel() {
     const [aiGeneratedStyle, setAiGeneratedStyle] = useState<any>(null)
     const [isGeneratingStyle, setIsGeneratingStyle] = useState(false)
     const [styleError, setStyleError] = useState<string | null>(null)
+    const [createNewTrack, setCreateNewTrack] = useState(false)
     
     const { tracks, executeCommand, selectedClipId, clips } = useEditor()
     const { currentTime } = usePlayback()
@@ -28,6 +29,11 @@ export default function TextToolPanel() {
 
     // Find the selected text clip if we're editing
     const selectedClip = clips.find(clip => clip.id === selectedClipId && clip.type === 'text')
+
+    // Find existing text tracks
+    const textTracks = useMemo(() => {
+        return tracks.filter(track => track.type === 'text')
+    }, [tracks])
 
     // Update text and style when a clip is selected
     useEffect(() => {
@@ -170,68 +176,95 @@ export default function TextToolPanel() {
                 }
             })
         } else {
-            // Create a new text track at index 0
-            const newTrack = {
-                id: uuid(),
-                projectId: projectId!,
-                index: 0,
-                type: 'text' as TrackType,
-                createdAt: new Date().toISOString(),
-            }
-
             // Default duration is 5 seconds
             const duration = 5000 // 5 seconds in milliseconds
             const startTime = currentTime * 1000 // Convert seconds to milliseconds
 
-            // Create the text clip
-            const textClip = {
-                id: uuid(),
-                trackId: newTrack.id,
-                type: 'text' as const,
-                sourceStartMs: 0,
-                sourceEndMs: duration,
-                timelineStartMs: startTime,
-                timelineEndMs: startTime + duration,
-                assetDurationMs: duration,
-                volume: 1,
-                speed: 1,
-                properties,
-                createdAt: new Date().toISOString(),
-            }
-
-            // Create commands to:
-            // 1. Shift all existing tracks down
-            // 2. Add the new track
-            // 3. Add the text clip
-            const commands = [
-                // First shift all existing tracks down
-                ...tracks.map(track => ({
-                    type: 'UPDATE_TRACK' as const,
-                    payload: {
-                        before: track,
-                        after: {
-                            ...track,
-                            index: track.index + 1
-                        }
-                    }
-                })),
-                // Then add the new track
-                {
-                    type: 'ADD_TRACK' as const,
-                    payload: { track: newTrack }
-                },
-                // Finally add the text clip
-                {
-                    type: 'ADD_CLIP' as const,
-                    payload: { clip: textClip }
+            if (createNewTrack || textTracks.length === 0) {
+                // Create a new text track at index 0
+                const newTrack = {
+                    id: uuid(),
+                    projectId: projectId!,
+                    index: 0,
+                    type: 'text' as TrackType,
+                    createdAt: new Date().toISOString(),
                 }
-            ]
 
-            // Execute all commands in a single batch
-            executeCommand({
-                type: 'BATCH',
-                payload: { commands }
-            })
+                // Create the text clip
+                const textClip = {
+                    id: uuid(),
+                    trackId: newTrack.id,
+                    type: 'text' as const,
+                    sourceStartMs: 0,
+                    sourceEndMs: duration,
+                    timelineStartMs: startTime,
+                    timelineEndMs: startTime + duration,
+                    assetDurationMs: duration,
+                    volume: 1,
+                    speed: 1,
+                    properties,
+                    createdAt: new Date().toISOString(),
+                }
+
+                // Create commands to:
+                // 1. Shift all existing tracks down
+                // 2. Add the new track
+                // 3. Add the text clip
+                const commands = [
+                    // First shift all existing tracks down
+                    ...tracks.map(track => ({
+                        type: 'UPDATE_TRACK' as const,
+                        payload: {
+                            before: track,
+                            after: {
+                                ...track,
+                                index: track.index + 1
+                            }
+                        }
+                    })),
+                    // Then add the new track
+                    {
+                        type: 'ADD_TRACK' as const,
+                        payload: { track: newTrack }
+                    },
+                    // Finally add the text clip
+                    {
+                        type: 'ADD_CLIP' as const,
+                        payload: { clip: textClip }
+                    }
+                ]
+
+                // Execute all commands in a single batch
+                executeCommand({
+                    type: 'BATCH',
+                    payload: { commands }
+                })
+            } else {
+                // Use existing text track (use the first one)
+                const existingTrack = textTracks[0];
+                
+                // Create the text clip on the existing track
+                const textClip = {
+                    id: uuid(),
+                    trackId: existingTrack.id,
+                    type: 'text' as const,
+                    sourceStartMs: 0,
+                    sourceEndMs: duration,
+                    timelineStartMs: startTime,
+                    timelineEndMs: startTime + duration,
+                    assetDurationMs: duration,
+                    volume: 1,
+                    speed: 1,
+                    properties,
+                    createdAt: new Date().toISOString(),
+                }
+
+                // Add the text clip to the existing track
+                executeCommand({
+                    type: 'ADD_CLIP',
+                    payload: { clip: textClip }
+                })
+            }
         }
 
         // Reset the form if we're not editing
@@ -350,6 +383,31 @@ export default function TextToolPanel() {
                         </div>
                     </div>
                 </div>
+
+                {/* Track options */}
+                {!selectedClip && textTracks.length > 0 && (
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-black/50">
+                            Track Options
+                        </label>
+                        <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg">
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={createNewTrack}
+                                    onChange={() => setCreateNewTrack(!createNewTrack)}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-sm">Create new track</span>
+                            </label>
+                            <div className="text-xs text-gray-500">
+                                {createNewTrack ? 
+                                    "Text will be added to a new track" : 
+                                    `Text will be added to existing track (${textTracks.length} available)`}
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 <button
                     onClick={handleAddOrUpdateText}
