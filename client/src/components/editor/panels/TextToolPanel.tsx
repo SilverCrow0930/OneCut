@@ -168,11 +168,25 @@ export default function TextToolPanel() {
                 }
             })
         } else {
-            // Create a new text track at index 0
+            // Create a new text track at the first available index in the text range (1-4)
+            const textTrackRange = { start: 1, end: 4 }
+            const existingTextTracks = tracks.filter(t => t.type === 'text')
+                .map(t => t.index)
+                .sort((a, b) => a - b)
+            
+            // Find the first available index in the range
+            let newTrackIndex = textTrackRange.start
+            for (let i = textTrackRange.start; i <= textTrackRange.end; i++) {
+                if (!existingTextTracks.includes(i)) {
+                    newTrackIndex = i
+                    break
+                }
+            }
+
             const newTrack = {
                 id: uuid(),
                 projectId: projectId!,
-                index: 0, // Insert at the beginning
+                index: newTrackIndex,
                 type: 'text' as TrackType,
                 createdAt: new Date().toISOString(),
             }
@@ -197,27 +211,13 @@ export default function TextToolPanel() {
             }
 
             // Create commands to:
-            // 1. Shift all existing tracks down
-            // 2. Add the new track
-            // 3. Add the text clip
+            // 1. Add the new track
+            // 2. Add the text clip
             const commands = [
-                // First shift all existing tracks down
-                ...tracks.map(track => ({
-                    type: 'UPDATE_TRACK' as const,
-                    payload: {
-                        before: track,
-                        after: {
-                            ...track,
-                            index: track.index + 1
-                        }
-                    }
-                })),
-                // Then add the new track
                 {
                     type: 'ADD_TRACK' as const,
                     payload: { track: newTrack }
                 },
-                // Finally add the text clip
                 {
                     type: 'ADD_CLIP' as const,
                     payload: { clip: textClip }

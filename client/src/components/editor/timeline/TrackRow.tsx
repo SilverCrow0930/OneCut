@@ -354,139 +354,121 @@ export default function TrackRow({
     }, [executeCommand, tracks, clips, assets])
 
     return (
-        <>
-            <div
-                ref={rowRef}
-                className={`
-                    relative h-12
-                    rounded-lg overflow-x-auto overflow-y-hidden
-                    scrollbar-hide
-                    ${(track as any).isEmpty 
-                        ? 'bg-gray-50/50 border-2 border-dashed border-gray-200/60 hover:border-gray-300/60 hover:bg-gray-100/50 cursor-pointer transition-all duration-200' 
-                        : 'bg-white border-2 backdrop-blur-sm'
-                    }
-                    ${isDragOver
-                        ? (track as any).isEmpty
-                            ? 'border-blue-400 bg-blue-50 shadow-lg'
-                            : 'border-blue-400 bg-blue-50 shadow-lg' 
-                        : (track as any).isEmpty
-                            ? ''
-                            : 'border-gray-200/80 hover:border-gray-300 hover:bg-gray-50/80 shadow-sm hover:shadow-md'
-                    }
-                `}
+        <div
+            data-timeline-track
+            className={`
+                relative h-12 rounded-lg overflow-hidden
+                ${track.isEmpty ? 'bg-gray-100' : 'bg-gray-50'}
+                ${isDragOver ? 'border-2 border-blue-400 bg-blue-50' : 'border border-gray-200'}
+            `}
+            onDragEnter={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                dragCounter.current++
+                setIsDragOver(true)
+                timelineSetIsDragOver(false)
+            }}
+            onDragLeave={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                dragCounter.current--
+                if (dragCounter.current === 0) {
+                    setIsDragOver(false)
+                    timelineSetIsDragOver(true)
+                }
+            }}
+            onDragOver={e => {
+                e.preventDefault()
+                e.stopPropagation()
+            }}
+            onDrop={handleDrop}
+        >
+            {/* Track content container with proper width for scrolling */}
+            <div 
+                className="relative h-full"
                 style={{
-                    scrollbarWidth: 'none', /* Firefox */
-                    msOverflowStyle: 'none', /* IE and Edge */
+                    width: Math.max(
+                        // Calculate the minimum width needed for all clips
+                        clips.length > 0 
+                            ? Math.max(...clips.map(c => (c.timelineEndMs * timeScale) + 100)) 
+                            : 0,
+                        // Ensure minimum width is at least the container width
+                        rowRef.current?.parentElement?.clientWidth || 1000
+                    ),
+                    minWidth: '100%'
                 }}
-                onDragOver={e => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                }}
-                onDragEnter={e => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    dragCounter.current++
-                    setIsDragOver(true)
-                    timelineSetIsDragOver(false)
-                }}
-                onDragLeave={e => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    dragCounter.current--
-                    if (dragCounter.current === 0) {
-                        setIsDragOver(false)
-                        timelineSetIsDragOver(true)
-                    }
-                }}
-                onDrop={handleDrop}
             >
-                {/* Track content container with proper width for scrolling */}
-                <div 
-                    className="relative h-full"
-                    style={{
-                        width: Math.max(
-                            // Calculate the minimum width needed for all clips
-                            clips.length > 0 
-                                ? Math.max(...clips.map(c => (c.timelineEndMs * timeScale) + 100)) 
-                                : 0,
-                            // Ensure minimum width is at least the container width
-                            rowRef.current?.parentElement?.clientWidth || 1000
-                        ),
-                        minWidth: '100%'
+                {/* Track type indicator - only for real tracks */}
+                {!((track as any).isEmpty) && (
+                    <div className={`
+                        absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg z-30
+                        ${track.type === 'video' ? 'bg-blue-500' : 
+                          track.type === 'audio' ? 'bg-green-500' : 
+                          track.type === 'caption' ? 'bg-orange-500' : 'bg-purple-500'}
+                    `} />
+                )}
+
+                {/* Track label */}
+                <div className="absolute left-2 top-2 text-xs font-medium text-gray-600 pointer-events-none">
+                    {(track as any).isEmpty 
+                        ? "Drop content here to create track"
+                        : `Track ${track.index + 1} • ${track.type}`
+                    }
+                </div>
+
+                {/* Background div that receives timeline clicks */}
+                <div
+                    className="absolute inset-0 rounded-lg pointer-events-auto"
+                    style={{ pointerEvents: isDragOver ? 'none' : 'auto' }}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if ((track as any).isEmpty) {
+                            // Always add a new track on click
+                            const newTrack = {
+                                id: uuid(),
+                                projectId: track.projectId,
+                                index: track.index,
+                                type: 'video' as TrackType,
+                                createdAt: new Date().toISOString(),
+                            };
+                            executeCommand({
+                                type: 'ADD_TRACK',
+                                payload: { track: newTrack },
+                            });
+                            // Optionally, scroll to the new track or trigger a UI update here
+                            return;
+                        }
+                        // For non-empty tracks, pass click to timeline container (original behavior)
+                        const timelineContainer = rowRef.current?.closest('.timeline-container');
+                        if (timelineContainer) {
+                            const rect = timelineContainer.getBoundingClientRect();
+                            const x = e.clientX - rect.left + timelineContainer.scrollLeft;
+                            const clickEvent = new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                clientX: e.clientX,
+                                clientY: e.clientY,
+                            });
+                            timelineContainer.dispatchEvent(clickEvent);
+                        }
                     }}
-                >
-                    {/* Track type indicator - only for real tracks */}
-                    {!((track as any).isEmpty) && (
-                        <div className={`
-                            absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg z-30
-                            ${track.type === 'video' ? 'bg-blue-500' : 
-                              track.type === 'audio' ? 'bg-green-500' : 
-                              track.type === 'caption' ? 'bg-orange-500' : 'bg-purple-500'}
-                        `} />
-                    )}
+                />
 
-                    {/* Track label */}
-                    <div className="absolute left-2 top-2 text-xs font-medium text-gray-600 pointer-events-none">
-                        {(track as any).isEmpty 
-                            ? "Drop content here to create track"
-                            : `Track ${track.index + 1} • ${track.type}`
-                        }
-                    </div>
-
-                    {/* Background div that receives timeline clicks */}
-                    <div
-                        className="absolute inset-0 rounded-lg pointer-events-auto"
-                        style={{ pointerEvents: isDragOver ? 'none' : 'auto' }}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if ((track as any).isEmpty) {
-                                // Always add a new track on click
-                                const newTrack = {
-                                    id: uuid(),
-                                    projectId: track.projectId,
-                                    index: track.index,
-                                    type: 'video' as TrackType,
-                                    createdAt: new Date().toISOString(),
-                                };
-                                executeCommand({
-                                    type: 'ADD_TRACK',
-                                    payload: { track: newTrack },
-                                });
-                                // Optionally, scroll to the new track or trigger a UI update here
-                                return;
-                            }
-                            // For non-empty tracks, pass click to timeline container (original behavior)
-                            const timelineContainer = rowRef.current?.closest('.timeline-container');
-                            if (timelineContainer) {
-                                const rect = timelineContainer.getBoundingClientRect();
-                                const x = e.clientX - rect.left + timelineContainer.scrollLeft;
-                                const clickEvent = new MouseEvent('click', {
-                                    bubbles: true,
-                                    cancelable: true,
-                                    clientX: e.clientX,
-                                    clientY: e.clientY,
-                                });
-                                timelineContainer.dispatchEvent(clickEvent);
-                            }
-                        }}
-                    />
-
-                    {/* Clips container */}
-                    <div className="absolute inset-0 rounded-lg overflow-hidden">
-                        {
-                            clips.map(c => (
-                                <ClipItem
-                                    key={c.id}
-                                    clip={c}
-                                    onSelect={onClipSelect}
-                                    selected={selectedClipId === c.id}
-                                />
-                            ))
-                        }
-                    </div>
+                {/* Clips container */}
+                <div className="absolute inset-0 rounded-lg overflow-hidden">
+                    {
+                        clips.map(c => (
+                            <ClipItem
+                                key={c.id}
+                                clip={c}
+                                onSelect={onClipSelect}
+                                selected={selectedClipId === c.id}
+                            />
+                        ))
+                    }
                 </div>
             </div>
-        </>
+        </div>
     )
 }

@@ -505,9 +505,12 @@ export default function Timeline() {
         const timelineRect = containerRef.current?.getBoundingClientRect()
         if (!timelineRect) return
 
-        // Only allow moving the playhead if clicking in the upper part of the timeline
-        const upperPartHeight = 50 // Example height for the upper part
-        if (e.clientY - timelineRect.top > upperPartHeight) return
+        // Get the position of the first track
+        const firstTrack = containerRef.current?.querySelector('[data-timeline-track]')
+        const firstTrackTop = firstTrack?.getBoundingClientRect().top ?? 0
+
+        // Allow clicking anywhere above the first track
+        if (e.clientY > firstTrackTop) return
 
         const newPlayheadPosition = e.clientX - timelineRect.left
         setCurrentTime(newPlayheadPosition / timeScale)
@@ -516,9 +519,16 @@ export default function Timeline() {
     const handlePlayheadDrag = (e: React.MouseEvent) => {
         if (!containerRef.current) return
 
+        // Get the position of the first track
+        const firstTrack = containerRef.current?.querySelector('[data-timeline-track]')
+        const firstTrackTop = firstTrack?.getBoundingClientRect().top ?? 0
+
+        // Allow dragging only in the area above the first track
+        if (e.clientY > firstTrackTop) return
+
         const rect = containerRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left + containerRef.current.scrollLeft
-        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs)) // Strict bounds: 0 <= time <= paddedMaxMs
+        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs))
         setCurrentTime(newTimeMs / 1000)
 
         // Auto-scroll when dragging near the edges
