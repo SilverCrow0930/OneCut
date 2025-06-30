@@ -76,7 +76,7 @@ export default function HomeNavbar() {
                             >
                                 Home
                                 {pathname === '/' && (
-                                    <div className="absolute -bottom-1 -left-2 -right-2 h-0.5 bg-blue-300 rounded-full"></div>
+                                    <div className="absolute -bottom-1 -left-1 -right-1 h-0.5 bg-blue-400 rounded-full"></div>
                                 )}
                             </a>
                             <a 
