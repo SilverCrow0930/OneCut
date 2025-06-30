@@ -11,7 +11,7 @@ const ProjectsHeader = () => {
                     What will you create today?
                 </h1>
                 <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                    Transform your ideas into compelling videos with AI-powered editing tools
+                    Turn your vision into professional videos with AI editing tools
                 </p>
             </div>
 
@@ -22,7 +22,7 @@ const ProjectsHeader = () => {
                 <CreateProjectButton />
                 </div>
                 <p className="text-sm text-gray-500">
-                    or browse your existing projects below
+                    or browse your projects below
                 </p>
             </div>
         </div>
