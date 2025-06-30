@@ -390,27 +390,54 @@ export default function TextToolPanel() {
                         <label className="block text-sm font-medium text-black/50">
                             Track Options
                         </label>
-                        <div className="flex flex-col gap-2 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <div className="flex flex-col gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className={`w-4 h-4 rounded-full ${createNewTrack ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
-                                    <span className="text-sm font-medium">{createNewTrack ? 'Create new track' : 'Use existing track'}</span>
+                                    <span className="text-sm font-medium">Text Track Placement</span>
                                 </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={createNewTrack}
-                                        onChange={() => setCreateNewTrack(!createNewTrack)}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                </label>
+                                <div className="text-xs text-gray-500">
+                                    {textTracks.length} existing track{textTracks.length !== 1 ? 's' : ''}
+                                </div>
                             </div>
-                            <div className="text-xs text-gray-500 pl-6">
-                                {createNewTrack ? 
-                                    "Text will be added to a new track at the top of the timeline" : 
-                                    `Text will be added to existing track (${textTracks.length} available)`}
+                            
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => setCreateNewTrack(false)}
+                                    className={`px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2
+                                        ${!createNewTrack 
+                                            ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm' 
+                                            : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                        <line x1="9" y1="3" x2="9" y2="21" />
+                                    </svg>
+                                    Use Existing
+                                </button>
+                                <button
+                                    onClick={() => setCreateNewTrack(true)}
+                                    className={`px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2
+                                        ${createNewTrack 
+                                            ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm' 
+                                            : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                        <line x1="12" y1="8" x2="12" y2="16" />
+                                        <line x1="8" y1="12" x2="16" y2="12" />
+                                    </svg>
+                                    New Track
+                                </button>
                             </div>
+                            
+                            <p className="text-xs text-gray-500">
+                                {createNewTrack 
+                                    ? "Text will be placed on a new track" 
+                                    : "Text will be added to an existing text track"}
+                            </p>
                         </div>
                     </div>
                 )}

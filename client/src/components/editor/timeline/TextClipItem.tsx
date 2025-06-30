@@ -404,7 +404,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
             >
                 {/* Text content area */}
                 <div className="w-full h-full flex items-center justify-center px-2 text-white text-xs font-medium truncate">
-                    {truncatedText}
+                            {truncatedText}
                 </div>
                 <div className="absolute bottom-0 right-0 px-1 text-[10px] text-white/70 bg-black/30 rounded-tl">
                     {formatTime(durationMs)}
