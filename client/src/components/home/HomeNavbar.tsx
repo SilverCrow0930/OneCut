@@ -76,7 +76,7 @@ export default function HomeNavbar() {
                             >
                                 Home
                                 {pathname === '/' && (
-                                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+                                    <div className="absolute -bottom-1 -left-2 -right-2 h-0.5 bg-blue-300 rounded-full"></div>
                                 )}
                             </a>
                             <a 
@@ -87,7 +87,7 @@ export default function HomeNavbar() {
                             >
                                 Pricing
                                 {pathname === '/pricing' && (
-                                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+                                    <div className="absolute -bottom-1 -left-2 -right-2 h-0.5 bg-blue-300 rounded-full"></div>
                                 )}
                             </a>
                             <a 
