@@ -1,20 +1,54 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { Clip } from '@/types/editor'
 import { getTimeScale } from '@/lib/constants'
 import { useZoom } from '@/contexts/ZoomContext'
 import { useEditor } from '@/contexts/EditorContext'
 import { formatTime } from '@/lib/utils'
 
+// Optimized drag state management
+interface DragState {
+    isDragging: boolean
+    startX: number
+    startLeft: number
+    currentLeft: number
+    ghostElement: HTMLElement | null
+    dragOffset: number
+    isOverlapping: boolean
+    targetTrackId: string | null
+    isShiftDrag: boolean
+    startY: number
+    currentY: number
+}
+
+const initialDragState: DragState = {
+    isDragging: false,
+    startX: 0,
+    startLeft: 0,
+    currentLeft: 0,
+    ghostElement: null,
+    dragOffset: 0,
+    isOverlapping: false,
+    targetTrackId: null,
+    isShiftDrag: false,
+    startY: 0,
+    currentY: 0
+}
+
 export default function TextClipItem({ clip }: { clip: Clip }) {
     const { zoomLevel } = useZoom()
-    const { selectedClipIds, setSelectedClipIds, setSelectedClipId } = useEditor()
+    const { selectedClipIds, setSelectedClipIds, setSelectedClipId, executeCommand, clips } = useEditor()
     const timeScale = getTimeScale(zoomLevel)
     const [showContextMenu, setShowContextMenu] = useState(false)
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
     const [isShiftHeld, setIsShiftHeld] = useState(false)
+    const clipRef = useRef<HTMLDivElement>(null)
+    const lastUpdateTime = useRef<number>(0)
+
+    // Drag state
+    const [dragState, setDragState] = useState<DragState>(initialDragState)
 
     // convert ms → px
-    const left = clip.timelineStartMs * timeScale
+    const left = dragState.isDragging ? dragState.currentLeft : clip.timelineStartMs * timeScale
     const width = (clip.timelineEndMs - clip.timelineStartMs) * timeScale
     const durationMs = clip.timelineEndMs - clip.timelineStartMs
 
@@ -23,6 +57,57 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     const isInMultiSelection = selectedClipIds.includes(clip.id)
     const isMultiSelectionActive = selectedClipIds.length > 1
     const isPrimarySelection = isSelected && !isMultiSelectionActive
+
+    // Calculate snapped position and check for collisions
+    const calculateSnappedPosition = useCallback((rawLeft: number, clipWidth: number, trackId: string) => {
+        // Snap to grid (500ms intervals)
+        const gridSize = 500 * timeScale
+        const snappedLeft = Math.round(rawLeft / gridSize) * gridSize
+        return Math.max(0, snappedLeft)
+    }, [timeScale])
+
+    const checkCollisions = useCallback((newLeft: number, clipWidth: number, trackId: string) => {
+        const newStartMs = Math.round(newLeft / timeScale)
+        const newEndMs = newStartMs + durationMs
+
+        // Get all clips on the same track, excluding the current clip
+        const trackClips = clips.filter(c => c.trackId === trackId && c.id !== clip.id)
+        
+        // Check for collisions
+        return trackClips.some(otherClip => {
+            const overlaps = (
+                (newStartMs >= otherClip.timelineStartMs && newStartMs < otherClip.timelineEndMs) ||
+                (newEndMs > otherClip.timelineStartMs && newEndMs <= otherClip.timelineEndMs) ||
+                (newStartMs <= otherClip.timelineStartMs && newEndMs >= otherClip.timelineEndMs)
+            )
+            return overlaps
+        })
+    }, [clips, clip.id, durationMs, timeScale])
+
+    // Throttled drag update for better performance
+    const updateDragPosition = useCallback((clientX: number) => {
+        const now = performance.now()
+        if (now - lastUpdateTime.current < 16) return // Throttle to ~60fps
+        lastUpdateTime.current = now
+
+        if (!clipRef.current || !dragState.isDragging) return
+
+        const timelineContainer = clipRef.current.closest('.timeline-container')
+        if (!timelineContainer) return
+
+        const timelineRect = timelineContainer.getBoundingClientRect()
+        const rawLeft = clientX - timelineRect.left - dragState.dragOffset
+        const clipWidth = width
+        
+        const snappedLeft = calculateSnappedPosition(rawLeft, clipWidth, clip.trackId)
+        const isOverlapping = checkCollisions(snappedLeft, clipWidth, clip.trackId)
+
+        setDragState(prev => ({
+            ...prev,
+            currentLeft: snappedLeft,
+            isOverlapping
+        }))
+    }, [dragState.isDragging, dragState.dragOffset, width, clip.trackId, calculateSnappedPosition, checkCollisions])
 
     // HTML5 Drag and Drop handlers for moving between tracks (Shift+Drag)
     const handleDragStart = (e: React.DragEvent) => {
@@ -54,6 +139,164 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         setShowContextMenu(true)
     }
 
+    // Optimized mouse event handlers for dragging
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        if (e.button !== 0) return // Only left mouse button
+
+        // If Shift is held, we'll use HTML5 drag for track switching
+        if (e.shiftKey) {
+            // Don't prevent default - let HTML5 drag handle it
+            return
+        }
+
+        // For regular drag (horizontal movement within same track)
+        e.preventDefault()
+        e.stopPropagation()
+
+        if (!clipRef.current) return
+
+        const rect = clipRef.current.getBoundingClientRect()
+        const offset = e.clientX - rect.left
+
+        setDragState({
+            isDragging: true,
+            startX: e.clientX,
+            startLeft: left,
+            currentLeft: left,
+            ghostElement: null,
+            dragOffset: offset,
+            isOverlapping: false,
+            targetTrackId: clip.trackId,
+            isShiftDrag: false,
+            startY: e.clientY,
+            currentY: e.clientY
+        })
+
+        // Add visual feedback class
+        document.body.classList.add('cursor-grabbing')
+        if (clipRef.current) {
+            clipRef.current.style.zIndex = '1000'
+            clipRef.current.style.opacity = '0.9'
+        }
+    }, [left, clip.trackId])
+
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        if (!dragState.isDragging) return
+        updateDragPosition(e.clientX)
+    }, [dragState.isDragging, updateDragPosition])
+
+    const handleMouseUp = useCallback((e: MouseEvent) => {
+        if (!dragState.isDragging) return
+
+        // Remove visual feedback
+        document.body.classList.remove('cursor-grabbing')
+        if (clipRef.current) {
+            clipRef.current.style.zIndex = ''
+            clipRef.current.style.opacity = ''
+        }
+
+        // Only update if position actually changed
+        if (Math.abs(dragState.currentLeft - dragState.startLeft) > 5) {
+            const newStartMs = Math.round(dragState.currentLeft / timeScale)
+            const durationMs = clip.timelineEndMs - clip.timelineStartMs
+            const newEndMs = newStartMs + durationMs
+
+            // Get all clips on the same track, excluding the current clip
+            const trackClips = clips.filter(c => c.trackId === clip.trackId && c.id !== clip.id)
+            
+            // Create a map to track all clip positions (original and updated)
+            const clipPositions = new Map<string, { startMs: number, endMs: number }>()
+            
+            // Initialize with original positions
+            trackClips.forEach(c => {
+                clipPositions.set(c.id, { startMs: c.timelineStartMs, endMs: c.timelineEndMs })
+            })
+            
+            // Add our moving clip's new position
+            clipPositions.set(clip.id, { startMs: newStartMs, endMs: newEndMs })
+            
+            // Find all clips that need to be shifted
+            const clipsToUpdate: Array<{ before: Clip, after: Clip }> = []
+            let finalNewStartMs = newStartMs
+            
+            // Sort all clips by their start time to process in order
+            const sortedClips = [...trackClips].sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+            
+            // Process each clip to handle overlaps
+            for (const trackClip of sortedClips) {
+                const currentPos = clipPositions.get(trackClip.id)!
+                const movingClipPos = clipPositions.get(clip.id)!
+                
+                // Check if this clip overlaps with our moving clip
+                if (movingClipPos.startMs < currentPos.endMs && movingClipPos.endMs > currentPos.startMs) {
+                    // This clip needs to be shifted
+                    const shiftAmount = movingClipPos.endMs - currentPos.startMs
+                    const newStart = currentPos.startMs + shiftAmount
+                    const newEnd = currentPos.endMs + shiftAmount
+                    
+                    clipPositions.set(trackClip.id, { startMs: newStart, endMs: newEnd })
+                    
+                    clipsToUpdate.push({
+                        before: trackClip,
+                        after: {
+                            ...trackClip,
+                            timelineStartMs: newStart,
+                            timelineEndMs: newEnd
+                        }
+                    })
+                }
+            }
+
+            const commands: any[] = []
+
+            // Add the main clip move command
+            commands.push({
+                type: 'UPDATE_CLIP' as const,
+                payload: {
+                    before: clip,
+                    after: {
+                        ...clip,
+                        timelineStartMs: finalNewStartMs,
+                        timelineEndMs: finalNewStartMs + durationMs
+                    }
+                }
+            })
+
+            // Add all shift commands
+            clipsToUpdate.forEach(update => {
+                commands.push({
+                    type: 'UPDATE_CLIP' as const,
+                    payload: update
+                })
+            })
+
+            // Execute all commands as a batch if there are multiple, or single command if just one
+            if (commands.length > 1) {
+                executeCommand({
+                    type: 'BATCH',
+                    payload: { commands }
+                })
+            } else {
+                executeCommand(commands[0])
+            }
+        }
+
+        setDragState(initialDragState)
+    }, [dragState, clip, timeScale, executeCommand, clips])
+
+    // Mouse event listeners
+    useEffect(() => {
+        if (!dragState.isDragging) return
+
+        document.addEventListener('mousemove', handleMouseMove)
+        document.addEventListener('mouseup', handleMouseUp)
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove)
+            document.removeEventListener('mouseup', handleMouseUp)
+        }
+    }, [dragState.isDragging, handleMouseMove, handleMouseUp])
+
     const onClick = (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
@@ -84,14 +327,14 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     }
 
     // Close context menu when clicking outside
-    React.useEffect(() => {
+    useEffect(() => {
         const handleClickOutside = () => setShowContextMenu(false)
         document.addEventListener('click', handleClickOutside)
         return () => document.removeEventListener('click', handleClickOutside)
     }, [])
 
     // Keyboard event listeners for Shift key tracking
-    React.useEffect(() => {
+    useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Shift') {
                 setIsShiftHeld(true)
@@ -122,11 +365,13 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     return (
         <>
             <div
+                ref={clipRef}
                 data-timeline-clip
                 data-clip-id={clip.id}
                 className={`
                     absolute h-full rounded-lg overflow-hidden
                     border-2 transition-all duration-75 select-none
+                    ${dragState.isOverlapping ? 'border-blue-500 bg-blue-500/20 shadow-lg' : ''}
                     ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
                       'border-transparent hover:border-gray-400'}
@@ -138,55 +383,22 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                 style={{
                     left: `${left}px`,
                     width: `${Math.max(width, 20)}px`,
+                    transform: dragState.isDragging ? 'translateY(-1px)' : 'translateY(0)',
                 }}
                 onClick={onClick}
                 onContextMenu={handleContextMenu}
+                onMouseDown={handleMouseDown}
                 draggable={isShiftHeld} // Only enable HTML5 drag when Shift is held
                 onDragStart={handleDragStart}
-                title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move horizontally, Shift+Drag to move between tracks'}
+                title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move - overlapping clips will be automatically pushed forward'}
             >
                 {/* Text content area */}
-                <div className="flex items-center justify-between h-full px-2 text-white">
-                    <div className="flex items-center space-x-2 flex-1 min-w-0">
-                        {/* Text type icon */}
-                        {isCaption ? (
-                            <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M7 4V2a1 1 0 011-1h4a1 1 0 011 1v2h3a1 1 0 110 2h-1v9a2 2 0 01-2 2H7a2 2 0 01-2-2V6H4a1 1 0 010-2h3zM9 6v8h2V6H9z" clipRule="evenodd" />
-                            </svg>
-                        ) : (
-                            <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" />
-                            </svg>
-                        )}
-                        
-                        {/* Text content */}
-                        <span className="text-xs font-medium truncate">
-                            {truncatedText}
-                        </span>
-                    </div>
-                    
-                    {/* Duration indicator */}
-                    <div className="text-xs opacity-90 bg-black/30 px-1.5 py-0.5 rounded ml-2 flex-shrink-0">
-                        {formatTime(durationMs)}
-                    </div>
+                <div className="w-full h-full flex items-center justify-center px-2 text-white text-xs font-medium truncate">
+                    {truncatedText}
                 </div>
-
-                {/* Type label */}
-                <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                    {isCaption ? 'CAPTION' : 'TEXT'}
+                <div className="absolute bottom-0 right-0 px-1 text-[10px] text-white/70 bg-black/30 rounded-tl">
+                    {formatTime(durationMs)}
                 </div>
-
-                {/* Multi-selection indicator */}
-                {isInMultiSelection && (
-                    <div className="absolute top-1 right-1 w-2 h-2 bg-purple-400 rounded-full" />
-                )}
-
-                {/* Text preview on hover for longer text */}
-                {textContent.length > 20 && (
-                    <div className="absolute bottom-full left-0 mb-1 bg-black/90 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 max-w-xs">
-                        {textContent}
-                    </div>
-                )}
             </div>
 
             {/* Context Menu */}
