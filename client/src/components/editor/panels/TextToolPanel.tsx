@@ -384,60 +384,39 @@ export default function TextToolPanel() {
                     </div>
                 </div>
 
-                {/* Track options */}
+                {/* Track options - simplified */}
                 {!selectedClip && textTracks.length > 0 && (
                     <div className="space-y-2">
-                        <label className="block text-sm font-medium text-black/50">
-                            Track Options
-                        </label>
-                        <div className="flex flex-col gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className={`w-4 h-4 rounded-full ${createNewTrack ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
-                                    <span className="text-sm font-medium">Text Track Placement</span>
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                    {textTracks.length} existing track{textTracks.length !== 1 ? 's' : ''}
-                                </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    onClick={() => setCreateNewTrack(false)}
-                                    className={`px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2
-                                        ${!createNewTrack 
-                                            ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm' 
-                                            : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                                        }`}
-                                >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                                        <line x1="9" y1="3" x2="9" y2="21" />
-                                    </svg>
-                                    Use Existing
-                                </button>
-                                <button
-                                    onClick={() => setCreateNewTrack(true)}
-                                    className={`px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2
-                                        ${createNewTrack 
-                                            ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm' 
-                                            : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                                        }`}
-                                >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                                        <line x1="12" y1="8" x2="12" y2="16" />
-                                        <line x1="8" y1="12" x2="16" y2="12" />
-                                    </svg>
-                                    New Track
-                                </button>
-                            </div>
-                            
-                            <p className="text-xs text-gray-500">
-                                {createNewTrack 
-                                    ? "Text will be placed on a new track" 
-                                    : "Text will be added to an existing text track"}
-                            </p>
+                        <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium text-black/50">
+                                Track Placement
+                            </label>
+                            <span className="text-xs text-gray-500">
+                                {textTracks.length} existing track{textTracks.length !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setCreateNewTrack(false)}
+                                className={`flex-1 px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2
+                                    ${!createNewTrack 
+                                        ? 'bg-blue-500 text-white' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                            >
+                                Use Existing
+                            </button>
+                            <button
+                                onClick={() => setCreateNewTrack(true)}
+                                className={`flex-1 px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-center gap-2
+                                    ${createNewTrack 
+                                        ? 'bg-blue-500 text-white' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                            >
+                                New Track
+                            </button>
                         </div>
                     </div>
                 )}

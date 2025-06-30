@@ -169,6 +169,23 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     // 4) Save state
     const [saveState, setSaveState] = useState<SaveState>('saved')
 
+    // Ensure saveState is 'saved' on initial mount
+    useEffect(() => {
+        setSaveState('saved')
+        
+        // Reset saveState when page becomes visible again (after refresh)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                setSaveState('saved')
+            }
+        }
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    }, [])
+
     // selection
     const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
     const [selectedClipIds, setSelectedClipIds] = useState<string[]>([])
@@ -210,6 +227,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
                 tracks: payload.tracks.map(dbToTrack),
                 clips: payload.clips.map(dbToClip),
             })
+            
+            // Ensure saveState is set to 'saved' after loading timeline
+            setSaveState('saved')
         }
         catch (e: any) {
             setTimelineError(e.message)
@@ -298,6 +318,14 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             try {
                 console.log(`🔄 [AutoSave] Validating timeline data...`)
                 console.log(`🔄 [AutoSave] Tracks: ${tracks.length}, Clips: ${clips.length}`)
+                
+                // If user refreshed the page during saving, ensure we don't leave in saving state
+                const isPageRefreshing = document.visibilityState === 'hidden';
+                if (isPageRefreshing) {
+                    console.log('🔄 [AutoSave] Page refresh detected, setting state to saved')
+                    setSaveState('saved');
+                    return;
+                }
                 
                 // Convert to database format with validation
                 const dbTracks = tracks.map(t => {
