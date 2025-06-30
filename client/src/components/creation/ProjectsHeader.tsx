@@ -11,7 +11,7 @@ const ProjectsHeader = () => {
                     What will you create today?
                 </h1>
                 <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                    Turn your ideas into professional videos with powerful AI editing features
+                    Transform your ideas into compelling videos with AI editing suite
                 </p>
             </div>
 
