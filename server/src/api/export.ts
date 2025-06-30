@@ -1647,36 +1647,24 @@ async function processVideoExport(
         // Phase 2: Asset Resolution and Download (10-40%)
         console.log(`[Export ${jobId}] Phase 2: Resolving and downloading assets`)
         const downloadedAssets = new Map<string, string>()
-        
-        // Filter elements that need asset downloads:
-        // 1. Must have either a valid assetId OR external asset data
-        // 2. Exclude "missing_" prefixed IDs (these are placeholder IDs for text/caption clips)
-        // 3. Exclude "external_" prefixed IDs without proper external asset data
         const assetElements = elements.filter(el => {
-            // Skip text and caption elements that don't need assets
-            if (el.type === 'text' || el.type === 'caption') {
-                return false
+            // Include elements with external assets
+            if (el.properties?.externalAsset) return true
+            
+            // Include elements with valid asset IDs (not missing/external/invalid)
+            if (el.assetId && 
+                !el.assetId.startsWith('missing_') && 
+                !el.assetId.startsWith('external_')) {
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+                return uuidRegex.test(el.assetId)
             }
             
-            // Skip elements with missing_ prefixed asset IDs
-            if (el.assetId?.startsWith('missing_')) {
-                console.log(`[Export ${jobId}] Skipping missing asset: ${el.assetId}`)
-                return false
-            }
-            
-            // Include external assets that have proper external asset data
-            if (el.properties?.externalAsset && el.properties.externalAsset.url) {
-                return true
-            }
-            
-            // Include elements with valid database asset IDs
-            if (el.assetId && !el.assetId.startsWith('external_') && !el.assetId.startsWith('missing_')) {
-                return true
-            }
-            
-            console.log(`[Export ${jobId}] Skipping element without valid asset: ${el.id}, assetId: ${el.assetId}, type: ${el.type}`)
             return false
         })
+        
+        console.log(`[Export ${jobId}] Found ${assetElements.length} valid assets to download from ${elements.length} total elements`)
+        
+        let successfulDownloads = 0 // Declare outside to be accessible later
         
         if (assetElements.length === 0) {
             console.log(`[Export ${jobId}] No assets to download, proceeding to export`)
@@ -1686,34 +1674,30 @@ async function processVideoExport(
             for (let i = 0; i < assetElements.length; i++) {
                 const element = assetElements[i]
 
-            try {
-                let assetUrl: string
+                            try {
+                    let assetUrl: string
                     let filename: string
 
                     if (element.properties?.externalAsset) {
-                        // External asset (e.g., from Freesound, Unsplash, Pexels)
-                        const externalAsset = element.properties.externalAsset
-                        assetUrl = externalAsset.url
-                        
-                        if (!assetUrl) {
-                            throw new Error(`External asset has no URL: ${JSON.stringify(externalAsset)}`)
-                        }
-                        
-                        try {
-                            const urlParts = new URL(assetUrl)
-                            const baseName = path.basename(urlParts.pathname) || 'asset'
-                            const mimeType = (externalAsset as any).mime_type || ''
-                            const extension = path.extname(baseName) || (mimeType.includes('video') ? '.mp4' : 
-                                                                       mimeType.includes('audio') ? '.mp3' : 
-                                                                       mimeType.includes('image') ? '.jpg' : '.file')
-                            filename = `external_${element.id}_${Date.now()}${extension}`
-                        } catch (urlError) {
-                            console.warn(`[Export ${jobId}] Invalid external asset URL: ${assetUrl}, using fallback filename`)
-                            filename = `external_${element.id}_${Date.now()}.file`
-                        }
-                        
-                        console.log(`[Export ${jobId}] Processing external asset: ${externalAsset.platform || 'unknown'} - ${(externalAsset as any).name || 'unnamed'}`)
+                        // External asset (e.g., from Freesound, Unsplash)
+                        assetUrl = element.properties.externalAsset.url
+                        const urlParts = new URL(assetUrl)
+                        filename = `external_${element.id}_${path.basename(urlParts.pathname) || 'asset'}`
+                        console.log(`[Export ${jobId}] Processing external asset: ${element.properties.externalAsset.platform}`)
                     } else if (element.assetId) {
+                        // Check for invalid or missing asset IDs
+                        if (element.assetId.startsWith('missing_') || element.assetId.startsWith('external_')) {
+                            console.warn(`[Export ${jobId}] Skipping invalid asset ID: ${element.assetId} for element ${element.id}`)
+                            continue
+                        }
+                        
+                        // Validate UUID format for database asset IDs
+                        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+                        if (!uuidRegex.test(element.assetId)) {
+                            console.warn(`[Export ${jobId}] Skipping invalid UUID format: ${element.assetId} for element ${element.id}`)
+                            continue
+                        }
+                        
                         // Internal asset from database
                         assetUrl = await fetchAssetUrl(element.assetId)
                         filename = `asset_${element.assetId}`
@@ -1726,6 +1710,7 @@ async function processVideoExport(
                     const localPath = await downloadAssetWithValidation(assetUrl, filename, jobId)
                     const assetKey = element.assetId || element.id
                     downloadedAssets.set(assetKey, localPath)
+                    successfulDownloads++
 
                     job.progress = 10 + (i + 1) * progressPerAsset
                     console.log(`[Export ${jobId}] Downloaded asset ${i + 1}/${assetElements.length} (${Math.round(job.progress)}%)`)
@@ -1733,13 +1718,24 @@ async function processVideoExport(
                 } catch (error) {
                     const errorMsg = `Failed to download asset for element ${element.id}: ${error instanceof Error ? error.message : 'Unknown error'}`
                     console.error(`[Export ${jobId}] ${errorMsg}`)
-                    throw new Error(errorMsg)
+                    
+                    // Continue with export instead of failing completely
+                    console.warn(`[Export ${jobId}] Continuing export without asset for element ${element.id}`)
+                    
+                    // Still update progress
+                    job.progress = 10 + (i + 1) * progressPerAsset
                 }
             }
         }
 
         job.progress = 40
         console.log(`[Export ${jobId}] Asset download phase completed`)
+        console.log(`[Export ${jobId}] Successfully downloaded ${successfulDownloads}/${assetElements.length} assets`)
+        
+        if (successfulDownloads < assetElements.length) {
+            const failedCount = assetElements.length - successfulDownloads
+            console.warn(`[Export ${jobId}] Warning: ${failedCount} assets failed to download - continuing export without them`)
+        }
 
         // Phase 3: Output Configuration (40-45%)
         console.log(`[Export ${jobId}] Phase 3: Configuring output settings`)
@@ -1790,7 +1786,7 @@ async function processVideoExport(
         }
 
         // Upload to Google Cloud Storage
-        const uploadName = `exports/video_${jobId}_${job.createdAt.getTime()}.mp4`
+        const uploadName = `exports/video_${jobId}_${Date.now()}.mp4`
         await bucket.upload(outputPath, {
             destination: uploadName,
             metadata: {
@@ -1799,16 +1795,13 @@ async function processVideoExport(
             }
         })
 
-        // Generate a proper signed URL for download (valid for 24 hours)
+        // Generate signed URL for secure download (valid for 24 hours)
         const [downloadUrl] = await bucket.file(uploadName).getSignedUrl({
             action: 'read',
-            expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+            expires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
         })
-
-        console.log(`[Export ${jobId}] Generated signed download URL`)
         
-        // Store the upload name for consistent downloads
-        job.outputPath = uploadName
+        console.log(`[Export ${jobId}] Generated signed download URL (24h expiry)`)
         
         // Cleanup local files
         try {
@@ -1983,46 +1976,16 @@ router.get('/download/:jobId', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Export not ready for download' })
         }
 
-        console.log(`[Export ${req.params.jobId}] Processing download request`)
+        console.log(`[Export ${req.params.jobId}] Proxying download request`)
 
-        // Try the existing signed URL first
-        let downloadUrl = job.downloadUrl
-        let response = await fetch(downloadUrl)
-        
-        // If the signed URL has expired, generate a new one
-        if (response.status === 403 || response.status === 401) {
-            console.log(`[Export ${req.params.jobId}] Signed URL expired, generating new one`)
-            
-            // Use stored upload name or construct it from job data
-            const uploadName = job.outputPath || `exports/video_${req.params.jobId}_${job.createdAt.getTime()}.mp4`
-            
-            try {
-                const [newSignedUrl] = await bucket.file(uploadName).getSignedUrl({
-                    action: 'read',
-                    expires: Date.now() + 60 * 60 * 1000, // 1 hour
-                })
-                
-                downloadUrl = newSignedUrl
-                response = await fetch(downloadUrl)
-                
-                // Update the job with the new URL
-                job.downloadUrl = newSignedUrl
-                
-            } catch (signError) {
-                console.error(`[Export ${req.params.jobId}] Failed to generate new signed URL:`, signError)
-                return res.status(500).json({ 
-                    success: false, 
-                    error: 'Failed to generate download URL' 
-                })
-            }
-        }
-
+        // Fetch the file from GCS
+        const response = await fetch(job.downloadUrl)
         if (!response.ok) {
-            throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`)
+            throw new Error(`Failed to fetch file: ${response.status}`)
         }
 
         // Set appropriate headers for download
-        const filename = `lemona-video-${req.params.jobId.substr(0, 8)}-${Date.now()}.mp4`
+        const filename = `video-export-${Date.now()}.mp4`
         res.setHeader('Content-Type', 'video/mp4')
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
         res.setHeader('Cache-Control', 'no-cache')
@@ -2030,8 +1993,6 @@ router.get('/download/:jobId', async (req, res) => {
         if (response.headers.get('content-length')) {
             res.setHeader('Content-Length', response.headers.get('content-length')!)
         }
-
-        console.log(`[Export ${req.params.jobId}] Streaming download to client`)
 
         // Stream the file to the client
         if (response.body) {
@@ -2049,21 +2010,12 @@ router.get('/download/:jobId', async (req, res) => {
             }())
             
             stream.pipe(res)
-            
-            stream.on('end', () => {
-                console.log(`[Export ${req.params.jobId}] Download completed successfully`)
-            })
-            
-            stream.on('error', (streamError) => {
-                console.error(`[Export ${req.params.jobId}] Stream error:`, streamError)
-            })
-            
         } else {
             throw new Error('No response body available')
         }
 
     } catch (error) {
-        console.error(`[Export ${req.params.jobId}] Download proxy error:`, error)
+        console.error(`[Export] Download proxy error:`, error)
         if (!res.headersSent) {
             res.status(500).json({ 
                 success: false, 
