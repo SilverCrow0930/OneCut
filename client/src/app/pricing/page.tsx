@@ -164,7 +164,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-gray-50">
       <HomeNavbar />
 
-      <div className="max-w-7xl mx-auto px-4 pt-16 pb-16">
+      <div className="max-w-7xl mx-auto px-4 pt-24 pb-16">
         {/* Header */}
         <div className="mb-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
@@ -367,7 +367,7 @@ export default function PricingPage() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 sticky top-24 shadow-sm">
               <div className="flex items-center mb-6">
-                <span className="mr-3 text-2xl">🛍️</span>
+                <span className="mr-3 text-2xl transform scale-x-[-1]">🛒</span>
                 <h3 className="text-xl font-bold text-gray-900">Cart</h3>
               </div>
               
