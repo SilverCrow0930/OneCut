@@ -738,38 +738,14 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 onDragStart={handleDragStart}
                 title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move - overlapping clips will be automatically pushed forward'}
             >
-                {/* Resize handles - Enhanced visibility and functionality */}
+                {/* Resize handles */}
                 <div
-                    className="absolute left-0 top-0 w-1 h-full bg-gray-400/60 hover:bg-blue-500 hover:w-1.5 cursor-ew-resize transition-all duration-150 z-20"
+                    className="absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
                     onMouseDown={(e) => handleResizeStart(e, 'start')}
-                    title="Drag to trim start"
                 />
                 <div
-                    className="absolute right-0 top-0 w-1 h-full bg-gray-400/60 hover:bg-blue-500 hover:w-1.5 cursor-ew-resize transition-all duration-150 z-20"
+                    className="absolute right-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
-                    title="Drag to trim end"
-                />
-
-                {/* Corner resize indicators for better visibility */}
-                <div
-                    className="absolute left-0 top-0 w-3 h-3 bg-gray-400/80 hover:bg-blue-500 cursor-ew-resize transition-all duration-150 z-20 rounded-br-md"
-                    onMouseDown={(e) => handleResizeStart(e, 'start')}
-                    title="Drag to trim start"
-                />
-                <div
-                    className="absolute right-0 top-0 w-3 h-3 bg-gray-400/80 hover:bg-blue-500 cursor-ew-resize transition-all duration-150 z-20 rounded-bl-md"
-                    onMouseDown={(e) => handleResizeStart(e, 'end')}
-                    title="Drag to trim end"
-                />
-                <div
-                    className="absolute left-0 bottom-0 w-3 h-3 bg-gray-400/80 hover:bg-blue-500 cursor-ew-resize transition-all duration-150 z-20 rounded-tr-md"
-                    onMouseDown={(e) => handleResizeStart(e, 'start')}
-                    title="Drag to trim start"
-                />
-                <div
-                    className="absolute right-0 bottom-0 w-3 h-3 bg-gray-400/80 hover:bg-blue-500 cursor-ew-resize transition-all duration-150 z-20 rounded-tl-md"
-                    onMouseDown={(e) => handleResizeStart(e, 'end')}
-                    title="Drag to trim end"
                 />
 
                 {/* Enhanced Content based on type */}
