@@ -47,9 +47,17 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     // Drag state
     const [dragState, setDragState] = useState<DragState>(initialDragState)
 
+    // Resize state
+    const [isResizing, setIsResizing] = useState(false)
+    const [resizeType, setResizeType] = useState<'start' | 'end' | null>(null)
+    const [resizeStartX, setResizeStartX] = useState(0)
+    const [resizeStartMs, setResizeStartMs] = useState(0)
+    const [currentLeft, setCurrentLeft] = useState(0)
+    const [currentWidth, setCurrentWidth] = useState(0)
+
     // convert ms → px
-    const left = dragState.isDragging ? dragState.currentLeft : clip.timelineStartMs * timeScale
-    const width = (clip.timelineEndMs - clip.timelineStartMs) * timeScale
+    const left = dragState.isDragging ? dragState.currentLeft : isResizing ? currentLeft : clip.timelineStartMs * timeScale
+    const width = dragState.isDragging ? (clip.timelineEndMs - clip.timelineStartMs) * timeScale : isResizing ? currentWidth : (clip.timelineEndMs - clip.timelineStartMs) * timeScale
     const durationMs = clip.timelineEndMs - clip.timelineStartMs
 
     const isCaption = clip.type === 'caption'
@@ -296,7 +304,110 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
 
     // Mouse event listeners
     useEffect(() => {
-        if (!dragState.isDragging) return
+        if (!dragState.isDragging && !isResizing) return
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (dragState.isDragging) {
+                updateDragPosition(e.clientX)
+            } else if (isResizing && resizeType && clipRef.current) {
+                const deltaX = e.clientX - resizeStartX
+                const deltaMs = Math.round(deltaX / timeScale)
+
+                if (resizeType === 'start') {
+                    const minStartMs = 0
+                    const maxStartMs = clip.timelineEndMs - 100
+
+                    let newStartMs = resizeStartMs + deltaMs
+                    newStartMs = Math.max(minStartMs, Math.min(newStartMs, maxStartMs))
+
+                    setCurrentLeft(newStartMs * timeScale)
+                    setCurrentWidth((clip.timelineEndMs - newStartMs) * timeScale)
+                } else {
+                    const minEndMs = clip.timelineStartMs + 100
+                    const maxEndMs = clip.timelineStartMs + 300000
+
+                    let newEndMs = resizeStartMs + deltaMs
+                    newEndMs = Math.max(minEndMs, Math.min(newEndMs, maxEndMs))
+
+                    setCurrentWidth((newEndMs - clip.timelineStartMs) * timeScale)
+                }
+            }
+        }
+
+        const handleMouseUp = (e: MouseEvent) => {
+            if (dragState.isDragging) {
+                // Remove visual feedback
+                document.body.classList.remove('cursor-grabbing')
+                if (clipRef.current) {
+                    clipRef.current.style.zIndex = ''
+                    clipRef.current.style.opacity = ''
+                }
+
+                // Apply the final position
+                const finalStartMs = Math.round(dragState.currentLeft / timeScale)
+                const finalEndMs = finalStartMs + durationMs
+
+                executeCommand({
+                    type: 'UPDATE_CLIP',
+                    payload: {
+                        before: clip,
+                        after: {
+                            ...clip,
+                            timelineStartMs: finalStartMs,
+                            timelineEndMs: finalEndMs
+                        }
+                    }
+                })
+
+                setDragState(initialDragState)
+            } else if (isResizing && resizeType) {
+                const deltaX = e.clientX - resizeStartX
+                const deltaMs = Math.round(deltaX / timeScale)
+
+                if (resizeType === 'start') {
+                    const minStartMs = 0
+                    const maxStartMs = clip.timelineEndMs - 100
+
+                    let newStartMs = resizeStartMs + deltaMs
+                    newStartMs = Math.max(minStartMs, Math.min(newStartMs, maxStartMs))
+
+                    executeCommand({
+                        type: 'UPDATE_CLIP',
+                        payload: {
+                            before: clip,
+                            after: {
+                                ...clip,
+                                timelineStartMs: newStartMs,
+                                sourceStartMs: 0
+                            }
+                        }
+                    })
+                } else {
+                    const minEndMs = clip.timelineStartMs + 100
+                    const maxEndMs = clip.timelineStartMs + 300000
+
+                    let newEndMs = resizeStartMs + deltaMs
+                    newEndMs = Math.max(minEndMs, Math.min(newEndMs, maxEndMs))
+
+                    executeCommand({
+                        type: 'UPDATE_CLIP',
+                        payload: {
+                            before: clip,
+                            after: {
+                                ...clip,
+                                timelineEndMs: newEndMs,
+                                sourceEndMs: newEndMs - clip.timelineStartMs,
+                                assetDurationMs: newEndMs - clip.timelineStartMs
+                            }
+                        }
+                    })
+                }
+
+                setIsResizing(false)
+                setResizeType(null)
+                document.body.classList.remove('cursor-ew-resize')
+            }
+        }
 
         document.addEventListener('mousemove', handleMouseMove)
         document.addEventListener('mouseup', handleMouseUp)
@@ -305,7 +416,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
             document.removeEventListener('mousemove', handleMouseMove)
             document.removeEventListener('mouseup', handleMouseUp)
         }
-    }, [dragState.isDragging, handleMouseMove, handleMouseUp])
+    }, [dragState.isDragging, isResizing, resizeType, resizeStartX, resizeStartMs, timeScale, clip, executeCommand, updateDragPosition, dragState.currentLeft, durationMs])
 
     const onClick = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -369,6 +480,99 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         }
     }, [])
 
+    // Resize handlers
+    const handleResizeStart = (e: React.MouseEvent, type: 'start' | 'end') => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsResizing(true)
+        setResizeType(type)
+        setResizeStartX(e.clientX)
+        setResizeStartMs(type === 'start' ? clip.timelineStartMs : clip.timelineEndMs)
+        setCurrentLeft(clip.timelineStartMs * timeScale)
+        setCurrentWidth((clip.timelineEndMs - clip.timelineStartMs) * timeScale)
+        document.body.classList.add('cursor-ew-resize')
+    }
+
+    const handleResizeMove = (e: MouseEvent) => {
+        if (!isResizing || !resizeType || !clipRef.current) return
+
+        const deltaX = e.clientX - resizeStartX
+        const deltaMs = Math.round(deltaX / timeScale)
+
+        if (resizeType === 'start') {
+            // Calculate new start time with constraints
+            const minStartMs = 0 // Can't go before timeline start
+            const maxStartMs = clip.timelineEndMs - 100 // Minimum 100ms duration
+
+            let newStartMs = resizeStartMs + deltaMs
+            newStartMs = Math.max(minStartMs, Math.min(newStartMs, maxStartMs))
+
+            // Update visual position and width directly
+            setCurrentLeft(newStartMs * timeScale)
+            setCurrentWidth((clip.timelineEndMs - newStartMs) * timeScale)
+        } else {
+            // Calculate new end time with constraints
+            const minEndMs = clip.timelineStartMs + 100 // Minimum 100ms duration
+            const maxEndMs = clip.timelineStartMs + 300000 // Maximum 5 minutes for text
+
+            let newEndMs = resizeStartMs + deltaMs
+            newEndMs = Math.max(minEndMs, Math.min(newEndMs, maxEndMs))
+
+            // Update visual width directly
+            setCurrentWidth((newEndMs - clip.timelineStartMs) * timeScale)
+        }
+    }
+
+    const handleResizeEnd = (e: MouseEvent) => {
+        if (!isResizing || !resizeType) return
+
+        const deltaX = e.clientX - resizeStartX
+        const deltaMs = Math.round(deltaX / timeScale)
+
+        if (resizeType === 'start') {
+            const minStartMs = 0
+            const maxStartMs = clip.timelineEndMs - 100
+
+            let newStartMs = resizeStartMs + deltaMs
+            newStartMs = Math.max(minStartMs, Math.min(newStartMs, maxStartMs))
+
+            executeCommand({
+                type: 'UPDATE_CLIP',
+                payload: {
+                    before: clip,
+                    after: {
+                        ...clip,
+                        timelineStartMs: newStartMs,
+                        sourceStartMs: 0 // Text clips always start from 0
+                    }
+                }
+            })
+        } else {
+            const minEndMs = clip.timelineStartMs + 100
+            const maxEndMs = clip.timelineStartMs + 300000 // Maximum 5 minutes for text
+
+            let newEndMs = resizeStartMs + deltaMs
+            newEndMs = Math.max(minEndMs, Math.min(newEndMs, maxEndMs))
+
+            executeCommand({
+                type: 'UPDATE_CLIP',
+                payload: {
+                    before: clip,
+                    after: {
+                        ...clip,
+                        timelineEndMs: newEndMs,
+                        sourceEndMs: newEndMs - clip.timelineStartMs,
+                        assetDurationMs: newEndMs - clip.timelineStartMs
+                    }
+                }
+            })
+        }
+
+        setIsResizing(false)
+        setResizeType(null)
+        document.body.classList.remove('cursor-ew-resize')
+    }
+
     const textContent = clip.properties?.text || (isCaption ? 'Caption' : 'Text Overlay')
     const truncatedText = textContent.length > 20 ? textContent.substring(0, 20) + '...' : textContent
 
@@ -402,6 +606,40 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                 onDragStart={handleDragStart}
                 title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move - overlapping clips will be automatically pushed forward'}
             >
+                {/* Resize handles - Enhanced visibility and functionality */}
+                <div
+                    className="absolute left-0 top-0 w-1 h-full bg-gray-400/60 hover:bg-blue-500 hover:w-1.5 cursor-ew-resize transition-all duration-150 z-20"
+                    onMouseDown={(e) => handleResizeStart(e, 'start')}
+                    title="Drag to trim start"
+                />
+                <div
+                    className="absolute right-0 top-0 w-1 h-full bg-gray-400/60 hover:bg-blue-500 hover:w-1.5 cursor-ew-resize transition-all duration-150 z-20"
+                    onMouseDown={(e) => handleResizeStart(e, 'end')}
+                    title="Drag to trim end"
+                />
+
+                {/* Corner resize indicators for better visibility */}
+                <div
+                    className="absolute left-0 top-0 w-3 h-3 bg-gray-400/80 hover:bg-blue-500 cursor-ew-resize transition-all duration-150 z-20 rounded-br-md"
+                    onMouseDown={(e) => handleResizeStart(e, 'start')}
+                    title="Drag to trim start"
+                />
+                <div
+                    className="absolute right-0 top-0 w-3 h-3 bg-gray-400/80 hover:bg-blue-500 cursor-ew-resize transition-all duration-150 z-20 rounded-bl-md"
+                    onMouseDown={(e) => handleResizeStart(e, 'end')}
+                    title="Drag to trim end"
+                />
+                <div
+                    className="absolute left-0 bottom-0 w-3 h-3 bg-gray-400/80 hover:bg-blue-500 cursor-ew-resize transition-all duration-150 z-20 rounded-tr-md"
+                    onMouseDown={(e) => handleResizeStart(e, 'start')}
+                    title="Drag to trim start"
+                />
+                <div
+                    className="absolute right-0 bottom-0 w-3 h-3 bg-gray-400/80 hover:bg-blue-500 cursor-ew-resize transition-all duration-150 z-20 rounded-tl-md"
+                    onMouseDown={(e) => handleResizeStart(e, 'end')}
+                    title="Drag to trim end"
+                />
+
                 {/* Text content area */}
                 <div className="w-full h-full flex items-center justify-center px-2 text-white text-xs font-medium truncate">
                     {truncatedText}
