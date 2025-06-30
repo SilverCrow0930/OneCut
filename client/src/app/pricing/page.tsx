@@ -166,17 +166,17 @@ export default function PricingPage() {
 
       <div className="max-w-7xl mx-auto px-4 pt-16 pb-16">
         {/* Header */}
-        <div className="text-right mb-12">
+        <div className="mb-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
             Pricing
           </h1>
-          <p className="text-gray-600 max-w-2xl ml-auto">
+          <p className="text-gray-600 max-w-2xl">
             Start with our complete video editor, then add AI credits as you need them.
           </p>
         </div>
 
         {/* Current Status */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl ml-auto">
+        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl">
           {/* Credits */}
           <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -367,7 +367,7 @@ export default function PricingPage() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 sticky top-24 shadow-sm">
               <div className="flex items-center mb-6">
-                <span className="mr-3 text-2xl transform scale-x-[-1]">🛒</span>
+                <span className="mr-3 text-2xl">🛍️</span>
                 <h3 className="text-xl font-bold text-gray-900">Cart</h3>
               </div>
               
@@ -375,7 +375,7 @@ export default function PricingPage() {
                 <div className="text-center py-8 text-gray-500">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 11-4 0v-6m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
                     </svg>
                   </div>
                   <p className="font-medium">Your cart is empty</p>
