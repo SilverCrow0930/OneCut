@@ -73,7 +73,7 @@ export default function TrackRow({
             const newTrack = {
                 id: uuid(),
                 projectId: track.projectId,
-                index: track.index,
+                index: trackType === 'audio' ? tracks.length : track.index,
                 type: trackType,
                 createdAt: new Date().toISOString(),
             }

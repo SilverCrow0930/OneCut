@@ -1,121 +1,79 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { v4 as uuid } from 'uuid'
 import { useParams } from 'next/navigation'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
-import { TrackType } from '@/types/editor'
+import { TrackType, ClipType } from '@/types/editor'
 
 export default function EmptyTimeline() {
     const [isDragOver, setIsDragOver] = useState(false)
     const dragCounter = useRef(0)
     const params = useParams()
-    const { executeCommand } = useEditor()
+    const { executeCommand, tracks } = useEditor()
     const { assets } = useAssets()
+    const projectId = params?.projectId as string
 
-    // Normalize projectId to a single string
-    const projectId = Array.isArray(params.projectId)
-        ? params.projectId[0]
-        : params.projectId
-
-    const handleDragEnter = (e: React.DragEvent) => {
+    const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault()
         e.stopPropagation()
-        dragCounter.current++
-        setIsDragOver(true)
-    }
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        dragCounter.current--
-        if (dragCounter.current === 0) {
-            setIsDragOver(false)
-        }
-    }
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-    }
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        dragCounter.current = 0
         setIsDragOver(false)
+        dragCounter.current = 0
 
-        // 1) parse payload
-        let payload: { assetId?: string, type?: string, assetType?: string, asset?: any }
-        try {
-            payload = JSON.parse(e.dataTransfer.getData('application/json'))
-            console.log('EmptyTimeline drop payload:', payload)
-        }
-        catch (error) {
-            console.error('EmptyTimeline failed to parse drop data:', error)
-            return
-        }
+        const payload = JSON.parse(e.dataTransfer.getData('application/json'))
 
-        // Handle external assets (Pexels/stickers)
+        // Handle external assets (from Pexels, etc)
         if (payload.type === 'external_asset') {
-            console.log('Handling external asset on empty timeline:', payload)
-
-            // Extract the correct URL based on asset type and source
-            let mediaUrl = ''
-
-            if (payload.asset.isSticker) {
-                // Giphy sticker
-                mediaUrl = payload.asset.url || payload.asset.images?.original?.url
-            } else if (payload.assetType === 'image') {
-                // Pexels image
-                mediaUrl = payload.asset.src?.original || payload.asset.src?.large2x || payload.asset.src?.large
-            } else if (payload.assetType === 'video') {
-                // Pexels video - get the first available video file
-                mediaUrl = payload.asset.video_files?.[0]?.link || payload.asset.url
-            }
-
-            console.log('Extracted media URL for empty timeline:', mediaUrl)
-
-            if (!mediaUrl) {
-                console.error('Could not extract media URL from external asset:', payload.asset)
+            const asset = payload.asset
+            if (!asset) {
+                console.error('No asset found in external payload')
                 return
             }
 
-            // Create a temporary asset-like object for external assets
-            const externalAsset = {
-                id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                url: mediaUrl,
-                name: payload.asset.title || payload.asset.alt || `External ${payload.assetType}`,
-                mime_type: payload.assetType === 'video' ? 'video/mp4' : 
-                          (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
-                duration: payload.assetType === 'video' ? 10000 : 
-                         (payload.asset.isSticker || mediaUrl.includes('.gif')) ? 3000 : 5000, // 3s for GIFs, 5s for images
-                isExternal: true,
-                originalData: payload.asset
+            console.log('Handling external asset in EmptyTimeline:', asset)
+
+            // Determine track type and duration
+            let trackType: TrackType = 'video'
+            let dur = 0
+
+            if (payload.assetType === 'video') {
+                trackType = 'video'
+                dur = 10000 // 10 seconds default for videos
+            } else if (payload.assetType === 'music' || payload.assetType === 'sound') {
+                trackType = 'audio'
+                dur = asset.duration ? Math.round(asset.duration * 1000) : 30000
+            } else {
+                trackType = 'video' // Images go on video tracks
+                dur = 5000 // 5 seconds default for images
             }
 
-            console.log('Created external asset for empty timeline:', externalAsset)
+            // Create external asset data
+            const externalAsset = {
+                id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                url: asset.video_files?.[0]?.link || asset.src?.original || asset.url,
+                name: asset.title || asset.alt || 'External asset',
+                mime_type: trackType === 'audio' ? 'audio/mpeg' : 'video/mp4',
+                duration: dur,
+                isExternal: true,
+                originalData: asset
+            }
 
-            // 2) CREATE TRACK
-            const trackType: TrackType = payload.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+            // Create track
             const newTrack = {
                 id: uuid(),
-                projectId: projectId!,
-                index: 0,
+                projectId: projectId,
+                index: trackType === 'audio' ? (tracks?.length ?? 0) : 0,
                 type: trackType,
                 createdAt: new Date().toISOString(),
             }
 
-            console.log('Creating external track in EmptyTimeline:', newTrack)
+            console.log('Creating track in EmptyTimeline:', newTrack)
 
             executeCommand({
                 type: 'ADD_TRACK',
-                payload: {
-                    track: newTrack
-                }
+                payload: { track: newTrack }
             })
 
-            // 3) CREATE CLIP in that track
-            const dur = externalAsset.duration
+            // Create clip
             const newClip = {
                 id: uuid(),
                 trackId: newTrack.id,
@@ -129,7 +87,7 @@ export default function EmptyTimeline() {
                 volume: 1,
                 speed: 1,
                 properties: {
-                    externalAsset: externalAsset // Store external asset data in properties
+                    externalAsset
                 },
                 createdAt: new Date().toISOString(),
             }
@@ -138,9 +96,7 @@ export default function EmptyTimeline() {
 
             executeCommand({
                 type: 'ADD_CLIP',
-                payload: {
-                    clip: newClip
-                }
+                payload: { clip: newClip }
             })
             return
         }
@@ -152,7 +108,7 @@ export default function EmptyTimeline() {
         }
 
         console.log('Looking for asset in EmptyTimeline:', payload.assetId)
-        const asset = assets.find(a => a.id === payload.assetId)
+        const asset = assets.find((a: any) => a.id === payload.assetId)
         if (!asset) {
             console.error('Asset not found in EmptyTimeline:', payload.assetId)
             return
@@ -160,12 +116,12 @@ export default function EmptyTimeline() {
 
         console.log('Found asset in EmptyTimeline:', asset)
 
-        // 2) CREATE TRACK
+        // Create track
         const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
         const newTrack = {
             id: uuid(),
-            projectId: projectId!,
-            index: 0,
+            projectId: projectId,
+            index: trackType === 'audio' ? (tracks?.length ?? 0) : 0,
             type: trackType,
             createdAt: new Date().toISOString(),
         }
@@ -174,13 +130,12 @@ export default function EmptyTimeline() {
 
         executeCommand({
             type: 'ADD_TRACK',
-            payload: {
-                track: newTrack
-            }
+            payload: { track: newTrack }
         })
 
-        // 3) CREATE CLIP in that track
+        // Create clip in that track
         const dur = asset.duration ? Math.floor(asset.duration) : 0 // Duration is already in ms
+
         const newClip = {
             id: uuid(),
             trackId: newTrack.id,
@@ -213,77 +168,42 @@ export default function EmptyTimeline() {
 
         executeCommand({
             type: 'ADD_CLIP',
-            payload: {
-                clip: newClip
-            }
+            payload: { clip: newClip }
         })
-    }
+    }, [executeCommand, assets, projectId, tracks])
 
     return (
         <div
-            className={`
-                w-full h-full flex flex-col items-center justify-center text-gray-500
-                transition-all duration-500
-                ${isDragOver ?
-                    'bg-cyan-50/50' :
-                    ''}
-            `}
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDragOver={handleDragOver}
+            className="flex-1 flex items-center justify-center bg-gray-900 rounded-lg border-2 border-dashed border-gray-700 p-8"
+            onDragEnter={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                dragCounter.current++
+                if (dragCounter.current === 1) {
+                    setIsDragOver(true)
+                }
+            }}
+            onDragLeave={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                dragCounter.current--
+                if (dragCounter.current === 0) {
+                    setIsDragOver(false)
+                }
+            }}
+            onDragOver={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+            }}
             onDrop={handleDrop}
         >
-            <div className={`
-                mb-4 p-2 rounded-2xl
-                transition-all duration-500
-                ${isDragOver ?
-                    'bg-white shadow-lg scale-105' :
-                    ''}
-            `}>
-                <svg
-                    className={`
-                        w-16 h-16 transition-colors duration-500 
-                        ${isDragOver ?
-                            'text-cyan-400' :
-                            ''}
-                    `}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-                    />
-                </svg>
-            </div>
-            <h3 className={`text-xl font-medium mb-2 transition-colors duration-500 ${isDragOver ? 'text-cyan-600' : ''}`}>
-                Your timeline is empty
-            </h3>
-
-            <div className={`
-                flex items-center gap-2 text-sm
-                transition-colors duration-500
-                ${isDragOver ? 'text-cyan-400' : 'text-gray-400'}
-            `}>
-                <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                    />
-                </svg>
-                <span>Drag media here to get started</span>
+            <div className={`text-center transition-opacity duration-200 ${isDragOver ? 'opacity-100' : 'opacity-50'}`}>
+                <p className="text-gray-400 text-lg">
+                    Drag and drop media here to start your project
+                </p>
+                <p className="text-gray-500 text-sm mt-2">
+                    Or click the upload button above to browse files
+                </p>
             </div>
         </div>
     )

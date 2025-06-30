@@ -313,15 +313,39 @@ export function addAssetToTrack(
             targetTrackIndex = targetTrack.index;
         }
     } else {
-        // If no specific track index provided, try to find an existing track of the same type
-        if (trackIndex === undefined) {
-            const existingTrack = tracks.find(t => t.type === trackType)
-            if (existingTrack) {
-                targetTrack = existingTrack
-                targetTrackIndex = existingTrack.index
+        // Special handling for audio tracks - always place at the bottom
+        if (trackType === 'audio') {
+            // Find the highest non-audio track index
+            const nonAudioTracks = tracks.filter(t => t.type !== 'audio');
+            const highestNonAudioIndex = nonAudioTracks.length > 0 
+                ? Math.max(...nonAudioTracks.map(t => t.index))
+                : -1;
+            
+            // Place audio track below all non-audio tracks
+            targetTrackIndex = highestNonAudioIndex + 1;
+            
+            // Shift any existing audio tracks down by 1
+            const audioTracksToShift = tracks.filter(t => t.type === 'audio' && t.index >= targetTrackIndex);
+            for (const track of audioTracksToShift) {
+                executeCommand({
+                    type: 'UPDATE_TRACK',
+                    payload: { track: { ...track, index: track.index + 1 } }
+                });
             }
-        } else if (trackIndex < tracks.length) {
-            targetTrack = tracks[trackIndex]
+            
+            // Try to find an existing audio track at this position
+            targetTrack = tracks.find(t => t.type === 'audio' && t.index === targetTrackIndex);
+        } else {
+            // If no specific track index provided, try to find an existing track of the same type
+            if (trackIndex === undefined) {
+                const existingTrack = tracks.find(t => t.type === trackType)
+                if (existingTrack) {
+                    targetTrack = existingTrack
+                    targetTrackIndex = existingTrack.index
+                }
+            } else if (trackIndex < tracks.length) {
+                targetTrack = tracks[trackIndex]
+            }
         }
         
         // Calculate start time - place at the end of existing content on the track

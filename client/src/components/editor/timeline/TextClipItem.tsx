@@ -73,14 +73,18 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         // Get all clips on the same track, excluding the current clip
         const trackClips = clips.filter(c => c.trackId === trackId && c.id !== clip.id)
         
+        // Check for collisions with a minimum overlap threshold (30% of the clip width)
+        const minOverlapMs = durationMs * 0.3
+        
         // Check for collisions
         return trackClips.some(otherClip => {
-            const overlaps = (
-                (newStartMs >= otherClip.timelineStartMs && newStartMs < otherClip.timelineEndMs) ||
-                (newEndMs > otherClip.timelineStartMs && newEndMs <= otherClip.timelineEndMs) ||
-                (newStartMs <= otherClip.timelineStartMs && newEndMs >= otherClip.timelineEndMs)
-            )
-            return overlaps
+            // Calculate overlap amount
+            const overlapStartMs = Math.max(newStartMs, otherClip.timelineStartMs)
+            const overlapEndMs = Math.min(newEndMs, otherClip.timelineEndMs)
+            const overlapMs = overlapEndMs - overlapStartMs
+
+            // Only consider it a collision if the overlap is significant
+            return overlapMs > minOverlapMs
         })
     }, [clips, clip.id, durationMs, timeScale])
 
@@ -227,8 +231,14 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                 const currentPos = clipPositions.get(trackClip.id)!
                 const movingClipPos = clipPositions.get(clip.id)!
                 
-                // Check if this clip overlaps with our moving clip
-                if (movingClipPos.startMs < currentPos.endMs && movingClipPos.endMs > currentPos.startMs) {
+                // Calculate overlap amount
+                const overlapStartMs = Math.max(movingClipPos.startMs, currentPos.startMs)
+                const overlapEndMs = Math.min(movingClipPos.endMs, currentPos.endMs)
+                const overlapMs = overlapEndMs - overlapStartMs
+                const minOverlapMs = durationMs * 0.3 // Same threshold as in collision check
+
+                // Only shift if overlap is significant
+                if (overlapMs > minOverlapMs) {
                     // This clip needs to be shifted
                     const shiftAmount = movingClipPos.endMs - currentPos.startMs
                     const newStart = currentPos.startMs + shiftAmount

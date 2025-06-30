@@ -384,12 +384,10 @@ export default function Timeline() {
         const y = e.clientY - rect.top
         const rowHeight = containerRef.current.firstElementChild?.clientHeight ?? 68
         const rawIndex = Math.floor(y / rowHeight)
-        const newIndex = Math.max(0, Math.min(tracks.length, rawIndex))
-
-        console.log('Creating track at index:', newIndex, 'time:', startMs)
-
-        // 4) CREATE TRACK
         const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
+
+        // For audio tracks, always place at the bottom
+        let newIndex = trackType === 'audio' ? tracks.length : Math.max(0, Math.min(tracks.length, rawIndex))
 
         const newTrack = {
             id: uuid(),
