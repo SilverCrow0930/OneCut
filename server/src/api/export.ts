@@ -1598,210 +1598,265 @@ function validateExportInputs(
     }
 }
 
-async function processVideoExport(jobId: string, clips: TimelineClip[], tracks: TimelineTrack[], exportSettings: ExportSettings, accessToken?: string): Promise<void> {
+/**
+ * Enhanced Video Export Processing Function
+ * 
+ * Main orchestrator function that handles the entire export workflow with:
+ * - Comprehensive input validation
+ * - Robust asset downloading and verification
+ * - Professional FFmpeg processing
+ * - Error recovery mechanisms
+ * - Progress tracking and job management
+ */
+async function processVideoExport(
+    jobId: string,
+    clips: TimelineClip[],
+    tracks: TimelineTrack[],
+    exportSettings: ExportSettings,
+    accessToken?: string
+): Promise<void> {
     const job = exportJobs.get(jobId)
-    if (!job) return
-
-    let downloadedAssets = new Map<string, string>()
+    if (!job) {
+        console.error(`[Export ${jobId}] Job not found`)
+        return
+    }
 
     try {
+        console.log(`[Export ${jobId}] Starting enhanced video export process`)
         job.status = 'processing'
-        job.progress = 5
+        job.progress = 0
 
-        console.log(`[Export ${jobId}] Professional export starting...`)
-
-        // Comprehensive input validation
+        // Phase 1: Comprehensive Input Validation (0-10%)
+        console.log(`[Export ${jobId}] Phase 1: Validating inputs`)
         const validation = validateExportInputs(clips, tracks, exportSettings, jobId)
+        
         if (!validation.valid) {
-            const errorMessage = `Export validation failed: ${validation.errors.join('; ')}`
-            console.error(`[Export ${jobId}] ${errorMessage}`)
-            throw new Error(errorMessage)
+            throw new Error(`Validation failed: ${validation.errors.join(', ')}`)
         }
-        
-        if (validation.warnings.length > 0) {
-            console.warn(`[Export ${jobId}] Export proceeding with ${validation.warnings.length} warnings`)
-        }
-        
-        // Use corrected elements if validation provided them
+
+        // Use corrected elements if validation provided fixes
         const elements = validation.correctedElements || convertToTimelineElements(clips)
         
-        const totalDurationMs = Math.max(...elements.map(e => e.timelineEndMs), 2000)
-
-        const validElements = elements.filter(e => 
-            ['video', 'image', 'audio'].includes(e.type) && e.assetId
-        )
-
-        // Download assets with enhanced error handling
-        console.log(`[Export ${jobId}] Starting asset downloads for ${validElements.length} elements`)
-        
-        if (validElements.length === 0) {
-            console.log(`[Export ${jobId}] No valid elements found for export`)
-            throw new Error('No valid media elements found for export')
+        if (validation.warnings.length > 0) {
+            console.warn(`[Export ${jobId}] Export proceeding with warnings: ${validation.warnings.join(', ')}`)
         }
+
+        job.progress = 10
+        console.log(`[Export ${jobId}] Input validation completed successfully`)
+
+        // Phase 2: Asset Resolution and Download (10-40%)
+        console.log(`[Export ${jobId}] Phase 2: Resolving and downloading assets`)
+        const downloadedAssets = new Map<string, string>()
+        const assetElements = elements.filter(el => el.assetId || el.properties?.externalAsset)
         
-        const downloadPromises: Promise<{ assetId: string; filePath: string }>[] = []
-        const failedAssets: string[] = []
-        
-        // Process assets in batches to avoid overwhelming the system
-        const batchSize = 3
-        for (let batchStart = 0; batchStart < validElements.length; batchStart += batchSize) {
-            const batchEnd = Math.min(batchStart + batchSize, validElements.length)
-            const batch = validElements.slice(batchStart, batchEnd)
-            
-            console.log(`[Export ${jobId}] Processing asset batch ${Math.floor(batchStart / batchSize) + 1}/${Math.ceil(validElements.length / batchSize)}`)
-            
-            const batchPromises = batch.map(async (element, batchIndex) => {
-                const globalIndex = batchStart + batchIndex
+        if (assetElements.length === 0) {
+            console.log(`[Export ${jobId}] No assets to download, proceeding to export`)
+        } else {
+            const progressPerAsset = 30 / assetElements.length
+
+            for (let i = 0; i < assetElements.length; i++) {
+                const element = assetElements[i]
                 
-                if (!element.assetId) {
-                    throw new Error(`Element ${globalIndex} missing asset ID`)
-                }
+                try {
+                    let assetUrl: string
+                    let filename: string
 
-                console.log(`[Export ${jobId}] Processing asset ${globalIndex + 1}/${validElements.length}: ${element.assetId}`)
-
-            try {
-                let assetUrl: string
-                    
-                    // Handle external vs internal assets
-                if (element.assetId.startsWith('external_')) {
-                    assetUrl = element.properties?.externalAsset?.url || ''
-                        if (!assetUrl) {
-                            throw new Error(`External asset ${element.assetId} missing URL`)
-                        }
-                    console.log(`[Export ${jobId}] External asset URL: ${assetUrl.substring(0, 100)}...`)
-                        
-                        // Additional validation for external URLs
-                        try {
-                            const urlObj = new URL(assetUrl)
-                            if (!['http:', 'https:'].includes(urlObj.protocol)) {
-                                throw new Error(`Invalid protocol: ${urlObj.protocol}`)
-                            }
-                        } catch (urlError) {
-                            throw new Error(`Invalid external asset URL: ${urlError instanceof Error ? urlError.message : 'Parse error'}`)
-                        }
-                } else {
-                    console.log(`[Export ${jobId}] Fetching internal asset URL for: ${element.assetId}`)
-                        try {
-                    assetUrl = await fetchAssetUrl(element.assetId)
-                        } catch (fetchError) {
-                            throw new Error(`Failed to fetch asset URL: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`)
-                        }
+                    if (element.properties?.externalAsset) {
+                        // External asset (e.g., from Freesound, Unsplash)
+                        assetUrl = element.properties.externalAsset.url
+                        const urlParts = new URL(assetUrl)
+                        filename = `external_${element.id}_${path.basename(urlParts.pathname) || 'asset'}`
+                        console.log(`[Export ${jobId}] Processing external asset: ${element.properties.externalAsset.platform}`)
+                    } else if (element.assetId) {
+                        // Internal asset from database
+                        assetUrl = await fetchAssetUrl(element.assetId)
+                        filename = `asset_${element.assetId}`
+                        console.log(`[Export ${jobId}] Processing internal asset: ${element.assetId}`)
+                    } else {
+                        continue
                     }
 
-                    // Generate safe filename
-                    const urlParts = assetUrl.split('?')[0].split('/')
-                    const originalExt = path.extname(urlParts[urlParts.length - 1]) || '.mp4'
-                    const safeExt = originalExt.toLowerCase()
-                    const filename = `${jobId}_asset_${globalIndex}_${Date.now()}${safeExt}`
-                
-                console.log(`[Export ${jobId}] Downloading ${filename}...`)
-                
-                    // Download with retry mechanism
-                    const filePath = await downloadAsset(assetUrl, filename, 3)
-                
-                    console.log(`[Export ${jobId}] Asset ${globalIndex + 1}/${validElements.length} downloaded successfully`)
-                    
-                    return { assetId: element.assetId, filePath }
-                
-            } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-                    console.error(`[Export ${jobId}] Failed to download asset ${element.assetId}: ${errorMessage}`)
-                    failedAssets.push(element.assetId)
-                    throw new Error(`Asset download failed for ${element.assetId}: ${errorMessage}`)
+                    // Enhanced download with retry mechanism
+                    const localPath = await downloadAssetWithValidation(assetUrl, filename, jobId)
+                    const assetKey = element.assetId || element.id
+                    downloadedAssets.set(assetKey, localPath)
+
+                    job.progress = 10 + (i + 1) * progressPerAsset
+                    console.log(`[Export ${jobId}] Downloaded asset ${i + 1}/${assetElements.length} (${Math.round(job.progress)}%)`)
+
+                } catch (error) {
+                    const errorMsg = `Failed to download asset for element ${element.id}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    console.error(`[Export ${jobId}] ${errorMsg}`)
+                    throw new Error(errorMsg)
                 }
-            })
-            
-            // Wait for batch completion
-            try {
-                const batchResults = await Promise.all(batchPromises)
-                downloadPromises.push(...batchResults.map(result => Promise.resolve(result)))
-                
-                // Update progress
-                const completedAssets = batchEnd
-                job.progress = 5 + Math.round((completedAssets / validElements.length) * 30)
-                console.log(`[Export ${jobId}] Batch completed. Progress: ${job.progress}%`)
-                
-            } catch (batchError) {
-                console.error(`[Export ${jobId}] Batch failed:`, batchError)
-                throw batchError
             }
         }
-        
-        // Collect all successful downloads
-        try {
-            const allResults = await Promise.all(downloadPromises)
-            allResults.forEach(result => {
-                downloadedAssets.set(result.assetId, result.filePath)
-            })
-            
-            console.log(`[Export ${jobId}] All ${allResults.length} assets downloaded successfully`)
-            
-            if (failedAssets.length > 0) {
-                console.warn(`[Export ${jobId}] Some assets failed to download: ${failedAssets.join(', ')}`)
-            }
-            
-        } catch (downloadError) {
-            console.error(`[Export ${jobId}] Asset download collection failed:`, downloadError)
-            throw new Error(`Critical asset download failure: ${downloadError instanceof Error ? downloadError.message : 'Unknown error'}`)
-        }
-        
-        console.log(`[Export ${jobId}] All assets downloaded successfully`)
 
-        job.progress = 35
+        job.progress = 40
+        console.log(`[Export ${jobId}] Asset download phase completed`)
 
-        const resolutionMap = {
-            '480p': { width: 480, height: 854 },
-            '720p': { width: 720, height: 1280 },
-            '1080p': { width: 1080, height: 1920 }
-        }
+        // Phase 3: Output Configuration (40-45%)
+        console.log(`[Export ${jobId}] Phase 3: Configuring output settings`)
+        const outputSettings = getOutputSettings(exportSettings)
+        const outputPath = path.join(EXPORTS_DIR, `export_${jobId}.mp4`)
 
-        const { width, height } = resolutionMap[exportSettings.resolution]
-        const outputPath = path.join(EXPORTS_DIR, `${jobId}.mp4`)
+        job.progress = 45
+        console.log(`[Export ${jobId}] Output configuration: ${outputSettings.width}x${outputSettings.height} @ ${outputSettings.fps}fps`)
 
+        // Phase 4: Professional Video Export (45-90%)
+        console.log(`[Export ${jobId}] Phase 4: Starting FFmpeg video processing`)
         const exporter = new ProfessionalVideoExporter(
-            elements, tracks, { width, height, fps: exportSettings.fps }, downloadedAssets, jobId
+            elements,
+            tracks,
+            outputSettings,
+            downloadedAssets,
+            jobId
         )
 
-        await exporter.exportVideo(outputPath)
+        // Set up progress monitoring for FFmpeg
+        const exportPromise = exporter.exportVideo(outputPath)
+        
+        // Monitor FFmpeg progress (simplified progress tracking)
+        const progressInterval = setInterval(() => {
+            if (job.progress < 85) {
+                job.progress = Math.min(85, job.progress + 2)
+            }
+        }, 2000)
 
-        // Upload
-        job.progress = 95
-        const cloudFileName = `exports/${jobId}.mp4`
-        await bucket.upload(outputPath, { destination: cloudFileName })
+        await exportPromise
+        clearInterval(progressInterval)
 
-        const [downloadUrl] = await bucket.file(cloudFileName).getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 24 * 60 * 60 * 1000
+        job.progress = 90
+        console.log(`[Export ${jobId}] FFmpeg processing completed successfully`)
+
+        // Phase 5: File Verification and Upload (90-100%)
+        console.log(`[Export ${jobId}] Phase 5: Verifying and uploading output`)
+        
+        // Verify the output file exists and has content
+        try {
+            const stats = await fs.stat(outputPath)
+            if (stats.size === 0) {
+                throw new Error('Output file is empty')
+            }
+            console.log(`[Export ${jobId}] Output file verified: ${(stats.size / 1024 / 1024).toFixed(2)} MB`)
+        } catch (error) {
+            throw new Error(`Output file verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+
+        // Upload to Google Cloud Storage
+        const uploadName = `exports/video_${jobId}_${Date.now()}.mp4`
+        await bucket.upload(outputPath, {
+            destination: uploadName,
+            metadata: {
+                contentType: 'video/mp4',
+                cacheControl: 'no-cache'
+            }
         })
 
+        const downloadUrl = `https://storage.googleapis.com/${bucket.name}/${uploadName}`
+        
+        // Cleanup local files
+        try {
+            await fs.unlink(outputPath)
+            for (const localPath of downloadedAssets.values()) {
+                try {
+                    await fs.unlink(localPath)
+                } catch (cleanupError) {
+                    console.warn(`[Export ${jobId}] Failed to cleanup asset: ${cleanupError}`)
+                }
+            }
+        } catch (cleanupError) {
+            console.warn(`[Export ${jobId}] Cleanup warning: ${cleanupError}`)
+        }
+
+        // Complete the job
         job.status = 'completed'
         job.progress = 100
         job.downloadUrl = downloadUrl
         job.completedAt = new Date()
+        job.outputPath = outputPath
 
-        // Cleanup
-        for (const filePath of downloadedAssets.values()) {
-            try { await fs.unlink(filePath) } catch {}
-        }
+        console.log(`[Export ${jobId}] Enhanced export completed successfully`)
+        console.log(`[Export ${jobId}] Download URL: ${downloadUrl}`)
 
     } catch (error) {
-        console.error(`[Export ${jobId}] Export failed:`, error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+        console.error(`[Export ${jobId}] Export failed: ${errorMessage}`)
         
         job.status = 'failed'
-        job.progress = 0
-        job.error = error instanceof Error ? error.message : 'Unknown error'
+        job.error = errorMessage
         
-        console.log(`[Export ${jobId}] Job marked as failed with error: ${job.error}`)
-        
-        // Clean up any downloaded assets
-        for (const filePath of downloadedAssets.values()) {
-            try { 
-                await fs.unlink(filePath)
-                console.log(`[Export ${jobId}] Cleaned up file: ${filePath}`)
-            } catch (cleanupError) {
-                console.warn(`[Export ${jobId}] Failed to cleanup file: ${filePath}`, cleanupError)
+        // Cleanup on failure
+        try {
+            const outputPath = path.join(EXPORTS_DIR, `export_${jobId}.mp4`)
+            await fs.unlink(outputPath).catch(() => {})
+        } catch (cleanupError) {
+            console.warn(`[Export ${jobId}] Failed to cleanup on error: ${cleanupError}`)
+        }
+    }
+}
+
+/**
+ * Enhanced asset download with validation and retry mechanism
+ */
+async function downloadAssetWithValidation(
+    url: string, 
+    filename: string, 
+    jobId: string, 
+    maxRetries: number = 3
+): Promise<string> {
+    let lastError: Error = new Error('Download failed')
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`[Export ${jobId}] Downloading asset attempt ${attempt}/${maxRetries}: ${url}`)
+            
+            const localPath = await downloadAsset(url, filename, 1)
+            
+            // Validate downloaded file
+            const stats = await fs.stat(localPath)
+            if (stats.size === 0) {
+                throw new Error('Downloaded file is empty')
+            }
+            
+            // Basic file type validation
+            const ext = path.extname(localPath).toLowerCase()
+            if (!['.mp4', '.mov', '.avi', '.mp3', '.wav', '.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+                console.warn(`[Export ${jobId}] Unknown file extension: ${ext}`)
+            }
+            
+            console.log(`[Export ${jobId}] Asset downloaded and validated: ${(stats.size / 1024).toFixed(1)}KB`)
+            return localPath
+            
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(`Unknown error on attempt ${attempt}`)
+            console.warn(`[Export ${jobId}] Download attempt ${attempt} failed: ${lastError.message}`)
+            
+            if (attempt < maxRetries) {
+                const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000)
+                console.log(`[Export ${jobId}] Waiting ${delay}ms before retry...`)
+                await new Promise(resolve => setTimeout(resolve, delay))
             }
         }
+    }
+    
+    throw new Error(`Failed to download asset after ${maxRetries} attempts: ${lastError.message}`)
+}
+
+/**
+ * Get optimized output settings based on export configuration
+ */
+function getOutputSettings(exportSettings: ExportSettings) {
+    const resolutionMap = {
+        '480p': { width: 854, height: 480 },
+        '720p': { width: 1280, height: 720 },
+        '1080p': { width: 1920, height: 1080 }
+    }
+    
+    return {
+        ...resolutionMap[exportSettings.resolution],
+        fps: exportSettings.fps,
+        quality: exportSettings.quality
     }
 }
 
