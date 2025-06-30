@@ -1,4 +1,4 @@
-import { Clip, Track, TrackType } from "@/types/editor";
+import { Clip, Track } from "@/types/editor";
 import { Command, HistoryState } from "@/types/editor";
 
 // Helper function to generate UUID
@@ -213,88 +213,116 @@ export function addAssetToTrack(
         startTimeMs?: number
     } = {}
 ) {
-    const {
-        isExternal = false,
-        assetType = 'video',
-        trackIndex,
-    } = options
-
-    // Handle external assets (like stickers)
-    const externalAsset = isExternal ? {
-        id: generateUUID(),
-        url: asset.url,
-        duration: asset.duration || 5000,
-        isExternal: true,
-        isSticker: asset.isSticker,
-        originalData: asset
-    } : null
-
-    // Determine track type and target index
-    let trackType: TrackType = 'video'
-    let targetTrack: any = null
-    let targetTrackIndex = 0
-    let timelineStartMs = options.startTimeMs ?? 0
-
-    if (isExternal && asset.isSticker) {
-        // For stickers, create a new track above the current video track
-        const videoTracks = tracks.filter(t => t.type === 'video')
-        if (videoTracks.length > 0) {
-            // Find the highest video track index
-            const highestVideoTrackIndex = Math.max(...videoTracks.map(t => t.index))
-            targetTrackIndex = highestVideoTrackIndex + 1
-            
-            // Shift all tracks above this index up by 1
-            const tracksToUpdate = tracks
-                .filter(t => t.index >= targetTrackIndex)
-                .map(t => ({
-                    before: t,
-                    after: { ...t, index: t.index + 1 }
-                }))
-            
-            if (tracksToUpdate.length > 0) {
-                executeCommand({
-                    type: 'BATCH',
-                    payload: {
-                        commands: tracksToUpdate.map(update => ({
-                            type: 'UPDATE_TRACK',
-                            payload: update
-                        }))
-                    }
-                })
-            }
+    const { isExternal = false, assetType, trackIndex } = options
+    
+    console.log('Adding asset to track:', { asset, isExternal, assetType, trackIndex })
+    
+    // Determine track type and asset details
+    let trackType: 'audio' | 'video' = 'video'
+    let duration = 0
+    let externalAsset = null
+    
+    if (isExternal) {
+        // Handle external assets (Pexels, Giphy stickers, Freesound audio)
+        if (assetType === 'music' || assetType === 'sound') {
+            trackType = 'audio'
+        } else {
+            trackType = assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
         }
-    } else if (!isExternal && asset.mime_type?.startsWith('audio/')) {
-        // For audio tracks, place at the bottom
-        trackType = 'audio'
         
-        // Find all non-audio tracks
-        const nonAudioTracks = tracks.filter(t => t.type !== 'audio')
-        const audioTracks = tracks.filter(t => t.type === 'audio')
+        // Extract the correct URL based on asset type and source
+        let mediaUrl = ''
         
-        // Place new audio track at the bottom of non-audio tracks
-        targetTrackIndex = nonAudioTracks.length
-        
-        // If there are existing audio tracks, shift them down
-        if (audioTracks.length > 0) {
-            const tracksToUpdate = audioTracks.map(t => ({
-                before: t,
-                after: { ...t, index: t.index + 1 }
-            }))
-            
-            if (tracksToUpdate.length > 0) {
-                executeCommand({
-                    type: 'BATCH',
-                    payload: {
-                        commands: tracksToUpdate.map(update => ({
-                            type: 'UPDATE_TRACK',
-                            payload: update
-                        }))
-                    }
-                })
-            }
+        if (asset.isSticker) {
+            // Giphy sticker
+            mediaUrl = asset.url || asset.images?.original?.url
+        } else if (assetType === 'image') {
+            // Pexels image
+            mediaUrl = asset.src?.original || asset.src?.large2x || asset.src?.large
+        } else if (assetType === 'video') {
+            // Pexels video
+            mediaUrl = asset.video_files?.[0]?.link || asset.url
+        } else if (assetType === 'music' || assetType === 'sound') {
+            // Freesound audio
+            mediaUrl = asset.previews?.['preview-hq-mp3'] || asset.previews?.['preview-lq-mp3'] || asset.download
         }
+        
+        if (!mediaUrl) {
+            console.error('Could not extract media URL from external asset:', asset)
+            return
+        }
+        
+        // Calculate duration and ensure it's an integer
+        let calculatedDuration = 0
+        if (assetType === 'video') {
+            calculatedDuration = 10000
+        } else if (assetType === 'music' || assetType === 'sound') {
+            calculatedDuration = asset.duration ? Math.round(asset.duration * 1000) : 30000
+        } else if (asset.isSticker || mediaUrl.includes('.gif')) {
+            calculatedDuration = 3000
+        } else {
+            calculatedDuration = 5000
+        }
+
+        // Create external asset data
+        externalAsset = {
+            id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            url: mediaUrl,
+            name: asset.title || asset.name || asset.alt || `External ${assetType}`,
+            mime_type: assetType === 'video' ? 'video/mp4' : 
+                      assetType === 'music' || assetType === 'sound' ? 'audio/mpeg' :
+                      (asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
+            duration: calculatedDuration,
+            isExternal: true,
+            originalData: asset
+        }
+        duration = calculatedDuration
     } else {
-        // For other assets, try to find existing track or use provided index
+        // Handle regular uploaded assets
+        trackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
+        duration = asset.duration ? Math.floor(asset.duration) : 0
+        
+        // Ensure minimum duration for images and other assets
+        if (duration <= 0) {
+            if (asset.mime_type.startsWith('image/')) {
+                duration = 5000 // 5 seconds for images
+                console.log('Added default 5s duration for uploaded image')
+            } else {
+                duration = 1000 // 1 second minimum for other assets
+                console.log('Added default 1s duration for asset with no duration')
+            }
+        }
+    }
+    
+    // Find the target track or create a new one
+    let targetTrack: any = null
+    let targetTrackIndex = trackIndex ?? tracks.length // Default to end
+    let startTimeMs = options.startTimeMs ?? 0
+    
+    // Special handling for stickers - always create a new track above the video track
+    if (isExternal && asset.isSticker) {
+        // Find the highest video track index
+        const videoTracks = tracks.filter(t => t.type === 'video');
+        const highestVideoTrackIndex = videoTracks.length > 0 
+            ? Math.max(...videoTracks.map(t => t.index))
+            : -1;
+        
+        // Place sticker track above the highest video track
+        targetTrackIndex = highestVideoTrackIndex + 1;
+        
+        // Shift all tracks above this index up by 1
+        const tracksToShift = tracks.filter(t => t.index >= targetTrackIndex);
+        for (const track of tracksToShift) {
+            executeCommand({
+                type: 'UPDATE_TRACK',
+                payload: { track: { ...track, index: track.index + 1 } }
+            });
+        }
+        
+        // Create new track for sticker
+        targetTrack = null; // Force creation of new track
+    } else {
+        // If no specific track index provided, try to find an existing track of the same type
         if (trackIndex === undefined) {
             const existingTrack = tracks.find(t => t.type === trackType)
             if (existingTrack) {
@@ -303,24 +331,23 @@ export function addAssetToTrack(
             }
         } else if (trackIndex < tracks.length) {
             targetTrack = tracks[trackIndex]
-            targetTrackIndex = trackIndex
+        }
+        
+        // Calculate start time - place at the end of existing content on the track
+        if (options.startTimeMs === undefined && targetTrack) {
+            // Find the latest end time for clips on this track to prevent overlap
+            const trackClips = clips.filter(clip => clip.trackId === targetTrack.id)
+            if (trackClips.length > 0) {
+                const latestEndTime = Math.max(...trackClips.map(clip => clip.timelineEndMs))
+                startTimeMs = latestEndTime // Place new clip after the last one
+                console.log('Placing clip after existing content at:', startTimeMs)
+            } else {
+                startTimeMs = 0 // First clip on track starts at 0
+                console.log('First clip on track, starting at 0')
+            }
         }
     }
-
-    // Calculate start time - place at the end of existing content on the track
-    if (options.startTimeMs === undefined && targetTrack) {
-        // Find the latest end time for clips on this track to prevent overlap
-        const trackClips = clips.filter(clip => clip.trackId === targetTrack.id)
-        if (trackClips.length > 0) {
-            const latestEndTime = Math.max(...trackClips.map(clip => clip.timelineEndMs))
-            timelineStartMs = latestEndTime // Place new clip after the last one
-            console.log('Placing clip after existing content at:', timelineStartMs)
-        } else {
-            timelineStartMs = 0 // First clip on track starts at 0
-            console.log('First clip on track, starting at 0')
-        }
-    }
-
+    
     // Create new track if needed
     if (!targetTrack) {
         targetTrack = {
@@ -330,40 +357,28 @@ export function addAssetToTrack(
             type: trackType,
             createdAt: new Date().toISOString(),
         }
-
+        
         console.log('Creating new track:', targetTrack)
-
+        
         executeCommand({
             type: 'ADD_TRACK',
             payload: { track: targetTrack }
         })
-
+        
         // For new tracks, start at 0 since there are no existing clips
-        timelineStartMs = 0
+        startTimeMs = 0
     }
-
-    // Calculate duration based on asset type
-    let duration = 5000 // Default 5 seconds for images/stickers
-    if (!isExternal) {
-        if (asset.duration) {
-            duration = Math.floor(asset.duration)
-        } else if (!asset.mime_type?.startsWith('image/')) {
-            console.warn('Non-image asset missing duration:', asset)
-        }
-    } else if (externalAsset?.duration) {
-        duration = Math.floor(externalAsset.duration)
-    }
-
+    
     // Final safety check - ensure duration is valid and integer
     if (duration <= 0) {
         duration = 5000 // 5 seconds default
         console.warn('Duration was still 0, using 5s default')
     }
-
+    
     // Ensure all duration and time values are integers to prevent database errors
     duration = Math.round(duration)
-    timelineStartMs = Math.round(timelineStartMs)
-
+    startTimeMs = Math.round(startTimeMs)
+    
     // Create the clip
     const newClip = {
         id: generateUUID(),
@@ -372,14 +387,14 @@ export function addAssetToTrack(
         type: (isExternal && asset.isSticker) ? 'image' : trackType,
         sourceStartMs: 0,
         sourceEndMs: duration,
-        timelineStartMs: timelineStartMs,
-        timelineEndMs: timelineStartMs + duration,
+        timelineStartMs: startTimeMs,
+        timelineEndMs: startTimeMs + duration,
         assetDurationMs: duration,
         volume: 1,
         speed: 1,
         properties: isExternal ? {
             externalAsset: externalAsset
-        } : (asset.mime_type?.startsWith('image/') ? {
+        } : (asset.mime_type.startsWith('image/') ? {
             crop: {
                 width: 320,  // Default 16:9 aspect ratio
                 height: 180,
@@ -394,13 +409,13 @@ export function addAssetToTrack(
         } : {}),
         createdAt: new Date().toISOString(),
     }
-
+    
     console.log('Creating clip:', newClip)
-
+    
     executeCommand({
         type: 'ADD_CLIP',
         payload: { clip: newClip }
     })
-
+    
     return { track: targetTrack, clip: newClip }
 }
