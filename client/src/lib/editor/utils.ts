@@ -298,8 +298,33 @@ export function addAssetToTrack(
     let targetTrack: any = null
     let targetTrackIndex = trackIndex ?? tracks.length // Default to end
     
-    // If no specific track index provided, try to find an existing track of the same type
-    if (trackIndex === undefined) {
+    // Special handling for stickers - always create a new track above video tracks
+    if (isExternal && asset.isSticker) {
+        // Find the highest video track index and place sticker track above it
+        const videoTracks = tracks.filter(t => t.type === 'video')
+        const maxVideoIndex = videoTracks.length > 0 ? Math.max(...videoTracks.map(t => t.index)) : -1
+        targetTrackIndex = maxVideoIndex + 1
+        
+        // Re-index existing tracks to make room
+        const tracksToUpdate = tracks.filter(t => t.index > maxVideoIndex)
+        tracksToUpdate.forEach(track => {
+            executeCommand({
+                type: 'UPDATE_TRACK',
+                payload: {
+                    before: track,
+                    after: { ...track, index: track.index + 1 }
+                }
+            })
+        })
+        
+        console.log('Creating sticker track at index:', targetTrackIndex)
+    } else if (trackType === 'audio') {
+        // Audio tracks should always be at the bottom
+        const maxIndex = tracks.length > 0 ? Math.max(...tracks.map(t => t.index)) : -1
+        targetTrackIndex = maxIndex + 1
+        console.log('Creating audio track at bottom index:', targetTrackIndex)
+    } else if (trackIndex === undefined) {
+        // For non-stickers, try to find an existing track of the same type
         const existingTrack = tracks.find(t => t.type === trackType)
         if (existingTrack) {
             targetTrack = existingTrack
