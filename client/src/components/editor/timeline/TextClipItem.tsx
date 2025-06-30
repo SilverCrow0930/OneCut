@@ -11,8 +11,6 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     const timeScale = getTimeScale(zoomLevel)
     const [showContextMenu, setShowContextMenu] = useState(false)
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
-    const [isShiftHeld, setIsShiftHeld] = useState(false)
-
     // convert ms → px
     const left = clip.timelineStartMs * timeScale
     const width = (clip.timelineEndMs - clip.timelineStartMs) * timeScale
@@ -24,13 +22,9 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     const isMultiSelectionActive = selectedClipIds.length > 1
     const isPrimarySelection = isSelected && !isMultiSelectionActive
 
-    // HTML5 Drag and Drop handlers for moving between tracks (Shift+Drag)
+    // HTML5 Drag and Drop handlers for moving between tracks
     const handleDragStart = (e: React.DragEvent) => {
-        // Only allow HTML5 drag when Shift is held
-        if (!e.shiftKey) {
-            e.preventDefault()
-            return
-        }
+        // Always allow HTML5 drag for track switching - no Shift key required
 
         e.dataTransfer.setData('application/json', JSON.stringify({
             clipId: clip.id
@@ -90,31 +84,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         return () => document.removeEventListener('click', handleClickOutside)
     }, [])
 
-    // Keyboard event listeners for Shift key tracking
-    React.useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Shift') {
-                setIsShiftHeld(true)
-                document.body.style.cursor = 'move'
-            }
-        }
-
-        const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.key === 'Shift') {
-                setIsShiftHeld(false)
-                document.body.style.cursor = ''
-            }
-        }
-
-        document.addEventListener('keydown', handleKeyDown)
-        document.addEventListener('keyup', handleKeyUp)
-
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown)
-            document.removeEventListener('keyup', handleKeyUp)
-            document.body.style.cursor = ''
-        }
-    }, [])
+    // Keyboard event listeners removed - no longer needed for drag functionality
 
     const textContent = clip.properties?.text || (isCaption ? 'Caption' : 'Text Overlay')
     const truncatedText = textContent.length > 20 ? textContent.substring(0, 20) + '...' : textContent
@@ -130,7 +100,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                     ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
                       'border-transparent hover:border-gray-400'}
-                    ${isShiftHeld ? 'cursor-move border-blue-300 shadow-lg' : 'cursor-grab active:cursor-grabbing'}
+                    cursor-grab active:cursor-grabbing
                     ${isCaption 
                         ? 'bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600' 
                         : 'bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600'}
@@ -141,9 +111,9 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                 }}
                 onClick={onClick}
                 onContextMenu={handleContextMenu}
-                draggable={isShiftHeld} // Only enable HTML5 drag when Shift is held
+                draggable={true} // Always enable HTML5 drag for track switching
                 onDragStart={handleDragStart}
-                title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move horizontally, Shift+Drag to move between tracks'}
+                title="Drag to move within track or to another track - overlapping clips will be automatically pushed forward"
             >
                 {/* Text content area */}
                 <div className="flex items-center justify-between h-full px-2 text-white">
