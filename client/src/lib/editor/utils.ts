@@ -208,7 +208,7 @@ const TRACK_RANGES = {
     audio: { start: 18, end: 22 }
 };
 
-function getNextAvailableIndex(tracks: any[], type: string): number {
+export function getNextAvailableIndex(tracks: any[], type: string): number {
     // Get the range for this track type
     const range = TRACK_RANGES[type as keyof typeof TRACK_RANGES];
     if (!range) return tracks.length; // Fallback
@@ -225,25 +225,33 @@ function getNextAvailableIndex(tracks: any[], type: string): number {
         }
     }
 
-    // If no index is available in the range, use the last possible index
+    // If no index is available, use the last possible index
     return range.end;
 }
 
-function shiftTracksForNewTrack(tracks: any[], newIndex: number, executeCommand: any) {
-    // Get all tracks that need to be shifted (tracks with index >= newIndex)
-    const tracksToShift = tracks.filter(t => t.index >= newIndex)
-        .sort((a, b) => b.index - a.index); // Sort in descending order to avoid conflicts
+export function shiftTracksForNewTrack(tracks: any[], newIndex: number, executeCommand: any) {
+    // Get all tracks that need to be shifted (those with index >= newIndex)
+    const tracksToShift = tracks.filter(t => t.index >= newIndex);
 
-    // Shift each track up by 1
-    for (const track of tracksToShift) {
-        executeCommand({
-            type: 'UPDATE_TRACK',
-            payload: {
-                before: track,
-                after: { ...track, index: track.index + 1 }
+    if (tracksToShift.length === 0) return;
+
+    // Create update commands for each track that needs to be shifted
+    const commands = tracksToShift.map(track => ({
+        type: 'UPDATE_TRACK' as const,
+        payload: {
+            before: track,
+            after: {
+                ...track,
+                index: track.index + 1
             }
-        });
-    }
+        }
+    }));
+
+    // Execute all shift commands in a batch
+    executeCommand({
+        type: 'BATCH',
+        payload: { commands }
+    });
 }
 
 export function addAssetToTrack(

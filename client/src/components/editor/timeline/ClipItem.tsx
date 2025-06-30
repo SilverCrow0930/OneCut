@@ -740,13 +740,17 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             >
                 {/* Resize handles */}
                 <div
-                    className="absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors"
+                    className="absolute left-0 top-0 w-4 h-full cursor-ew-resize hover:bg-white/20 transition-colors group"
                     onMouseDown={(e) => handleResizeStart(e, 'start')}
-                />
+                >
+                    <div className="absolute left-0 top-0 w-0.5 h-full bg-white/20 group-hover:bg-white/40" />
+                </div>
                 <div
-                    className="absolute right-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors"
+                    className="absolute right-0 top-0 w-4 h-full cursor-ew-resize hover:bg-white/20 transition-colors group"
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
-                />
+                >
+                    <div className="absolute right-0 top-0 w-0.5 h-full bg-white/20 group-hover:bg-white/40" />
+                </div>
 
                 {/* Enhanced Content based on type */}
                 {isVideo && mediaUrl && (

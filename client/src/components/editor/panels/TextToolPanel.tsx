@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useParams } from 'next/navigation'
@@ -8,24 +8,36 @@ import { Plus, Type, Sparkles, Wand2, RefreshCw } from 'lucide-react'
 import TextStyleSelector, { stylePresets } from './text/TextStyleSelector'
 import PanelHeader from './PanelHeader'
 import { apiPath } from '@/lib/config'
+import { getNextAvailableIndex, shiftTracksForNewTrack } from '@/lib/editor/utils'
 
 export default function TextToolPanel() {
+    const { tracks, executeCommand, selectedClipId, clips } = useEditor()
+    const { projectId } = useParams<{ projectId: string }>()
     const [text, setText] = useState('')
+    const [fontSize, setFontSize] = useState(20)
+    const [fontFamily, setFontFamily] = useState('Arial')
+    const [color, setColor] = useState('#FFFFFF')
+    const [backgroundColor, setBackgroundColor] = useState('rgba(0,0,0,0.8)')
+    const [textAlign, setTextAlign] = useState('center')
+    const [position, setPosition] = useState('center')
     const [selectedStyleIdx, setSelectedStyleIdx] = useState(0)
     const [useAIStyle, setUseAIStyle] = useState(false)
     const [stylePrompt, setStylePrompt] = useState('')
     const [aiGeneratedStyle, setAiGeneratedStyle] = useState<any>(null)
-    const [isGeneratingStyle, setIsGeneratingStyle] = useState(false)
+    const [isGenerating, setIsGenerating] = useState(false)
     const [styleError, setStyleError] = useState<string | null>(null)
-    
-    const { tracks, executeCommand, selectedClipId, clips } = useEditor()
+    const [createNewTrack, setCreateNewTrack] = useState(true)
+    const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
     const { session } = useAuth()
-    const params = useParams()
-    const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     // Find the selected text clip if we're editing
     const selectedClip = clips.find(clip => clip.id === selectedClipId && clip.type === 'text')
+
+    // Get available text tracks
+    const textTracks = useMemo(() => {
+        return tracks.filter(t => t.type === 'text').sort((a, b) => a.index - b.index)
+    }, [tracks])
 
     // Update text and style when a clip is selected
     useEffect(() => {
@@ -80,7 +92,7 @@ export default function TextToolPanel() {
             return
         }
 
-        setIsGeneratingStyle(true)
+        setIsGenerating(true)
         setStyleError(null)
 
         try {
@@ -124,7 +136,7 @@ export default function TextToolPanel() {
             })
             setStyleError(error.message || 'Failed to generate style')
         } finally {
-            setIsGeneratingStyle(false)
+            setIsGenerating(false)
         }
     }
 
@@ -141,38 +153,33 @@ export default function TextToolPanel() {
         }
     }
 
-    const handleAddOrUpdateText = () => {
+    const handleAddText = () => {
         if (!text.trim()) return
 
-        const currentStyle = getCurrentStyle()
-        const properties: any = {
+        const properties = {
             text: text.trim(),
-            style: currentStyle,
+            style: {
+                fontSize: fontSize,
+                fontFamily: fontFamily,
+                color: color,
+                backgroundColor: backgroundColor,
+                textAlign: textAlign,
+                position: position
+            }
         }
 
-        // Store AI prompt if using AI style
-        if (useAIStyle && stylePrompt) {
-            properties.aiStylePrompt = stylePrompt
-        }
+        if (createNewTrack) {
+            // Get the next available index for text track
+            const newIndex = getNextAvailableIndex(tracks, 'text')
 
-        if (selectedClip) {
-            // Update existing clip
-            executeCommand({
-                type: 'UPDATE_CLIP',
-                payload: {
-                    before: selectedClip,
-                    after: {
-                        ...selectedClip,
-                        properties
-                    }
-                }
-            })
-        } else {
-            // Create a new text track at index 0
+            // Shift tracks if needed
+            shiftTracksForNewTrack(tracks, newIndex, executeCommand)
+
+            // Create a new text track
             const newTrack = {
                 id: uuid(),
                 projectId: projectId!,
-                index: 0, // Insert at the beginning
+                index: newIndex,
                 type: 'text' as TrackType,
                 createdAt: new Date().toISOString(),
             }
@@ -187,7 +194,7 @@ export default function TextToolPanel() {
                 type: 'text' as const,
                 sourceStartMs: 0,
                 sourceEndMs: duration * 1000,
-                timelineStartMs: 0, // Start at the beginning
+                timelineStartMs: 0,
                 timelineEndMs: duration * 1000,
                 assetDurationMs: duration * 1000,
                 volume: 1,
@@ -196,47 +203,58 @@ export default function TextToolPanel() {
                 createdAt: new Date().toISOString(),
             }
 
-            // Create commands to:
-            // 1. Shift all existing tracks down
-            // 2. Add the new track
-            // 3. Add the text clip
-            const commands = [
-                // First shift all existing tracks down
-                ...tracks.map(track => ({
-                    type: 'UPDATE_TRACK' as const,
-                    payload: {
-                        before: track,
-                        after: {
-                            ...track,
-                            index: track.index + 1
-                        }
-                    }
-                })),
-                // Then add the new track
-                {
-                    type: 'ADD_TRACK' as const,
-                    payload: { track: newTrack }
-                },
-                // Finally add the text clip
-                {
-                    type: 'ADD_CLIP' as const,
-                    payload: { clip: textClip }
-                }
-            ]
-
-            // Execute all commands in a single batch
+            // Add the new track and text clip
             executeCommand({
                 type: 'BATCH',
-                payload: { commands }
+                payload: {
+                    commands: [
+                        { type: 'ADD_TRACK', payload: { track: newTrack } },
+                        { type: 'ADD_CLIP', payload: { clip: textClip } }
+                    ]
+                }
+            })
+        } else if (selectedTrackId) {
+            // Find the selected track
+            const track = tracks.find(t => t.id === selectedTrackId)
+            if (!track) return
+
+            // Find the last clip in this track
+            const trackClips = clips.filter(c => c.trackId === track.id)
+            const lastClip = trackClips.length > 0 
+                ? trackClips.reduce((latest, clip) => 
+                    clip.timelineEndMs > latest.timelineEndMs ? clip : latest
+                  )
+                : null
+
+            // Default duration is 5 seconds
+            const duration = 5
+            const startTime = lastClip ? lastClip.timelineEndMs : 0
+
+            // Create the text clip
+            const textClip = {
+                id: uuid(),
+                trackId: track.id,
+                type: 'text' as const,
+                sourceStartMs: 0,
+                sourceEndMs: duration * 1000,
+                timelineStartMs: startTime,
+                timelineEndMs: startTime + duration * 1000,
+                assetDurationMs: duration * 1000,
+                volume: 1,
+                speed: 1,
+                properties,
+                createdAt: new Date().toISOString(),
+            }
+
+            // Add the text clip to existing track
+            executeCommand({
+                type: 'ADD_CLIP',
+                payload: { clip: textClip }
             })
         }
 
-        // Reset the form if we're not editing
-        if (!selectedClip) {
-            setText('')
-            setStylePrompt('')
-            setAiGeneratedStyle(null)
-        }
+        // Clear the text input
+        setText('')
     }
 
     return (
@@ -263,6 +281,56 @@ export default function TextToolPanel() {
                 </div>
 
                 <div className="space-y-3">
+                    <label className="block text-sm font-medium text-black/50">
+                        Track Options
+                    </label>
+                    
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="trackType"
+                                checked={createNewTrack}
+                                onChange={() => setCreateNewTrack(true)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-medium">Create new track</span>
+                        </label>
+                        
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="trackType"
+                                checked={!createNewTrack}
+                                onChange={() => setCreateNewTrack(false)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-medium">Add to existing track</span>
+                        </label>
+                        </div>
+                        
+                    {!createNewTrack && (
+                        <select
+                            value={selectedTrackId || ''}
+                            onChange={(e) => setSelectedTrackId(e.target.value || null)}
+                            className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            disabled={textTracks.length === 0}
+                        >
+                            {textTracks.length === 0 ? (
+                                <option value="">No text tracks available</option>
+                            ) : (
+                                <>
+                                    <option value="">Select a track</option>
+                                    {textTracks.map(track => (
+                                        <option key={track.id} value={track.id}>
+                                            Text Track {track.index}
+                                        </option>
+                                    ))}
+                                </>
+                            )}
+                        </select>
+                    )}
+
                     <label className="block text-sm font-medium text-black/50">
                         Style Options
                     </label>
@@ -308,16 +376,16 @@ export default function TextToolPanel() {
                             
                             <button
                                 onClick={generateAIStyle}
-                                disabled={isGeneratingStyle || !stylePrompt.trim()}
+                                disabled={isGenerating || !stylePrompt.trim()}
                                 className={`
                                     w-full px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
-                                    ${isGeneratingStyle || !stylePrompt.trim()
+                                    ${isGenerating || !stylePrompt.trim()
                                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                         : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
                                     }
                                 `}
                             >
-                                {isGeneratingStyle ? (
+                                {isGenerating ? (
                                     <div className="flex items-center justify-center gap-2">
                                         <RefreshCw className="w-4 h-4 animate-spin" />
                                         Generating Style...
@@ -376,11 +444,11 @@ export default function TextToolPanel() {
             </div>
                 
                 <button
-                    onClick={handleAddOrUpdateText}
-                    disabled={!text.trim()}
+                    onClick={handleAddText}
+                    disabled={!text.trim() || (!createNewTrack && !selectedTrackId)}
                     className={`
                         w-full px-4 py-3 rounded-lg font-medium transition-all duration-200
-                        ${!text.trim()
+                        ${!text.trim() || (!createNewTrack && !selectedTrackId)
                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                             : 'text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 active:scale-95'
                         }
@@ -388,7 +456,7 @@ export default function TextToolPanel() {
                 >
                     <div className="flex items-center justify-center gap-2">
                         <Plus className="w-4 h-4" />
-                        {selectedClip ? 'Update Text' : 'Add Text to Timeline'}
+                        {createNewTrack ? 'Add Text in New Track' : 'Add Text to Selected Track'}
                     </div>
                 </button>
             </div>
