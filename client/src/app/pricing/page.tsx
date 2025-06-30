@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import HomeNavbar from '@/components/home/HomeNavbar';
+import PieChart from '@/components/ui/PieChart';
 
 interface Plan {
   id: string;
@@ -185,15 +186,16 @@ export default function PricingPage() {
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">AI Credits</h3>
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{currentCredits}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-4 mb-3">
-                <div 
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full transition-all duration-500"
-                  style={{ width: `${creditPercentage}%` }}
+              <div className="flex items-center justify-center mb-4">
+                <PieChart 
+                  used={currentCredits} 
+                  total={maxCredits}
+                  size={140}
+                  strokeWidth={10}
                 />
               </div>
-              <p className="text-sm text-gray-600">of {maxCredits} credits • Resets monthly</p>
+              <p className="text-sm text-gray-600 text-center">{currentCredits}/{maxCredits} credits • Resets monthly</p>
             </div>
 
             {/* Active Subscriptions */}
