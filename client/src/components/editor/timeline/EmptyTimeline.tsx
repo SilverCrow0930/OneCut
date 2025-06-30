@@ -5,6 +5,53 @@ import { useEditor } from '@/contexts/EditorContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { TrackType, ClipType } from '@/types/editor'
 
+// Track index ranges
+const TRACK_RANGES = {
+    text: { start: 1, end: 4 },
+    stickers: { start: 5, end: 8 },
+    video: { start: 9, end: 14 },
+    caption: { start: 15, end: 17 },
+    audio: { start: 18, end: 22 }
+};
+
+function getNextAvailableIndex(tracks: any[], type: string): number {
+    // Get the range for this track type
+    const range = TRACK_RANGES[type as keyof typeof TRACK_RANGES];
+    if (!range) return tracks.length; // Fallback
+
+    // Get all tracks of this type
+    const typeTracks = tracks.filter(t => t.type === type)
+        .map(t => t.index)
+        .sort((a, b) => a - b);
+
+    // Find the first available index in the range
+    for (let i = range.start; i <= range.end; i++) {
+        if (!typeTracks.includes(i)) {
+            return i;
+        }
+    }
+
+    // If no index is available in the range, use the last possible index
+    return range.end;
+}
+
+function shiftTracksForNewTrack(tracks: any[], newIndex: number, executeCommand: any) {
+    // Get all tracks that need to be shifted (tracks with index >= newIndex)
+    const tracksToShift = tracks.filter(t => t.index >= newIndex)
+        .sort((a, b) => b.index - a.index); // Sort in descending order to avoid conflicts
+
+    // Shift each track up by 1
+    for (const track of tracksToShift) {
+        executeCommand({
+            type: 'UPDATE_TRACK',
+            payload: {
+                before: track,
+                after: { ...track, index: track.index + 1 }
+            }
+        });
+    }
+}
+
 export default function EmptyTimeline() {
     const [isDragOver, setIsDragOver] = useState(false)
     const dragCounter = useRef(0)
@@ -58,10 +105,15 @@ export default function EmptyTimeline() {
             }
 
             // Create track
+            const newIndex = getNextAvailableIndex(tracks, trackType);
+
+            // Shift tracks if needed
+            shiftTracksForNewTrack(tracks, newIndex, executeCommand);
+
             const newTrack = {
                 id: uuid(),
                 projectId: projectId,
-                index: trackType === 'audio' ? (tracks?.length ?? 0) : 0,
+                index: newIndex,
                 type: trackType,
                 createdAt: new Date().toISOString(),
             }
@@ -118,10 +170,15 @@ export default function EmptyTimeline() {
 
         // Create track
         const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
+        const newIndex = getNextAvailableIndex(tracks, trackType);
+
+        // Shift tracks if needed
+        shiftTracksForNewTrack(tracks, newIndex, executeCommand);
+
         const newTrack = {
             id: uuid(),
             projectId: projectId,
-            index: trackType === 'audio' ? (tracks?.length ?? 0) : 0,
+            index: newIndex,
             type: trackType,
             createdAt: new Date().toISOString(),
         }

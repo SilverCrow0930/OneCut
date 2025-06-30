@@ -199,7 +199,53 @@ export function dbToClip(r: any): Clip {
     }
 }
 
-// Add asset directly to timeline track (helper for click-to-add functionality)
+// Track index ranges
+const TRACK_RANGES = {
+    text: { start: 1, end: 4 },
+    stickers: { start: 5, end: 8 },
+    video: { start: 9, end: 14 },
+    caption: { start: 15, end: 17 },
+    audio: { start: 18, end: 22 }
+};
+
+function getNextAvailableIndex(tracks: any[], type: string): number {
+    // Get the range for this track type
+    const range = TRACK_RANGES[type as keyof typeof TRACK_RANGES];
+    if (!range) return tracks.length; // Fallback
+
+    // Get all tracks of this type
+    const typeTracks = tracks.filter(t => t.type === type)
+        .map(t => t.index)
+        .sort((a, b) => a - b);
+
+    // Find the first available index in the range
+    for (let i = range.start; i <= range.end; i++) {
+        if (!typeTracks.includes(i)) {
+            return i;
+        }
+    }
+
+    // If no index is available in the range, use the last possible index
+    return range.end;
+}
+
+function shiftTracksForNewTrack(tracks: any[], newIndex: number, executeCommand: any) {
+    // Get all tracks that need to be shifted (tracks with index >= newIndex)
+    const tracksToShift = tracks.filter(t => t.index >= newIndex)
+        .sort((a, b) => b.index - a.index); // Sort in descending order to avoid conflicts
+
+    // Shift each track up by 1
+    for (const track of tracksToShift) {
+        executeCommand({
+            type: 'UPDATE_TRACK',
+            payload: {
+                before: track,
+                after: { ...track, index: track.index + 1 }
+            }
+        });
+    }
+}
+
 export function addAssetToTrack(
     asset: any,
     tracks: any[],
@@ -213,21 +259,19 @@ export function addAssetToTrack(
         startTimeMs?: number
     } = {}
 ) {
-    const { isExternal = false, assetType, trackIndex } = options
-    
-    console.log('Adding asset to track:', { asset, isExternal, assetType, trackIndex })
-    
-    // Determine track type and asset details
-    let trackType: 'audio' | 'video' | 'stickers' = 'video'
-    let duration = 0
+    const { isExternal = false } = options
     let externalAsset = null
-    
+    let trackType: 'video' | 'audio' | 'text' | 'caption' | 'stickers' = 'video'
+    let duration = 0
+    let startTimeMs = options.startTimeMs ?? 0
+
+    // Handle external assets (from Pexels, etc)
     if (isExternal) {
         // Handle external assets (Pexels, Giphy stickers, Freesound audio)
-        if (assetType === 'music' || assetType === 'sound') {
+        if (options.assetType === 'music' || options.assetType === 'sound') {
             trackType = 'audio'
         } else {
-            trackType = assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+            trackType = options.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
         }
         
         // Extract the correct URL based on asset type and source
@@ -236,13 +280,13 @@ export function addAssetToTrack(
         if (asset.isSticker) {
             // Giphy sticker
             mediaUrl = asset.url || asset.images?.original?.url
-        } else if (assetType === 'image') {
+        } else if (options.assetType === 'image') {
             // Pexels image
             mediaUrl = asset.src?.original || asset.src?.large2x || asset.src?.large
-        } else if (assetType === 'video') {
+        } else if (options.assetType === 'video') {
             // Pexels video
             mediaUrl = asset.video_files?.[0]?.link || asset.url
-        } else if (assetType === 'music' || assetType === 'sound') {
+        } else if (options.assetType === 'music' || options.assetType === 'sound') {
             // Freesound audio
             mediaUrl = asset.previews?.['preview-hq-mp3'] || asset.previews?.['preview-lq-mp3'] || asset.download
         }
@@ -254,9 +298,9 @@ export function addAssetToTrack(
         
         // Calculate duration and ensure it's an integer
         let calculatedDuration = 0
-        if (assetType === 'video') {
+        if (options.assetType === 'video') {
             calculatedDuration = 10000
-        } else if (assetType === 'music' || assetType === 'sound') {
+        } else if (options.assetType === 'music' || options.assetType === 'sound') {
             calculatedDuration = asset.duration ? Math.round(asset.duration * 1000) : 30000
         } else if (asset.isSticker || mediaUrl.includes('.gif')) {
             calculatedDuration = 3000
@@ -268,9 +312,9 @@ export function addAssetToTrack(
         externalAsset = {
             id: `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             url: mediaUrl,
-            name: asset.title || asset.name || asset.alt || `External ${assetType}`,
-            mime_type: assetType === 'video' ? 'video/mp4' : 
-                      assetType === 'music' || assetType === 'sound' ? 'audio/mpeg' :
+            name: asset.title || asset.name || asset.alt || `External ${options.assetType}`,
+            mime_type: options.assetType === 'video' ? 'video/mp4' : 
+                      options.assetType === 'music' || options.assetType === 'sound' ? 'audio/mpeg' :
                       (asset.isSticker || mediaUrl.includes('.gif')) ? 'image/gif' : 'image/jpeg',
             duration: calculatedDuration,
             isExternal: true,
@@ -296,79 +340,37 @@ export function addAssetToTrack(
     
     // Find the target track or create a new one
     let targetTrack: any = null
-    let targetTrackIndex = trackIndex ?? tracks.length // Default to end
-    let startTimeMs = options.startTimeMs ?? 0
-    
-    // Special handling for stickers - use stickers track type
+    let targetTrackIndex: number
+
+    // Special handling for stickers
     if (isExternal && asset.isSticker) {
+        trackType = 'stickers'
         // Try to find an existing stickers track
-        targetTrack = tracks.find(t => t.type === 'stickers');
+        targetTrack = tracks.find(t => t.type === 'stickers')
+        targetTrackIndex = targetTrack ? targetTrack.index : getNextAvailableIndex(tracks, 'stickers')
         
         if (!targetTrack) {
-            // If no stickers track exists, create one at index 0 (top)
-            targetTrackIndex = 0;
-            // Shift all tracks down by 1
-            for (const track of tracks) {
-                executeCommand({
-                    type: 'UPDATE_TRACK',
-                    payload: { 
-                        before: track,
-                        after: { ...track, index: track.index + 1 }
-                    }
-                });
-            }
-            targetTrack = null; // Force creation of new track
-            trackType = 'stickers'; // Set track type to stickers
-        } else {
-            targetTrackIndex = targetTrack.index;
+            shiftTracksForNewTrack(tracks, targetTrackIndex, executeCommand)
         }
     } else {
-        // Special handling for audio tracks - always place at the bottom
-        if (trackType === 'audio') {
-            targetTrackIndex = tracks.length; // Add at the end (bottom)
-            targetTrack = null; // Force creation of new track
+        // For all other track types
+        if (options.trackIndex !== undefined) {
+            // If specific track index provided, use it
+            targetTrack = tracks.find(t => t.index === options.trackIndex)
+            targetTrackIndex = options.trackIndex
         } else {
-            // For non-audio tracks, add at the top (index 0) and shift others down
-            if (trackIndex === undefined) {
-                // Try to find an existing track of the same type
-                targetTrack = tracks.find(t => t.type === trackType)
-                if (targetTrack) {
-                    targetTrackIndex = targetTrack.index
-                } else {
-                    // Create at top and shift everything down
-                    targetTrackIndex = 0;
-                    // Shift all tracks down by 1
-                    for (const track of tracks) {
-                        executeCommand({
-                            type: 'UPDATE_TRACK',
-                            payload: { 
-                                before: track,
-                                after: { ...track, index: track.index + 1 }
-                            }
-                        });
-                    }
-                }
-            } else if (trackIndex < tracks.length) {
-                targetTrack = tracks[trackIndex]
-                targetTrackIndex = trackIndex
-            }
-        }
-        
-        // Calculate start time - place at the end of existing content on the track
-        if (options.startTimeMs === undefined && targetTrack) {
-            // Find the latest end time for clips on this track to prevent overlap
-            const trackClips = clips.filter(clip => clip.trackId === targetTrack.id)
-            if (trackClips.length > 0) {
-                const latestEndTime = Math.max(...trackClips.map(clip => clip.timelineEndMs))
-                startTimeMs = latestEndTime // Place new clip after the last one
-                console.log('Placing clip after existing content at:', startTimeMs)
+            // Try to find an existing track of the same type
+            targetTrack = tracks.find(t => t.type === trackType)
+            if (targetTrack) {
+                targetTrackIndex = targetTrack.index
             } else {
-                startTimeMs = 0 // First clip on track starts at 0
-                console.log('First clip on track, starting at 0')
+                // Create new track at the next available index for this type
+                targetTrackIndex = getNextAvailableIndex(tracks, trackType)
+                shiftTracksForNewTrack(tracks, targetTrackIndex, executeCommand)
             }
         }
     }
-    
+
     // Create new track if needed
     if (!targetTrack) {
         targetTrack = {
@@ -385,9 +387,19 @@ export function addAssetToTrack(
             type: 'ADD_TRACK',
             payload: { track: targetTrack }
         })
-        
-        // For new tracks, start at 0 since there are no existing clips
-        startTimeMs = 0
+    }
+
+    // Calculate start time - place at the end of existing content on the track
+    if (options.startTimeMs === undefined && targetTrack) {
+        const trackClips = clips.filter(clip => clip.trackId === targetTrack.id)
+        if (trackClips.length > 0) {
+            const latestEndTime = Math.max(...trackClips.map(clip => clip.timelineEndMs))
+            startTimeMs = latestEndTime
+            console.log('Placing clip after existing content at:', startTimeMs)
+        } else {
+            startTimeMs = 0
+            console.log('First clip on track, starting at 0')
+        }
     }
     
     // Final safety check - ensure duration is valid and integer
@@ -415,7 +427,7 @@ export function addAssetToTrack(
         speed: 1,
         properties: isExternal ? {
             externalAsset: externalAsset
-        } : (asset.mime_type.startsWith('image/') ? {
+        } : (asset.mime_type?.startsWith('image/') ? {
             crop: {
                 width: 320,  // Default 16:9 aspect ratio
                 height: 180,
