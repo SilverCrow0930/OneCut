@@ -236,38 +236,86 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
             // Sort all clips by their start time to process in order
             const sortedClips = [...trackClips].sort((a, b) => a.timelineStartMs - b.timelineStartMs)
             
-            // Process each clip to handle overlaps
-            for (const trackClip of sortedClips) {
-                const currentPos = clipPositions.get(trackClip.id)!
-                const movingClipPos = clipPositions.get(clip.id)!
+            // Check each clip to see if it needs to be shifted
+            for (const otherClip of sortedClips) {
+                const currentPos = clipPositions.get(otherClip.id)!
+                const ourPos = clipPositions.get(clip.id)!
                 
-                // Calculate overlap amount
-                const overlapStartMs = Math.max(movingClipPos.startMs, currentPos.startMs)
-                const overlapEndMs = Math.min(movingClipPos.endMs, currentPos.endMs)
-                const overlapMs = overlapEndMs - overlapStartMs
-                const minOverlapMs = durationMs * 0.3 // Same threshold as in collision check
-
-                // Only shift if overlap is significant
-                if (overlapMs > minOverlapMs) {
-                    // This clip needs to be shifted
-                    const shiftAmount = movingClipPos.endMs - currentPos.startMs
-                    const newStart = currentPos.startMs + shiftAmount
-                    const newEnd = currentPos.endMs + shiftAmount
-                    
-                    clipPositions.set(trackClip.id, { startMs: newStart, endMs: newEnd })
-                    
-                    clipsToUpdate.push({
-                        before: trackClip,
-                        after: {
-                            ...trackClip,
-                            timelineStartMs: newStart,
-                            timelineEndMs: newEnd
+                // If our clip overlaps with this clip
+                if (ourPos.startMs < currentPos.endMs && ourPos.endMs > currentPos.startMs) {
+                    // Case 1: We're inserting before this clip - shift it forward
+                    if (ourPos.startMs <= currentPos.startMs) {
+                        const shiftAmount = ourPos.endMs - currentPos.startMs
+                        const newStartMs = currentPos.startMs + shiftAmount
+                        const newEndMs = currentPos.endMs + shiftAmount
+                        
+                        // Update the position map
+                        clipPositions.set(otherClip.id, { startMs: newStartMs, endMs: newEndMs })
+                        
+                        // Add to update list
+                        clipsToUpdate.push({
+                            before: otherClip,
+                            after: {
+                                ...otherClip,
+                                timelineStartMs: newStartMs,
+                                timelineEndMs: newEndMs
+                            }
+                        })
+                        
+                        // Now check if this shifted clip overlaps with any clips that come after it
+                        const laterClips = sortedClips.filter(c => c.timelineStartMs > otherClip.timelineStartMs)
+                        for (const laterClip of laterClips) {
+                            const laterPos = clipPositions.get(laterClip.id)!
+                            
+                            // If the shifted clip now overlaps with a later clip
+                            if (newStartMs < laterPos.endMs && newEndMs > laterPos.startMs) {
+                                const cascadeShiftAmount = newEndMs - laterPos.startMs
+                                if (cascadeShiftAmount > 0) {
+                                    const cascadeNewStartMs = laterPos.startMs + cascadeShiftAmount
+                                    const cascadeNewEndMs = laterPos.endMs + cascadeShiftAmount
+                                    
+                                    // Update position map
+                                    clipPositions.set(laterClip.id, { 
+                                        startMs: cascadeNewStartMs, 
+                                        endMs: cascadeNewEndMs 
+                                    })
+                                    
+                                    // Add to update list (or update existing entry)
+                                    const existingIndex = clipsToUpdate.findIndex(u => u.before.id === laterClip.id)
+                                    if (existingIndex >= 0) {
+                                        clipsToUpdate[existingIndex].after = {
+                                            ...laterClip,
+                                            timelineStartMs: cascadeNewStartMs,
+                                            timelineEndMs: cascadeNewEndMs
+                                        }
+                                    } else {
+                                        clipsToUpdate.push({
+                                            before: laterClip,
+                                            after: {
+                                                ...laterClip,
+                                                timelineStartMs: cascadeNewStartMs,
+                                                timelineEndMs: cascadeNewEndMs
+                                            }
+                                        })
+                                    }
+                                }
+                            }
                         }
-                    })
+                    }
+                    // Case 2: We're inserting in the middle of this clip - snap to its end
+                    else if (ourPos.startMs > currentPos.startMs && ourPos.startMs < currentPos.endMs) {
+                        finalNewStartMs = currentPos.endMs
+                        // Update our position in the map
+                        clipPositions.set(clip.id, { 
+                            startMs: finalNewStartMs, 
+                            endMs: finalNewStartMs + durationMs 
+                        })
+                    }
                 }
             }
 
-            const commands: any[] = []
+            // Create the commands array
+            const commands = []
 
             // Add the main clip move command
             commands.push({
