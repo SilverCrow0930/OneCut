@@ -502,23 +502,16 @@ export default function Timeline() {
     }, [tracks, clips, projectId, executeCommand, assets])
 
     const handleTimelineClick = (e: React.MouseEvent) => {
-        if (!containerRef.current) return;
+        const timelineRect = containerRef.current?.getBoundingClientRect()
+        if (!timelineRect) return
 
-        // Get the target element
-        const target = e.target as HTMLElement;
+        // Only allow moving the playhead if clicking in the upper part of the timeline
+        const upperPartHeight = 50 // Example height for the upper part
+        if (e.clientY - timelineRect.top > upperPartHeight) return
 
-        // If the click is on a clip or its children, don't handle it
-        if (target.closest('[data-clip-layer]')) return;
-
-        // If the click is on the ruler or playhead, don't handle it
-        if (target.closest('.ruler') || target.closest('.playhead')) return;
-
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left + containerRef.current.scrollLeft;
-        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs)); // Constrain between 0 and max
-        setCurrentTime(newTimeMs / 1000);
-        setSelectedClipId(null);
-    };
+        const newPlayheadPosition = e.clientX - timelineRect.left
+        setCurrentTime(newPlayheadPosition / timeScale)
+    }
 
     const handlePlayheadDrag = (e: React.MouseEvent) => {
         if (!containerRef.current) return

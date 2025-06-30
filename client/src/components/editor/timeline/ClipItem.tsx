@@ -707,6 +707,11 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
     const isMultiSelectionActive = selectedClipIds.length > 1
     const isPrimarySelection = selected && !isMultiSelectionActive
 
+    const selectionStyle = isPrimarySelection ? {
+        border: '2px solid rgba(59, 130, 246, 0.8)', // More visible blue border
+        boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)' // Subtle glow effect
+    } : {}
+
     return (
         <>
             <div
@@ -730,6 +735,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     left: isResizing ? `${currentLeft}px` : `${left}px`,
                     width: isResizing ? `${currentWidth}px` : `${Math.max(width, 20)}px`,
                     transform: dragState.isDragging ? 'translateY(-1px)' : 'translateY(0)',
+                    ...selectionStyle
                 }}
                 onClick={onClick}
                 onContextMenu={handleContextMenu}

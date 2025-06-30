@@ -348,33 +348,6 @@ export default function TextToolPanel() {
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <label className="block text-sm font-medium text-black/50">
-                        Timeline Options
-                    </label>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-600">Duration</label>
-                            <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="3">3 seconds</option>
-                                <option value="5" selected>5 seconds</option>
-                                <option value="10">10 seconds</option>
-                                <option value="custom">Custom</option>
-                            </select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-600">Position</label>
-                            <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="start">Start of timeline</option>
-                                <option value="cursor">At cursor</option>
-                                <option value="end">End of timeline</option>
-                            </select>
-                        </div>
-                    </div>
-            </div>
-                
                 <button
                     onClick={handleAddOrUpdateText}
                     disabled={!text.trim()}
