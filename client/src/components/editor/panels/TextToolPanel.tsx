@@ -255,7 +255,7 @@ export default function TextToolPanel() {
                         placeholder="Enter your text here"
                         className="
                             w-full px-4 py-3 text-sm border border-gray-200 rounded-lg
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent 
                             transition-all duration-200 placeholder:text-black/50 overflow-hidden
                             resize-none min-h-[80px]
                         "
@@ -289,21 +289,21 @@ export default function TextToolPanel() {
                             />
                             <span className="text-sm font-medium">AI Style</span>
                         </label>
-                    </div>
-
+                        </div>
+                        
                     {useAIStyle ? (
                         <div className="space-y-3">
                             <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700">
                                     Describe your desired style
                                 </label>
-                                <textarea
-                                    value={stylePrompt}
-                                    onChange={(e) => setStylePrompt(e.target.value)}
-                                    placeholder="Bold neon cyberpunk style with glowing edges or Elegant gold text with shadow for luxury brand"
-                                    className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    rows={3}
-                                />
+                            <textarea
+                                value={stylePrompt}
+                                onChange={(e) => setStylePrompt(e.target.value)}
+                                placeholder="Bold neon cyberpunk style with glowing edges or Elegant gold text with shadow for luxury brand"
+                                className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                rows={3}
+                            />
                             </div>
                             
                             <button
@@ -329,15 +329,15 @@ export default function TextToolPanel() {
                                     </div>
                                 )}
                             </button>
-                            
+
                             {styleError && (
-                                <p className="text-sm text-red-600">{styleError}</p>
+                                    <p className="text-sm text-red-600">{styleError}</p>
                             )}
                         </div>
                     ) : (
                         <TextStyleSelector selectedStyleIdx={selectedStyleIdx} setSelectedStyleIdx={setSelectedStyleIdx} />
-                    )}
-                    
+                )}
+
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">Preview</label>
                         <div className="bg-gray-900 rounded-lg p-4 min-h-[60px] flex items-center justify-center">
@@ -373,8 +373,8 @@ export default function TextToolPanel() {
                             </select>
                         </div>
                     </div>
-                </div>
-
+            </div>
+                
                 <button
                     onClick={handleAddOrUpdateText}
                     disabled={!text.trim()}

@@ -162,15 +162,15 @@ export default function PricingPage() {
   const creditPlans = plans.filter(p => p.type === 'credits');
 
     return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <HomeNavbar />
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+            <HomeNavbar />
 
       <main className="max-w-[85%] mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16">
-        {/* Header */}
+                {/* Header */}
         <div className="mb-16 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             {currentSubscriptions.filter(s => s.status === 'active').length > 0 ? 'Current Plans' : 'Pricing'}
-          </h1>
+                    </h1>
           <p className="text-base text-gray-600 max-w-3xl mx-auto">
             {currentSubscriptions.filter(s => s.status === 'active').length > 0 
               ? 'Manage your active subscriptions and upgrade your plans as needed.'
@@ -403,7 +403,7 @@ export default function PricingPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
-                        </div>
+                                </div>
                         
                         <div className="flex items-center justify-between">
                           {item.plan.type === 'foundation' ? (
@@ -429,7 +429,7 @@ export default function PricingPage() {
                             ${(item.plan.price * item.quantity).toFixed(2)}
                           </div>
                         </div>
-                      </div>
+                        </div>
                     ))}
                   </div>
 
@@ -461,7 +461,7 @@ export default function PricingPage() {
               <p className="text-gray-600">
                 Credits reset monthly. Use them for AI features like voiceover, generation, and smart editing.
               </p>
-            </div>
+                </div>
             
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
               <h3 className="font-semibold text-gray-900 mb-4">Can I cancel anytime?</h3>
@@ -469,9 +469,9 @@ export default function PricingPage() {
                 Yes! Cancel from your account or this page. No contracts, no hassle.
               </p>
             </div>
-          </div>
+            </div>
         </div>
       </main>
-    </div>
-  );
+        </div>
+    );
 } 

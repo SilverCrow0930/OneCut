@@ -46,7 +46,7 @@ export default function HomeNavbar() {
 
     const handleSignIn = () => {
         signIn()
-        router.push('/creation')
+        router.push('/projects')
     }
 
     const handleSignOut = () => {
@@ -77,6 +77,17 @@ export default function HomeNavbar() {
                                 Home
                                 {pathname === '/' && (
                                     <div className="absolute -bottom-1 -left-1 -right-1 h-0.5 bg-blue-400 rounded-full"></div>
+                                )}
+                            </a>
+                            <a 
+                                href="/projects" 
+                                className={`text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium relative ${
+                                    pathname === '/projects' ? 'text-gray-900' : ''
+                                }`}
+                            >
+                                Projects
+                                {pathname === '/projects' && (
+                                    <div className="absolute -bottom-1 -left-2 -right-2 h-0.5 bg-blue-300 rounded-full"></div>
                                 )}
                             </a>
                             <a 
