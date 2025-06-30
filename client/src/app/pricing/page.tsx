@@ -354,11 +354,11 @@ export default function PricingPage() {
                         {plan.credits} credits
                       </div>
                       <div className="text-sm text-gray-500">per month</div>
-                            </div>
+                    </div>
 
                     <button
                       onClick={() => addToCart(plan)}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
                     >
                       Add to Cart
                     </button>
