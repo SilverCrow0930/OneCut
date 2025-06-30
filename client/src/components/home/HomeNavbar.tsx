@@ -3,7 +3,7 @@ import LemonaLogo from '../common/LemonaLogo';
 import LogoutButton from '../ui/buttons/LogoutButton';
 import AuthButton from '../ui/buttons/AuthButton';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 declare global {
     interface Window {
@@ -14,6 +14,7 @@ declare global {
 export default function HomeNavbar() {
     const { user, profile, signIn, signOut } = useAuth()
     const router = useRouter()
+    const pathname = usePathname()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -67,11 +68,27 @@ export default function HomeNavbar() {
                     <div className="flex items-center space-x-8">
                         {/* Navigation Links */}
                         <div className="hidden md:flex items-center space-x-8">
-                            <a href="/" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
+                            <a 
+                                href="/" 
+                                className={`text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium relative ${
+                                    pathname === '/' ? 'text-gray-900' : ''
+                                }`}
+                            >
                                 Home
+                                {pathname === '/' && (
+                                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+                                )}
                             </a>
-                            <a href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium">
+                            <a 
+                                href="/pricing" 
+                                className={`text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium relative ${
+                                    pathname === '/pricing' ? 'text-gray-900' : ''
+                                }`}
+                            >
                                 Pricing
+                                {pathname === '/pricing' && (
+                                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+                                )}
                             </a>
                             <a 
                                 href="https://x.com/lemona_labs" 
