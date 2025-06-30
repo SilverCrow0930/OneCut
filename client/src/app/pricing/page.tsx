@@ -169,13 +169,13 @@ export default function PricingPage() {
         <div className="mb-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
             {currentSubscriptions.filter(s => s.status === 'active').length > 0 ? 'Current Plans' : 'Pricing'}
-          </h1>
+                    </h1>
           <p className="text-gray-600 max-w-2xl">
             {currentSubscriptions.filter(s => s.status === 'active').length > 0 
               ? 'Manage your active subscriptions and upgrade your plans as needed.'
               : 'Start with our complete video editor, then add AI credits as you need them.'
             }
-          </p>
+                    </p>
                 </div>
 
         {/* Current Status - Only show if user has active subscriptions */}
@@ -358,7 +358,7 @@ export default function PricingPage() {
 
                     <button
                       onClick={() => addToCart(plan)}
-                      className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
                     >
                       Add to Cart
                     </button>
