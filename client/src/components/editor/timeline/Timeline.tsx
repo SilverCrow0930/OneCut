@@ -339,13 +339,17 @@ export default function Timeline() {
             const y = e.clientY - rect.top
             const rowHeight = containerRef.current.firstElementChild?.clientHeight ?? 68
             const rawIndex = Math.floor(y / rowHeight)
-            const newIndex = Math.max(0, Math.min(tracks.length, rawIndex))
+            const trackType: TrackType = payload.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
+
+            // Get the next available index for this track type
+            const newIndex = getNextAvailableIndex(tracks, trackType);
+
+            // Shift tracks if needed
+            shiftTracksForNewTrack(tracks, newIndex, executeCommand);
 
             console.log('Creating external track at index:', newIndex, 'time:', startMs)
 
             // 4) CREATE TRACK
-            const trackType: TrackType = payload.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
-
             const newTrack = {
                 id: uuid(),
                 projectId: projectId!,
@@ -433,21 +437,11 @@ export default function Timeline() {
         const rawIndex = Math.floor(y / rowHeight)
         const trackType: TrackType = asset.mime_type.startsWith('audio/') ? 'audio' : 'video'
 
-        // For audio tracks, always place at the bottom, for others place at the top
-        let newIndex = trackType === 'audio' ? tracks.length : 0;
+        // Get the next available index for this track type
+        const newIndex = getNextAvailableIndex(tracks, trackType);
 
-        // For non-audio tracks, shift all tracks down
-        if (trackType !== 'audio') {
-            for (const track of tracks) {
-                executeCommand({
-                    type: 'UPDATE_TRACK',
-                    payload: { 
-                        before: track,
-                        after: { ...track, index: track.index + 1 }
-                    }
-                });
-            }
-        }
+        // Shift tracks if needed
+        shiftTracksForNewTrack(tracks, newIndex, executeCommand);
 
         const newTrack = {
             id: uuid(),

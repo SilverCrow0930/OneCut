@@ -22,6 +22,53 @@ export interface CommandValidation {
   errors: string[]
 }
 
+// Track index ranges
+const TRACK_RANGES = {
+    text: { start: 1, end: 4 },
+    stickers: { start: 5, end: 8 },
+    video: { start: 9, end: 14 },
+    caption: { start: 15, end: 17 },
+    audio: { start: 18, end: 22 }
+};
+
+function getNextAvailableIndex(tracks: any[], type: string): number {
+    // Get the range for this track type
+    const range = TRACK_RANGES[type as keyof typeof TRACK_RANGES];
+    if (!range) return tracks.length; // Fallback
+
+    // Get all tracks of this type
+    const typeTracks = tracks.filter(t => t.type === type)
+        .map(t => t.index)
+        .sort((a, b) => a - b);
+
+    // Find the first available index in the range
+    for (let i = range.start; i <= range.end; i++) {
+        if (!typeTracks.includes(i)) {
+            return i;
+        }
+    }
+
+    // If no index is available in the range, use the last possible index
+    return range.end;
+}
+
+function shiftTracksForNewTrack(tracks: any[], newIndex: number, executeCommand: any) {
+    // Get all tracks that need to be shifted (tracks with index >= newIndex)
+    const tracksToShift = tracks.filter(t => t.index >= newIndex)
+        .sort((a, b) => b.index - a.index); // Sort in descending order to avoid conflicts
+
+    // Shift each track up by 1
+    for (const track of tracksToShift) {
+        executeCommand({
+            type: 'UPDATE_TRACK',
+            payload: {
+                before: track,
+                after: { ...track, index: track.index + 1 }
+            }
+        });
+    }
+}
+
 export class CommandExecutor {
   private projectId: string
   private executeCommand: (cmd: Command) => void
@@ -533,7 +580,7 @@ export class CommandExecutor {
       voice = 'default',
       speed = 1.0,
       timelineStartMs = 0,
-      trackIndex = 0
+      trackIndex
     } = payload
 
     // Estimate duration based on script length (rough calculation)
@@ -541,14 +588,31 @@ export class CommandExecutor {
     const timelineEndMs = timelineStartMs + estimatedDuration
 
     // Find or create audio track for voiceover
-    let audioTrack = this.tracks.find(t => t.type === 'audio' && t.index === trackIndex)
+    let audioTrack = trackIndex !== undefined ? 
+        this.tracks.find(t => t.type === 'audio' && t.index === trackIndex) :
+        null;
     const commands: Command[] = []
 
     if (!audioTrack) {
+      // Get next available index for audio track
+      const newIndex = getNextAvailableIndex(this.tracks, 'audio');
+
+      // Shift tracks if needed
+      const tracksToShift = this.tracks.filter(t => t.index >= newIndex);
+      commands.push(
+        ...tracksToShift.map(track => ({
+          type: 'UPDATE_TRACK' as const,
+          payload: {
+            before: track,
+            after: { ...track, index: track.index + 1 }
+          }
+        }))
+      );
+
       audioTrack = {
         id: uuid(),
         projectId: this.projectId,
-        index: trackIndex,
+        index: newIndex,
         type: 'audio' as TrackType,
         createdAt: new Date().toISOString(),
       }
@@ -559,7 +623,7 @@ export class CommandExecutor {
       })
     }
 
-    // Create voiceover clip (placeholder - actual implementation would need API call)
+    // Create voiceover clip
     const voiceoverClip: Clip = {
       id: uuid(),
       trackId: audioTrack.id,
@@ -683,18 +747,35 @@ export class CommandExecutor {
       duration = 30000,
       volume = 0.3,
       timelineStartMs = 0,
-      trackIndex = 3
+      trackIndex
     } = payload
 
     // Find or create audio track for music
-    let musicTrack = this.tracks.find(t => t.type === 'audio' && t.index === trackIndex)
+    let musicTrack = trackIndex !== undefined ? 
+        this.tracks.find(t => t.type === 'audio' && t.index === trackIndex) :
+        null;
     const commands: Command[] = []
 
     if (!musicTrack) {
+      // Get next available index for audio track
+      const newIndex = getNextAvailableIndex(this.tracks, 'audio');
+
+      // Shift tracks if needed
+      const tracksToShift = this.tracks.filter(t => t.index >= newIndex);
+      commands.push(
+        ...tracksToShift.map(track => ({
+          type: 'UPDATE_TRACK' as const,
+          payload: {
+            before: track,
+            after: { ...track, index: track.index + 1 }
+          }
+        }))
+      );
+
       musicTrack = {
         id: uuid(),
         projectId: this.projectId,
-        index: trackIndex,
+        index: newIndex,
         type: 'audio' as TrackType,
         createdAt: new Date().toISOString(),
       }
