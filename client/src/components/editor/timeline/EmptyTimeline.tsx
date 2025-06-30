@@ -9,7 +9,7 @@ export default function EmptyTimeline() {
     const [isDragOver, setIsDragOver] = useState(false)
     const dragCounter = useRef(0)
     const params = useParams()
-    const { executeCommand } = useEditor()
+    const { executeCommand, tracks } = useEditor()
     const { assets } = useAssets()
 
     // Normalize projectId to a single string
@@ -100,7 +100,7 @@ export default function EmptyTimeline() {
             const newTrack = {
                 id: uuid(),
                 projectId: projectId!,
-                index: 0,
+                index: tracks.length, // Add at bottom for consistency
                 type: trackType,
                 createdAt: new Date().toISOString(),
             }
@@ -165,7 +165,7 @@ export default function EmptyTimeline() {
         const newTrack = {
             id: uuid(),
             projectId: projectId!,
-            index: 0,
+            index: tracks.length, // Add at bottom for consistency
             type: trackType,
             createdAt: new Date().toISOString(),
         }

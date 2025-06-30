@@ -296,18 +296,14 @@ export function addAssetToTrack(
     
     // Find the target track or create a new one
     let targetTrack: any = null
-    let targetTrackIndex = trackIndex ?? tracks.length // Default to end
+    let targetTrackIndex = trackIndex ?? tracks.length // Default to end (bottom)
     
-    // If no specific track index provided, try to find an existing track of the same type
-    if (trackIndex === undefined) {
-        const existingTrack = tracks.find(t => t.type === trackType)
-        if (existingTrack) {
-            targetTrack = existingTrack
-            targetTrackIndex = existingTrack.index
-        }
-    } else if (trackIndex < tracks.length) {
+    // If specific track index provided, use that track
+    if (trackIndex !== undefined && trackIndex < tracks.length) {
         targetTrack = tracks[trackIndex]
     }
+    // Otherwise, always create a new track at the bottom for better UX
+    // This ensures new assets get their own track instead of reusing existing ones
     
     // Calculate start time - place at the end of existing content on the track
     let startTimeMs = options.startTimeMs ?? 0
