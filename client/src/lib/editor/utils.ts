@@ -218,7 +218,7 @@ export function addAssetToTrack(
     console.log('Adding asset to track:', { asset, isExternal, assetType, trackIndex })
     
     // Determine track type and asset details
-    let trackType: 'audio' | 'video' = 'video'
+    let trackType: 'audio' | 'video' | 'stickers' = 'video'
     let duration = 0
     let externalAsset = null
     
@@ -299,28 +299,19 @@ export function addAssetToTrack(
     let targetTrackIndex = trackIndex ?? tracks.length // Default to end
     let startTimeMs = options.startTimeMs ?? 0
     
-    // Special handling for stickers - always create a new track above the video track
+    // Special handling for stickers - use stickers track type
     if (isExternal && asset.isSticker) {
-        // Find the highest video track index
-        const videoTracks = tracks.filter(t => t.type === 'video');
-        const highestVideoTrackIndex = videoTracks.length > 0 
-            ? Math.max(...videoTracks.map(t => t.index))
-            : -1;
+        // Try to find an existing stickers track
+        targetTrack = tracks.find(t => t.type === 'stickers');
         
-        // Place sticker track above the highest video track
-        targetTrackIndex = highestVideoTrackIndex + 1;
-        
-        // Shift all tracks above this index up by 1
-        const tracksToShift = tracks.filter(t => t.index >= targetTrackIndex);
-        for (const track of tracksToShift) {
-            executeCommand({
-                type: 'UPDATE_TRACK',
-                payload: { track: { ...track, index: track.index + 1 } }
-            });
+        if (!targetTrack) {
+            // If no stickers track exists, create one at the current index
+            targetTrackIndex = tracks.length; // Add at the end
+            targetTrack = null; // Force creation of new track
+            trackType = 'stickers'; // Set track type to stickers
+        } else {
+            targetTrackIndex = targetTrack.index;
         }
-        
-        // Create new track for sticker
-        targetTrack = null; // Force creation of new track
     } else {
         // If no specific track index provided, try to find an existing track of the same type
         if (trackIndex === undefined) {
