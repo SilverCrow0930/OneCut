@@ -328,6 +328,34 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         const deltaX = e.clientX - resizeStartX
         const deltaMs = Math.round(deltaX / timeScale)
 
+        // For text and caption clips, allow more flexible resizing
+        if (isText || isCaption) {
+            if (resizeType === 'start') {
+                // Calculate new start time with constraints
+                const minStartMs = 0 // Can't go before timeline start
+                const maxStartMs = clip.timelineEndMs - 1000 // Minimum 1s duration for text
+
+                let newStartMs = resizeStartMs + deltaMs
+                newStartMs = Math.max(minStartMs, Math.min(newStartMs, maxStartMs))
+
+                // Update visual position and width directly
+                setCurrentLeft(newStartMs * timeScale)
+                setCurrentWidth((clip.timelineEndMs - newStartMs) * timeScale)
+            } else {
+                // Calculate new end time with constraints
+                const minEndMs = clip.timelineStartMs + 1000 // Minimum 1s duration for text
+                const maxEndMs = clip.timelineStartMs + 300000 // Max 5 minutes for text clips
+
+                let newEndMs = resizeStartMs + deltaMs
+                newEndMs = Math.max(minEndMs, Math.min(newEndMs, maxEndMs))
+
+                // Update visual width directly
+                setCurrentWidth((newEndMs - clip.timelineStartMs) * timeScale)
+            }
+            return
+        }
+
+        // For media clips (video, audio)
         if (resizeType === 'start') {
             // Calculate new start time with constraints
             const minStartMs = 0 // Can't go before timeline start
@@ -369,55 +397,98 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         const deltaX = e.clientX - resizeStartX
         const deltaMs = Math.round(deltaX / timeScale)
 
-        if (resizeType === 'start') {
-            const minStartMs = 0
-            const maxStartMs = clip.timelineEndMs - 100
+        // For text and caption clips
+        if (isText || isCaption) {
+            if (resizeType === 'start') {
+                const minStartMs = 0
+                const maxStartMs = clip.timelineEndMs - 1000 // Minimum 1s duration for text
 
-            let newStartMs = resizeStartMs + deltaMs
-            if (clip.sourceStartMs === 0) {
-                const timelineRatio = (newStartMs - clip.timelineStartMs) / (clip.timelineEndMs - clip.timelineStartMs)
-                const sourceDuration = clip.sourceEndMs - clip.sourceStartMs
-                const newSourceStartMs = Math.round(clip.sourceStartMs + (sourceDuration * timelineRatio))
-                if (newSourceStartMs < clip.sourceStartMs) {
-                    newStartMs = clip.timelineStartMs
-                }
+                let newStartMs = resizeStartMs + deltaMs
+                newStartMs = Math.max(minStartMs, Math.min(newStartMs, maxStartMs))
+
+                executeCommand({
+                    type: 'UPDATE_CLIP',
+                    payload: {
+                        before: clip,
+                        after: {
+                            ...clip,
+                            timelineStartMs: newStartMs,
+                            sourceStartMs: 0,
+                            sourceEndMs: clip.timelineEndMs - newStartMs
+                        }
+                    }
+                })
+            } else {
+                const minEndMs = clip.timelineStartMs + 1000 // Minimum 1s duration for text
+                const maxEndMs = clip.timelineStartMs + 300000 // Max 5 minutes
+
+                let newEndMs = resizeStartMs + deltaMs
+                newEndMs = Math.max(minEndMs, Math.min(newEndMs, maxEndMs))
+
+                executeCommand({
+                    type: 'UPDATE_CLIP',
+                    payload: {
+                        before: clip,
+                        after: {
+                            ...clip,
+                            timelineEndMs: newEndMs,
+                            sourceEndMs: newEndMs - clip.timelineStartMs
+                        }
+                    }
+                })
             }
-
-            newStartMs = Math.max(minStartMs, Math.min(newStartMs, maxStartMs))
-
-            const newSourceStartMs = Math.round(clip.sourceStartMs + ((newStartMs - clip.timelineStartMs) / (clip.timelineEndMs - clip.timelineStartMs)) * (clip.sourceEndMs - clip.sourceStartMs))
-
-            executeCommand({
-                type: 'UPDATE_CLIP',
-                payload: {
-                    before: clip,
-                    after: {
-                        ...clip,
-                        timelineStartMs: newStartMs,
-                        sourceStartMs: Math.max(0, newSourceStartMs)
-                    }
-                }
-            })
         } else {
-            const minEndMs = clip.timelineStartMs + 100
-            const maxEndMs = clip.timelineStartMs + (assetDuration - clip.sourceStartMs)
+            // For media clips
+            if (resizeType === 'start') {
+                const minStartMs = 0
+                const maxStartMs = clip.timelineEndMs - 100
 
-            let newEndMs = resizeStartMs + deltaMs
-            newEndMs = Math.max(minEndMs, Math.min(newEndMs, maxEndMs))
-
-            const newSourceEndMs = Math.round(clip.sourceStartMs + (newEndMs - clip.timelineStartMs))
-
-            executeCommand({
-                type: 'UPDATE_CLIP',
-                payload: {
-                    before: clip,
-                    after: {
-                        ...clip,
-                        timelineEndMs: newEndMs,
-                        sourceEndMs: Math.min(assetDuration, newSourceEndMs)
+                let newStartMs = resizeStartMs + deltaMs
+                if (clip.sourceStartMs === 0) {
+                    const timelineRatio = (newStartMs - clip.timelineStartMs) / (clip.timelineEndMs - clip.timelineStartMs)
+                    const sourceDuration = clip.sourceEndMs - clip.sourceStartMs
+                    const newSourceStartMs = Math.round(clip.sourceStartMs + (sourceDuration * timelineRatio))
+                    if (newSourceStartMs < clip.sourceStartMs) {
+                        newStartMs = clip.timelineStartMs
                     }
                 }
-            })
+
+                newStartMs = Math.max(minStartMs, Math.min(newStartMs, maxStartMs))
+
+                const newSourceStartMs = Math.round(clip.sourceStartMs + ((newStartMs - clip.timelineStartMs) / (clip.timelineEndMs - clip.timelineStartMs)) * (clip.sourceEndMs - clip.sourceStartMs))
+
+                executeCommand({
+                    type: 'UPDATE_CLIP',
+                    payload: {
+                        before: clip,
+                        after: {
+                            ...clip,
+                            timelineStartMs: newStartMs,
+                            sourceStartMs: Math.max(0, newSourceStartMs)
+                        }
+                    }
+                })
+            } else {
+                const minEndMs = clip.timelineStartMs + 100
+                const maxEndMs = clip.timelineStartMs + (assetDuration - clip.sourceStartMs)
+
+                let newEndMs = resizeStartMs + deltaMs
+                newEndMs = Math.max(minEndMs, Math.min(newEndMs, maxEndMs))
+
+                const newSourceEndMs = Math.round(clip.sourceStartMs + (newEndMs - clip.timelineStartMs))
+
+                executeCommand({
+                    type: 'UPDATE_CLIP',
+                    payload: {
+                        before: clip,
+                        after: {
+                            ...clip,
+                            timelineEndMs: newEndMs,
+                            sourceEndMs: Math.min(assetDuration, newSourceEndMs)
+                        }
+                    }
+                })
+            }
         }
 
         setIsResizing(false)
@@ -738,15 +809,23 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 onDragStart={handleDragStart}
                 title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move - overlapping clips will be automatically pushed forward'}
             >
-                {/* Resize handles */}
+                {/* Left resize handle */}
                 <div
-                    className="absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
+                    className="absolute left-0 top-0 w-4 h-full group"
                     onMouseDown={(e) => handleResizeStart(e, 'start')}
-                />
+                >
+                    <div className="absolute left-0 top-0 w-1 h-full bg-white/30 group-hover:bg-white/60 transition-colors" />
+                    <div className="absolute left-1 top-0 w-3 h-full cursor-ew-resize hover:bg-white/10 transition-colors" />
+                </div>
+
+                {/* Right resize handle */}
                 <div
-                    className="absolute right-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
+                    className="absolute right-0 top-0 w-4 h-full group"
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
-                />
+                >
+                    <div className="absolute right-0 top-0 w-1 h-full bg-white/30 group-hover:bg-white/60 transition-colors" />
+                    <div className="absolute right-1 top-0 w-3 h-full cursor-ew-resize hover:bg-white/10 transition-colors" />
+                </div>
 
                 {/* Enhanced Content based on type */}
                 {isVideo && mediaUrl && (
