@@ -199,74 +199,24 @@ export default function TrackRow({
                 startMs = Math.max(0, startMs)
             }
 
-            // Check for track type compatibility - allow moving between tracks of the same type
-            const targetTrack = track
-            const sourceTrack = tracks.find(t => t.id === droppedClip.trackId)
-            
-            if (sourceTrack && targetTrack.type !== sourceTrack.type) {
-                // Different track types - check if the clip type is compatible
-                const clipType = droppedClip.type
-                
-                // Define compatible combinations
-                const isCompatible = (
-                    // Text/caption clips can move between video tracks
-                    (clipType === 'text' || clipType === 'caption') && targetTrack.type === 'video'
-                ) || (
-                    // Audio clips can only move to audio tracks
-                    clipType === 'audio' && targetTrack.type === 'audio'
-                ) || (
-                    // Video/image clips can move to video tracks
-                    (clipType === 'video' || clipType === 'image') && targetTrack.type === 'video'
-                )
-                
-                if (!isCompatible) {
-                    console.log(`Clip type '${clipType}' not compatible with track type '${targetTrack.type}'`)
-                    return
-                }
-            }
-
-            // Handle overlaps with smart insertion - shift existing clips instead of blocking
+            // Check for overlaps with existing clips in this track
             const existingClips = clips.filter(c => c.id !== droppedClip.id)
-            const clipDuration = droppedClip.timelineEndMs - droppedClip.timelineStartMs
-            
-            // Find clips that would be affected by the insertion
-            const affectedClips = existingClips.filter(c => {
-                return c.timelineStartMs >= startMs || 
-                       (c.timelineStartMs < startMs && c.timelineEndMs > startMs)
-            }).sort((a, b) => a.timelineStartMs - b.timelineStartMs)
-            
-            const commands: any[] = []
-            
-            // If there are affected clips, shift them to make room
-            if (affectedClips.length > 0) {
-                let shiftAmount = 0
-                
-                // Calculate the shift needed
-                const firstAffectedClip = affectedClips[0]
-                if (firstAffectedClip.timelineStartMs < startMs + clipDuration) {
-                    shiftAmount = (startMs + clipDuration) - firstAffectedClip.timelineStartMs
-                }
-                
-                // Shift all affected clips
-                affectedClips.forEach(clip => {
-                    commands.push({
-                        type: 'UPDATE_CLIP',
-                        payload: {
-                            before: clip,
-                            after: {
-                                ...clip,
-                                timelineStartMs: clip.timelineStartMs + shiftAmount,
-                                timelineEndMs: clip.timelineEndMs + shiftAmount
-                            }
-                        }
-                    })
-                })
+            const clipWidth = (droppedClip.timelineEndMs - droppedClip.timelineStartMs) * timeScale
+            const wouldOverlap = existingClips.some(c => {
+                const clipLeft = c.timelineStartMs * timeScale
+                const clipRight = c.timelineEndMs * timeScale
+                return !(startMs + clipWidth <= clipLeft || startMs >= clipRight)
+            })
+
+            if (wouldOverlap) {
+                console.log('Clip drop would overlap, cancelling')
+                return
             }
 
             console.log('Moving clip to track:', track.id, 'at time:', startMs)
 
-            // Add the main clip move command
-            commands.push({
+            // Update the clip position and track
+            executeCommand({
                 type: 'UPDATE_CLIP',
                 payload: {
                     before: droppedClip,
@@ -274,22 +224,10 @@ export default function TrackRow({
                         ...droppedClip,
                         trackId: track.id,
                         timelineStartMs: startMs,
-                        timelineEndMs: startMs + clipDuration
+                        timelineEndMs: startMs + (droppedClip.timelineEndMs - droppedClip.timelineStartMs)
                     }
                 }
             })
-
-            // Execute all commands as a batch (clip move + any necessary shifts)
-            if (commands.length === 1) {
-                // Single command - execute directly
-                executeCommand(commands[0])
-            } else {
-                // Multiple commands - execute as batch
-                executeCommand({
-                    type: 'BATCH',
-                    payload: { commands }
-                })
-            }
             return
         }
 
@@ -391,39 +329,6 @@ export default function TrackRow({
                 onDragOver={e => {
                     e.preventDefault()
                     e.stopPropagation()
-                    
-                    // Check compatibility for visual feedback
-                    try {
-                        const payload = JSON.parse(e.dataTransfer.getData('application/json'))
-                        if (payload.clipId) {
-                            const droppedClip = allClips.find(c => c.id === payload.clipId)
-                            if (droppedClip) {
-                                const sourceTrack = tracks.find(t => t.id === droppedClip.trackId)
-                                const targetTrack = track
-                                
-                                // Different visual feedback based on compatibility
-                                if (sourceTrack && targetTrack.type !== sourceTrack.type) {
-                                    const clipType = droppedClip.type
-                                    const isCompatible = (
-                                        (clipType === 'text' || clipType === 'caption') && targetTrack.type === 'video'
-                                    ) || (
-                                        clipType === 'audio' && targetTrack.type === 'audio'
-                                    ) || (
-                                        (clipType === 'video' || clipType === 'image') && targetTrack.type === 'video'
-                                    )
-                                    
-                                    if (!isCompatible) {
-                                        e.dataTransfer.dropEffect = 'none'
-                                        return
-                                    }
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        // Ignore parsing errors - might be other drag data
-                    }
-                    
-                    e.dataTransfer.dropEffect = 'move'
                 }}
                 onDragEnter={e => {
                     e.preventDefault()
