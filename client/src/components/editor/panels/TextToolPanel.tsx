@@ -390,19 +390,25 @@ export default function TextToolPanel() {
                         <label className="block text-sm font-medium text-black/50">
                             Track Options
                         </label>
-                        <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg">
-                            <label className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    checked={createNewTrack}
-                                    onChange={() => setCreateNewTrack(!createNewTrack)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <span className="text-sm">Create new track</span>
-                            </label>
-                            <div className="text-xs text-gray-500">
+                        <div className="flex flex-col gap-2 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-4 h-4 rounded-full ${createNewTrack ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                                    <span className="text-sm font-medium">{createNewTrack ? 'Create new track' : 'Use existing track'}</span>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={createNewTrack}
+                                        onChange={() => setCreateNewTrack(!createNewTrack)}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div className="text-xs text-gray-500 pl-6">
                                 {createNewTrack ? 
-                                    "Text will be added to a new track" : 
+                                    "Text will be added to a new track at the top of the timeline" : 
                                     `Text will be added to existing track (${textTracks.length} available)`}
                             </div>
                         </div>
