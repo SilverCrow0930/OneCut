@@ -302,9 +302,6 @@ const VoiceoverToolPanel = () => {
             // Add generated audio to timeline
             await addAudioToTimeline(result.assetId, result.name)
 
-            setSuccessMessage(`🎉 Voiceover generated with ${selectedVoice.name}!`)
-            setTimeout(() => setSuccessMessage(null), 5000)
-
         } catch (error: any) {
             console.error('❌ Voiceover generation failed:', error)
             setError(error.message || 'Failed to generate voiceover')
