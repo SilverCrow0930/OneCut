@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef } from 'react'
 import { Clip } from '@/types/editor'
 import { getTimeScale } from '@/lib/constants'
 import { useZoom } from '@/contexts/ZoomContext'
@@ -7,7 +7,7 @@ import { formatTime } from '@/lib/utils'
 
 export default function TextClipItem({ clip }: { clip: Clip }) {
     const { zoomLevel } = useZoom()
-    const { selectedClipIds, setSelectedClipIds, setSelectedClipId, executeCommand, clips } = useEditor()
+    const { selectedClipIds, setSelectedClipIds, setSelectedClipId, executeCommand } = useEditor()
     const timeScale = getTimeScale(zoomLevel)
     const [showContextMenu, setShowContextMenu] = useState(false)
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 })
@@ -15,11 +15,10 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     const [isDragging, setIsDragging] = useState(false)
     const [dragStartX, setDragStartX] = useState(0)
     const [dragStartLeft, setDragStartLeft] = useState(0)
-    const [currentLeft, setCurrentLeft] = useState(0)
     const clipRef = useRef<HTMLDivElement>(null)
 
     // convert ms → px
-    const left = isDragging ? currentLeft : clip.timelineStartMs * timeScale
+    const left = isDragging ? dragStartLeft : clip.timelineStartMs * timeScale
     const width = (clip.timelineEndMs - clip.timelineStartMs) * timeScale
     const durationMs = clip.timelineEndMs - clip.timelineStartMs
 
@@ -28,68 +27,6 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
     const isInMultiSelection = selectedClipIds.includes(clip.id)
     const isMultiSelectionActive = selectedClipIds.length > 1
     const isPrimarySelection = isSelected && !isMultiSelectionActive
-
-    // Drag functionality for horizontal movement
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (e.button !== 0) return // Only left mouse button
-        
-        e.preventDefault()
-        e.stopPropagation()
-        
-        setIsDragging(true)
-        setDragStartX(e.clientX)
-        setDragStartLeft(left)
-        
-        // Add cursor style
-        document.body.style.cursor = 'ew-resize'
-        document.body.style.userSelect = 'none'
-    }
-
-    const handleMouseMove = useCallback((e: MouseEvent) => {
-        if (!isDragging) return
-        
-        const deltaX = e.clientX - dragStartX
-        const newLeft = Math.max(0, dragStartLeft + deltaX)
-        setCurrentLeft(newLeft)
-    }, [isDragging, dragStartX, dragStartLeft])
-
-    const handleMouseUp = useCallback((e: MouseEvent) => {
-        if (!isDragging) return
-        
-        setIsDragging(false)
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-        
-        // Calculate new timeline position
-        const newTimelineStartMs = Math.round(currentLeft / timeScale)
-        const newTimelineEndMs = newTimelineStartMs + durationMs
-        
-        // Update the clip
-        executeCommand({
-            type: 'UPDATE_CLIP',
-            payload: {
-                before: clip,
-                after: {
-                    ...clip,
-                    timelineStartMs: newTimelineStartMs,
-                    timelineEndMs: newTimelineEndMs
-                }
-            }
-        })
-    }, [isDragging, currentLeft, timeScale, durationMs, executeCommand, clip])
-
-    // Add/remove mouse event listeners
-    React.useEffect(() => {
-        if (isDragging) {
-            document.addEventListener('mousemove', handleMouseMove)
-            document.addEventListener('mouseup', handleMouseUp)
-        }
-        
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove)
-            document.removeEventListener('mouseup', handleMouseUp)
-        }
-    }, [isDragging, handleMouseMove, handleMouseUp])
 
     // HTML5 Drag and Drop handlers for moving between tracks (Shift+Drag)
     const handleDragStart = (e: React.DragEvent) => {
@@ -112,6 +49,79 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         document.body.appendChild(dragImage)
         e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY)
         setTimeout(() => document.body.removeChild(dragImage), 0)
+    }
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (e.button !== 0) return // Only left mouse button
+        
+        // If Shift is held, we'll use HTML5 drag for track switching
+        if (e.shiftKey) return
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        setIsDragging(true)
+        setDragStartX(e.clientX)
+        setDragStartLeft(e.clientX - (clipRef.current?.getBoundingClientRect().left || 0))
+
+        // Add visual feedback
+        document.body.style.cursor = 'grabbing'
+        if (clipRef.current) {
+            clipRef.current.style.zIndex = '1000'
+            clipRef.current.style.opacity = '0.9'
+        }
+
+        // Add document-level event listeners
+        document.addEventListener('mousemove', handleMouseMove)
+        document.addEventListener('mouseup', handleMouseUp)
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isDragging) return
+
+        const deltaX = e.clientX - dragStartX
+        const newLeft = dragStartLeft + deltaX
+        
+        // Update clip position
+        if (clipRef.current) {
+            clipRef.current.style.left = `${Math.max(0, newLeft)}px`
+        }
+    }
+
+    const handleMouseUp = (e: MouseEvent) => {
+        if (!isDragging) return
+
+        // Remove document-level event listeners
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+
+        // Remove visual feedback
+        document.body.style.cursor = ''
+        if (clipRef.current) {
+            clipRef.current.style.zIndex = ''
+            clipRef.current.style.opacity = ''
+        }
+
+        // Calculate new position in milliseconds
+        const deltaX = e.clientX - dragStartX
+        const deltaMs = Math.round(deltaX / timeScale)
+        const newStartMs = Math.max(0, clip.timelineStartMs + deltaMs)
+        const duration = clip.timelineEndMs - clip.timelineStartMs
+
+        // Update clip position through command
+        executeCommand({
+            type: 'UPDATE_CLIP',
+            payload: {
+                before: clip,
+                after: {
+                    ...clip,
+                    timelineStartMs: newStartMs,
+                    timelineEndMs: newStartMs + duration
+                }
+            }
+        })
+
+        setIsDragging(false)
     }
 
     const handleContextMenu = (e: React.MouseEvent) => {
@@ -162,18 +172,14 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Shift') {
                 setIsShiftHeld(true)
-                if (!isDragging) {
-                    document.body.style.cursor = 'move'
-                }
+                document.body.style.cursor = 'move'
             }
         }
 
         const handleKeyUp = (e: KeyboardEvent) => {
             if (e.key === 'Shift') {
                 setIsShiftHeld(false)
-                if (!isDragging) {
-                    document.body.style.cursor = ''
-                }
+                document.body.style.cursor = ''
             }
         }
 
@@ -183,11 +189,9 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         return () => {
             document.removeEventListener('keydown', handleKeyDown)
             document.removeEventListener('keyup', handleKeyUp)
-            if (!isDragging) {
-                document.body.style.cursor = ''
-            }
+            document.body.style.cursor = ''
         }
-    }, [isDragging])
+    }, [])
 
     const textContent = clip.properties?.text || (isCaption ? 'Caption' : 'Text Overlay')
     const truncatedText = textContent.length > 20 ? textContent.substring(0, 20) + '...' : textContent
@@ -196,41 +200,43 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         <>
             <div
                 ref={clipRef}
+                data-clip-layer
                 data-timeline-clip
                 data-clip-id={clip.id}
                 className={`
-                    absolute h-full rounded-lg overflow-hidden
-                    border-2 transition-all duration-75 select-none
+                    absolute h-full text-white text-xs
+                    flex items-center justify-center rounded-lg
+                    border-2 transition-all duration-75
+                    ${isDragging ? 'border-blue-500 bg-blue-500/20 shadow-lg' : ''}
                     ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
                       isInMultiSelection ? 'border-purple-400 shadow-sm' : 
                       'border-transparent hover:border-gray-400'}
                     ${isShiftHeld ? 'cursor-move border-blue-300 shadow-lg' : 'cursor-grab active:cursor-grabbing'}
-                    ${isDragging ? 'cursor-ew-resize' : ''}
-                    ${isCaption 
-                        ? 'bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600' 
-                        : 'bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600'}
+                    select-none overflow-hidden bg-purple-500 hover:bg-purple-600
                 `}
                 style={{
                     left: `${left}px`,
                     width: `${Math.max(width, 20)}px`,
+                    transform: isDragging ? 'translateY(-1px)' : 'translateY(0)',
                 }}
                 onClick={onClick}
-                onMouseDown={handleMouseDown}
                 onContextMenu={handleContextMenu}
-                draggable={isShiftHeld} // Only enable HTML5 drag when Shift is held
+                onMouseDown={handleMouseDown}
+                draggable={isShiftHeld}
                 onDragStart={handleDragStart}
-                title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move horizontally, Shift+Drag to move between tracks'}
+                title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move'}
             >
-                {/* Text content area */}
-                <div className="flex items-center justify-between h-full px-2 text-white">
-                    <div className="flex items-center space-x-2 flex-1 min-w-0">
-                        {/* Text type icon */}
+                {/* Content container */}
+                <div className="flex items-center justify-between w-full px-2 py-1">
+                    {/* Icon and text */}
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                        {/* Icon */}
                         {isCaption ? (
-                            <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M7 4V2a1 1 0 011-1h4a1 1 0 011 1v2h3a1 1 0 110 2h-1v9a2 2 0 01-2 2H7a2 2 0 01-2-2V6H4a1 1 0 010-2h3zM9 6v8h2V6H9z" clipRule="evenodd" />
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" />
                             </svg>
                         ) : (
-                            <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" />
                             </svg>
                         )}
@@ -275,16 +281,13 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                     }}
                 >
                     <button
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
                         onClick={() => {
-                            executeCommand({
-                                type: 'REMOVE_CLIP',
-                                payload: { clip }
-                            })
+                            // Handle delete - this would need to be implemented
                             setShowContextMenu(false)
                         }}
-                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
                     >
-                        Delete
+                        Delete Text
                     </button>
                 </div>
             )}
