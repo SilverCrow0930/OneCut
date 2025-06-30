@@ -391,9 +391,6 @@ export default function TextToolPanel() {
                             <label className="text-sm font-medium text-black/50">
                                 Track Placement
                             </label>
-                            <span className="text-xs text-gray-500">
-                                {textTracks.length} existing track{textTracks.length !== 1 ? 's' : ''}
-                            </span>
                         </div>
                         
                         <div className="flex gap-2">
