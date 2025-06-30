@@ -502,33 +502,30 @@ export default function Timeline() {
     }, [tracks, clips, projectId, executeCommand, assets])
 
     const handleTimelineClick = (e: React.MouseEvent) => {
-        const timelineRect = containerRef.current?.getBoundingClientRect()
-        if (!timelineRect) return
+        if (!containerRef.current) return;
 
-        // Get the position of the first track
-        const firstTrack = containerRef.current?.querySelector('[data-timeline-track]')
-        const firstTrackTop = firstTrack?.getBoundingClientRect().top ?? 0
+        // Get the target element
+        const target = e.target as HTMLElement;
 
-        // Allow clicking anywhere above the first track
-        if (e.clientY > firstTrackTop) return
+        // If the click is on a clip or its children, don't handle it
+        if (target.closest('[data-clip-layer]')) return;
 
-        const newPlayheadPosition = e.clientX - timelineRect.left
-        setCurrentTime(newPlayheadPosition / timeScale)
-    }
+        // If the click is on the ruler or playhead, don't handle it
+        if (target.closest('.ruler') || target.closest('.playhead')) return;
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left + containerRef.current.scrollLeft;
+        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs)); // Constrain between 0 and max
+        setCurrentTime(newTimeMs / 1000);
+        setSelectedClipId(null);
+    };
 
     const handlePlayheadDrag = (e: React.MouseEvent) => {
         if (!containerRef.current) return
 
-        // Get the position of the first track
-        const firstTrack = containerRef.current?.querySelector('[data-timeline-track]')
-        const firstTrackTop = firstTrack?.getBoundingClientRect().top ?? 0
-
-        // Allow dragging only in the area above the first track
-        if (e.clientY > firstTrackTop) return
-
         const rect = containerRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left + containerRef.current.scrollLeft
-        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs))
+        const newTimeMs = Math.max(0, Math.min(Math.round(x / timeScale), paddedMaxMs)) // Strict bounds: 0 <= time <= paddedMaxMs
         setCurrentTime(newTimeMs / 1000)
 
         // Auto-scroll when dragging near the edges

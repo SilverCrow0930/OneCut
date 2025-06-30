@@ -11,7 +11,6 @@ interface DragState {
     startX: number
     startLeft: number
     currentLeft: number
-    currentWidth: number
     ghostElement: HTMLElement | null
     dragOffset: number
     isOverlapping: boolean
@@ -19,7 +18,6 @@ interface DragState {
     isShiftDrag: boolean
     startY: number
     currentY: number
-    resizeType?: 'start' | 'end'
 }
 
 const initialDragState: DragState = {
@@ -27,15 +25,13 @@ const initialDragState: DragState = {
     startX: 0,
     startLeft: 0,
     currentLeft: 0,
-    currentWidth: 0,
     ghostElement: null,
     dragOffset: 0,
     isOverlapping: false,
     targetTrackId: null,
     isShiftDrag: false,
     startY: 0,
-    currentY: 0,
-    resizeType: undefined
+    currentY: 0
 }
 
 export default function TextClipItem({ clip }: { clip: Clip }) {
@@ -169,9 +165,8 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         setDragState({
             isDragging: true,
             startX: e.clientX,
-            startLeft: left || 0,
-            currentLeft: left || 0,
-            currentWidth: width,
+            startLeft: left,
+            currentLeft: left,
             ghostElement: null,
             dragOffset: offset,
             isOverlapping: false,
@@ -187,7 +182,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
             clipRef.current.style.zIndex = '1000'
             clipRef.current.style.opacity = '0.9'
         }
-    }, [left, clip.trackId, width])
+    }, [left, clip.trackId])
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         if (!dragState.isDragging) return
@@ -205,7 +200,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         }
 
         // Only update if position actually changed
-        if (dragState.currentLeft !== undefined && Math.abs(dragState.currentLeft - dragState.startLeft) > 5) {
+        if (Math.abs(dragState.currentLeft - dragState.startLeft) > 5) {
             const newStartMs = Math.round(dragState.currentLeft / timeScale)
             const durationMs = clip.timelineEndMs - clip.timelineStartMs
             const newEndMs = newStartMs + durationMs
@@ -374,89 +369,6 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         }
     }, [])
 
-    const handleResizeStart = (e: React.MouseEvent, type: 'start' | 'end') => {
-        e.preventDefault()
-        e.stopPropagation()
-        setDragState(prev => ({
-            ...prev,
-            isDragging: true,
-            startX: e.clientX,
-            startLeft: left || 0,
-            currentLeft: type === 'start' ? (left || 0) : prev.currentLeft,
-            resizeType: type,
-            currentWidth: width
-        }))
-        document.body.classList.add('cursor-ew-resize')
-    }
-
-    const handleResizeMove = (e: MouseEvent) => {
-        if (!dragState.isDragging) return
-
-        const deltaX = e.clientX - dragState.startX
-        
-        if (dragState.resizeType === 'start') {
-            // When resizing from start, update left position and width
-            const newLeft = Math.max(0, dragState.startLeft + deltaX)
-            const newWidth = Math.max(100, dragState.currentWidth - (newLeft - dragState.startLeft))
-            
-            setDragState(prev => ({
-                ...prev,
-                currentLeft: newLeft,
-                currentWidth: newWidth
-            }))
-        } else {
-            // When resizing from end, only update width
-            const newWidth = Math.max(100, dragState.currentWidth + deltaX)
-            
-            setDragState(prev => ({
-                ...prev,
-                currentWidth: newWidth
-            }))
-        }
-    }
-
-    const handleResizeEnd = (e: MouseEvent) => {
-        if (!dragState.isDragging) return
-
-        document.body.classList.remove('cursor-ew-resize')
-
-        const newStartMs = dragState.currentLeft !== undefined 
-            ? Math.round(dragState.currentLeft / timeScale)
-            : clip.timelineStartMs
-            
-        const newEndMs = dragState.currentWidth !== undefined
-            ? newStartMs + Math.round(dragState.currentWidth / timeScale)
-            : clip.timelineEndMs
-
-        if (newStartMs !== clip.timelineStartMs || newEndMs !== clip.timelineEndMs) {
-            executeCommand({
-                type: 'UPDATE_CLIP',
-                payload: {
-                    before: clip,
-                    after: {
-                        ...clip,
-                        timelineStartMs: newStartMs,
-                        timelineEndMs: newEndMs
-                    }
-                }
-            })
-        }
-
-        setDragState(initialDragState)
-    }
-
-    useEffect(() => {
-        if (!dragState.isDragging) return
-
-        document.addEventListener('mousemove', handleResizeMove)
-        document.addEventListener('mouseup', handleResizeEnd)
-
-        return () => {
-            document.removeEventListener('mousemove', handleResizeMove)
-            document.removeEventListener('mouseup', handleResizeEnd)
-        }
-    }, [dragState.isDragging, handleResizeMove, handleResizeEnd])
-
     const textContent = clip.properties?.text || (isCaption ? 'Caption' : 'Text Overlay')
     const truncatedText = textContent.length > 20 ? textContent.substring(0, 20) + '...' : textContent
 
@@ -479,8 +391,8 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                         : 'bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600'}
                 `}
                 style={{
-                    left: `${dragState.currentLeft !== undefined ? dragState.currentLeft : left}px`,
-                    width: `${dragState.currentWidth !== undefined ? dragState.currentWidth : width}px`,
+                    left: `${left}px`,
+                    width: `${Math.max(width, 20)}px`,
                     transform: dragState.isDragging ? 'translateY(-1px)' : 'translateY(0)',
                 }}
                 onClick={onClick}
@@ -490,16 +402,6 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                 onDragStart={handleDragStart}
                 title={isShiftHeld ? 'Hold Shift and drag to move between tracks' : 'Drag to move - overlapping clips will be automatically pushed forward'}
             >
-                {/* Resize handles */}
-                <div
-                    className="absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
-                    onMouseDown={(e) => handleResizeStart(e, 'start')}
-                />
-                <div
-                    className="absolute right-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
-                    onMouseDown={(e) => handleResizeStart(e, 'end')}
-                />
-
                 {/* Text content area */}
                 <div className="w-full h-full flex items-center justify-center px-2 text-white text-xs font-medium truncate">
                     {truncatedText}

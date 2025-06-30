@@ -8,6 +8,7 @@ import { Plus, Type, Sparkles, Wand2, RefreshCw } from 'lucide-react'
 import TextStyleSelector, { stylePresets } from './text/TextStyleSelector'
 import PanelHeader from './PanelHeader'
 import { apiPath } from '@/lib/config'
+import { usePlayback } from '@/contexts/PlaybackContext'
 
 export default function TextToolPanel() {
     const [text, setText] = useState('')
@@ -19,6 +20,7 @@ export default function TextToolPanel() {
     const [styleError, setStyleError] = useState<string | null>(null)
     
     const { tracks, executeCommand, selectedClipId, clips } = useEditor()
+    const { currentTime } = usePlayback()
     const { session } = useAuth()
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
@@ -168,31 +170,18 @@ export default function TextToolPanel() {
                 }
             })
         } else {
-            // Create a new text track at the first available index in the text range (1-4)
-            const textTrackRange = { start: 1, end: 4 }
-            const existingTextTracks = tracks.filter(t => t.type === 'text')
-                .map(t => t.index)
-                .sort((a, b) => a - b)
-            
-            // Find the first available index in the range
-            let newTrackIndex = textTrackRange.start
-            for (let i = textTrackRange.start; i <= textTrackRange.end; i++) {
-                if (!existingTextTracks.includes(i)) {
-                    newTrackIndex = i
-                    break
-                }
-            }
-
+            // Create a new text track at index 0
             const newTrack = {
                 id: uuid(),
                 projectId: projectId!,
-                index: newTrackIndex,
+                index: 0,
                 type: 'text' as TrackType,
                 createdAt: new Date().toISOString(),
             }
 
             // Default duration is 5 seconds
-            const duration = 5
+            const duration = 5000 // 5 seconds in milliseconds
+            const startTime = currentTime * 1000 // Convert seconds to milliseconds
 
             // Create the text clip
             const textClip = {
@@ -200,10 +189,10 @@ export default function TextToolPanel() {
                 trackId: newTrack.id,
                 type: 'text' as const,
                 sourceStartMs: 0,
-                sourceEndMs: duration * 1000,
-                timelineStartMs: 0, // Start at the beginning
-                timelineEndMs: duration * 1000,
-                assetDurationMs: duration * 1000,
+                sourceEndMs: duration,
+                timelineStartMs: startTime,
+                timelineEndMs: startTime + duration,
+                assetDurationMs: duration,
                 volume: 1,
                 speed: 1,
                 properties,
@@ -211,13 +200,27 @@ export default function TextToolPanel() {
             }
 
             // Create commands to:
-            // 1. Add the new track
-            // 2. Add the text clip
+            // 1. Shift all existing tracks down
+            // 2. Add the new track
+            // 3. Add the text clip
             const commands = [
+                // First shift all existing tracks down
+                ...tracks.map(track => ({
+                    type: 'UPDATE_TRACK' as const,
+                    payload: {
+                        before: track,
+                        after: {
+                            ...track,
+                            index: track.index + 1
+                        }
+                    }
+                })),
+                // Then add the new track
                 {
                     type: 'ADD_TRACK' as const,
                     payload: { track: newTrack }
                 },
+                // Finally add the text clip
                 {
                     type: 'ADD_CLIP' as const,
                     payload: { clip: textClip }
@@ -289,7 +292,7 @@ export default function TextToolPanel() {
                             />
                             <span className="text-sm font-medium">AI Style</span>
                         </label>
-                        </div>
+                    </div>
                         
                     {useAIStyle ? (
                         <div className="space-y-3">
@@ -297,13 +300,13 @@ export default function TextToolPanel() {
                                 <label className="block text-sm font-medium text-gray-700">
                                     Describe your desired style
                                 </label>
-                            <textarea
-                                value={stylePrompt}
-                                onChange={(e) => setStylePrompt(e.target.value)}
-                                placeholder="Bold neon cyberpunk style with glowing edges or Elegant gold text with shadow for luxury brand"
-                                className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                rows={3}
-                            />
+                                <textarea
+                                    value={stylePrompt}
+                                    onChange={(e) => setStylePrompt(e.target.value)}
+                                    placeholder="Bold neon cyberpunk style with glowing edges or Elegant gold text with shadow for luxury brand"
+                                    className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    rows={3}
+                                />
                             </div>
                             
                             <button
@@ -331,12 +334,12 @@ export default function TextToolPanel() {
                             </button>
 
                             {styleError && (
-                                    <p className="text-sm text-red-600">{styleError}</p>
+                                <p className="text-sm text-red-600">{styleError}</p>
                             )}
                         </div>
                     ) : (
                         <TextStyleSelector selectedStyleIdx={selectedStyleIdx} setSelectedStyleIdx={setSelectedStyleIdx} />
-                )}
+                    )}
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">Preview</label>
@@ -347,7 +350,7 @@ export default function TextToolPanel() {
                         </div>
                     </div>
                 </div>
-
+                
                 <button
                     onClick={handleAddOrUpdateText}
                     disabled={!text.trim()}
