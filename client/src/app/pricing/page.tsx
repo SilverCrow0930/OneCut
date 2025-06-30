@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import HomeNavbar from '@/components/home/HomeNavbar';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Plan {
   id: string;
@@ -19,15 +20,63 @@ interface CartItem {
   quantity: number;
 }
 
+interface UserSubscription {
+  videoEditor: {
+    active: boolean;
+    nextBilling: string;
+    price: number;
+  } | null;
+  
+  credits: {
+    plan: 'starter' | 'creator' | 'pro' | 'enterprise' | null;
+    remaining: number;
+    monthly: number;
+    nextBilling: string;
+    price: number;
+  } | null;
+}
+
+type UserState = 'new' | 'editor-only' | 'credits-only' | 'full-user';
+
 export default function PricingPage() {
-  // Simulated user data - in real app this would come from auth/user context
-  const [currentCredits] = useState(47);
-  const [maxCredits] = useState(150);
+  const { user } = useAuth();
+  
+  // Simulated user subscription data - in real app this would come from API
+  const [userSubscription] = useState<UserSubscription>({
+    videoEditor: user ? {
+      active: true,
+      nextBilling: 'Feb 15',
+      price: 8
+    } : null,
+    credits: user ? {
+      plan: 'creator',
+      remaining: 47,
+      monthly: 200,
+      nextBilling: 'Feb 15',
+      price: 29
+    } : null
+  });
+
+  // Determine user state
+  const getUserState = (): UserState => {
+    if (!user) return 'new';
+    if (userSubscription.videoEditor?.active && userSubscription.credits?.plan) return 'full-user';
+    if (userSubscription.videoEditor?.active && !userSubscription.credits?.plan) return 'editor-only';
+    if (!userSubscription.videoEditor?.active && userSubscription.credits?.plan) return 'credits-only';
+    return 'new';
+  };
+
+  const userState = getUserState();
+  const currentCredits = userSubscription.credits?.remaining || 0;
+  const maxCredits = userSubscription.credits?.monthly || 200;
+  const currentCreditPlan = userSubscription.credits?.plan;
+  
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showEditorFeatures, setShowEditorFeatures] = useState(false);
   const [showAIFeatures, setShowAIFeatures] = useState(false);
+  const [showPlanSelector, setShowPlanSelector] = useState(false);
   
-  // Simulated current subscriptions
+  // Legacy simulated data for backward compatibility
   const [currentSubscriptions, setCurrentSubscriptions] = useState([
     {
       id: 'foundation-active',
@@ -110,6 +159,18 @@ export default function PricingPage() {
   ];
 
   const addToCart = (plan: Plan) => {
+    // Prevent adding video editor if already have it
+    if (plan.type === 'foundation' && userSubscription.videoEditor?.active) {
+      console.log('User already has video editor');
+      return;
+    }
+    
+    // Prevent adding credit plan if already have one (should use change plan instead)
+    if (plan.type === 'credits' && userSubscription.credits?.plan) {
+      console.log('User already has a credit plan, use change plan instead');
+      return;
+    }
+    
     setCart(prev => {
       const existing = prev.find(item => item.plan.id === plan.id);
       if (existing) {
@@ -156,6 +217,93 @@ export default function PricingPage() {
     );
   };
 
+  // Enhanced button logic and plan management
+  const getVideoEditorButtonState = () => {
+    if (userSubscription.videoEditor?.active) {
+      return {
+        text: '✅ Active Plan',
+        disabled: true,
+        className: 'bg-green-100 text-green-700 cursor-not-allowed border-2 border-green-200'
+      };
+    }
+    return {
+      text: user ? 'Add to Cart' : 'Start Free Trial',
+      disabled: false,
+      className: 'bg-blue-600 hover:bg-blue-700 text-white'
+    };
+  };
+
+  const getCurrentPlanIndex = (planId: string) => {
+    return creditPlans.findIndex(plan => plan.id.includes(planId));
+  };
+
+  const getCreditButtonState = (plan: Plan) => {
+    if (!userSubscription.credits?.plan) {
+      return {
+        text: user ? 'Add to Cart' : 'Start Free Trial',
+        action: () => addToCart(plan),
+        disabled: false,
+        className: 'bg-gray-900 hover:bg-gray-800 text-white'
+      };
+    }
+    
+    if (plan.id.includes(currentCreditPlan || '')) {
+      return {
+        text: '✅ Current Plan',
+        disabled: true,
+        className: 'bg-green-100 text-green-700 cursor-not-allowed border-2 border-green-200'
+      };
+    }
+    
+    const currentIndex = getCurrentPlanIndex(currentCreditPlan || '');
+    const planIndex = getCurrentPlanIndex(plan.id.split('-')[0]);
+    
+    if (planIndex > currentIndex) {
+      return {
+        text: 'Upgrade',
+        action: () => handlePlanChange(plan.id),
+        className: 'bg-blue-600 hover:bg-blue-700 text-white'
+      };
+    } else if (planIndex < currentIndex) {
+      return {
+        text: 'Downgrade',
+        action: () => handlePlanChange(plan.id),
+        className: 'bg-gray-600 hover:bg-gray-700 text-white'
+      };
+    }
+    
+    return {
+      text: 'Switch Plan',
+      action: () => handlePlanChange(plan.id),
+      className: 'bg-gray-600 hover:bg-gray-700 text-white'
+    };
+  };
+
+  const handlePlanChange = (planId: string) => {
+    console.log('Changing to plan:', planId);
+    // In real app, this would call an API to change the subscription
+    // For now, just show a message or update local state
+  };
+
+  const getContextualMessage = () => {
+    switch (userState) {
+      case 'new':
+        return "Start with our complete video editor, then add AI credits as you need them.";
+      case 'editor-only':
+        return "🎉 You have the Video Editor! Add AI credits to unlock powerful features like voiceover and smart editing.";
+      case 'credits-only':
+        return "⚠️ You have AI credits but need the Video Editor to use them. Add it now to start creating!";
+      case 'full-user':
+        return "You're all set! Create amazing videos with your editor and AI credits.";
+      default:
+        return "Start with our complete video editor, then add AI credits as you need them.";
+    }
+  };
+
+  // Visibility logic for status sections
+  const showAICreditsSection = userState === 'full-user' || userState === 'credits-only';
+  const showActivePlansSection = userState === 'full-user' || userState === 'editor-only';
+
   const creditPercentage = (currentCredits / maxCredits) * 100;
   const foundationPlan = plans.find(p => p.type === 'foundation');
   const creditPlans = plans.filter(p => p.type === 'credits');
@@ -171,56 +319,194 @@ export default function PricingPage() {
             Pricing
           </h1>
           <p className="text-gray-600 max-w-2xl">
-            Start with our complete video editor, then add AI credits as you need them.
+            {getContextualMessage()}
           </p>
         </div>
 
-        {/* Current Status */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl">
-          {/* Credits */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">AI Credits</h3>
-              <span className="text-2xl font-bold text-blue-600">{currentCredits}</span>
+        {/* Hero Section for New Users */}
+        {userState === 'new' && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 mb-12">
+            <div className="max-w-3xl">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Create professional videos with AI-powered editing
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Join 10,000+ creators using Lemona to make stunning videos 10x faster. 
+                Start with our complete editor, then add AI features as you grow.
+              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                <div className="flex items-center">
+                  <span className="text-yellow-500 mr-2">⭐⭐⭐⭐⭐</span>
+                  <span className="text-sm text-gray-600">4.9/5 from 500+ reviews</span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  🎬 Free 7-day trial • No credit card required
+                </div>
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-              <div 
-                className="bg-blue-500 h-3 rounded-full transition-all duration-300"
-                style={{ width: `${creditPercentage}%` }}
-              />
-            </div>
-            <p className="text-sm text-gray-500">of {maxCredits} credits • Resets monthly</p>
           </div>
+        )}
 
-          {/* Active Subscriptions */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Active Plans</h3>
-              <span className="text-2xl font-bold text-gray-900">
-                ${currentSubscriptions.filter(s => s.status === 'active').reduce((sum, s) => sum + s.price, 0)}/mo
-              </span>
-            </div>
-            <div className="space-y-3">
-              {currentSubscriptions.filter(s => s.status === 'active').map(sub => (
-                <div key={sub.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <div className="font-medium text-gray-900">{sub.name}</div>
-                    <div className="text-sm text-gray-500">Next billing: {sub.nextBilling}</div>
-                  </div>
+        {/* Current Status - Only show for authenticated users with subscriptions */}
+        {(showAICreditsSection || showActivePlansSection) && (
+          <div className={`grid ${showAICreditsSection && showActivePlansSection ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-6 mb-12 max-w-4xl`}>
+            {/* Enhanced AI Credits Section */}
+            {showAICreditsSection && (
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                {/* Header with current plan info */}
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <span className="font-semibold text-gray-900">${sub.price}/mo</span>
-                    <button
-                      onClick={() => cancelSubscription(sub.id)}
-                      className="text-sm text-red-500 hover:text-red-600 px-3 py-1 rounded-md hover:bg-red-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
+                    <h3 className="text-lg font-semibold text-gray-900">AI Credits</h3>
+                    {currentCreditPlan && (
+                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full capitalize">
+                        {currentCreditPlan} Plan
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-blue-600">{currentCredits}</span>
+                    <span className="text-sm text-gray-500 ml-1">left</span>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* Enhanced Progress Bar */}
+                <div className="relative mb-4">
+                  <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-300"
+                      style={{ width: `${creditPercentage}%` }}
+                    />
+                  </div>
+                  
+                  {/* Usage indicator */}
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>0</span>
+                    <span className="font-medium">
+                      {currentCredits} of {maxCredits} credits
+                    </span>
+                    <span>{maxCredits}</span>
+                  </div>
+                </div>
+
+                {/* Quick Action Buttons */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    {/* Usage status */}
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      creditPercentage > 50 
+                        ? 'bg-green-100 text-green-700' 
+                        : creditPercentage > 20 
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {creditPercentage > 50 ? '✅ Good' : creditPercentage > 20 ? '⚠️ Low' : '🚨 Very Low'}
+                    </div>
+                    
+                    <span className="text-xs text-gray-500">• Resets monthly</span>
+                  </div>
+
+                  {/* Quick plan management */}
+                  <button
+                    onClick={() => setShowPlanSelector(!showPlanSelector)}
+                    className="text-xs px-3 py-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                  >
+                    {showPlanSelector ? 'Hide Plans' : 'Change Plan'}
+                  </button>
+                </div>
+
+                {/* Expandable Plan Selector */}
+                {showPlanSelector && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-3">Choose Your Plan</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {creditPlans.map((plan) => {
+                        const buttonState = getCreditButtonState(plan);
+                        return (
+                          <button
+                            key={plan.id}
+                            onClick={buttonState.action}
+                            disabled={buttonState.disabled}
+                            className={`p-3 rounded-lg border-2 text-left transition-all ${
+                              buttonState.disabled
+                                ? 'border-green-200 bg-green-50 cursor-not-allowed'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-sm">{plan.name}</span>
+                              {buttonState.disabled && <span className="text-xs text-green-600">✅</span>}
+                            </div>
+                            
+                            <div className="text-xs text-gray-600 mb-2">
+                              {plan.credits} credits/mo
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-sm">${plan.price}</span>
+                              {!buttonState.disabled && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700">
+                                  {buttonState.text}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Active Subscriptions */}
+            {showActivePlansSection && (
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Active Plans</h3>
+                  <span className="text-2xl font-bold text-gray-900">
+                    ${(userSubscription.videoEditor?.price || 0) + (userSubscription.credits?.price || 0)}/mo
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {userSubscription.videoEditor?.active && (
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <div className="font-medium text-gray-900">Video Editor</div>
+                        <div className="text-sm text-gray-500">Next billing: {userSubscription.videoEditor.nextBilling}</div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className="font-semibold text-gray-900">${userSubscription.videoEditor.price}/mo</span>
+                        <button
+                          onClick={() => console.log('Cancel video editor')}
+                          className="text-sm text-red-500 hover:text-red-600 px-3 py-1 rounded-md hover:bg-red-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {userSubscription.credits?.plan && (
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <div className="font-medium text-gray-900 capitalize">{userSubscription.credits.plan} Credits</div>
+                        <div className="text-sm text-gray-500">Next billing: {userSubscription.credits.nextBilling}</div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className="font-semibold text-gray-900">${userSubscription.credits.price}/mo</span>
+                        <button
+                          onClick={() => console.log('Cancel credits')}
+                          className="text-sm text-red-500 hover:text-red-600 px-3 py-1 rounded-md hover:bg-red-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Main Content */}
         <div className="grid lg:grid-cols-4 gap-8">
@@ -278,10 +564,11 @@ export default function PricingPage() {
                   )}
 
                   <button 
-                    onClick={() => addToCart(foundationPlan)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-colors"
+                    onClick={() => !getVideoEditorButtonState().disabled && addToCart(foundationPlan)}
+                    disabled={getVideoEditorButtonState().disabled}
+                    className={`w-full font-semibold py-4 px-6 rounded-xl text-lg transition-colors ${getVideoEditorButtonState().className}`}
                   >
-                    Add to Cart
+                    {getVideoEditorButtonState().text}
                   </button>
                 </div>
               )}
@@ -352,10 +639,16 @@ export default function PricingPage() {
                     </div>
 
                     <button
-                      onClick={() => addToCart(plan)}
-                      className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                      onClick={() => {
+                        const buttonState = getCreditButtonState(plan);
+                        if (!buttonState.disabled && buttonState.action) {
+                          buttonState.action();
+                        }
+                      }}
+                      disabled={getCreditButtonState(plan).disabled}
+                      className={`w-full font-semibold py-3 px-4 rounded-lg transition-colors ${getCreditButtonState(plan).className}`}
                     >
-                      Add to Cart
+                      {getCreditButtonState(plan).text}
                     </button>
                   </div>
                 ))}
