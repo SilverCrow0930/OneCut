@@ -11,6 +11,7 @@ interface DragState {
     startX: number
     startLeft: number
     currentLeft: number
+    currentWidth: number
     ghostElement: HTMLElement | null
     dragOffset: number
     isOverlapping: boolean
@@ -18,6 +19,7 @@ interface DragState {
     isShiftDrag: boolean
     startY: number
     currentY: number
+    resizeType?: 'start' | 'end'
 }
 
 const initialDragState: DragState = {
@@ -25,13 +27,15 @@ const initialDragState: DragState = {
     startX: 0,
     startLeft: 0,
     currentLeft: 0,
+    currentWidth: 0,
     ghostElement: null,
     dragOffset: 0,
     isOverlapping: false,
     targetTrackId: null,
     isShiftDrag: false,
     startY: 0,
-    currentY: 0
+    currentY: 0,
+    resizeType: undefined
 }
 
 export default function TextClipItem({ clip }: { clip: Clip }) {
@@ -165,8 +169,9 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         setDragState({
             isDragging: true,
             startX: e.clientX,
-            startLeft: left,
-            currentLeft: left,
+            startLeft: left || 0,
+            currentLeft: left || 0,
+            currentWidth: width,
             ghostElement: null,
             dragOffset: offset,
             isOverlapping: false,
@@ -182,7 +187,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
             clipRef.current.style.zIndex = '1000'
             clipRef.current.style.opacity = '0.9'
         }
-    }, [left, clip.trackId])
+    }, [left, clip.trackId, width])
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
         if (!dragState.isDragging) return
@@ -200,7 +205,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         }
 
         // Only update if position actually changed
-        if (Math.abs(dragState.currentLeft - dragState.startLeft) > 5) {
+        if (dragState.currentLeft !== undefined && Math.abs(dragState.currentLeft - dragState.startLeft) > 5) {
             const newStartMs = Math.round(dragState.currentLeft / timeScale)
             const durationMs = clip.timelineEndMs - clip.timelineStartMs
             const newEndMs = newStartMs + durationMs
@@ -376,10 +381,10 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
             ...prev,
             isDragging: true,
             startX: e.clientX,
-            startLeft: left,
-            currentLeft: left,
-            dragOffset: e.clientX - left,
-            isShiftDrag: false
+            startLeft: left || 0,
+            currentLeft: type === 'start' ? (left || 0) : prev.currentLeft,
+            resizeType: type,
+            currentWidth: width
         }))
         document.body.classList.add('cursor-ew-resize')
     }
@@ -388,14 +393,26 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
         if (!dragState.isDragging) return
 
         const deltaX = e.clientX - dragState.startX
-        const newLeft = dragState.startLeft + deltaX
-        const newWidth = Math.max(20, width + (dragState.isShiftDrag ? -deltaX : deltaX))
-
-        setDragState(prev => ({
-            ...prev,
-            currentLeft: newLeft,
-            dragOffset: deltaX
-        }))
+        
+        if (dragState.resizeType === 'start') {
+            // When resizing from start, update left position and width
+            const newLeft = Math.max(0, dragState.startLeft + deltaX)
+            const newWidth = Math.max(100, dragState.currentWidth - (newLeft - dragState.startLeft))
+            
+            setDragState(prev => ({
+                ...prev,
+                currentLeft: newLeft,
+                currentWidth: newWidth
+            }))
+        } else {
+            // When resizing from end, only update width
+            const newWidth = Math.max(100, dragState.currentWidth + deltaX)
+            
+            setDragState(prev => ({
+                ...prev,
+                currentWidth: newWidth
+            }))
+        }
     }
 
     const handleResizeEnd = (e: MouseEvent) => {
@@ -403,8 +420,13 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
 
         document.body.classList.remove('cursor-ew-resize')
 
-        const newStartMs = Math.round(dragState.currentLeft / timeScale)
-        const newEndMs = newStartMs + Math.round(width / timeScale)
+        const newStartMs = dragState.currentLeft !== undefined 
+            ? Math.round(dragState.currentLeft / timeScale)
+            : clip.timelineStartMs
+            
+        const newEndMs = dragState.currentWidth !== undefined
+            ? newStartMs + Math.round(dragState.currentWidth / timeScale)
+            : clip.timelineEndMs
 
         if (newStartMs !== clip.timelineStartMs || newEndMs !== clip.timelineEndMs) {
             executeCommand({
@@ -457,8 +479,8 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                         : 'bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600'}
                 `}
                 style={{
-                    left: `${left}px`,
-                    width: `${Math.max(width, 20)}px`,
+                    left: `${dragState.currentLeft !== undefined ? dragState.currentLeft : left}px`,
+                    width: `${dragState.currentWidth !== undefined ? dragState.currentWidth : width}px`,
                     transform: dragState.isDragging ? 'translateY(-1px)' : 'translateY(0)',
                 }}
                 onClick={onClick}
