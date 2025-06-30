@@ -106,7 +106,7 @@ const HomeHeroSection = () => {
 
     const handleGetStarted = () => {
         if (user) {
-            router.push('/creation')
+            router.push('/projects')
         } else {
             signIn()
         }
@@ -284,8 +284,8 @@ const HomeHeroSection = () => {
                 throw new Error(errorMessage)
             }
 
-            // 4. Navigate to creation page showing the processing project
-            router.push(`/creation?highlight=${project.id}`)
+            // 4. Navigate to projects page showing the processing project
+            router.push(`/projects?highlight=${project.id}`)
 
         } catch (error) {
             console.error('Error starting quickclips:', error)

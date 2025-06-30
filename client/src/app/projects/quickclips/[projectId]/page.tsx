@@ -160,7 +160,7 @@ export default function QuickClipsViewPage() {
                     <h2 className="text-xl font-semibold text-red-600 mb-2">Error loading Smart Cut</h2>
                     <p className="text-gray-600 mb-4">{error || 'Project not found'}</p>
                     <button
-                        onClick={() => router.push('/creation')}
+                        onClick={() => router.push('/projects')}
                         className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                         Back to Projects
@@ -180,7 +180,7 @@ export default function QuickClipsViewPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <button
-                        onClick={() => router.push('/creation')}
+                        onClick={() => router.push('/projects')}
                         className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
                     >
                         <ArrowLeft className="w-5 h-5" />

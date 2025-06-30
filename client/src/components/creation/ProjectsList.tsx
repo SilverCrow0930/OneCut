@@ -224,7 +224,7 @@ export default function ProjectsList() {
         if (project?.processing_type === 'quickclips') {
             if (project.processing_status === 'completed' && project.processing_result?.clips) {
                 // Show clips modal or navigate to clips view
-                router.push(`/creation/quickclips/${projectId}`)
+                router.push(`/projects/quickclips/${projectId}`)
                 return
             }
         }
@@ -241,7 +241,7 @@ export default function ProjectsList() {
         setShowMenu(null)
         
         // Navigate to QuickClips view
-        router.push(`/creation/quickclips/${projectId}`)
+        router.push(`/projects/quickclips/${projectId}`)
     }
 
     if (!session) {

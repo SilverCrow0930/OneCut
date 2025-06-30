@@ -33,8 +33,8 @@ const Menu = () => {
         e.stopPropagation()
         
         // Use window.location.href for reliable navigation
-        console.log('Navigating to /creation')
-        window.location.href = '/creation'
+                        console.log('Navigating to /projects')
+                window.location.href = '/projects'
     }
 
     const handleTitleClick = (e: React.MouseEvent) => {

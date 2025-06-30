@@ -9,7 +9,7 @@ const HomeCTA = () => {
 
     const handleGetStarted = () => {
         if (user) {
-            router.push('/creation')
+            router.push('/projects')
         } else {
             signIn()
         }

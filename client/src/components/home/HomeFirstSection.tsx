@@ -8,7 +8,7 @@ const HomeFirstSection = () => {
 
     const handleJoinBeta = () => {
         if (user) {
-            router.push('/creation')
+            router.push('/projects')
         } else {
             signIn()
         }
