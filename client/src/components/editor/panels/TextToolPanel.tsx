@@ -240,7 +240,7 @@ export default function TextToolPanel() {
                     payload: { commands }
                 })
             } else {
-                // Use existing text track (use the first one)
+                // Use existing text track (use the first one) 
                 const existingTrack = textTracks[0];
                 
                 // Create the text clip on the existing track
