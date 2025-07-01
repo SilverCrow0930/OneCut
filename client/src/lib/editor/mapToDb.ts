@@ -70,7 +70,11 @@ export function toDbClip(c: Clip) {
         asset_duration_ms: assetDurationMs,
         volume: c.volume || 1.0,
         speed: c.speed || 1.0,
-        properties: c.properties || null,
+        properties: {
+            ...(c.properties || {}),
+            // Preserve the SFX flag when saving to database
+            isSfx: c.properties?.isSfx || false
+        },
         created_at: c.createdAt ?? new Date().toISOString(),
     };
 }
