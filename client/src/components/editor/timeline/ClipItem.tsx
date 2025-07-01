@@ -741,14 +741,14 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 {/* Resize handles */}
                 {selected && (
                     <>
-                        <div
+                <div
                             className="absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
-                            onMouseDown={(e) => handleResizeStart(e, 'start')}
-                        />
-                        <div
+                    onMouseDown={(e) => handleResizeStart(e, 'start')}
+                />
+                <div
                             className="absolute right-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors z-10"
-                            onMouseDown={(e) => handleResizeStart(e, 'end')}
-                        />
+                    onMouseDown={(e) => handleResizeStart(e, 'end')}
+                />
                     </>
                 )}
 

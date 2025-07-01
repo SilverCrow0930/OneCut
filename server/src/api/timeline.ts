@@ -161,9 +161,7 @@ router.put(
                 if (typeof t.index !== 'number') {
                     throw new Error(`Track ${index} (${t.id}) has invalid index: ${t.index}`)
                 }
-                // Map 'sfx' to 'audio' for database storage
-                const dbType = t.type === 'sfx' ? 'audio' : t.type
-                if (!['video', 'audio', 'text', 'caption'].includes(dbType)) {
+                if (!['video', 'audio', 'text', 'caption'].includes(t.type)) {
                     throw new Error(`Track ${index} (${t.id}) has invalid type: ${t.type}`)
                 }
 
@@ -171,7 +169,7 @@ router.put(
                     id: t.id,
                     project_id: projectId,
                     index: t.index,
-                    type: dbType,
+                    type: t.type,
                     created_at: t.created_at || new Date().toISOString(),
                 }
             })

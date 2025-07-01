@@ -14,8 +14,7 @@ export function toDbTrack(t: Track, projectId: string) {
         project_id: projectId,
         index: index,
         type: t.type === 'caption' ? 'text' : 
-              t.type === 'stickers' ? 'video' :
-              t.type === 'sfx' ? 'audio' : t.type, // Map sfx to audio type for database
+              t.type === 'stickers' ? 'video' : t.type, // Map stickers to video type for database
         created_at: t.createdAt ?? new Date().toISOString(),
     };
 }
@@ -70,11 +69,7 @@ export function toDbClip(c: Clip) {
         asset_duration_ms: assetDurationMs,
         volume: c.volume || 1.0,
         speed: c.speed || 1.0,
-        properties: {
-            ...(c.properties || {}),
-            // Preserve the SFX flag when saving to database
-            isSfx: c.properties?.isSfx || false
-        },
+        properties: c.properties || null,
         created_at: c.createdAt ?? new Date().toISOString(),
     };
 }
