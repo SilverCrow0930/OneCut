@@ -14,7 +14,8 @@ export function toDbTrack(t: Track, projectId: string) {
         project_id: projectId,
         index: index,
         type: t.type === 'caption' ? 'text' : 
-              t.type === 'stickers' ? 'video' : t.type, // Map stickers to video type for database
+              t.type === 'stickers' ? 'video' :
+              t.type === 'sfx' ? 'audio' : t.type, // Map sfx to audio type for database
         created_at: t.createdAt ?? new Date().toISOString(),
     };
 }

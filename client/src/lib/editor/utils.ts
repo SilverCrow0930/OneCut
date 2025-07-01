@@ -149,11 +149,14 @@ export function historyReducer(
 }
 
 export function dbToTrack(r: any): Track {
+    // Determine if this is an SFX track by checking if any clips on this track are SFX
+    const isSfxTrack = r.type === 'audio' && r.clips?.some((clip: any) => clip.properties?.isSfx)
+
     return {
         id: r.id,                               // uuid
         projectId: r.project_id,                       // uuid FK
         index: Number(r.index) || 0,         // ordering in UI
-        type: r.type as Track['type'],            // 'video' | 'audio'
+        type: isSfxTrack ? 'sfx' : r.type as Track['type'],            // 'video' | 'audio' | 'sfx'
         createdAt: r.created_at ?? new Date().toISOString(),
     }
 }
@@ -254,22 +257,24 @@ export function addAssetToTrack(
     projectId: string,
     options: {
         isExternal?: boolean,
-        assetType?: 'image' | 'video' | 'music' | 'sound',
+        assetType?: 'image' | 'video' | 'music' | 'sound' | 'sfx',
         trackIndex?: number,
         startTimeMs?: number
     } = {}
 ) {
     const { isExternal = false } = options
     let externalAsset = null
-    let trackType: 'video' | 'audio' | 'text' | 'caption' | 'stickers' = 'video'
+    let trackType: 'video' | 'audio' | 'text' | 'caption' | 'stickers' | 'sfx' = 'video'
     let duration = 0
     let startTimeMs = options.startTimeMs ?? 0
 
     // Handle external assets (from Pexels, etc)
     if (isExternal) {
         // Handle external assets (Pexels, Giphy stickers, Freesound audio)
-        if (options.assetType === 'music' || options.assetType === 'sound') {
+        if (options.assetType === 'music') {
             trackType = 'audio'
+        } else if (options.assetType === 'sound') {
+            trackType = 'sfx'
         } else {
             trackType = options.assetType === 'video' ? 'video' : 'video' // Images also go on video tracks
         }
@@ -426,7 +431,8 @@ export function addAssetToTrack(
         volume: 1,
         speed: 1,
         properties: isExternal ? {
-            externalAsset: externalAsset
+            externalAsset: externalAsset,
+            isSfx: trackType === 'sfx'
         } : (asset.mime_type?.startsWith('image/') ? {
             crop: {
                 width: 320,  // Default 16:9 aspect ratio
