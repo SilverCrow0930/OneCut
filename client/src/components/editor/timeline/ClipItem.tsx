@@ -719,8 +719,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                     flex items-center justify-center rounded-lg
                     border-2 transition-all duration-75
                     ${dragState.isOverlapping ? 'border-blue-500 bg-blue-500/20 shadow-lg' : ''}
-                    ${isPrimarySelection ? 'border-blue-400 shadow-md' : 
-                      isInMultiSelection ? 'border-purple-400 shadow-sm' : 
+                    ${isPrimarySelection ? 'border-blue-400 shadow-[0_0_0_2px_rgba(96,165,250,0.3)] ring-2 ring-blue-400 ring-offset-1 ring-offset-black/50' : 
+                      isInMultiSelection ? 'border-purple-400 shadow-[0_0_0_2px_rgba(192,132,252,0.3)] ring-2 ring-purple-400 ring-offset-1 ring-offset-black/50' : 
                       'border-transparent hover:border-gray-400'}
                     ${isVoiceover ? 'bg-green-500 hover:bg-green-600' : !isVideo && !isImage ? 'bg-purple-500 hover:bg-purple-600' : ''}
                     ${isShiftHeld ? 'cursor-move border-blue-300 shadow-lg' : 'cursor-grab active:cursor-grabbing'}
