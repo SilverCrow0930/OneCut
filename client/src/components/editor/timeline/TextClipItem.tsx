@@ -576,13 +576,19 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                 {isSelected && (
                     <>
                         <div
-                            className="absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors"
+                            className="absolute left-0 top-0 w-2 h-full cursor-ew-resize bg-white/10 hover:bg-white/30 transition-colors"
                             onMouseDown={(e) => handleResizeStart(e, 'start')}
-                        />
+                            title="Drag to resize"
+                        >
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 rounded-r opacity-75" />
+                        </div>
                         <div
-                            className="absolute right-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white/20 transition-colors"
+                            className="absolute right-0 top-0 w-2 h-full cursor-ew-resize bg-white/10 hover:bg-white/30 transition-colors"
                             onMouseDown={(e) => handleResizeStart(e, 'end')}
-                        />
+                            title="Drag to resize"
+                        >
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400 rounded-l opacity-75" />
+                        </div>
                     </>
                 )}
             </div>
