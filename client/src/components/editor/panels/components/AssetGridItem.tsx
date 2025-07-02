@@ -33,7 +33,7 @@ export default function AssetGridItem({ asset, type, onUploadAndHighlight }: Ass
         ? params.projectId[0] 
         : params.projectId
 
-    // Get the appropriate URL based on asset type
+    // Get the appropriate URL based on asset type 
     const getAssetUrl = () => {
         if (isPexelsAsset) {
             // Pexels asset
