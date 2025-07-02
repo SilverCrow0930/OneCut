@@ -4,7 +4,6 @@ import { useAssetUrl } from '@/hooks/useAssetUrl'
 import { useEditor } from '@/contexts/EditorContext'
 import { useAudio } from '@/contexts/AudioContext'
 import type { Clip } from '@/types/editor'
-import ClipMenu from './ClipMenu'
 import { updateSnapGuides } from './Player'
 
 interface ClipLayerProps {
@@ -913,18 +912,6 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
 
     return (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            {(isPrimarySelection || (isInMultiSelection && isMultiSelectionActive)) && (
-                <div
-                    className="absolute pointer-events-auto z-50"
-                    style={{
-                        left: crop.left + crop.width / 2,
-                        top: Math.max(10, crop.top - 60), // Ensure menu stays at least 10px from top edge
-                        transform: 'translateX(-50%)'
-                    }}
-                >
-                    <ClipMenu />
-                </div>
-            )}
             <div
                 className={`relative pointer-events-auto ${
                     isPrimarySelection ? 'ring-2 ring-blue-500' : 
@@ -937,10 +924,10 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                     height: crop.height,
                     left: crop.left,
                     top: crop.top,
-                    overflow: 'visible', // Keep visible for UI controls (resize handles, selection rings)
+                    overflow: 'visible',
                     position: 'absolute',
                     background: clip.type === 'text' ? 'rgba(0, 0, 0, 0)' : 'black',
-                    ...transitionStyles // Apply transition effects
+                    ...transitionStyles
                 }}
                 onClick={handleClick}
             >
@@ -956,26 +943,70 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                         {/* Corner Resize handles - exactly in the corners */}
                         {/* NW */}
                         <div
-                            className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nwse-resize z-50"
-                            style={{ left: 0, top: 0, transform: 'translate(-50%, -50%)' }}
+                            className="absolute cursor-nwse-resize z-50 hover:scale-110 transition-all duration-150"
+                            style={{
+                                left: 0,
+                                top: 0,
+                                transform: 'translate(-50%, -50%)',
+                                width: '12px',
+                                height: '12px',
+                                background: 'white',
+                                border: '2px solid rgba(216, 180, 254, 0.9)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)',
+                                willChange: 'transform'
+                            }}
                             onMouseDown={(e) => handleResizeStart(e, 'nw')}
                         />
                         {/* NE */}
                         <div
-                            className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nesw-resize z-50"
-                            style={{ right: 0, top: 0, transform: 'translate(50%, -50%)' }}
+                            className="absolute cursor-nesw-resize z-50 hover:scale-110 transition-all duration-150"
+                            style={{
+                                right: 0,
+                                top: 0,
+                                transform: 'translate(50%, -50%)',
+                                width: '12px',
+                                height: '12px',
+                                background: 'white',
+                                border: '2px solid rgba(216, 180, 254, 0.9)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)',
+                                willChange: 'transform'
+                            }}
                             onMouseDown={(e) => handleResizeStart(e, 'ne')}
                         />
                         {/* SW */}
                         <div
-                            className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nesw-resize z-50"
-                            style={{ left: 0, bottom: 0, transform: 'translate(-50%, 50%)' }}
+                            className="absolute cursor-nesw-resize z-50 hover:scale-110 transition-all duration-150"
+                            style={{
+                                left: 0,
+                                bottom: 0,
+                                transform: 'translate(-50%, 50%)',
+                                width: '12px',
+                                height: '12px',
+                                background: 'white',
+                                border: '2px solid rgba(216, 180, 254, 0.9)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)',
+                                willChange: 'transform'
+                            }}
                             onMouseDown={(e) => handleResizeStart(e, 'sw')}
                         />
                         {/* SE */}
                         <div
-                            className="absolute w-3 h-3 rounded-full bg-white border border-black cursor-nwse-resize z-50"
-                            style={{ right: 0, bottom: 0, transform: 'translate(50%, 50%)' }}
+                            className="absolute cursor-nwse-resize z-50 hover:scale-110 transition-all duration-150"
+                            style={{
+                                right: 0,
+                                bottom: 0,
+                                transform: 'translate(50%, 50%)',
+                                width: '12px',
+                                height: '12px',
+                                background: 'white',
+                                border: '2px solid rgba(216, 180, 254, 0.9)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)',
+                                willChange: 'transform'
+                            }}
                             onMouseDown={(e) => handleResizeStart(e, 'se')}
                         />
                     </>
