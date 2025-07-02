@@ -914,8 +914,8 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div
                 className={`relative pointer-events-auto ${
-                    isPrimarySelection ? 'ring-2 ring-blue-500' : 
-                    isInMultiSelection && isMultiSelectionActive ? 'ring-2 ring-purple-500 ring-offset-1' : ''
+                    isPrimarySelection ? 'before:absolute before:inset-[-2px] before:border-2 before:border-purple-400 before:rounded before:shadow-[0_0_0_1px_rgba(216,180,254,0.3)] before:z-[1]' : 
+                    isInMultiSelection && isMultiSelectionActive ? 'before:absolute before:inset-[-2px] before:border-2 before:border-purple-400 before:rounded before:shadow-[0_0_0_1px_rgba(216,180,254,0.3)] before:z-[1]' : ''
                 }`}
                 data-clip-layer
                 data-clip-id={clip.id}
@@ -943,7 +943,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                         {/* Corner Resize handles - exactly in the corners */}
                         {/* NW */}
                         <div
-                            className="absolute cursor-nwse-resize z-50 hover:scale-110 transition-all duration-150"
+                            className="absolute cursor-nwse-resize z-[2] hover:scale-110 transition-all duration-150"
                             style={{
                                 left: 0,
                                 top: 0,
@@ -960,7 +960,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                         />
                         {/* NE */}
                         <div
-                            className="absolute cursor-nesw-resize z-50 hover:scale-110 transition-all duration-150"
+                            className="absolute cursor-nesw-resize z-[2] hover:scale-110 transition-all duration-150"
                             style={{
                                 right: 0,
                                 top: 0,
@@ -977,7 +977,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                         />
                         {/* SW */}
                         <div
-                            className="absolute cursor-nesw-resize z-50 hover:scale-110 transition-all duration-150"
+                            className="absolute cursor-nesw-resize z-[2] hover:scale-110 transition-all duration-150"
                             style={{
                                 left: 0,
                                 bottom: 0,
@@ -994,7 +994,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                         />
                         {/* SE */}
                         <div
-                            className="absolute cursor-nwse-resize z-50 hover:scale-110 transition-all duration-150"
+                            className="absolute cursor-nwse-resize z-[2] hover:scale-110 transition-all duration-150"
                             style={{
                                 right: 0,
                                 bottom: 0,
