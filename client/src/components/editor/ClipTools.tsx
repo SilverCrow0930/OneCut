@@ -407,7 +407,7 @@ const ClipTools = () => {
             <Tooltip text="Split" disabled={!hasSelectedClip || hasMultipleSelection}>
                 <button
                     className={`
-                        p-1 rounded-lg transition-colors duration-200 flex items-center justify-center
+                        p-1 rounded-lg transition-colors duration-200
                         ${hasSelectedClip && !hasMultipleSelection ?
                             'hover:bg-gray-300' :
                             'opacity-40 cursor-not-allowed'
@@ -587,7 +587,7 @@ const ClipTools = () => {
             <Tooltip text={hasMultipleSelection ? "Delete" : "Delete"} disabled={!hasAnySelection}>
                 <button
                     className={`
-                        p-1 rounded-lg transition-colors duration-200 flex items-center justify-center
+                        p-1 rounded-lg transition-colors duration-200
                         ${hasAnySelection ? 'hover:bg-gray-300' : 'opacity-40 cursor-not-allowed'}
                     `}
                     onClick={handleDelete}
