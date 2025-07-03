@@ -427,7 +427,7 @@ const ClipTools = () => {
                         className={`
                             p-1 rounded-lg transition-colors duration-200 flex items-center justify-center
                             ${canAdjustSpeed && hasAnySelection ? 
-                                'hover:bg-gray-300 -translate-y-[1px]' : 
+                                'hover:bg-gray-300 -translate-y-[2px]' : 
                                 'opacity-40 cursor-not-allowed'
                             }
                         `}
@@ -436,7 +436,7 @@ const ClipTools = () => {
                         }}
                         disabled={!canAdjustSpeed || !hasAnySelection}
                     >
-                        <Gauge size={26} />
+                        <Gauge size={26} className={canAdjustSpeed && hasAnySelection ? 'text-black' : ''} />
                     </button>
                 </Tooltip>
 
@@ -509,7 +509,7 @@ const ClipTools = () => {
                         className={`
                             p-1 rounded-lg transition-colors duration-200 flex items-center justify-center
                             ${canAdjustVolume && hasAnySelection ? 
-                                'hover:bg-gray-300 -translate-y-[1px]' : 
+                                'hover:bg-gray-300 -translate-y-[2px]' : 
                                 'opacity-40 cursor-not-allowed'
                             }
                         `}
@@ -518,7 +518,7 @@ const ClipTools = () => {
                         }}
                         disabled={!canAdjustVolume || !hasAnySelection}
                     >
-                        <Volume2 size={26} />
+                        <Volume2 size={26} className={canAdjustVolume && hasAnySelection ? 'text-black' : ''} />
                     </button>
                 </Tooltip>
 
