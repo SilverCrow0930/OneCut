@@ -103,13 +103,21 @@ const FORMAT_CONFIGS = {
 // Helper function to get transcription from audio
 async function getTranscriptionFromAudio(audioUrl: string, mimeType: string): Promise<string> {
     try {
+        console.log(`[Transcription] Starting transcription process`)
+        console.log(`[Transcription] MIME type: ${mimeType}`)
+
         const { GoogleGenAI, createUserContent, createPartFromUri } = await import('@google/genai')
+        
+        if (!process.env.GEMINI_API_KEY) {
+            throw new Error('GEMINI_API_KEY not configured')
+        }
         
         const ai = new GoogleGenAI({
             apiKey: process.env.GEMINI_API_KEY
         })
         
         // Upload audio file to Gemini
+        console.log(`[Transcription] Downloading audio file...`)
         const fileResponse = await fetch(audioUrl)
         if (!fileResponse.ok) {
             throw new Error(`Failed to download audio for transcription: ${fileResponse.status}`)
@@ -118,6 +126,7 @@ async function getTranscriptionFromAudio(audioUrl: string, mimeType: string): Pr
         const buffer = await fileResponse.arrayBuffer()
         const blob = new Blob([buffer], { type: mimeType })
         
+        console.log(`[Transcription] Uploading audio to Gemini...`)
         const uploadedFile = await ai.files.upload({
             file: blob,
             config: { mimeType }
@@ -128,8 +137,10 @@ async function getTranscriptionFromAudio(audioUrl: string, mimeType: string): Pr
         }
         
         // Wait for file processing
+        console.log(`[Transcription] Waiting for file processing...`)
         let file = await ai.files.get({ name: uploadedFile.name })
         while (file.state === 'PROCESSING') {
+            console.log(`[Transcription] File state: ${file.state}`)
             await new Promise(resolve => setTimeout(resolve, 2000))
             file = await ai.files.get({ name: uploadedFile.name })
         }
@@ -137,6 +148,8 @@ async function getTranscriptionFromAudio(audioUrl: string, mimeType: string): Pr
         if (file.state === 'FAILED') {
             throw new Error('Audio file processing for transcription failed')
         }
+        
+        console.log(`[Transcription] File processed successfully, generating transcription...`)
         
         // Generate transcription
         const transcriptionPrompt = `Please provide a clean, accurate transcription of this audio. Include natural speech patterns, pauses (indicated by ... or [pause]), and speaker changes if multiple speakers. Format as readable text with proper punctuation.`
@@ -156,13 +169,29 @@ async function getTranscriptionFromAudio(audioUrl: string, mimeType: string): Pr
             }
         })
         
+        console.log(`[Transcription] AI response structure:`, {
+            hasCandidates: !!response.candidates,
+            candidateCount: response.candidates?.length,
+            firstCandidateHasContent: !!response.candidates?.[0]?.content,
+            contentParts: response.candidates?.[0]?.content?.parts?.length
+        })
+        
         const transcript = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
-        console.log(`📝 Transcription completed: ${transcript.length} characters`)
+        console.log(`[Transcription] Completed: ${transcript.length} characters`)
+        
+        if (!transcript) {
+            throw new Error('Empty transcription received from AI')
+        }
         
         return transcript
         
     } catch (error) {
-        console.error('Transcription failed, proceeding without transcript:', error)
+        console.error(`[Transcription] Failed:`, error)
+        console.error(`[Transcription] Error details:`, {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            mimeType: mimeType
+        })
         return 'Transcription unavailable - proceeding with audio-only analysis.'
     }
 }
@@ -182,101 +211,109 @@ async function generateQuickClips(signedUrl: string, mimeType: string, job: Quic
 
 // Audio-only processing for Talk & Audio content (95% cost savings)
 async function generateQuickClipsFromAudio(signedUrl: string, mimeType: string, job: QuickclipsJob): Promise<{ clips: any[], transcript: string }> {
-    const { GoogleGenAI, createUserContent, createPartFromUri } = await import('@google/genai')
-    
-    const ai = new GoogleGenAI({
-        apiKey: process.env.GEMINI_API_KEY
-    })
-    
-    const formatConfig = FORMAT_CONFIGS[job.videoFormat]
-    
-    // Extract audio from video for cost optimization (same logic as transcription service)
-    let audioUrl = signedUrl
-    let audioMimeType = mimeType
-    let tempAudioFile: string | null = null
-    
-    if (mimeType.startsWith('video/')) {
-        console.log('🎵 Extracting audio from video for cost-optimized processing...')
-        
-        try {
-            const tempDir = os.tmpdir()
-            const inputFileName = `input_${Date.now()}_${Math.random().toString(36).substring(7)}.${mimeType.split('/')[1]}`
-            const outputFileName = `audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`
-            const inputPath = path.join(tempDir, inputFileName)
-            const outputPath = path.join(tempDir, outputFileName)
-            
-            // Download video file
-            const videoResponse = await fetch(signedUrl)
-            if (!videoResponse.ok) {
-                throw new Error(`Failed to download video: ${videoResponse.status}`)
-            }
-            
-            const videoBuffer = await videoResponse.arrayBuffer()
-            await fs.writeFile(inputPath, Buffer.from(videoBuffer))
-            
-            // Extract audio using FFmpeg
-            await new Promise<void>((resolve, reject) => {
-                ffmpeg(inputPath)
-                    .toFormat('mp3')
-                    .audioCodec('libmp3lame')
-                    .audioChannels(1) // Mono for smaller file size
-                    .audioFrequency(22050) // Lower frequency for analysis (sufficient quality)
-                    .audioBitrate('64k') // Lower bitrate for cost optimization
-                    .on('end', () => {
-                        console.log('✅ Audio extraction completed')
-                        resolve()
-                    })
-                    .on('error', (err) => {
-                        console.error('❌ FFmpeg audio extraction failed:', err)
-                        reject(new Error(`Audio extraction failed: ${err.message}`))
-                    })
-                    .save(outputPath)
-            })
-            
-            // Upload extracted audio to temporary GCS location
-            const audioBuffer = await fs.readFile(outputPath)
-            const tempAudioKey = `temp/quickclips_audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`
-            
-            const file = bucket.file(tempAudioKey)
-            await file.save(audioBuffer, {
-                metadata: {
-                    contentType: 'audio/mpeg',
-                },
-            })
-            
-            // Generate signed URL for the audio file
-            const [audioSignedUrl] = await file.getSignedUrl({
-                action: 'read',
-                expires: Date.now() + 60 * 60 * 1000, // 1 hour
-            })
-            
-            audioUrl = audioSignedUrl
-            audioMimeType = 'audio/mpeg'
-            tempAudioFile = tempAudioKey
-            
-            // Clean up local temp files
-            await fs.unlink(inputPath).catch(console.error)
-            await fs.unlink(outputPath).catch(console.error)
-            
-            console.log('🎵 Audio extraction completed - processing with 95% cost savings!')
-            
-        } catch (audioError) {
-            console.error('Audio extraction failed, falling back to full video:', audioError)
-            // Fall back to original video file if audio extraction fails
-            audioUrl = signedUrl
-            audioMimeType = mimeType
-        }
-    }
-    
-    // Step 1: Get transcript for better analysis quality
-    console.log('📝 Getting transcript for enhanced audio analysis...')
-    const transcript = await getTranscriptionFromAudio(audioUrl, audioMimeType)
-    
-    const userInstructions = job.userPrompt ? `\n\nUSER INSTRUCTIONS: ${job.userPrompt}\nPlease incorporate these specific requirements into your analysis while maintaining the core quality standards.` : ''
-    
-    const prompt = `You are an expert audio editor trained to extract the most meaningful and coherent segments from audio content. Your goal is to identify speech-driven segments that capture key insights, compelling stories, emotional moments, and quotable statements.
+    try {
+        console.log(`[QuickClips Audio] Starting audio processing for job ${job.id}`)
+        console.log(`[QuickClips Audio] Content type: ${job.contentType}`)
+        console.log(`[QuickClips Audio] MIME type: ${mimeType}`)
+        console.log(`[QuickClips Audio] Format: ${job.videoFormat}`)
 
-CRITICAL: You MUST return ONLY a valid JSON array. Do not include any other text, markdown formatting, or explanations. The response should start with '[' and end with ']'.
+        const { GoogleGenAI, createUserContent, createPartFromUri } = await import('@google/genai')
+        
+        if (!process.env.GEMINI_API_KEY) {
+            throw new Error('GEMINI_API_KEY not configured')
+        }
+        
+        const ai = new GoogleGenAI({
+            apiKey: process.env.GEMINI_API_KEY
+        })
+        
+        const formatConfig = FORMAT_CONFIGS[job.videoFormat]
+        
+        // Extract audio from video for cost optimization (same logic as transcription service)
+        let audioUrl = signedUrl
+        let audioMimeType = mimeType
+        let tempAudioFile: string | null = null
+        
+        if (mimeType.startsWith('video/')) {
+            console.log('🎵 Extracting audio from video for cost-optimized processing...')
+            
+            try {
+                const tempDir = os.tmpdir()
+                const inputFileName = `input_${Date.now()}_${Math.random().toString(36).substring(7)}.${mimeType.split('/')[1]}`
+                const outputFileName = `audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`
+                const inputPath = path.join(tempDir, inputFileName)
+                const outputPath = path.join(tempDir, outputFileName)
+                
+                // Download video file
+                const videoResponse = await fetch(signedUrl)
+                if (!videoResponse.ok) {
+                    throw new Error(`Failed to download video: ${videoResponse.status}`)
+                }
+                
+                const videoBuffer = await videoResponse.arrayBuffer()
+                await fs.writeFile(inputPath, Buffer.from(videoBuffer))
+                
+                // Extract audio using FFmpeg
+                await new Promise<void>((resolve, reject) => {
+                    ffmpeg(inputPath)
+                        .toFormat('mp3')
+                        .audioCodec('libmp3lame')
+                        .audioChannels(1) // Mono for smaller file size
+                        .audioFrequency(22050) // Lower frequency for analysis (sufficient quality)
+                        .audioBitrate('64k') // Lower bitrate for cost optimization
+                        .on('end', () => {
+                            console.log('✅ Audio extraction completed')
+                            resolve()
+                        })
+                        .on('error', (err) => {
+                            console.error('❌ FFmpeg audio extraction failed:', err)
+                            reject(new Error(`Audio extraction failed: ${err.message}`))
+                        })
+                        .save(outputPath)
+                })
+                
+                // Upload extracted audio to temporary GCS location
+                const audioBuffer = await fs.readFile(outputPath)
+                const tempAudioKey = `temp/quickclips_audio_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`
+                
+                const file = bucket.file(tempAudioKey)
+                await file.save(audioBuffer, {
+                    metadata: {
+                        contentType: 'audio/mpeg',
+                    },
+                })
+                
+                // Generate signed URL for the audio file
+                const [audioSignedUrl] = await file.getSignedUrl({
+                    action: 'read',
+                    expires: Date.now() + 60 * 60 * 1000, // 1 hour
+                })
+                
+                audioUrl = audioSignedUrl
+                audioMimeType = 'audio/mpeg'
+                tempAudioFile = tempAudioKey
+                
+                // Clean up local temp files
+                await fs.unlink(inputPath).catch(console.error)
+                await fs.unlink(outputPath).catch(console.error)
+                
+                console.log('🎵 Audio extraction completed - processing with 95% cost savings!')
+                
+            } catch (audioError) {
+                console.error('Audio extraction failed, falling back to full video:', audioError)
+                // Fall back to original video file if audio extraction fails
+                audioUrl = signedUrl
+                audioMimeType = mimeType
+            }
+        }
+        
+        // Step 1: Get transcript for better analysis quality
+        console.log('📝 Getting transcript for enhanced audio analysis...')
+        const transcript = await getTranscriptionFromAudio(audioUrl, audioMimeType)
+        
+        const userInstructions = job.userPrompt ? `\n\nUSER INSTRUCTIONS: ${job.userPrompt}\nPlease incorporate these specific requirements into your analysis while maintaining the core quality standards.` : ''
+        
+        const prompt = `You are an expert audio editor trained to extract the most meaningful and coherent segments from audio content. Your goal is to identify speech-driven segments that capture key insights, compelling stories, emotional moments, and quotable statements.
 
 TRANSCRIPTION-ENHANCED APPROACH: You have access to both the audio file and its transcript. Use the transcript to identify precise topic boundaries, key phrases, and content structure, while using the audio to assess tone, emphasis, and natural speech patterns.
 
@@ -319,28 +356,26 @@ SHORT FORMAT APPROACH:
 - Content quality is more important than exact timing
 `}
 
-REQUIRED JSON FORMAT:
-You MUST return an array of clip objects with EXACTLY this structure:
+OUTPUT FORMAT:
+Return ONLY a valid JSON array with NO additional text:
+
 [
   {
     "title": "Opening Statement",
-    "description": "Speaker introduces main theme with personal anecdote",
     "start_time": 15,
     "end_time": 65,
     "significance": 8.2,
+    "description": "Speaker introduces main theme with personal anecdote",
     "narrative_role": "introduction",
     "transition_note": "Natural pause before topic shift"
   }
 ]
 
 FIELD REQUIREMENTS:
-- title: String - Short, descriptive title
-- description: String - 1-2 sentence summary of content
-- start_time: Number - Exact timestamp in seconds (must be >= 0)
-- end_time: Number - Exact timestamp in seconds (must be > start_time)
-- significance: Number - Score from 1-10 based on importance
-- narrative_role: String - One of: "introduction", "development", "climax", "resolution", "supporting"
-- transition_note: String - How this segment connects to the narrative flow
+- start_time, end_time: exact timestamps in seconds
+- significance: 1-10 score based on importance to overall message
+- narrative_role: introduction, development, climax, resolution, supporting
+- transition_note: how this segment connects to the narrative flow
 - NO overlapping timestamps
 - Order segments chronologically (by start_time)
 
@@ -353,159 +388,158 @@ Use the transcript to identify:
 - Story beginnings and conclusions
 - Natural speech patterns and emphasis points
 
-${userInstructions}
+${userInstructions}`
 
-CRITICAL REMINDER: Return ONLY the JSON array. No other text or formatting.`
-
-    try {
-        // Upload audio file to Gemini
-        const fileResponse = await fetch(audioUrl)
-        if (!fileResponse.ok) {
-            throw new Error(`Failed to download audio: ${fileResponse.status}`)
-        }
-        
-        const buffer = await fileResponse.arrayBuffer()
-        const blob = new Blob([buffer], { type: audioMimeType })
-        
-        const uploadedFile = await ai.files.upload({
-            file: blob,
-            config: { mimeType: audioMimeType }
-        })
-        
-        if (!uploadedFile.name) {
-            throw new Error('Audio file upload failed - no file name returned')
-        }
-        
-        // Wait for file processing
-        let file = await ai.files.get({ name: uploadedFile.name })
-        while (file.state === 'PROCESSING') {
-            await new Promise(resolve => setTimeout(resolve, 2000))
-            file = await ai.files.get({ name: uploadedFile.name })
-        }
-        
-        if (file.state === 'FAILED') {
-            throw new Error('Audio file processing failed')
-        }
-        
-        // Generate content using audio-only analysis
-        const content = createUserContent([
-            prompt,
-            createPartFromUri(uploadedFile.uri || '', audioMimeType)
-        ])
-        
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
-            contents: [content],
-            config: {
-                maxOutputTokens: 4096,
-                temperature: 0.2,
-                topP: 0.8,
-            }
-        })
-        
-        const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
-        console.log(`[QuickClips Audio] Raw AI response:`, responseText.substring(0, 500))
-        
-        // Parse JSON response (same logic as video processing)
-        let clips = []
         try {
-            // First try: direct parse after cleaning
-            const cleanedResponse = responseText
-                .replace(/```json/g, '')  // Remove markdown code block markers
-                .replace(/```/g, '')
-                .trim()
+            // Upload audio file to Gemini
+            const fileResponse = await fetch(audioUrl)
+            if (!fileResponse.ok) {
+                throw new Error(`Failed to download audio: ${fileResponse.status}`)
+            }
             
+            const buffer = await fileResponse.arrayBuffer()
+            const blob = new Blob([buffer], { type: audioMimeType })
+            
+            const uploadedFile = await ai.files.upload({
+                file: blob,
+                config: { mimeType: audioMimeType }
+            })
+            
+            if (!uploadedFile.name) {
+                throw new Error('Audio file upload failed - no file name returned')
+            }
+            
+            // Wait for file processing
+            let file = await ai.files.get({ name: uploadedFile.name })
+            while (file.state === 'PROCESSING') {
+                await new Promise(resolve => setTimeout(resolve, 2000))
+                file = await ai.files.get({ name: uploadedFile.name })
+            }
+            
+            if (file.state === 'FAILED') {
+                throw new Error('Audio file processing failed')
+            }
+            
+            // Generate content using audio-only analysis
+            const content = createUserContent([
+                prompt,
+                createPartFromUri(uploadedFile.uri || '', audioMimeType)
+            ])
+            
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.0-flash-exp',
+                contents: [content],
+                config: {
+                    maxOutputTokens: 4096,
+                    temperature: 0.2,
+                    topP: 0.8,
+                }
+            })
+            
+            const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+            console.log(`[QuickClips Audio] Raw AI response:`, responseText.substring(0, 500))
+            
+            // Parse JSON response (same logic as video processing)
+            let clips = []
             try {
+                const cleanedResponse = responseText.trim()
                 clips = JSON.parse(cleanedResponse)
-            } catch (directParseError) {
-                console.log(`[QuickClips Audio] Direct parse failed, trying array extraction...`)
+            } catch (e) {
+                console.log(`[QuickClips Audio] Direct parse failed, trying extraction strategies...`)
                 
-                // Second try: find array pattern
-                const arrayMatch = cleanedResponse.match(/\[\s*\{[\s\S]*?\}\s*\]/g)
-                if (arrayMatch) {
+                let jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/g)
+                if (jsonMatch) {
                     try {
-                        clips = JSON.parse(arrayMatch[0])
-                    } catch (arrayParseError) {
-                        console.log(`[QuickClips Audio] Array extraction failed, trying object extraction...`)
-                        
-                        // Third try: extract individual objects
-                        const objectPattern = /\{\s*"title"[\s\S]*?"end_time"\s*:\s*\d+[\s\S]*?\}/g
-                        const objectMatches = cleanedResponse.match(objectPattern)
-                        
-                        if (objectMatches) {
-                            clips = objectMatches
-                                .map(match => {
-                                    try {
-                                        return JSON.parse(match)
-                                    } catch (e) {
-                                        console.log(`[QuickClips Audio] Failed to parse object: ${match.substring(0, 50)}...`)
-                                        return null
-                                    }
-                                })
-                                .filter(Boolean)
-                        }
+                        clips = JSON.parse(jsonMatch[0])
+                    } catch (parseError) {
+                        console.log(`[QuickClips Audio] Array extraction failed`)
                     }
                 }
-            }
-            
-            // Validate clip structure
-            clips = clips.filter((clip: AIGeneratedClip) => {
-                const isValid = clip && 
-                    typeof clip.title === 'string' &&
-                    typeof clip.description === 'string' &&
-                    typeof clip.start_time === 'number' && 
-                    typeof clip.end_time === 'number' &&
-                    clip.end_time > clip.start_time &&
-                    (clip.end_time - clip.start_time) >= 5 // Minimum 5 seconds
                 
-                if (!isValid) {
-                    console.log(`[QuickClips Audio] Filtered out invalid clip:`, clip)
+                if (!clips.length) {
+                    const objectPattern = /\{\s*"title"[\s\S]*?"end_time"\s*:\s*\d+[\s\S]*?\}/g
+                    const objectMatches = responseText.match(objectPattern)
+                    
+                    if (objectMatches) {
+                        clips = objectMatches.map(match => {
+                            try {
+                                return JSON.parse(match)
+                            } catch (e) {
+                                return null
+                            }
+                        }).filter(Boolean)
+                    }
                 }
                 
-                return isValid
+                if (clips.length === 0) {
+                    throw new Error(`Failed to parse audio analysis output: ${responseText.substring(0, 200)}...`)
+                }
+            }
+            
+            // Validate and clean clips
+            if (!Array.isArray(clips)) {
+                throw new Error('Audio analysis response is not an array')
+            }
+            
+            clips = clips.filter(clip => {
+                return clip && 
+                       typeof clip.start_time === 'number' && 
+                       typeof clip.end_time === 'number' &&
+                       clip.end_time > clip.start_time &&
+                       (clip.end_time - clip.start_time) >= 5 // Minimum 5 seconds
             })
             
             if (clips.length === 0) {
-                throw new Error('No valid clips found after parsing and validation')
+                throw new Error('No valid audio clips found after filtering')
             }
             
-            // Sort clips by start time
-            clips.sort((a: AIGeneratedClip, b: AIGeneratedClip) => a.start_time - b.start_time)
+            // Clean up temporary audio file
+            if (tempAudioFile) {
+                setTimeout(async () => {
+                    try {
+                        await bucket.file(tempAudioFile!).delete()
+                        console.log('🗑️ Cleaned up temporary audio file from GCS')
+                    } catch (error) {
+                        console.error('Failed to clean up temp audio file:', error)
+                    }
+                }, 2 * 60 * 60 * 1000) // 2 hours
+            }
             
-            console.log(`[QuickClips Audio] Successfully parsed ${clips.length} clips`)
+            console.log(`[QuickClips Audio] Generated ${clips.length} audio-optimized clips`)
+            return { clips, transcript }
             
-        } catch (error: unknown) {
-            console.error('[QuickClips Audio] Failed to parse response:', error)
-            console.error('[QuickClips Audio] Raw response:', responseText)
-            throw new Error(`Failed to parse audio analysis output: ${error instanceof Error ? error.message : String(error)}`)
-        }
-        
-        // Clean up temporary audio file
-        if (tempAudioFile) {
-            setTimeout(async () => {
+        } catch (error) {
+            console.error(`[QuickClips Audio] Audio processing failed:`, error)
+            console.error(`[QuickClips Audio] Full error details:`, {
+                message: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined,
+                jobId: job.id,
+                projectId: job.projectId,
+                contentType: job.contentType,
+                mimeType: mimeType
+            })
+            
+            // Clean up temporary audio file on error
+            if (tempAudioFile) {
                 try {
-                    await bucket.file(tempAudioFile!).delete()
-                    console.log('🗑️ Cleaned up temporary audio file from GCS')
-                } catch (error) {
-                    console.error('Failed to clean up temp audio file:', error)
+                    await bucket.file(tempAudioFile).delete()
+                } catch (cleanupError) {
+                    console.error('Failed to clean up temp audio file on error:', cleanupError)
                 }
-            }, 2 * 60 * 60 * 1000) // 2 hours
-        }
-        
-        return { clips, transcript }
-        
-    } catch (error) {
-        console.error('[QuickClips Audio] Audio processing failed:', error)
-        
-        // Clean up temporary audio file on error
-        if (tempAudioFile) {
-            try {
-                await bucket.file(tempAudioFile).delete()
-            } catch (cleanupError) {
-                console.error('Failed to clean up temp audio file on error:', cleanupError)
             }
+            
+            throw error
         }
-        
+    } catch (error) {
+        console.error(`[QuickClips Audio] Processing failed for job ${job.id}:`, error)
+        console.error(`[QuickClips Audio] Full error details:`, {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            jobId: job.id,
+            projectId: job.projectId,
+            contentType: job.contentType,
+            mimeType: mimeType
+        })
         throw error
     }
 }
