@@ -1,8 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useEditor } from '@/contexts/EditorContext'
 import { apiPath } from '@/lib/config'
 import { Upload } from 'lucide-react'
 import { Asset } from '@/contexts/AssetsContext'
+import { addAssetToTrack } from '@/lib/editor/utils'
 
 interface UploadProgress {
     fileName: string;
@@ -16,6 +18,7 @@ interface AssetUploaderProps {
 
 export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
     const { session } = useAuth()
+    const { tracks, clips, executeCommand } = useEditor()
     const inputRef = useRef<HTMLInputElement>(null)
     const [uploading, setUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([])
@@ -144,12 +147,103 @@ export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
         setUploading(true)
         setUploadProgress([])
         setShowProgress(true)
+        
+        // Get project ID from URL
+        const projectId = window.location.pathname.split('/').pop()
 
         try {
             const uploadedAssets = await Promise.all(files.map(file => uploadFile(file)))
+            
             if (onUploadSuccess) {
                 onUploadSuccess(uploadedAssets)
             }
+            
+            // Automatically add uploaded assets to timeline
+            uploadedAssets.forEach(asset => {
+                const assetType = asset.mime_type.startsWith('audio/') 
+                    ? 'music' 
+                    : asset.mime_type.startsWith('video/') 
+                        ? 'video' 
+                        : 'image'
+                
+                // Add asset to timeline
+                addAssetToTrack(
+                    asset,
+                    tracks,
+                    clips,
+                    executeCommand,
+                    asset.project_id || projectId,
+                    { assetType }
+                )
+            })
+        } catch (err) {
+            console.error('Batch upload error:', err)
+        } finally {
+            setUploading(false)
+            if (inputRef.current) {
+                inputRef.current.value = ''
+            }
+        }
+    }
+
+    // Handle drag and drop events
+    const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(false)
+    }
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+    }
+
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(false)
+        
+        const files = Array.from(e.dataTransfer.files)
+        if (files.length === 0) return
+
+        setUploading(true)
+        setUploadProgress([])
+        setShowProgress(true)
+        
+        // Get project ID from URL
+        const projectId = window.location.pathname.split('/').pop()
+
+        try {
+            const uploadedAssets = await Promise.all(files.map(file => uploadFile(file)))
+            
+            if (onUploadSuccess) {
+                onUploadSuccess(uploadedAssets)
+            }
+            
+            // Automatically add uploaded assets to timeline
+            uploadedAssets.forEach(asset => {
+                const assetType = asset.mime_type.startsWith('audio/') 
+                    ? 'music' 
+                    : asset.mime_type.startsWith('video/') 
+                        ? 'video' 
+                        : 'image'
+                
+                // Add asset to timeline
+                addAssetToTrack(
+                    asset,
+                    tracks,
+                    clips,
+                    executeCommand,
+                    asset.project_id || projectId,
+                    { assetType }
+                )
+            })
         } catch (err) {
             console.error('Batch upload error:', err)
         } finally {
@@ -172,6 +266,10 @@ export default function AssetUploader({ onUploadSuccess }: AssetUploaderProps) {
                         ''
                     }
                 `}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
             >
                 <label className="
                     flex flex-row gap-2 items-center text-white 
