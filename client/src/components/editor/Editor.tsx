@@ -212,11 +212,9 @@ const Editor = () => {
     // Keyboard event handler
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Only handle keyboard events if we're not in an input/textarea/contenteditable
+            // Only handle keyboard events if we're not in an input/textarea
             const target = e.target as HTMLElement
-            if (target.tagName === 'INPUT' || 
-                target.tagName === 'TEXTAREA' || 
-                target.contentEditable === 'true') {
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
                 return
             }
 
