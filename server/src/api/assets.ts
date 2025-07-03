@@ -183,34 +183,78 @@ router.get('/:id/url', async (req: Request, res: Response, next: NextFunction) =
         const supaUid = authReq.user.id
         const { id } = req.params
 
+        console.log(`[Asset URL] Request for asset ${id} by user ${supaUid}`)
+
         // 1) map to local user
         const localUserId = await getLocalUserId(supaUid)
+        console.log(`[Asset URL] Mapped Supabase user ${supaUid} to local user ${localUserId}`)
 
         // 2) fetch the object_key for that asset and user
         const { data: asset, error } = await supabase
             .from('assets')
-            .select('object_key')
+            .select('object_key, mime_type, name')
             .eq('id', id)
             .eq('user_id', localUserId)
             .single()
 
-        if (error || !asset) {
+        if (error) {
+            console.error(`[Asset URL] Database error for asset ${id}:`, error)
             return res.status(404).json({
-                error: 'Not found'
+                error: 'Asset not found in database'
             })
         }
 
-        // 3) generate signed URL
-        const [url] = await bucket
-            .file(asset.object_key)
-            .getSignedUrl({
+        if (!asset) {
+            console.error(`[Asset URL] No asset found for id ${id} and user ${localUserId}`)
+            return res.status(404).json({
+                error: 'Asset not found'
+            })
+        }
+
+        console.log(`[Asset URL] Found asset ${id}: ${asset.name} (${asset.mime_type}) at ${asset.object_key}`)
+
+        try {
+            // 3) Check if file exists in GCS
+            const file = bucket.file(asset.object_key)
+            const [exists] = await file.exists()
+            
+            if (!exists) {
+                console.error(`[Asset URL] File ${asset.object_key} not found in GCS bucket`)
+                return res.status(404).json({
+                    error: 'Asset file not found in storage'
+                })
+            }
+
+            // 4) generate signed URL
+            const [url] = await file.getSignedUrl({
                 action: 'read',
                 expires: Date.now() + 60 * 60 * 1000,
             })
 
-        res.json({ url })
+            console.log(`[Asset URL] Generated signed URL for ${id}`)
+            res.json({ url })
+        } catch (gcsError: any) {
+            // Check for billing issues
+            if (gcsError?.message?.includes('billing account') || 
+                gcsError?.code === 403 || 
+                gcsError?.errors?.[0]?.reason === 'accountDisabled') {
+                console.error(`[Asset URL] GCP billing account disabled:`, gcsError)
+                return res.status(503).json({
+                    error: 'Storage service temporarily unavailable',
+                    details: 'Storage service is experiencing billing issues. Please contact support.'
+                })
+            }
+
+            // Other GCS errors
+            console.error(`[Asset URL] GCS error for asset ${id}:`, gcsError)
+            return res.status(500).json({
+                error: 'Storage service error',
+                details: 'Failed to access storage service. Please try again later.'
+            })
+        }
     }
     catch (err) {
+        console.error(`[Asset URL] Unexpected error for asset ${req.params.id}:`, err)
         next(err)
     }
 })

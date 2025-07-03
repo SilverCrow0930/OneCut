@@ -6,6 +6,7 @@ interface ExportSettings {
     quickExport?: boolean
     optimizationLevel?: 'auto' | 'speed' | 'quality' | 'balanced'
     allowProgressiveQuality?: boolean
+    aspectRatio?: 'horizontal' | 'vertical'
 }
 
 interface ExportJob {

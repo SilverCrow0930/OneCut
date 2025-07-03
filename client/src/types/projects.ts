@@ -6,6 +6,9 @@ export interface Project {
     duration?: number
     is_public: boolean
     
+    // Project settings
+    aspectRatio?: 'horizontal' | 'vertical'
+    
     // Notes field for user's project notes
     notes?: string
     

@@ -100,6 +100,14 @@ export function useAssetUrl(assetId?: string) {
             return
         }
 
+        // Skip fetching for missing assets
+        if (assetId.startsWith('missing_')) {
+            console.log(`[useAssetUrl] Skipping missing asset: ${assetId}`)
+            setUrl(null)
+            setLoading(false)
+            return
+        }
+
         const fetchUrl = async () => {
             try {
                 // Check cache first

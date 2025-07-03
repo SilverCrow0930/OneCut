@@ -7,6 +7,12 @@ const assetUrlCache = new Map<string, { url: string | null; timestamp: number; e
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 const ERROR_RETRY_DELAY = 30 * 1000 // 30 seconds before retrying failed requests
 
+interface AccumulatorType {
+    externalAssetIds: string[]
+    regularAssetIds: string[]
+    missingAssetIds: string[]
+}
+
 export function useAssetUrls(assetIds: string[]) {
     const [urls, setUrls] = useState<Map<string, string | null>>(new Map())
     const [loading, setLoading] = useState(true)
@@ -32,23 +38,30 @@ export function useAssetUrls(assetIds: string[]) {
             const now = Date.now()
 
             // Separate external assets from regular assets
-            const { externalAssetIds, regularAssetIds } = stableAssetIds.reduce(
-                (acc, id) => {
+            const { externalAssetIds, regularAssetIds, missingAssetIds } = stableAssetIds.reduce(
+                (acc: AccumulatorType, id: string) => {
                     if (id.startsWith('external_')) {
                         acc.externalAssetIds.push(id)
+                    } else if (id.startsWith('missing_')) {
+                        acc.missingAssetIds.push(id)
+                        console.log(`[useAssetUrls] Skipping missing asset: ${id}`)
                     } else {
                         acc.regularAssetIds.push(id)
                     }
                     return acc
                 },
-                { externalAssetIds: [] as string[], regularAssetIds: [] as string[] }
+                { externalAssetIds: [], regularAssetIds: [], missingAssetIds: [] }
             )
 
-            // Handle external assets - mark them as handled but don't fetch URLs
-            // Their URLs are stored in clip properties, not in the assets table
-            externalAssetIds.forEach(id => {
+            // Handle external assets and missing assets
+            externalAssetIds.forEach((id: string) => {
                 newUrls.set(id, null) // Will be handled by the component using clip properties
                 console.log(`[useAssetUrls] Skipping external asset: ${id} (URL stored in clip properties)`)
+            })
+
+            missingAssetIds.forEach((id: string) => {
+                newUrls.set(id, null) // Missing assets have no URL
+                console.log(`[useAssetUrls] Skipping missing asset: ${id} (asset is missing)`)
             })
 
             // Check cache for regular assets and determine which IDs need fetching
@@ -70,27 +83,37 @@ export function useAssetUrls(assetIds: string[]) {
                 idsToFetch.push(id)
             }
 
-            // Set initial state with cached values and external asset placeholders
+            // Set initial state with cached values
             setUrls(newUrls)
 
-            // Fetch only the regular asset IDs that aren't cached or are expired
+            // Fetch only the IDs that aren't cached or are expired
             if (idsToFetch.length > 0) {
-                console.log(`[useAssetUrls] Fetching ${idsToFetch.length} regular asset URLs:`, idsToFetch)
+                console.log(`[useAssetUrls] Fetching ${idsToFetch.length} URLs:`, idsToFetch)
 
-            try {
-                await Promise.all(
-                        idsToFetch.map(async (id) => {
-                        try {
-                            const response = await fetch(apiPath(`assets/${id}/url`), {
-                                headers: {
-                                    'Authorization': `Bearer ${session?.access_token}`
-                                }
-                            })
-                                
+                try {
+                    await Promise.all(
+                        idsToFetch.map(async (id: string) => {
+                            try {
+                                const response = await fetch(apiPath(`assets/${id}/url`), {
+                                    headers: {
+                                        'Authorization': `Bearer ${session?.access_token}`
+                                    }
+                                })
+                                    
                                 if (!response.ok) {
-                                    // Log error only once per asset
+                                    // Don't spam console with the same error
                                     if (!assetUrlCache.has(id) || !assetUrlCache.get(id)?.error) {
-                                        console.error(`[useAssetUrls] Asset ${id} not found (${response.status})`)
+                                        const errorData = await response.json().catch(() => ({}))
+                                        if (response.status === 503 && errorData?.details?.includes('billing')) {
+                                            console.error(`[useAssetUrls] Storage service billing issue detected`)
+                                            // Show a user-friendly error message once
+                                            if (!window.localStorage.getItem('storage_billing_error_shown')) {
+                                                window.localStorage.setItem('storage_billing_error_shown', 'true')
+                                                window.alert('Storage service is temporarily unavailable. Our team has been notified and is working to resolve this. Please try again later.')
+                                            }
+                                        } else {
+                                            console.error(`[useAssetUrls] Asset ${id} not found (${response.status})`, errorData)
+                                        }
                                     }
                                     
                                     // Cache the error to prevent repeated requests
@@ -103,38 +126,23 @@ export function useAssetUrls(assetIds: string[]) {
                                     return
                                 }
                                 
-                            const data = await response.json()
+                                const data = await response.json()
                                 const url = data.url || null
-                                
-                                // Cache successful result
-                                assetUrlCache.set(id, { 
-                                    url, 
-                                    timestamp: now, 
-                                    error: false 
-                                })
-                                newUrls.set(id, url)
-                                
-                                console.log(`[useAssetUrls] Successfully fetched URL for asset: ${id}`)
-                                
-                        } catch (error) {
-                                // Log error only once per asset
-                                if (!assetUrlCache.has(id) || !assetUrlCache.get(id)?.error) {
-                                    console.error(`[useAssetUrls] Network error for asset ${id}:`, error)
+
+                                if (url) {
+                                    assetUrlCache.set(id, {
+                                        url,
+                                        timestamp: now
+                                    })
+                                    newUrls.set(id, url)
                                 }
-                                
-                                // Cache the error
-                                assetUrlCache.set(id, { 
-                                    url: null, 
-                                    timestamp: now, 
-                                    error: true 
-                                })
-                            newUrls.set(id, null)
-                        }
-                    })
-                )
-                    
-                setUrls(newUrls)
-            } catch (error) {
+                            } catch (error) {
+                                console.error(`[useAssetUrls] Error fetching URL for ${id}:`, error)
+                                newUrls.set(id, null)
+                            }
+                        })
+                    )
+                } catch (error) {
                     console.error('[useAssetUrls] Batch fetch error:', error)
                 }
             }
@@ -142,13 +150,7 @@ export function useAssetUrls(assetIds: string[]) {
             setLoading(false)
         }
 
-        if (stableAssetIds.length > 0) {
-            setLoading(true)
-            fetchUrls()
-        } else {
-            setUrls(new Map())
-            setLoading(false)
-        }
+        fetchUrls()
     }, [stableAssetIds, session?.access_token])
 
     return { urls, loading }

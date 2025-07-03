@@ -121,6 +121,7 @@ interface ExportSettings {
     fps: number
     quality: 'low' | 'medium' | 'high'
     quickExport?: boolean
+    aspectRatio?: 'horizontal' | 'vertical'
 }
 
 interface TimelineClip {
@@ -845,74 +846,123 @@ class ProfessionalVideoExporter {
     }
 
     private buildTextFilter(element: TimelineElement, text: string, startSec: number, endSec: number): string {
-        const fontSize = Math.max(8, element.fontSize || 24)
+        // Text properties with defaults
+        const fontSize = element.fontSize || 24
+        // Adjust font size based on resolution
+        const adjustedFontSize = Math.round(fontSize * (this.outputSettings.height / 1080))
+        
         const fontColor = element.fontColor || 'white'
-        const fontFamily = element.fontFamily || 'Arial'
+        const fontFamily = this.parseFontFamily(element.fontFamily)
+        const fontFile = this.getFontPath(element.fontFamily, element.fontWeight)
+        
+        // Position handling with defaults
+        const position = element.position || { x: 0.5, y: 0.8 }
+        const xPos = position.x * 100 // Convert to percentage
+        const yPos = position.y * 100
+        
+        // Style properties
         const fontWeight = element.fontWeight || 'normal'
+        const fontStyle = element.fontStyle || 'normal'
+        const textAlign = element.textAlign || 'center'
+        const backgroundColor = element.backgroundColor || null
+        const borderColor = element.borderColor || null
+        const borderWidth = element.borderWidth || 0
         
-        // Parse and resolve font with enhanced fallback system
-        const fontPath = this.getFontPath(fontFamily, fontWeight)
+        // Build the drawtext filter with all style properties
+        let filter = `drawtext=text='${text.replace(/'/g, "\\'")}':fontfile='${fontFile}':fontsize=${adjustedFontSize}:fontcolor=${fontColor}:x=(w*${position.x}):y=(h*${position.y})`
         
-        // Position calculation
-        const x = element.position?.x || '(w-text_w)/2'
-        const y = element.position?.y || '(h-text_h)/2'
+        // Add text alignment
+        if (textAlign === 'left') {
+            filter += ':x=(w*0.05)'
+        } else if (textAlign === 'right') {
+            filter += ':x=(w*0.95-text_w)'
+        } else {
+            // Center is default
+            filter += ':x=(w*0.5-text_w/2)'
+        }
         
-        // Build text filter with enable parameter for timing
-        let filter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}`
+        // Add background box if specified
+        if (backgroundColor) {
+            filter += `:box=1:boxcolor=${backgroundColor}:boxborderw=10`
+        }
         
-        // Temporarily disable font file usage to debug text rendering issue
-        // Use only basic font family names to avoid path issues
-        const safeFontFamily = fontFamily.replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'Arial'
-        filter += `:font='${safeFontFamily}'`
-        console.log(`[Export ${this.jobId}] Text filter using safe font family: ${safeFontFamily} (original: ${fontFamily})`)
+        // Add border/outline if specified
+        if (borderColor && borderWidth > 0) {
+            filter += `:bordercolor=${borderColor}:borderw=${borderWidth}`
+        }
         
-        // Add timing with enable parameter
+        // Add bold/italic styling
+        if (fontWeight === 'bold') {
+            filter += ':bold=1'
+        }
+        if (fontStyle === 'italic') {
+            filter += ':italic=1'
+        }
+        
+        // Add timing
         filter += `:enable='between(t,${startSec},${endSec})'`
         
-        console.log(`[Export ${this.jobId}] Generated text filter: ${filter}`)
         return filter
     }
 
     private buildCaptionFilter(element: TimelineElement, text: string, startSec: number, endSec: number): string {
-        const fontSize = Math.max(8, element.fontSize || 20)
-        const fontColor = element.fontColor || 'white'
-        const fontFamily = element.fontFamily || 'Impact'  // Default to Impact for captions
-        const fontWeight = element.fontWeight || 'normal'
-        
-        // Parse and resolve font with enhanced fallback system
-        const fontPath = this.getFontPath(fontFamily, fontWeight)
-        
-        // Caption-specific styling
+        // Get caption style properties with defaults
         const captionStyle = element.properties?.captionStyle || {}
-        const backgroundColor = captionStyle.backgroundColor || element.backgroundColor || 'black@0.8'
-        const borderColor = captionStyle.borderColor || element.borderColor || 'black'
-        const borderWidth = captionStyle.borderWidth || element.borderWidth || 1
         
-        // Caption positioning (usually bottom center)
-        const x = element.position?.x || '(w-text_w)/2'
-        const y = element.position?.y || '(h-text_h-20)' // 20px from bottom
+        // Base font properties
+        const fontSize = element.fontSize || 24
+        // Adjust font size based on resolution
+        const adjustedFontSize = Math.round(fontSize * (this.outputSettings.height / 1080))
         
-        // Build caption filter with background and border
-        let filter = `drawtext=text='${text}':fontsize=${fontSize}:fontcolor=${fontColor}:x=${x}:y=${y}`
+        const fontColor = element.fontColor || 'white'
+        const fontFamily = this.parseFontFamily(element.fontFamily)
+        const fontFile = this.getFontPath(element.fontFamily, element.fontWeight)
         
-        // Temporarily disable font file usage to debug text rendering issue
-        // Use only basic font family names to avoid path issues
-        const safeFontFamily = fontFamily.replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'Arial'
-        filter += `:font='${safeFontFamily}'`
-        console.log(`[Export ${this.jobId}] Caption filter using safe font family: ${safeFontFamily} (original: ${fontFamily})`)
+        // Caption specific styling
+        const backgroundColor = captionStyle.backgroundColor || 'black@0.75'
+        const borderColor = captionStyle.borderColor || null
+        const borderWidth = captionStyle.borderWidth || 0
+        const padding = captionStyle.padding || 10
+        const borderRadius = captionStyle.borderRadius || 0
+        const hasShadow = captionStyle.shadow !== false // Default to true
+        const hasOutline = captionStyle.outline !== false // Default to true
         
-        // Add caption-specific styling
-        filter += `:box=1:boxcolor=${backgroundColor}:boxborderw=${borderWidth}`
+        // Position handling - captions are typically at the bottom
+        const position = element.position || { x: 0.5, y: 0.9 }
         
-        // Add shadow/outline for better readability
-        if (captionStyle.shadow !== false) {
-            filter += `:shadowcolor=black@0.5:shadowx=1:shadowy=1`
+        // Escape special characters in text
+        const escapedText = text
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/:/g, '\\:')
+        
+        // Build the complete filter
+        let filter = `drawtext=text='${escapedText}'`
+        filter += `:fontfile='${fontFile}'`
+        filter += `:fontsize=${adjustedFontSize}`
+        filter += `:fontcolor=${fontColor}`
+        filter += `:x=(w*0.5-text_w/2)` // Center horizontally
+        filter += `:y=(h*${position.y})`
+        
+        // Always add background for captions
+        filter += `:box=1:boxcolor=${backgroundColor}:boxborderw=${padding}`
+        
+        // Add border if specified
+        if (borderColor && borderWidth > 0) {
+            filter += `:borderw=${borderWidth}:bordercolor=${borderColor}`
+        } else if (hasOutline) {
+            // Add outline for better readability if no border specified
+            filter += `:borderw=1.5:bordercolor=black@0.8`
         }
         
-        // Add timing with enable parameter
+        // Add shadow for better visibility
+        if (hasShadow) {
+            filter += `:shadowcolor=black@0.5:shadowx=2:shadowy=2`
+        }
+        
+        // Add timing
         filter += `:enable='between(t,${startSec},${endSec})'`
         
-        console.log(`[Export ${this.jobId}] Generated caption filter: ${filter}`)
         return filter
     }
 
@@ -1895,45 +1945,186 @@ async function downloadAssetWithValidation(
  * Get optimized output settings based on export configuration
  */
 function getOutputSettings(exportSettings: ExportSettings) {
-    const resolutionMap = {
-        '480p': { width: 854, height: 480 },
-        '720p': { width: 1280, height: 720 },
-        '1080p': { width: 1920, height: 1080 }
+    // Get resolution settings
+    const resolution = exportSettings.resolution || '1080p'
+    const fps = exportSettings.fps || 30
+    
+    // Define aspect ratio options
+    const aspectRatios = {
+        horizontal: { width: 16, height: 9 },  // 16:9
+        vertical: { width: 9, height: 16 }     // 9:16
     }
     
+    // Get aspect ratio from settings or default to horizontal
+    const aspectRatio = exportSettings.aspectRatio || 'horizontal'
+    const ratio = aspectRatios[aspectRatio as keyof typeof aspectRatios] || aspectRatios.horizontal
+    
+    // Calculate dimensions based on resolution and aspect ratio
+    let width, height
+    
+    if (aspectRatio === 'horizontal') {
+        // For horizontal videos (16:9)
+        switch (resolution) {
+            case '480p':
+                width = 854
+                height = 480
+                break
+            case '720p':
+                width = 1280
+                height = 720
+                break
+            case '1080p':
+            default:
+                width = 1920
+                height = 1080
+                break
+        }
+    } else {
+        // For vertical videos (9:16)
+        switch (resolution) {
+            case '480p':
+                width = 480
+                height = 854
+                break
+            case '720p':
+                width = 720
+                height = 1280
+                break
+            case '1080p':
+            default:
+                width = 1080
+                height = 1920
+                break
+        }
+    }
+    
+    // Quality settings based on export settings
+    const quality = exportSettings.quality || 'medium'
+    let videoBitrate, audioBitrate, preset
+    
+    switch (quality) {
+        case 'low':
+            videoBitrate = width >= 1280 ? '2500k' : '1500k'
+            audioBitrate = '128k'
+            preset = 'veryfast'
+            break
+        case 'high':
+            videoBitrate = width >= 1280 ? '8000k' : '4000k'
+            audioBitrate = '320k'
+            preset = 'slow'
+            break
+        case 'medium':
+        default:
+            videoBitrate = width >= 1280 ? '5000k' : '2500k'
+            audioBitrate = '192k'
+            preset = 'medium'
+            break
+    }
+    
+    // Return comprehensive output settings
     return {
-        ...resolutionMap[exportSettings.resolution],
-        fps: exportSettings.fps,
-        quality: exportSettings.quality
+        width,
+        height,
+        fps,
+        videoBitrate,
+        audioBitrate,
+        preset,
+        aspectRatio: ratio
     }
 }
 
 // Routes
 router.post('/start', validateExportRequest, async (req: Request, res: Response) => {
     try {
-        const errors = validationResult(req)
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() })
-        }
-
         const { clips, tracks, exportSettings } = req.body
-        const accessToken = req.headers.authorization?.replace('Bearer ', '')
-
         const jobId = uuid()
+        
+        // Validate inputs
+        const validationResult = validateExportInputs(clips, tracks, exportSettings, jobId)
+        
+        if (!validationResult.valid) {
+            console.error(`[Export ${jobId}] Validation failed:`, validationResult.errors)
+            return res.status(400).json({
+                success: false,
+                error: `Export validation failed: ${validationResult.errors.join(', ')}`,
+                warnings: validationResult.warnings
+            })
+        }
+        
+        // Get project ID from the first clip's track
+        const firstTrack = tracks[0]
+        if (!firstTrack) {
+            return res.status(400).json({
+                success: false,
+                error: 'No tracks provided'
+            })
+        }
+        
+        // Extract project ID from the first track
+        const projectId = firstTrack.id.split('_')[0]
+        if (!projectId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Could not determine project ID from track'
+            })
+        }
+        
+        console.log(`[Export ${jobId}] Determined project ID: ${projectId}`)
+        
+        // Fetch project settings to get aspect ratio
+        const { data: project, error: projectError } = await supabase
+            .from('projects')
+            .select('id, name, aspect_ratio')
+            .eq('id', projectId)
+            .single()
+        
+        if (projectError) {
+            console.error(`[Export ${jobId}] Failed to fetch project:`, projectError)
+        }
+        
+        // Use project's aspect ratio if available, otherwise use the one from export settings
+        const aspectRatio = project?.aspect_ratio || exportSettings.aspectRatio || 'horizontal'
+        console.log(`[Export ${jobId}] Using aspect ratio: ${aspectRatio}`)
+        
+        // Update export settings with the project's aspect ratio
+        const updatedExportSettings = {
+            ...exportSettings,
+            aspectRatio
+        }
+        
+        // Create export job
         const job: ExportJob = {
             id: jobId,
             status: 'queued',
             progress: 0,
             createdAt: new Date(),
-            exportSettings
+            exportSettings: updatedExportSettings
         }
-
+        
         exportJobs.set(jobId, job)
-        processVideoExport(jobId, clips, tracks, exportSettings, accessToken)
-
-        res.json({ success: true, jobId, message: 'Professional export started' })
+        
+        // Start processing in the background
+        processVideoExport(jobId, clips, tracks, updatedExportSettings)
+            .catch(err => {
+                console.error(`[Export ${jobId}] Processing error:`, err)
+                const job = exportJobs.get(jobId)
+                if (job) {
+                    job.status = 'failed'
+                    job.error = err.message
+                }
+            })
+        
+        return res.json({
+            success: true,
+            jobId,
+            warnings: validationResult.warnings
+        })
     } catch (error) {
-        res.status(500).json({ success: false, error: 'Export failed to start' })
+        console.error('Export start error:', error)
+        return res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        })
     }
 })
 

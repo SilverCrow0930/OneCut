@@ -7,6 +7,7 @@ interface VideoExporterProps {
     onError: (error: string) => void
     accessToken?: string | null
     quickExport?: boolean
+    aspectRatio?: 'horizontal' | 'vertical'
     onProgress?: (progress: number) => void
     onStatusChange?: (status: string) => void
     optimizationLevel?: 'auto' | 'speed' | 'quality' | 'balanced'

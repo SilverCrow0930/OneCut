@@ -158,6 +158,10 @@ const ShareButton = () => {
 
         try {
             if (useServerExport) {
+                // Get the project aspect ratio
+                const projectAspectRatio = project?.aspectRatio || 'horizontal'
+                console.log(`[Export] Using project aspect ratio: ${projectAspectRatio}`)
+                
                 // Use server-side export
                 const result = await exportService.startExport(
                     convertClipsForExport(clips), 
@@ -166,7 +170,8 @@ const ShareButton = () => {
                         resolution: selectedExportType as '480p' | '720p' | '1080p',
                         fps: 30,
                         quality: quickExport ? 'low' : 'medium',
-                        quickExport
+                        quickExport,
+                        aspectRatio: projectAspectRatio
                     }
                 )
 
@@ -190,6 +195,7 @@ const ShareButton = () => {
                     },
                     accessToken: session?.access_token,
                     quickExport,
+                    aspectRatio: project?.aspectRatio || 'horizontal',
                     onProgress: (progress) => {
                         setExportProgress(Math.min(progress, 100))
                     }

@@ -546,9 +546,15 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         }
     }, [project?.id, project?.thumbnail_url, clips.length, session?.access_token])
 
-    // aspect ratio - persist in localStorage
+    // aspect ratio - persist in localStorage and use project setting if available
     const [aspectRatio, setAspectRatio] = useState<'vertical' | 'horizontal'>(() => {
         try {
+            // First check if the project has an aspect ratio set
+            if (project?.aspectRatio === 'horizontal' || project?.aspectRatio === 'vertical') {
+                return project.aspectRatio
+            }
+            
+            // Otherwise use localStorage
             const saved = localStorage.getItem('lemona-aspect-ratio')
             return (saved === 'horizontal' || saved === 'vertical') ? saved : 'vertical'
         } catch {
@@ -560,10 +566,22 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         try {
             localStorage.setItem('lemona-aspect-ratio', aspectRatio)
+            
+            // Also update the project in the database
+            if (project) {
+                updateProjectAspectRatio(aspectRatio)
+            }
         } catch (error) {
             console.warn('Failed to save aspect ratio to localStorage:', error)
         }
-    }, [aspectRatio])
+    }, [aspectRatio, project?.id])
+
+    // Update aspect ratio when project is loaded
+    useEffect(() => {
+        if (project?.aspectRatio === 'horizontal' || project?.aspectRatio === 'vertical') {
+            setAspectRatio(project.aspectRatio)
+        }
+    }, [project?.aspectRatio])
 
     const clearError = () => {
         setError(null)
@@ -579,6 +597,36 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             return () => clearTimeout(timer)
         }
     }, [error])
+
+    // Update aspect ratio in the database
+    const updateProjectAspectRatio = async (aspectRatio: 'horizontal' | 'vertical') => {
+        if (!session?.access_token || !projectId) return
+
+        try {
+            const response = await fetch(apiPath(`projects/${projectId}`), {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    aspect_ratio: aspectRatio
+                }),
+            })
+
+            if (!response.ok) {
+                const text = await response.text()
+                throw new Error(text || response.statusText)
+            }
+
+            const data: Project = await response.json()
+            setProject(data)
+            console.log(`[Editor] Updated project aspect ratio to ${aspectRatio}`)
+        }
+        catch (error: any) {
+            console.error('Failed to update project aspect ratio:', error)
+        }
+    }
 
     return (
         <EditorContext.Provider value={{
