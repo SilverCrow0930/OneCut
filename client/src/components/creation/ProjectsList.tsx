@@ -45,9 +45,16 @@ export default function ProjectsList() {
                 }
                 const data: Project[] = await res.json()
                 if (!cancelled) {
-                    // Sort projects by last_opened (most recent first), fallback to created_at
+                    // Sort projects: processing smart cut projects first, then by last_opened time
                     const sortedProjects = data.sort((a, b) => {
-                        // First sort by last_opened (most recent first, nulls last)
+                        // First prioritize processing smart cut projects
+                        const aIsProcessingSmartCut = (a.processing_status === 'processing' || a.processing_status === 'queued') && a.processing_type === 'quickclips'
+                        const bIsProcessingSmartCut = (b.processing_status === 'processing' || b.processing_status === 'queued') && b.processing_type === 'quickclips'
+                        
+                        if (aIsProcessingSmartCut && !bIsProcessingSmartCut) return -1
+                        if (!aIsProcessingSmartCut && bIsProcessingSmartCut) return 1
+                        
+                        // Then sort by last_opened (most recent first, nulls last)
                         if (a.last_opened && b.last_opened) {
                             return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
                         }
