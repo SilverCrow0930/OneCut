@@ -407,9 +407,9 @@ const ClipTools = () => {
             <Tooltip text="Split" disabled={!hasSelectedClip || hasMultipleSelection}>
                 <button
                     className={`
-                        p-1 rounded-lg transition-all duration-200
+                        p-1 rounded-lg transition-colors duration-200
                         ${hasSelectedClip && !hasMultipleSelection ?
-                            'bg-gray-300' :
+                            'hover:bg-gray-300' :
                             'opacity-40 cursor-not-allowed'
                         }
                     `}
@@ -425,13 +425,15 @@ const ClipTools = () => {
                 <Tooltip text="Speed" disabled={!canAdjustSpeed || !hasAnySelection}>
                     <button
                         className={`
-                            p-1 rounded-lg transition-all duration-200
+                            p-1 rounded-lg transition-colors duration-200
                             ${canAdjustSpeed && hasAnySelection ? 
                                 'hover:bg-gray-300' : 
                                 'opacity-40 cursor-not-allowed'
                             }
                         `}
-                        onClick={() => setShowSpeedSlider(!showSpeedSlider)}
+                        onClick={() => {
+                            setShowSpeedSlider(!showSpeedSlider)
+                        }}
                         disabled={!canAdjustSpeed || !hasAnySelection}
                     >
                         <Gauge size={26} />
@@ -505,13 +507,15 @@ const ClipTools = () => {
                 <Tooltip text="Volume" disabled={!canAdjustVolume || !hasAnySelection}>
                     <button
                         className={`
-                            p-1 rounded-lg transition-all duration-200
+                            p-1 rounded-lg transition-colors duration-200
                             ${canAdjustVolume && hasAnySelection ? 
                                 'hover:bg-gray-300' : 
                                 'opacity-40 cursor-not-allowed'
                             }
                         `}
-                        onClick={() => setShowVolumeSlider(!showVolumeSlider)}
+                        onClick={() => {
+                            setShowVolumeSlider(!showVolumeSlider)
+                        }}
                         disabled={!canAdjustVolume || !hasAnySelection}
                     >
                         <Volume2 size={26} />
@@ -580,11 +584,11 @@ const ClipTools = () => {
                 )}
             </div>
 
-            <Tooltip text="Delete" disabled={!hasAnySelection}>
+            <Tooltip text={hasMultipleSelection ? "Delete" : "Delete"} disabled={!hasAnySelection}>
                 <button
                     className={`
-                        p-1 rounded-lg transition-all duration-200
-                        ${hasAnySelection ? 'bg-gray-300' : 'opacity-40 cursor-not-allowed'}
+                        p-1 rounded-lg transition-colors duration-200
+                        ${hasAnySelection ? 'hover:bg-gray-300' : 'opacity-40 cursor-not-allowed'}
                     `}
                     onClick={handleDelete}
                     disabled={!hasAnySelection}

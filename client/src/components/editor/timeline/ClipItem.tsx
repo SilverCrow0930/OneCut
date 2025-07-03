@@ -756,15 +756,15 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 {isVideo && mediaUrl && (
                     <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800 relative">
                         {/* Single thumbnail image repeated across the entire clip */}
-                        <div 
+                                <div
                             className="w-full h-full bg-cover bg-center"
-                            style={{
+                                    style={{
                                 backgroundImage: `url(${mediaUrl}#t=0.1)`, // Use media fragment to get first frame
-                                backgroundSize: 'cover',
+                                        backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                                 backgroundRepeat: 'repeat-x' // Repeat the image horizontally
-                            }}
-                        />
+                                    }}
+                                />
                         {/* Play icon overlay */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="bg-black/60 rounded-full p-1.5">
@@ -791,7 +791,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                 <span className="text-xs">OUT</span>
                             </div>
                         )}
-                    </div>
+                                        </div>
                 )}
 
                 {isImage && mediaUrl && (

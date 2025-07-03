@@ -2050,7 +2050,7 @@ router.post('/start', validateExportRequest, async (req: Request, res: Response)
                 warnings: validationResult.warnings
             })
         }
-        
+
         // Get project ID from the first clip's track
         const firstTrack = tracks[0]
         if (!firstTrack) {
@@ -2100,7 +2100,7 @@ router.post('/start', validateExportRequest, async (req: Request, res: Response)
             createdAt: new Date(),
             exportSettings: updatedExportSettings
         }
-        
+
         exportJobs.set(jobId, job)
         
         // Start processing in the background
@@ -2113,7 +2113,7 @@ router.post('/start', validateExportRequest, async (req: Request, res: Response)
                     job.error = err.message
                 }
             })
-        
+
         return res.json({
             success: true,
             jobId,

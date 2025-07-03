@@ -232,7 +232,7 @@ router.get('/:id/url', async (req: Request, res: Response, next: NextFunction) =
             })
 
             console.log(`[Asset URL] Generated signed URL for ${id}`)
-            res.json({ url })
+        res.json({ url })
         } catch (gcsError: any) {
             // Check for billing issues
             if (gcsError?.message?.includes('billing account') || 
