@@ -132,10 +132,13 @@ const QuickClipsButton = () => {
         setIsUploading(true)
         setIsProcessing(true)
         setProcessingProgress(0)
+        setProcessingMessage('Preparing...')
         setError(null)
 
         try {
             // 1. Create new project
+            setProcessingProgress(5)
+            setProcessingMessage('Creating project...')
             const projectResponse = await fetch(apiPath('projects'), {
                 method: 'POST',
                 headers: {
@@ -146,8 +149,8 @@ const QuickClipsButton = () => {
                     name: `Smart Cut - ${selectedFile.name}`,
                     processing_status: 'queued',
                     processing_type: 'quickclips',
-                    processing_progress: 0,
-                    processing_message: 'Preparing for processing...',
+                    processing_progress: 5,
+                    processing_message: 'Creating project...',
                     processing_data: {
                         contentType: getContentType(),
                         videoFormat: getVideoFormat(),
@@ -171,6 +174,8 @@ const QuickClipsButton = () => {
             const project = await projectResponse.json()
 
             // 2. Upload file to assets
+            setProcessingProgress(10)
+            setProcessingMessage('Uploading video...')
             const formData = new FormData()
             formData.append('file', selectedFile)
             formData.append('projectId', project.id)
@@ -203,6 +208,8 @@ const QuickClipsButton = () => {
             }
 
             setIsUploading(false)
+            setProcessingProgress(15)
+            setProcessingMessage('Starting analysis...')
 
             // 3. Start QuickClips processing
             const jobResponse = await fetch(apiPath('quickclips/start'), {
@@ -231,6 +238,19 @@ const QuickClipsButton = () => {
                 }
                 throw new Error(errorMessage)
             }
+
+            // Update project with initial processing state
+            await fetch(apiPath(`projects/${project.id}`), {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    processing_progress: 15,
+                    processing_message: 'Analyzing video...'
+                })
+            })
 
             // Close modal and navigate to projects page with highlight
             setIsModalOpen(false)

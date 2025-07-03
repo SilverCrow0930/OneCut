@@ -27,6 +27,31 @@ export default function ProjectsList() {
         p.processing_status === 'queued'
     )
 
+    // Get processing stage and progress
+    const getProcessingStage = (project: Project) => {
+        const progress = project.processing_progress || 0
+        const message = project.processing_message || ''
+
+        if (project.processing_status === 'queued') {
+            return { stage: 'Preparing...', progress: 5 }
+        }
+
+        // Map progress to different stages
+        if (progress < 20) {
+            return { stage: 'Analyzing video...', progress: 15 }
+        } else if (progress < 40) {
+            return { stage: 'Extracting content...', progress: 35 }
+        } else if (progress < 60) {
+            return { stage: 'Identifying key moments...', progress: 55 }
+        } else if (progress < 80) {
+            return { stage: 'Generating smart cuts...', progress: 75 }
+        } else if (progress < 95) {
+            return { stage: 'Finalizing...', progress: 90 }
+        }
+
+        return { stage: message || 'Processing...', progress }
+    }
+
     useEffect(() => {
         // only fetch once we have a valid token
         if (!session?.access_token) {
@@ -349,34 +374,22 @@ export default function ProjectsList() {
             {/* Processing status bar */}
             {processingProject && (
                 <div className="w-full max-w-6xl mx-auto mb-6">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="animate-spin">
-                            <Loader2 className="w-5 h-5 text-blue-500" />
+                    <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-sm font-medium">
+                                {getProcessingStage(processingProject).stage}
+                            </span>
                         </div>
-                        <span className="text-sm text-gray-600">
-                            Processing "{processingProject.name}"...
-                        </span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-blue-500 transition-all duration-300 ease-out relative overflow-hidden"
-                            style={{ width: '90%' }}
-                        >
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                             <div 
-                                className="absolute inset-0 bg-blue-400"
-                                style={{
-                                    animation: 'progress-pulse 2s ease-in-out infinite'
+                                className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-out"
+                                style={{ 
+                                    width: `${getProcessingStage(processingProject).progress}%`,
                                 }}
                             />
                         </div>
                     </div>
-                    <style jsx>{`
-                        @keyframes progress-pulse {
-                            0% { transform: translateX(-100%); }
-                            50% { transform: translateX(100%); }
-                            100% { transform: translateX(-100%); }
-                        }
-                    `}</style>
                 </div>
             )}
 
