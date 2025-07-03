@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Project } from '@/types/projects'
 import { formatSecondsAsTimestamp } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Clock, Play, Folder, MoreHorizontal, Trash2, Zap, Video, Eye } from 'lucide-react'
+import { Clock, Play, Folder, MoreHorizontal, Trash2, Zap, Video, Eye, Loader2 } from 'lucide-react'
 
 type ProjectFilter = 'all' | 'quickclips'
 
@@ -17,10 +17,15 @@ export default function ProjectsList() {
     const [error, setError] = useState<string | null>(null)
     const [showMenu, setShowMenu] = useState<string | null>(null)
     const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
-    const [processingProject, setProcessingProject] = useState<Project | null>(null)
 
     // Get highlighted project from URL params
     const highlightedProjectId = searchParams.get('highlight')
+
+    // Get processing project if any
+    const processingProject = projects.find(p => 
+        p.processing_status === 'processing' || 
+        p.processing_status === 'queued'
+    )
 
     useEffect(() => {
         // only fetch once we have a valid token
@@ -45,16 +50,9 @@ export default function ProjectsList() {
                 }
                 const data: Project[] = await res.json()
                 if (!cancelled) {
-                    // Sort projects: processing smart cut projects first, then by last_opened time
+                    // Sort projects by last_opened (most recent first), fallback to created_at
                     const sortedProjects = data.sort((a, b) => {
-                        // First prioritize processing smart cut projects
-                        const aIsProcessingSmartCut = (a.processing_status === 'processing' || a.processing_status === 'queued') && a.processing_type === 'quickclips'
-                        const bIsProcessingSmartCut = (b.processing_status === 'processing' || b.processing_status === 'queued') && b.processing_type === 'quickclips'
-                        
-                        if (aIsProcessingSmartCut && !bIsProcessingSmartCut) return -1
-                        if (!aIsProcessingSmartCut && bIsProcessingSmartCut) return 1
-                        
-                        // Then sort by last_opened (most recent first, nulls last)
+                        // First sort by last_opened (most recent first, nulls last)
                         if (a.last_opened && b.last_opened) {
                             return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
                         }
@@ -116,18 +114,14 @@ export default function ProjectsList() {
                     p.id === projectId ? updatedProject : p
                 ))
 
-                // Update processing project state
+                // Continue polling if still processing
                 if (updatedProject.processing_status === 'processing' || 
                     updatedProject.processing_status === 'queued') {
-                    setProcessingProject(updatedProject)
                     setTimeout(() => pollProjectStatus(projectId), 3000)
-                } else {
-                    setProcessingProject(null)
                 }
             }
         } catch (error) {
             console.error('Error polling project status:', error)
-            setProcessingProject(null)
         }
     }
 
@@ -309,54 +303,65 @@ export default function ProjectsList() {
     }
 
     return (
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full">
             {/* Filter Tabs */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex gap-2">
+            <div className="flex items-center justify-center mb-8">
+                <div className="flex bg-gray-100 rounded-xl p-1">
                     <button
                         onClick={() => setActiveFilter('all')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                             activeFilter === 'all'
-                                ? 'bg-gray-900 text-white'
-                                : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900'
                         }`}
                     >
-                        All Projects
+                        All projects ({projects.length})
                     </button>
                     <button
                         onClick={() => setActiveFilter('quickclips')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
                             activeFilter === 'quickclips'
-                                ? 'bg-gray-900 text-white'
-                                : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900'
                         }`}
                     >
-                        Smart Cut
+                        <Zap className="w-4 h-4" />
+                        Smart Cut ({quickclipsProjects.length})
                     </button>
                 </div>
             </div>
 
-            {/* Processing Progress Bar */}
+            {/* Processing status bar */}
             {processingProject && (
-                <div className="mb-6 bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                <div className="w-full max-w-6xl mx-auto mb-6">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium text-gray-700">
-                            Processing {processingProject.name}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                            {processingProject.processing_progress}%
+                        <div className="animate-spin">
+                            <Loader2 className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <span className="text-sm text-gray-600">
+                            Processing "{processingProject.name}"...
                         </span>
                     </div>
                     <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-blue-500 transition-all duration-300 ease-out"
-                            style={{ width: `${processingProject.processing_progress}%` }}
-                        />
+                            className="h-full bg-blue-500 transition-all duration-300 ease-out relative overflow-hidden"
+                            style={{ width: '90%' }}
+                        >
+                            <div 
+                                className="absolute inset-0 bg-blue-400"
+                                style={{
+                                    animation: 'progress-pulse 2s ease-in-out infinite'
+                                }}
+                            />
+                        </div>
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                        {processingProject.processing_message || 'Processing your video...'}
-                    </p>
+                    <style jsx>{`
+                        @keyframes progress-pulse {
+                            0% { transform: translateX(-100%); }
+                            50% { transform: translateX(100%); }
+                            100% { transform: translateX(-100%); }
+                        }
+                    `}</style>
                 </div>
             )}
 
@@ -380,7 +385,7 @@ export default function ProjectsList() {
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
                     {filteredProjects.map((project, index) => (
                         <ProjectCard 
                             key={project.id}
