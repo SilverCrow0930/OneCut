@@ -427,7 +427,7 @@ const ClipTools = () => {
                         className={`
                             p-1 rounded-lg transition-colors duration-200 flex items-center justify-center
                             ${canAdjustSpeed && hasAnySelection ? 
-                                'hover:bg-gray-300' : 
+                                'hover:bg-gray-300 -translate-y-[1px]' : 
                                 'opacity-40 cursor-not-allowed'
                             }
                         `}
@@ -509,7 +509,7 @@ const ClipTools = () => {
                         className={`
                             p-1 rounded-lg transition-colors duration-200 flex items-center justify-center
                             ${canAdjustVolume && hasAnySelection ? 
-                                'hover:bg-gray-300' : 
+                                'hover:bg-gray-300 -translate-y-[1px]' : 
                                 'opacity-40 cursor-not-allowed'
                             }
                         `}
