@@ -8,8 +8,6 @@ import { bucket } from '../integrations/googleStorage.js'
 import { Storage } from '@google-cloud/storage'
 import dotenv from 'dotenv'
 import path from 'path'
-import ffmpeg from 'fluent-ffmpeg'
-import os from 'os'
 
 dotenv.config()
 
@@ -109,51 +107,7 @@ router.post(
 
             const duration = req.body.duration ? Number(req.body.duration) * 1000 : null
 
-            // 3) Generate thumbnail for video assets
-            let thumbnailKey = null
-            if (file.mimetype.startsWith('video/')) {
-                try {
-                    // Create temp files
-                    const tempDir = os.tmpdir()
-                    const tempVideoPath = path.join(tempDir, `temp_${uuid()}.${ext}`)
-                    const tempThumbPath = path.join(tempDir, `thumb_${uuid()}.jpg`)
-
-                    // Write uploaded file to temp
-                    await fs.promises.writeFile(tempVideoPath, file.buffer)
-
-                    // Generate thumbnail using ffmpeg
-                    await new Promise<void>((resolve, reject) => {
-                        ffmpeg(tempVideoPath)
-                            .screenshots({
-                                timestamps: ['1'],
-                                filename: path.basename(tempThumbPath),
-                                folder: path.dirname(tempThumbPath),
-                                size: '640x360'
-                            })
-                            .on('end', () => resolve())
-                            .on('error', (err) => reject(err))
-                    })
-
-                    // Upload thumbnail to GCS
-                    thumbnailKey = `${authReq.user.id}/${uuid()}_thumb.jpg`
-                    const thumbBuffer = await fs.promises.readFile(tempThumbPath)
-                    await bucket.file(thumbnailKey).save(thumbBuffer, {
-                        metadata: { contentType: 'image/jpeg' },
-                        public: false,
-                    })
-
-                    // Cleanup temp files
-                    await Promise.all([
-                        fs.promises.unlink(tempVideoPath),
-                        fs.promises.unlink(tempThumbPath)
-                    ]).catch(console.error)
-                } catch (thumbError) {
-                    console.error('Failed to generate thumbnail:', thumbError)
-                    // Continue without thumbnail
-                }
-            }
-
-            // 4) Insert into assets using localUserId
+            // 3) Insert into assets using localUserId
             const { data, error } = await supabase
                 .from('assets')
                 .insert({
@@ -162,7 +116,6 @@ router.post(
                     mime_type: file.mimetype,
                     duration,
                     object_key: key,
-                    thumbnail_key: thumbnailKey
                 })
                 .select('*')
                 .single()
@@ -302,78 +255,6 @@ router.get('/:id/url', async (req: Request, res: Response, next: NextFunction) =
     }
     catch (err) {
         console.error(`[Asset URL] Unexpected error for asset ${req.params.id}:`, err)
-        next(err)
-    }
-})
-
-// GET /api/v1/assets/:id/thumbnail — returns a signed URL for the thumbnail
-router.get('/:id/thumbnail', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const authReq = req as AuthenticatedRequest
-        const supaUid = authReq.user.id
-        const { id } = req.params
-
-        // 1) map to local user
-        const localUserId = await getLocalUserId(supaUid)
-
-        // 2) fetch the thumbnail_key for that asset and user
-        const { data: asset, error } = await supabase
-            .from('assets')
-            .select('thumbnail_key, mime_type')
-            .eq('id', id)
-            .eq('user_id', localUserId)
-            .single()
-
-        if (error || !asset) {
-            return res.status(404).json({
-                error: 'Asset not found'
-            })
-        }
-
-        if (!asset.thumbnail_key) {
-            return res.status(404).json({
-                error: 'No thumbnail available'
-            })
-        }
-
-        try {
-            // 3) Check if file exists in GCS
-            const file = bucket.file(asset.thumbnail_key)
-            const [exists] = await file.exists()
-            
-            if (!exists) {
-                return res.status(404).json({
-                    error: 'Thumbnail file not found in storage'
-                })
-            }
-
-            // 4) generate signed URL
-            const [url] = await file.getSignedUrl({
-                action: 'read',
-                expires: Date.now() + 60 * 60 * 1000,
-            })
-
-            res.json({ url })
-        } catch (gcsError: any) {
-            // Check for billing issues
-            if (gcsError?.message?.includes('billing account') || 
-                gcsError?.code === 403 || 
-                gcsError?.errors?.[0]?.reason === 'accountDisabled') {
-                return res.status(503).json({
-                    error: 'Storage service temporarily unavailable',
-                    details: 'Storage service is experiencing billing issues. Please contact support.'
-                })
-            }
-
-            // Other GCS errors
-            console.error(`[Thumbnail URL] GCS error for asset ${id}:`, gcsError)
-            return res.status(500).json({
-                error: 'Storage service error',
-                details: 'Failed to access storage service. Please try again later.'
-            })
-        }
-    }
-    catch (err) {
         next(err)
     }
 })
