@@ -50,9 +50,16 @@ export default function ProjectsList() {
                 }
                 const data: Project[] = await res.json()
                 if (!cancelled) {
-                    // Sort projects by last_opened (most recent first), fallback to created_at
+                    // First sort by processing status (processing smart cut first), then by last_opened
                     const sortedProjects = data.sort((a, b) => {
-                        // First sort by last_opened (most recent first, nulls last)
+                        // Processing smart cut projects come first
+                        const aIsProcessing = (a.processing_status === 'processing' || a.processing_status === 'queued') && a.processing_type === 'quickclips'
+                        const bIsProcessing = (b.processing_status === 'processing' || b.processing_status === 'queued') && b.processing_type === 'quickclips'
+                        
+                        if (aIsProcessing && !bIsProcessing) return -1
+                        if (!aIsProcessing && bIsProcessing) return 1
+                        
+                        // Then sort by last_opened (most recent first, nulls last)
                         if (a.last_opened && b.last_opened) {
                             return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
                         }
@@ -212,6 +219,14 @@ export default function ProjectsList() {
                 )
                 // Re-sort after updating last_opened
                 return updatedProjects.sort((a, b) => {
+                    // Processing smart cut projects come first
+                    const aIsProcessing = (a.processing_status === 'processing' || a.processing_status === 'queued') && a.processing_type === 'quickclips'
+                    const bIsProcessing = (b.processing_status === 'processing' || b.processing_status === 'queued') && b.processing_type === 'quickclips'
+                    
+                    if (aIsProcessing && !bIsProcessing) return -1
+                    if (!aIsProcessing && bIsProcessing) return 1
+                    
+                    // Then sort by last_opened
                     if (a.last_opened && b.last_opened) {
                         return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
                     }
