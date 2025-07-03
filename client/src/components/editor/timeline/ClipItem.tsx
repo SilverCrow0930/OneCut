@@ -305,11 +305,6 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         }
     }
 
-    // Thumbnail constants
-    const MAX_THUMBNAILS = 8 // Increased for better coverage
-    const thumbWidth = Math.max(width / MAX_THUMBNAILS, 24) // Minimum 24px per thumbnail
-    const thumbHeight = '100%'
-
     const handleResizeStart = (e: React.MouseEvent, type: 'start' | 'end') => {
         e.preventDefault()
         e.stopPropagation()
@@ -755,20 +750,14 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 {/* Enhanced Content based on type */}
                 {isVideo && mediaUrl && (
                     <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800 relative">
-                        <div className="flex w-full h-full">
-                            {Array.from({ length: Math.min(MAX_THUMBNAILS, Math.floor(width / 24)) }, (_, i) => (
-                                <div
-                                    key={i}
-                                    className="flex-shrink-0 h-full bg-cover bg-center border-r border-gray-600 last:border-r-0"
-                                    style={{
-                                        width: `${thumbWidth}px`,
-                                        backgroundImage: `url(${mediaUrl})`,
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center'
-                                    }}
-                                />
-                            ))}
-                        </div>
+                        <div 
+                            className="w-full h-full bg-cover bg-center"
+                            style={{
+                                backgroundImage: `url(${mediaUrl})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center'
+                            }}
+                        />
                         {/* Play icon overlay */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="bg-black/60 rounded-full p-1.5">
@@ -795,7 +784,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                 <span className="text-xs">OUT</span>
                             </div>
                         )}
-                                        </div>
+                    </div>
                 )}
 
                 {isImage && mediaUrl && (
