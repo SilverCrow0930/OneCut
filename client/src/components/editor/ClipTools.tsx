@@ -409,7 +409,7 @@ const ClipTools = () => {
                     className={`
                         p-1 rounded-lg transition-all duration-200
                         ${hasSelectedClip && !hasMultipleSelection ?
-                            'hover:bg-gray-300' :
+                            'bg-gray-300' :
                             'opacity-40 cursor-not-allowed'
                         }
                     `}
@@ -431,9 +431,7 @@ const ClipTools = () => {
                                 'opacity-40 cursor-not-allowed'
                             }
                         `}
-                        onClick={() => {
-                            setShowSpeedSlider(!showSpeedSlider)
-                        }}
+                        onClick={() => setShowSpeedSlider(!showSpeedSlider)}
                         disabled={!canAdjustSpeed || !hasAnySelection}
                     >
                         <Gauge size={26} />
@@ -513,9 +511,7 @@ const ClipTools = () => {
                                 'opacity-40 cursor-not-allowed'
                             }
                         `}
-                        onClick={() => {
-                            setShowVolumeSlider(!showVolumeSlider)
-                        }}
+                        onClick={() => setShowVolumeSlider(!showVolumeSlider)}
                         disabled={!canAdjustVolume || !hasAnySelection}
                     >
                         <Volume2 size={26} />
@@ -584,11 +580,11 @@ const ClipTools = () => {
                 )}
             </div>
 
-            <Tooltip text={hasMultipleSelection ? "Delete" : "Delete"} disabled={!hasAnySelection}>
+            <Tooltip text="Delete" disabled={!hasAnySelection}>
                 <button
                     className={`
                         p-1 rounded-lg transition-all duration-200
-                        ${hasAnySelection ? 'hover:bg-gray-300' : 'opacity-40 cursor-not-allowed'}
+                        ${hasAnySelection ? 'bg-gray-300' : 'opacity-40 cursor-not-allowed'}
                     `}
                     onClick={handleDelete}
                     disabled={!hasAnySelection}

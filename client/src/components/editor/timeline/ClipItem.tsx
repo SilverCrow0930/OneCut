@@ -305,6 +305,11 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
         }
     }
 
+    // Thumbnail constants
+    const MAX_THUMBNAILS = 8 // Increased for better coverage
+    const thumbWidth = Math.max(width / MAX_THUMBNAILS, 24) // Minimum 24px per thumbnail
+    const thumbHeight = '100%'
+
     const handleResizeStart = (e: React.MouseEvent, type: 'start' | 'end') => {
         e.preventDefault()
         e.stopPropagation()
@@ -750,12 +755,14 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 {/* Enhanced Content based on type */}
                 {isVideo && mediaUrl && (
                     <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800 relative">
+                        {/* Single thumbnail image repeated across the entire clip */}
                         <div 
                             className="w-full h-full bg-cover bg-center"
                             style={{
-                                backgroundImage: `url(${mediaUrl})`,
+                                backgroundImage: `url(${mediaUrl}#t=0.1)`, // Use media fragment to get first frame
                                 backgroundSize: 'cover',
-                                backgroundPosition: 'center'
+                                backgroundPosition: 'center',
+                                backgroundRepeat: 'repeat-x' // Repeat the image horizontally
                             }}
                         />
                         {/* Play icon overlay */}

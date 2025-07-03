@@ -90,16 +90,16 @@ export function useAssetUrls(assetIds: string[]) {
             if (idsToFetch.length > 0) {
                 console.log(`[useAssetUrls] Fetching ${idsToFetch.length} URLs:`, idsToFetch)
 
-                try {
-                    await Promise.all(
+            try {
+                await Promise.all(
                         idsToFetch.map(async (id: string) => {
-                            try {
-                                const response = await fetch(apiPath(`assets/${id}/url`), {
-                                    headers: {
-                                        'Authorization': `Bearer ${session?.access_token}`
-                                    }
-                                })
-                                    
+                        try {
+                            const response = await fetch(apiPath(`assets/${id}/url`), {
+                                headers: {
+                                    'Authorization': `Bearer ${session?.access_token}`
+                                }
+                            })
+                                
                                 if (!response.ok) {
                                     // Don't spam console with the same error
                                     if (!assetUrlCache.has(id) || !assetUrlCache.get(id)?.error) {
@@ -126,23 +126,23 @@ export function useAssetUrls(assetIds: string[]) {
                                     return
                                 }
                                 
-                                const data = await response.json()
+                            const data = await response.json()
                                 const url = data.url || null
-
+                                
                                 if (url) {
-                                    assetUrlCache.set(id, {
-                                        url,
+                                assetUrlCache.set(id, { 
+                                    url, 
                                         timestamp: now
-                                    })
-                                    newUrls.set(id, url)
+                                })
+                                newUrls.set(id, url)
                                 }
                             } catch (error) {
                                 console.error(`[useAssetUrls] Error fetching URL for ${id}:`, error)
-                                newUrls.set(id, null)
-                            }
-                        })
-                    )
-                } catch (error) {
+                            newUrls.set(id, null)
+                        }
+                    })
+                )
+            } catch (error) {
                     console.error('[useAssetUrls] Batch fetch error:', error)
                 }
             }
@@ -150,7 +150,7 @@ export function useAssetUrls(assetIds: string[]) {
             setLoading(false)
         }
 
-        fetchUrls()
+            fetchUrls()
     }, [stableAssetIds, session?.access_token])
 
     return { urls, loading }

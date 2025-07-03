@@ -551,6 +551,7 @@ export default function TextClipItem({ clip }: { clip: Clip }) {
                     ${isCaption 
                         ? 'bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600' 
                         : 'bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600'}
+
                 `}
                 style={{
                     left: `${left}px`,
