@@ -17,6 +17,7 @@ export default function ProjectsList() {
     const [error, setError] = useState<string | null>(null)
     const [showMenu, setShowMenu] = useState<string | null>(null)
     const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
+    const [processingProject, setProcessingProject] = useState<Project | null>(null)
 
     // Get highlighted project from URL params
     const highlightedProjectId = searchParams.get('highlight')
@@ -108,14 +109,18 @@ export default function ProjectsList() {
                     p.id === projectId ? updatedProject : p
                 ))
 
-                // Continue polling if still processing
+                // Update processing project state
                 if (updatedProject.processing_status === 'processing' || 
                     updatedProject.processing_status === 'queued') {
+                    setProcessingProject(updatedProject)
                     setTimeout(() => pollProjectStatus(projectId), 3000)
+                } else {
+                    setProcessingProject(null)
                 }
             }
         } catch (error) {
             console.error('Error polling project status:', error)
+            setProcessingProject(null)
         }
     }
 
@@ -297,33 +302,56 @@ export default function ProjectsList() {
     }
 
     return (
-        <div className="w-full">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Filter Tabs */}
-            <div className="flex items-center justify-center mb-8">
-                <div className="flex bg-gray-100 rounded-xl p-1">
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex gap-2">
                     <button
                         onClick={() => setActiveFilter('all')}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                             activeFilter === 'all'
-                                ? 'bg-white text-gray-900 shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
+                                ? 'bg-gray-900 text-white'
+                                : 'text-gray-600 hover:bg-gray-100'
                         }`}
                     >
-                        All projects ({projects.length})
+                        All Projects
                     </button>
                     <button
                         onClick={() => setActiveFilter('quickclips')}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                             activeFilter === 'quickclips'
-                                ? 'bg-white text-gray-900 shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
+                                ? 'bg-gray-900 text-white'
+                                : 'text-gray-600 hover:bg-gray-100'
                         }`}
                     >
-                        <Zap className="w-4 h-4" />
-                        Smart Cut ({quickclipsProjects.length})
+                        Smart Cut
                     </button>
                 </div>
             </div>
+
+            {/* Processing Progress Bar */}
+            {processingProject && (
+                <div className="mb-6 bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm font-medium text-gray-700">
+                            Processing {processingProject.name}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                            {processingProject.processing_progress}%
+                        </span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                            style={{ width: `${processingProject.processing_progress}%` }}
+                        />
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                        {processingProject.processing_message || 'Processing your video...'}
+                    </p>
+                </div>
+            )}
 
             {/* Projects Grid */}
             {filteredProjects.length === 0 ? (
@@ -345,7 +373,7 @@ export default function ProjectsList() {
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredProjects.map((project, index) => (
                         <ProjectCard 
                             key={project.id}

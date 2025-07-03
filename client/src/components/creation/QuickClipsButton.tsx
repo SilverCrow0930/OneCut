@@ -26,15 +26,16 @@ const QuickClipsButton = () => {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
     
-    const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [targetDuration, setTargetDuration] = useState(60)
     const [videoType, setVideoType] = useState<'talk_audio' | 'action_visual'>('talk_audio')
     const [userPrompt, setUserPrompt] = useState('') // Optional user prompt for Smart Cut
 
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [processingProgress, setProcessingProgress] = useState(0)
+    const [processingMessage, setProcessingMessage] = useState('')
     const [isDragOver, setIsDragOver] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
-    const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
     
 
@@ -125,6 +126,8 @@ const QuickClipsButton = () => {
         }
 
         setIsUploading(true)
+        setIsProcessing(true)
+        setProcessingProgress(0)
         setError(null)
 
         try {
@@ -145,7 +148,6 @@ const QuickClipsButton = () => {
                         contentType: getContentType(),
                         videoFormat: getVideoFormat(),
                         targetDuration,
-
                         filename: selectedFile.name
                     }
                 })
@@ -157,7 +159,6 @@ const QuickClipsButton = () => {
                     const errorData = await projectResponse.json()
                     errorMessage = errorData?.error || errorMessage
                 } catch (e) {
-                    // If JSON parsing fails, use the status text or generic message
                     errorMessage = projectResponse.statusText || errorMessage
                 }
                 throw new Error(errorMessage)
@@ -184,373 +185,194 @@ const QuickClipsButton = () => {
                     const errorData = await uploadResponse.json()
                     errorMessage = errorData?.error || errorMessage
                 } catch (e) {
-                    // If JSON parsing fails, use the status text or generic message
                     errorMessage = uploadResponse.statusText || errorMessage
                 }
                 throw new Error(errorMessage)
             }
 
             const uploadResult = await uploadResponse.json()
-            console.log('Upload response:', uploadResult)
-            
-            const fileUri = uploadResult.gsUri
-            console.log('Extracted fileUri:', fileUri)
-            
-            if (!fileUri) {
-                console.error('No gsUri found in upload response. Available fields:', Object.keys(uploadResult))
-                throw new Error('File upload did not return a valid GCS URI')
-            }
 
-            setIsUploading(false)
-
-            // 3. Start QuickClips processing
-            console.log('Starting QuickClips with data:', {
-                projectId: project.id,
-                fileUri,
-                mimeType: selectedFile.type,
-                contentType: getContentType(),
-                targetDuration: parseInt(String(targetDuration))
+            // 3. Start processing
+            const processingResponse = await fetch(apiPath('quickclips/process'), {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    projectId: project.id,
+                    assetId: uploadResult.id,
+                    contentType: getContentType(),
+                    videoFormat: getVideoFormat(),
+                    targetDuration,
+                    userPrompt
+                })
             })
-            
-            let jobResponse;
-            const maxRetries = 3;
-            let lastError;
-            
-            // Retry logic for network issues
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    jobResponse = await fetch(apiPath('quickclips/start'), {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${session?.access_token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            projectId: project.id,
-                            fileUri,
-                            mimeType: selectedFile.type,
-                            contentType: getContentType(),
-                            targetDuration: parseInt(String(targetDuration)),
-                            userPrompt: userPrompt.trim() || undefined
-                        })
-                    })
-                    break; // Success, exit retry loop
-                } catch (fetchError) {
-                    lastError = fetchError;
-                    if (attempt === maxRetries) {
-                        throw new Error(`Network error after ${maxRetries} attempts: ${fetchError instanceof Error ? fetchError.message : 'Connection failed'}`)
-                    }
-                    console.warn(`QuickClips request attempt ${attempt} failed, retrying...`)
-                    // Wait before retry (exponential backoff)
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
-                }
-            }
-            
-            if (!jobResponse) {
-                throw lastError || new Error('Failed to make request')
-            }
 
-            if (!jobResponse.ok) {
+            if (!processingResponse.ok) {
                 let errorMessage = 'Failed to start processing'
                 try {
-                    const errorData = await jobResponse.json()
-                    console.error('QuickClips API Error Details:', errorData)
-                    
-                    if (errorData.errors && Array.isArray(errorData.errors)) {
-                        // Validation errors - show specific messages
-                        const validationMessages = errorData.errors.map((err: any) => err.msg || err.message).join(', ')
-                        errorMessage = `Validation error: ${validationMessages}`
-                    } else {
-                        errorMessage = errorData?.error || errorData?.message || errorMessage
-                    }
+                    const errorData = await processingResponse.json()
+                    errorMessage = errorData?.error || errorMessage
                 } catch (e) {
-                    errorMessage = jobResponse.statusText || errorMessage
+                    errorMessage = processingResponse.statusText || errorMessage
                 }
-                console.error('Full error context:', {
-                    status: jobResponse.status,
-                    statusText: jobResponse.statusText,
-                    requestData: {
-                        projectId: project.id,
-                        fileUri,
-                        mimeType: selectedFile.type,
-                        contentType: getContentType(),
-                        targetDuration: parseInt(String(targetDuration))
-                    }
-                })
                 throw new Error(errorMessage)
             }
 
-            // Close the modal and redirect to projects page with highlight
-            setIsModalOpen(false)
-            
-            // Reset form state
-            setSelectedFile(null)
-            setVideoType('talk_audio')
-            setUserPrompt('')
-            setUploadProgress(0)
-            
-            // Redirect to projects page with the project highlighted
-            router.push(`/projects?highlight=${project.id}`)
+            // Navigate to projects page with this project highlighted
+            router.push(`/projects?highlight=${project.id}&filter=quickclips`)
 
         } catch (error) {
             console.error('Error processing video:', error)
             setError(error instanceof Error ? error.message : 'Processing failed')
             setIsUploading(false)
+            setIsProcessing(false)
         }
+    }
+
+    const handleDownload = (clip: QuickClip) => {
+        // TODO: Implement actual download when backend provides real URLs
+        console.log('Downloading clip:', clip)
+        // For now, just open a new tab with the preview
+        window.open(clip.previewUrl, '_blank')
     }
 
     const handleReset = () => {
         setSelectedFile(null)
         setVideoType('talk_audio')
         setUserPrompt('')
-        setUploadProgress(0)
+        setProcessingProgress(0)
+        setProcessingMessage('')
+        setIsProcessing(false)
+        setIsUploading(false)
         setError(null)
     }
 
+    const handleEditInTimeline = async (clip: QuickClip) => {
+        if (!user || !session) {
+            signIn()
+            return
+        }
+
+        try {
+            // Create a new project for editing this clip
+            const response = await fetch(apiPath('projects'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    name: `Edit: ${clip.title}`,
+                    initial_clip_data: {
+                        clipId: clip.id,
+                        start_time: clip.start_time,
+                        end_time: clip.end_time,
+                        videoUrl: clip.previewUrl,
+                        title: clip.title,
+                        description: clip.description
+                    }
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to create project for editing')
+            }
+
+            const project = await response.json()
+            
+            // Navigate to the new project with clip data in URL params
+            router.push(`/projects/${project.id}?clipId=${clip.id}&start=${clip.start_time}&end=${clip.end_time}&url=${encodeURIComponent(clip.previewUrl)}`)
+            
+        } catch (error) {
+            console.error('Failed to create edit project:', error)
+            alert('Failed to create project for editing. Please try again.')
+        }
+    }
+
     return (
-        <>
+        <div className="relative">
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept="video/*"
+                className="hidden"
+            />
             <button
-                onClick={() => setIsModalOpen(true)}
-                className="
-                    inline-flex items-center justify-center gap-2 
-                    px-6 py-3 rounded-lg font-semibold text-white
-                    bg-gradient-to-br from-blue-500 to-teal-500
-                    hover:from-blue-600 hover:to-teal-600
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                    shadow-lg hover:shadow-xl
-                    transform transition-all duration-200
-                    hover:scale-105 active:scale-95
-                "
+                onClick={() => {
+                    if (!user) {
+                        signIn()
+                        return
+                    }
+                    if (selectedFile) {
+                        handleStartProcessing()
+                    } else {
+                        fileInputRef.current?.click()
+                    }
+                }}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                className={`
+                    relative w-full px-6 py-4 rounded-xl border-2 border-dashed
+                    transition-all duration-200 overflow-hidden
+                    ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
+                    ${selectedFile ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white' : 'bg-white'}
+                `}
+                disabled={isProcessing || isUploading}
             >
-                <Zap className="w-5 h-5" />
-                <span>Smart Cut</span>
-            </button>
+                {/* Background animation */}
+                <div className={`
+                    absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500
+                    transition-opacity duration-500
+                    ${selectedFile ? 'opacity-100' : 'opacity-0'}
+                `} />
 
-            {/* Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        {/* Header */}
-                        <div className="flex items-start justify-between px-8 py-6 border-b border-gray-200">
-                            <div className="text-left">
-                                <h2 className="text-2xl font-bold text-gray-900">Smart Cut</h2>
-                                <p className="text-gray-600 mt-1">Transform Hours into Highlights</p>
+                {/* Content */}
+                <div className="relative z-10">
+                    {selectedFile ? (
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="flex items-center gap-2 text-lg font-medium">
+                                <Video className="w-5 h-5" />
+                                {selectedFile.name}
                             </div>
-                            <button
-                                onClick={() => setIsModalOpen(false)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+                            <p className="text-sm opacity-80">
+                                Click to start processing
+                            </p>
                         </div>
-
-                        <div className="px-8 py-6">
-                            {/* Error Message */}
-                            {error && (
-                                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-                                    <p className="text-red-800 text-sm">{error}</p>
-                                </div>
-                            )}
-
-                            {/* Upload View */}
-                            <div className="space-y-6">
-                                {/* Upload Area */}
-                                <div>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileSelect}
-                                        accept="video/*"
-                                        className="hidden"
-                                    />
-                                    
-                                    <div 
-                                        onClick={() => fileInputRef.current?.click()}
-                                        onDragEnter={handleDragEnter}
-                                        onDragLeave={handleDragLeave}
-                                        onDragOver={handleDragOver}
-                                        onDrop={handleDrop}
-                                        className={`
-                                            border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
-                                            transition-all duration-300
-                                            ${selectedFile ? 
-                                                'border-emerald-400 bg-emerald-50' : 
-                                                isDragOver ?
-                                                    'border-emerald-500 bg-emerald-100 scale-105' :
-                                                    'border-gray-300 hover:border-emerald-400 hover:bg-emerald-50'
-                                            }
-                                        `}
-                                    >
-                                        {selectedFile ? (
-                                            <div className="flex items-center justify-center gap-3">
-                                                <Video className="w-8 h-8 text-emerald-600" />
-                                                <div>
-                                                    <p className="font-medium text-emerald-800">{selectedFile.name}</p>
-                                                    <p className="text-sm text-emerald-600">Click to change file</p>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-center">
-                                                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                                <p className="text-lg text-gray-600 mb-2">Drop your video here</p>
-                                                <p className="text-sm text-gray-500">or click to browse</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Video Type Selection */}
-                                {selectedFile && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                                            Select Video Type
-                                        </label>
-                                        <div className="grid grid-cols-1 gap-3">
-                                            <button
-                                                onClick={() => setVideoType('talk_audio')}
-                                                className={`p-4 rounded-lg border-2 transition-all text-left ${
-                                                    videoType === 'talk_audio' 
-                                                        ? 'border-emerald-500 bg-emerald-50' 
-                                                        : 'border-gray-200 hover:border-gray-300'
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="text-2xl">🎙️</div>
-                                                    <div className="flex-1">
-                                                        <div className="font-medium text-gray-800">Talk & Audio</div>
-                                                        <div className="text-sm text-gray-600 mt-1">Podcasts, interviews, tutorials, meetings</div>
-                                                    </div>
-                                                </div>
-                                            </button>
-                                            <button
-                                                onClick={() => setVideoType('action_visual')}
-                                                className={`p-4 rounded-lg border-2 transition-all text-left ${
-                                                    videoType === 'action_visual' 
-                                                        ? 'border-emerald-500 bg-emerald-50' 
-                                                        : 'border-gray-200 hover:border-gray-300'
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="text-2xl">🎬</div>
-                                                    <div className="flex-1">
-                                                        <div className="font-medium text-gray-800">Action & Visual</div>
-                                                        <div className="text-sm text-gray-600 mt-1">Gaming, reactions, demos, sports</div>
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Target Duration Settings */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Clock className="w-5 h-5 text-blue-600" />
-                                        <label className="text-sm font-semibold text-gray-700">
-                                            Target Length: {formatDuration(targetDuration)}
-                                        </label>
-                                    </div>
-                                    
-
-                                    
-                                    {/* Slider */}
-                                    <div className="space-y-3">
-                                        <input
-                                            type="range"
-                                            min="20"
-                                            max="1800"
-                                            value={targetDuration}
-                                            onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-                                            className="
-                                                w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
-                                                [&::-webkit-slider-thumb]:appearance-none 
-                                                [&::-webkit-slider-thumb]:w-6 
-                                                [&::-webkit-slider-thumb]:h-6 
-                                                [&::-webkit-slider-thumb]:rounded-full 
-                                                [&::-webkit-slider-thumb]:bg-gradient-to-r
-                                                [&::-webkit-slider-thumb]:from-blue-500
-                                                [&::-webkit-slider-thumb]:to-purple-500
-                                                [&::-webkit-slider-thumb]:border-3
-                                                [&::-webkit-slider-thumb]:border-white
-                                                [&::-webkit-slider-thumb]:shadow-lg
-                                                [&::-webkit-slider-thumb]:cursor-pointer
-                                                [&::-webkit-slider-thumb]:hover:scale-110
-                                                [&::-webkit-slider-thumb]:transition-transform
-                                            "
-                                        />
-                                        <div className="flex justify-between text-xs text-gray-500">
-                                            <span className="font-medium">20s</span>
-                                            <span className="font-medium">30m</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Optional User Prompt */}
-                                {selectedFile && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Custom Instructions (Optional)
-                                        </label>
-                                        <textarea
-                                            value={userPrompt}
-                                            onChange={(e) => setUserPrompt(e.target.value)}
-                                            placeholder="Tell AI what to focus on... e.g., 'Extract the main discussion points and key insights' or 'Focus on the most engaging moments with good visual content'"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none text-sm"
-                                            rows={3}
-                                            maxLength={500}
-                                        />
-                                        <div className="flex justify-between items-center mt-1">
-                                            <p className="text-xs text-gray-500">
-                                                Give AI specific guidance for better results
-                                            </p>
-                                            <p className="text-xs text-gray-400">
-                                                {userPrompt.length}/500
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Generate Button */}
-                                <div className="pt-2">
-                                    <button
-                                        onClick={handleStartProcessing}
-                                        disabled={!selectedFile || isUploading}
-                                        className="
-                                            w-full bg-gradient-to-r from-emerald-600 to-teal-600 
-                                            hover:from-emerald-700 hover:to-teal-700
-                                            disabled:from-gray-400 disabled:to-gray-500
-                                            text-white font-bold text-lg
-                                            px-6 py-4 rounded-2xl 
-                                            transition-all duration-300 shadow-lg hover:shadow-xl 
-                                            disabled:cursor-not-allowed 
-                                            transform hover:scale-105 active:scale-95
-                                            relative overflow-hidden group
-                                        "
-                                    >
-                                        {/* Button glow effect */}
-                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-2xl"></div>
-                                        
-                                        <span className="relative z-10 flex items-center justify-center gap-2">
-                                            {isUploading ? (
-                                                <>
-                                                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                                                    Uploading...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Zap className="w-5 h-5" />
-                                                    Generate AI Clips
-                                                </>
-                                            )}
-                                        </span>
-                                    </button>
-                                </div>
+                    ) : (
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="flex items-center gap-2 text-lg font-medium text-gray-700">
+                                <Upload className="w-5 h-5" />
+                                Upload Video
                             </div>
+                            <p className="text-sm text-gray-500">
+                                Drag & drop or click to select
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Processing/Upload State */}
+                {(isProcessing || isUploading) && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <div className="flex items-center gap-3 text-white">
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            {isUploading ? 'Uploading...' : 'Processing...'}
                         </div>
                     </div>
+                )}
+            </button>
+
+            {error && (
+                <div className="mt-2 text-sm text-red-500">
+                    {error}
                 </div>
             )}
-        </>
+        </div>
     )
 }
 
