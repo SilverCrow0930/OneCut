@@ -276,6 +276,8 @@ async function generateQuickClipsFromAudio(signedUrl: string, mimeType: string, 
     
     const prompt = `You are an expert audio editor trained to extract the most meaningful and coherent segments from audio content. Your goal is to identify speech-driven segments that capture key insights, compelling stories, emotional moments, and quotable statements.
 
+CRITICAL: You MUST return ONLY a valid JSON array. Do not include any other text, markdown formatting, or explanations. The response should start with '[' and end with ']'.
+
 TRANSCRIPTION-ENHANCED APPROACH: You have access to both the audio file and its transcript. Use the transcript to identify precise topic boundaries, key phrases, and content structure, while using the audio to assess tone, emphasis, and natural speech patterns.
 
 TRANSCRIPT PREVIEW:
@@ -317,26 +319,28 @@ SHORT FORMAT APPROACH:
 - Content quality is more important than exact timing
 `}
 
-OUTPUT FORMAT:
-Return ONLY a valid JSON array with NO additional text:
-
+REQUIRED JSON FORMAT:
+You MUST return an array of clip objects with EXACTLY this structure:
 [
   {
     "title": "Opening Statement",
+    "description": "Speaker introduces main theme with personal anecdote",
     "start_time": 15,
     "end_time": 65,
     "significance": 8.2,
-    "description": "Speaker introduces main theme with personal anecdote",
     "narrative_role": "introduction",
     "transition_note": "Natural pause before topic shift"
   }
 ]
 
 FIELD REQUIREMENTS:
-- start_time, end_time: exact timestamps in seconds
-- significance: 1-10 score based on importance to overall message
-- narrative_role: introduction, development, climax, resolution, supporting
-- transition_note: how this segment connects to the narrative flow
+- title: String - Short, descriptive title
+- description: String - 1-2 sentence summary of content
+- start_time: Number - Exact timestamp in seconds (must be >= 0)
+- end_time: Number - Exact timestamp in seconds (must be > start_time)
+- significance: Number - Score from 1-10 based on importance
+- narrative_role: String - One of: "introduction", "development", "climax", "resolution", "supporting"
+- transition_note: String - How this segment connects to the narrative flow
 - NO overlapping timestamps
 - Order segments chronologically (by start_time)
 
@@ -349,7 +353,9 @@ Use the transcript to identify:
 - Story beginnings and conclusions
 - Natural speech patterns and emphasis points
 
-${userInstructions}`
+${userInstructions}
+
+CRITICAL REMINDER: Return ONLY the JSON array. No other text or formatting.`
 
     try {
         // Upload audio file to Gemini
@@ -403,55 +409,75 @@ ${userInstructions}`
         // Parse JSON response (same logic as video processing)
         let clips = []
         try {
-            const cleanedResponse = responseText.trim()
-            clips = JSON.parse(cleanedResponse)
-        } catch (e) {
-            console.log(`[QuickClips Audio] Direct parse failed, trying extraction strategies...`)
+            // First try: direct parse after cleaning
+            const cleanedResponse = responseText
+                .replace(/```json/g, '')  // Remove markdown code block markers
+                .replace(/```/g, '')
+                .trim()
             
-            let jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/g)
-            if (jsonMatch) {
-                try {
-                    clips = JSON.parse(jsonMatch[0])
-                } catch (parseError) {
-                    console.log(`[QuickClips Audio] Array extraction failed`)
-                }
-            }
-            
-            if (!clips.length) {
-                const objectPattern = /\{\s*"title"[\s\S]*?"end_time"\s*:\s*\d+[\s\S]*?\}/g
-                const objectMatches = responseText.match(objectPattern)
+            try {
+                clips = JSON.parse(cleanedResponse)
+            } catch (directParseError) {
+                console.log(`[QuickClips Audio] Direct parse failed, trying array extraction...`)
                 
-                if (objectMatches) {
-                    clips = objectMatches.map(match => {
-                        try {
-                            return JSON.parse(match)
-                        } catch (e) {
-                            return null
+                // Second try: find array pattern
+                const arrayMatch = cleanedResponse.match(/\[\s*\{[\s\S]*?\}\s*\]/g)
+                if (arrayMatch) {
+                    try {
+                        clips = JSON.parse(arrayMatch[0])
+                    } catch (arrayParseError) {
+                        console.log(`[QuickClips Audio] Array extraction failed, trying object extraction...`)
+                        
+                        // Third try: extract individual objects
+                        const objectPattern = /\{\s*"title"[\s\S]*?"end_time"\s*:\s*\d+[\s\S]*?\}/g
+                        const objectMatches = cleanedResponse.match(objectPattern)
+                        
+                        if (objectMatches) {
+                            clips = objectMatches
+                                .map(match => {
+                                    try {
+                                        return JSON.parse(match)
+                                    } catch (e) {
+                                        console.log(`[QuickClips Audio] Failed to parse object: ${match.substring(0, 50)}...`)
+                                        return null
+                                    }
+                                })
+                                .filter(Boolean)
                         }
-                    }).filter(Boolean)
+                    }
                 }
             }
+            
+            // Validate clip structure
+            clips = clips.filter((clip: AIGeneratedClip) => {
+                const isValid = clip && 
+                    typeof clip.title === 'string' &&
+                    typeof clip.description === 'string' &&
+                    typeof clip.start_time === 'number' && 
+                    typeof clip.end_time === 'number' &&
+                    clip.end_time > clip.start_time &&
+                    (clip.end_time - clip.start_time) >= 5 // Minimum 5 seconds
+                
+                if (!isValid) {
+                    console.log(`[QuickClips Audio] Filtered out invalid clip:`, clip)
+                }
+                
+                return isValid
+            })
             
             if (clips.length === 0) {
-                throw new Error(`Failed to parse audio analysis output: ${responseText.substring(0, 200)}...`)
+                throw new Error('No valid clips found after parsing and validation')
             }
-        }
-        
-        // Validate and clean clips
-        if (!Array.isArray(clips)) {
-            throw new Error('Audio analysis response is not an array')
-        }
-        
-        clips = clips.filter(clip => {
-            return clip && 
-                   typeof clip.start_time === 'number' && 
-                   typeof clip.end_time === 'number' &&
-                   clip.end_time > clip.start_time &&
-                   (clip.end_time - clip.start_time) >= 5 // Minimum 5 seconds
-        })
-        
-        if (clips.length === 0) {
-            throw new Error('No valid audio clips found after filtering')
+            
+            // Sort clips by start time
+            clips.sort((a: AIGeneratedClip, b: AIGeneratedClip) => a.start_time - b.start_time)
+            
+            console.log(`[QuickClips Audio] Successfully parsed ${clips.length} clips`)
+            
+        } catch (error: unknown) {
+            console.error('[QuickClips Audio] Failed to parse response:', error)
+            console.error('[QuickClips Audio] Raw response:', responseText)
+            throw new Error(`Failed to parse audio analysis output: ${error instanceof Error ? error.message : String(error)}`)
         }
         
         // Clean up temporary audio file
@@ -466,7 +492,6 @@ ${userInstructions}`
             }, 2 * 60 * 60 * 1000) // 2 hours
         }
         
-        console.log(`[QuickClips Audio] Generated ${clips.length} audio-optimized clips`)
         return { clips, transcript }
         
     } catch (error) {
