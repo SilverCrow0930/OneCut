@@ -13,6 +13,14 @@ interface UploadToolPanelProps {
 const UploadToolPanel: React.FC<UploadToolPanelProps> = ({ highlightedAssetId, uploadingAssetId }) => {
     const { assets, loading, error, addAsset } = useAssets()
 
+    // Sort assets by creation date (newest first)
+    const sortedAssets = [...assets].sort((a, b) => {
+        // Use created_at if available, otherwise fallback to id comparison
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
+        return dateB - dateA // Descending order (newest first)
+    })
+
     // Handle successful uploads by adding assets to state instead of full refresh
     const handleUploadSuccess = (newAssets: Asset[]) => {
         newAssets.forEach(asset => addAsset(asset))
@@ -46,7 +54,7 @@ const UploadToolPanel: React.FC<UploadToolPanelProps> = ({ highlightedAssetId, u
                 {
                     !loading && !error && (
                         <MasonryGrid
-                            assets={assets}
+                            assets={sortedAssets}
                             highlightedAssetId={highlightedAssetId}
                             uploadingAssetId={uploadingAssetId}
                         />
