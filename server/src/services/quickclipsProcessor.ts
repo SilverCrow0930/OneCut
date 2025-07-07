@@ -318,7 +318,7 @@ SHORT FORMAT APPROACH:
 `}
 
 OUTPUT FORMAT:
-Return ONLY a valid JSON array with NO additional text, markdown, or explanations:
+Return ONLY a valid JSON array with NO additional text, markdown, explanations, or code blocks:
 
 [
   {
@@ -332,7 +332,12 @@ Return ONLY a valid JSON array with NO additional text, markdown, or explanation
   }
 ]
 
-CRITICAL: Your response must start with [ and end with ]. Do not include any text before or after the JSON array.
+CRITICAL FORMATTING RULES:
+- Your entire response must start with [ and end with ]
+- Do not include any text, explanations, or commentary before or after the JSON
+- Do not wrap the JSON in markdown code blocks (no triple backticks)
+- Do not include phrases like "Here's the analysis" or "Based on the audio"
+- Return raw JSON only - nothing else
 
 FIELD REQUIREMENTS:
 - start_time, end_time: exact timestamps in seconds
@@ -400,85 +405,154 @@ ${userInstructions}`
         })
         
         const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
-        console.log(`[QuickClips Audio] Raw AI response:`, responseText.substring(0, 500))
+        console.log(`[QuickClips Audio] Raw AI response length: ${responseText.length} characters`)
+        console.log(`[QuickClips Audio] Raw AI response preview:`, responseText.substring(0, 1000))
         
-        // Parse JSON response with robust error handling
+        // Parse JSON response with enhanced robust error handling
         let clips = []
+        
+        // Clean the response first - remove common AI response artifacts
+        let cleanedResponse = responseText.trim()
+        
+        // Remove common AI prefixes/suffixes
+        cleanedResponse = cleanedResponse.replace(/^(Here's|Here are|Based on|I'll|Let me|The|This|Looking at)[\s\S]*?(\[)/i, '[')
+        cleanedResponse = cleanedResponse.replace(/(\])[\s\S]*?(I hope|This should|These segments|Let me know)[\s\S]*$/i, ']')
+        cleanedResponse = cleanedResponse.replace(/^.*?(\[[\s\S]*\]).*$/s, '$1')
+        
         try {
-            const cleanedResponse = responseText.trim()
             clips = JSON.parse(cleanedResponse)
+            console.log(`[QuickClips Audio] Successfully parsed cleaned response`)
         } catch (e) {
             console.log(`[QuickClips Audio] Direct parse failed, trying extraction strategies...`)
             
-            // Strategy 1: Extract JSON array (most common)
-            let jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/g)
-            if (jsonMatch) {
+            // Strategy 1: Find the largest JSON array in the response
+            const arrayMatches = responseText.match(/\[[\s\S]*?\]/g) || []
+            let bestMatch = null
+            let bestScore = 0
+            
+            for (const match of arrayMatches) {
                 try {
-                    clips = JSON.parse(jsonMatch[0])
-                    console.log(`[QuickClips Audio] Successfully parsed JSON array`)
-                } catch (parseError) {
-                    console.log(`[QuickClips Audio] Array extraction failed:`, parseError instanceof Error ? parseError.message : parseError)
+                    const parsed = JSON.parse(match)
+                    if (Array.isArray(parsed)) {
+                        // Score based on array length and presence of required fields
+                        let score = parsed.length
+                        if (parsed.length > 0 && parsed[0].title && parsed[0].start_time !== undefined) {
+                            score += 10
+                        }
+                        if (score > bestScore) {
+                            bestScore = score
+                            bestMatch = parsed
+                        }
+                    }
+                } catch (e) {
+                    // Continue to next match
                 }
+            }
+            
+            if (bestMatch) {
+                clips = bestMatch
+                console.log(`[QuickClips Audio] Successfully parsed best JSON array match (${clips.length} items)`)
             }
             
             // Strategy 2: Extract from markdown code blocks
             if (!clips.length) {
-                const codeBlockMatch = responseText.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/g)
-                if (codeBlockMatch) {
+                const codeBlockMatches = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/g) || []
+                for (const match of codeBlockMatches) {
                     try {
-                        const jsonContent = codeBlockMatch[0].replace(/```(?:json)?\s*/, '').replace(/\s*```/, '')
-                        clips = JSON.parse(jsonContent)
-                        console.log(`[QuickClips Audio] Successfully parsed from code block`)
+                        const jsonContent = match.replace(/```(?:json)?\s*/, '').replace(/\s*```/, '').trim()
+                        const parsed = JSON.parse(jsonContent)
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            clips = parsed
+                            console.log(`[QuickClips Audio] Successfully parsed from code block`)
+                            break
+                        }
                     } catch (parseError) {
-                        console.log(`[QuickClips Audio] Code block extraction failed:`, parseError instanceof Error ? parseError.message : parseError)
+                        // Continue to next code block
                     }
                 }
             }
             
-            // Strategy 3: Extract individual JSON objects
+            // Strategy 3: Extract individual JSON objects and combine
             if (!clips.length) {
                 const objectPattern = /\{\s*"title"[\s\S]*?"end_time"\s*:\s*\d+[\s\S]*?\}/g
-                const objectMatches = responseText.match(objectPattern)
+                const objectMatches = responseText.match(objectPattern) || []
                 
-                if (objectMatches) {
-                    clips = objectMatches.map(match => {
-                        try {
-                            return JSON.parse(match)
-                        } catch (e) {
-                            return null
+                const validObjects = []
+                for (const match of objectMatches) {
+                    try {
+                        const obj = JSON.parse(match)
+                        if (obj.title && typeof obj.start_time === 'number' && typeof obj.end_time === 'number') {
+                            validObjects.push(obj)
                         }
-                    }).filter(Boolean)
-                    
-                    if (clips.length > 0) {
-                        console.log(`[QuickClips Audio] Successfully parsed ${clips.length} individual objects`)
+                    } catch (e) {
+                        // Skip invalid objects
                     }
+                }
+                
+                if (validObjects.length > 0) {
+                    clips = validObjects
+                    console.log(`[QuickClips Audio] Successfully parsed ${clips.length} individual objects`)
                 }
             }
             
-            // Strategy 4: Look for any array-like structure
+            // Strategy 4: Try to find JSON between specific markers
             if (!clips.length) {
-                const arrayPattern = /\[[\s\S]*?\]/g
-                const arrayMatches = responseText.match(arrayPattern)
+                const patterns = [
+                    /\[[\s\S]*?\]/g,  // Any array
+                    /(?:segments?|clips?|results?)[\s\S]*?(\[[\s\S]*?\])/gi,  // Arrays after keywords
+                    /(?:json|array)[\s\S]*?(\[[\s\S]*?\])/gi  // Arrays after json/array mentions
+                ]
                 
-                if (arrayMatches) {
-                    for (const match of arrayMatches) {
-                        try {
-                            const parsed = JSON.parse(match)
-                            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
-                                clips = parsed
-                                console.log(`[QuickClips Audio] Successfully parsed array structure`)
-                                break
+                for (const pattern of patterns) {
+                    const matches = responseText.match(pattern)
+                    if (matches) {
+                        for (const match of matches) {
+                            try {
+                                const parsed = JSON.parse(match)
+                                if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
+                                    clips = parsed
+                                    console.log(`[QuickClips Audio] Successfully parsed with pattern matching`)
+                                    break
+                                }
+                            } catch (e) {
+                                // Continue to next match
                             }
-                        } catch (e) {
-                            // Continue to next match
                         }
+                        if (clips.length > 0) break
                     }
                 }
             }
             
             if (clips.length === 0) {
-                console.error(`[QuickClips Audio] Full AI response:`, responseText)
-                throw new Error(`Failed to parse audio analysis output. Response format not recognized. Response: ${responseText.substring(0, 500)}...`)
+                console.error(`[QuickClips Audio] Full AI response (first 2000 chars):`, responseText.substring(0, 2000))
+                console.error(`[QuickClips Audio] Full AI response (last 1000 chars):`, responseText.substring(Math.max(0, responseText.length - 1000)))
+                
+                // Try one last desperate attempt - look for any array with objects that have numeric properties
+                const desperatePattern = /\[[\s\S]*?\]/g
+                const desperateMatches = responseText.match(desperatePattern) || []
+                
+                for (const match of desperateMatches) {
+                    try {
+                        const parsed = JSON.parse(match)
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            console.log(`[QuickClips Audio] Found array with ${parsed.length} items, checking structure...`)
+                            console.log(`[QuickClips Audio] First item:`, JSON.stringify(parsed[0], null, 2))
+                            
+                            // If it has any time-related properties, try to use it
+                            if (parsed[0] && (parsed[0].start_time !== undefined || parsed[0].startTime !== undefined || parsed[0].start !== undefined)) {
+                                clips = parsed
+                                console.log(`[QuickClips Audio] Using desperate match - found time properties`)
+                                break
+                            }
+                        }
+                    } catch (e) {
+                        // Continue
+                    }
+                }
+                
+                if (clips.length === 0) {
+                    throw new Error(`Failed to parse audio analysis output. Response format not recognized. Response: ${responseText.substring(0, 500)}...`)
+                }
             }
         }
         
@@ -487,13 +561,30 @@ ${userInstructions}`
             throw new Error('Audio analysis response is not an array')
         }
         
-        clips = clips.filter(clip => {
-            return clip && 
+        // Normalize field names in case AI uses different naming conventions
+        clips = clips.map(clip => {
+            if (!clip || typeof clip !== 'object') return null
+            
+            // Handle different possible field names
+            const normalizedClip = {
+                title: clip.title || clip.name || clip.segment_title || '',
+                start_time: clip.start_time ?? clip.startTime ?? clip.start ?? clip.begin_time ?? 0,
+                end_time: clip.end_time ?? clip.endTime ?? clip.end ?? clip.finish_time ?? 0,
+                description: clip.description ?? clip.desc ?? clip.summary ?? '',
+                significance: clip.significance ?? clip.importance ?? clip.score ?? 5,
+                narrative_role: clip.narrative_role ?? clip.role ?? clip.type ?? 'supporting',
+                transition_note: clip.transition_note ?? clip.transition ?? clip.note ?? ''
+            }
+            
+            return normalizedClip
+        }).filter((clip): clip is NonNullable<typeof clip> => {
+            return clip !== null && 
                    typeof clip.start_time === 'number' && 
                    typeof clip.end_time === 'number' &&
                    clip.start_time < clip.end_time &&
                    clip.title && 
-                   clip.description
+                   clip.description &&
+                   (clip.end_time - clip.start_time) >= 3 // Minimum 3 seconds
         }).map(clip => ({
             title: String(clip.title),
             start_time: Number(clip.start_time),
