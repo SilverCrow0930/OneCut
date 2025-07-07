@@ -1163,7 +1163,9 @@ async function processQuickclipsJob(job: QuickclipsJob) {
         emitState('processing', job.message, 75)
         
         // Step 5: Process video clips (extract segments)
+        console.log(`[QuickClips] Starting video extraction for ${clips.length} clips`)
         const processedClips = await extractVideoClips(signedUrl, clips, job)
+        console.log(`[QuickClips] Video extraction completed, generated ${processedClips.length} processed clips`)
         
         job.progress = 95
         job.message = 'Finalizing clips...'
@@ -1271,6 +1273,8 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 const clip = clips[i]
                 const clipDuration = clip.end_time - clip.start_time
                 
+                console.log(`[QuickClips] Processing long format segment ${i + 1}/${clips.length}: "${clip.title}" (${clip.start_time}s - ${clip.end_time}s)`)
+                
                 // Extract segment
                 const segmentPath = path.join(tempDir, `segment_${job.id}_${i}.mp4`)
                 segmentFiles.push(segmentPath)
@@ -1282,6 +1286,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 // Attempt 1: Simple video extraction (preserves original aspect ratio)
                 try {
                     await new Promise<void>((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('FFmpeg timeout after 5 minutes'))
+                        }, 5 * 60 * 1000) // 5 minute timeout
+                        
                         ffmpeg(videoUrl)
                             .seekInput(clip.start_time)
                             .duration(clipDuration)
@@ -1296,8 +1304,21 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 '-crf 23',
                                 '-avoid_negative_ts make_zero'
                             ])
-                            .on('end', () => resolve())
-                            .on('error', (err) => reject(err))
+                            .on('start', (command) => {
+                                console.log(`[QuickClips] Starting FFmpeg for long segment ${i}: ${command}`)
+                            })
+                            .on('progress', (progress: FFmpegProgress) => {
+                                const percent = progress.percent ?? 0
+                                console.log(`[QuickClips] Long segment ${i} progress: ${Math.round(percent)}%`)
+                            })
+                            .on('end', () => {
+                                clearTimeout(timeout)
+                                resolve()
+                            })
+                            .on('error', (err) => {
+                                clearTimeout(timeout)
+                                reject(err)
+                            })
                             .run()
                     })
                     segmentSuccess = true
@@ -1332,6 +1353,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                         })
                         
                         await new Promise<void>((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                reject(new Error('FFmpeg audio-only timeout after 5 minutes'))
+                            }, 5 * 60 * 1000) // 5 minute timeout
+                            
                             ffmpeg()
                                 .input(videoUrl)
                                 .seekInput(clip.start_time)
@@ -1351,8 +1376,21 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                     '-map 1:v', // Video from black background with original dimensions
                                     '-shortest'
                                 ])
-                                .on('end', () => resolve())
-                                .on('error', (err) => reject(err))
+                                .on('start', (command) => {
+                                    console.log(`[QuickclipsProcessor] Starting audio-only FFmpeg for long segment ${i}: ${command}`)
+                                })
+                                .on('progress', (progress: FFmpegProgress) => {
+                                    const percent = progress.percent ?? 0
+                                    console.log(`[QuickclipsProcessor] Audio-only long segment ${i} progress: ${Math.round(percent)}%`)
+                                })
+                                .on('end', () => {
+                                    clearTimeout(timeout)
+                                    resolve()
+                                })
+                                .on('error', (err) => {
+                                    clearTimeout(timeout)
+                                    reject(err)
+                                })
                                 .run()
                         })
                         segmentSuccess = true
@@ -1375,6 +1413,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
             // Combine all segments
             const outputPath = path.join(tempDir, `combined_${job.id}.mp4`)
             await new Promise<void>((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('FFmpeg concatenation timeout after 10 minutes'))
+                }, 10 * 60 * 1000) // 10 minute timeout for concatenation
+                
                 ffmpeg()
                     .input(segmentList)
                     .inputOptions(['-f concat', '-safe 0'])
@@ -1383,8 +1425,21 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                         '-c copy',
                         '-movflags +faststart'
                     ])
-                    .on('end', () => resolve())
-                    .on('error', (err) => reject(err))
+                    .on('start', (command) => {
+                        console.log(`[QuickClips] Starting concatenation: ${command}`)
+                    })
+                    .on('progress', (progress: FFmpegProgress) => {
+                        const percent = progress.percent ?? 0
+                        console.log(`[QuickClips] Concatenation progress: ${Math.round(percent)}%`)
+                    })
+                    .on('end', () => {
+                        clearTimeout(timeout)
+                        resolve()
+                    })
+                    .on('error', (err) => {
+                        clearTimeout(timeout)
+                        reject(err)
+                    })
                     .run()
             })
 
@@ -1407,6 +1462,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
             // Generate thumbnail
             const thumbnailPath = path.join(tempDir, `thumb_${job.id}.jpg`)
             await new Promise<void>((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('Thumbnail generation timeout after 2 minutes'))
+                }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
+                
                 ffmpeg(outputPath)
                     .screenshots({
                         timestamps: ['1'],
@@ -1414,8 +1473,14 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                         folder: path.dirname(thumbnailPath),
                         size: '640x360'
                     })
-                    .on('end', () => resolve())
-                    .on('error', (err) => reject(err))
+                    .on('end', () => {
+                        clearTimeout(timeout)
+                        resolve()
+                    })
+                    .on('error', (err) => {
+                        clearTimeout(timeout)
+                        reject(err)
+                    })
             })
 
             // Upload thumbnail
@@ -1470,6 +1535,8 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
         for (let i = 0; i < clips.length; i++) {
             const clip = clips[i]
             
+            console.log(`[QuickClips] Processing short format clip ${i + 1}/${clips.length}: "${clip.title}" (${clip.start_time}s - ${clip.end_time}s)`)
+            
             // Validate clip timing
             if (typeof clip.start_time !== 'number' || typeof clip.end_time !== 'number') {
                 throw new Error(`Invalid clip timing for clip ${i}`)
@@ -1491,6 +1558,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 // Attempt 1: Simple video extraction (preserves original aspect ratio)
                 try {
                     await new Promise<void>((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('FFmpeg timeout after 5 minutes'))
+                        }, 5 * 60 * 1000) // 5 minute timeout
+                        
                         ffmpeg(videoUrl)
                             .seekInput(clip.start_time)
                             .duration(clipDuration)
@@ -1512,8 +1583,14 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 const percent = progress.percent ?? 0
                                 console.log(`[QuickclipsProcessor] Processing clip ${i}: ${Math.round(percent)}%`)
                             })
-                            .on('end', () => resolve())
-                            .on('error', (err) => reject(err))
+                            .on('end', () => {
+                                clearTimeout(timeout)
+                                resolve()
+                            })
+                            .on('error', (err) => {
+                                clearTimeout(timeout)
+                                reject(err)
+                            })
                             .run()
                     })
                     success = true
@@ -1548,6 +1625,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                         })
                         
                         await new Promise<void>((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                reject(new Error('FFmpeg audio-only timeout after 5 minutes'))
+                            }, 5 * 60 * 1000) // 5 minute timeout
+                            
                             ffmpeg()
                                 .input(videoUrl)
                                 .seekInput(clip.start_time)
@@ -1574,8 +1655,14 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                     const percent = progress.percent ?? 0
                                     console.log(`[QuickclipsProcessor] Processing audio-only clip ${i}: ${Math.round(percent)}%`)
                                 })
-                                .on('end', () => resolve())
-                                .on('error', (err) => reject(err))
+                                .on('end', () => {
+                                    clearTimeout(timeout)
+                                    resolve()
+                                })
+                                .on('error', (err) => {
+                                    clearTimeout(timeout)
+                                    reject(err)
+                                })
                                 .run()
                         })
                         success = true
@@ -1615,6 +1702,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 // Generate thumbnail
                 const thumbnailPath = path.join(tempDir, `thumb_${job.id}_${i}.jpg`)
                 await new Promise<void>((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Thumbnail generation timeout after 2 minutes'))
+                    }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
+                    
                     ffmpeg(outputPath)
                         .screenshots({
                             timestamps: ['1'],
@@ -1622,8 +1713,14 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                             folder: path.dirname(thumbnailPath),
                             size: '640x360'
                         })
-                        .on('end', () => resolve())
-                        .on('error', (err) => reject(err))
+                        .on('end', () => {
+                            clearTimeout(timeout)
+                            resolve()
+                        })
+                        .on('error', (err) => {
+                            clearTimeout(timeout)
+                            reject(err)
+                        })
                 })
                 
                 // Upload thumbnail
