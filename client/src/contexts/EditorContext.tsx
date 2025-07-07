@@ -94,7 +94,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         setError(null)
 
         try {
-            const response = await fetch(apiPath(`projects/${projectId}`), {
+            const response = await fetch(apiPath(`projects/${projectId}?updateLastOpened=true`), {
                 headers: {
                     Authorization: `Bearer ${session.access_token}`,
                     'Content-Type': 'application/json'

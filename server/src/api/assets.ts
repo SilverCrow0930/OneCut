@@ -97,7 +97,8 @@ router.post(
 
             // 2) Build GCS key & upload
             const ext = (file.originalname.split('.').pop() || '').toLowerCase()
-            const key = `${authReq.user.id}/${uuid()}.${ext}`
+            const uniqueFileName = `${Date.now()}_${uuid()}.${ext}`
+            const key = `${authReq.user.id}/${uniqueFileName}`
             const gcsFile = bucket.file(key)
 
             await gcsFile.save(file.buffer, {
@@ -149,7 +150,8 @@ router.post(
 
             // Build GCS key & upload
             const ext = (file.originalname.split('.').pop() || '').toLowerCase()
-            const key = `${authReq.user.id}/${uuid()}.${ext}`
+            const uniqueFileName = `${Date.now()}_${uuid()}.${ext}`
+            const key = `${authReq.user.id}/${uniqueFileName}`
             const gcsFile = bucket.file(key)
 
             await gcsFile.save(file.buffer, {
@@ -165,7 +167,7 @@ router.post(
             res.status(200).json({ 
                 gsUri,
                 objectKey: key,
-                filename: file.originalname,
+                filename: file.originalname, // Keep original name for display purposes
                 mimeType: file.mimetype
             })
         }

@@ -95,19 +95,22 @@ router.get(
                 })
             }
 
-            // 5) Update last_opened timestamp (fire and forget - don't wait for it)
-            ;(async () => {
-                try {
-                    await supabase
-                        .from('projects')
-                        .update({ last_opened: new Date().toISOString() })
-                        .eq('id', id)
-                        .eq('user_id', profile.id)
-                    console.log(`Updated last_opened for project ${id}`)
-                } catch (err) {
-                    console.error(`Failed to update last_opened for project ${id}:`, err)
-                }
-            })()
+            // 5) Update last_opened timestamp only if explicitly requested (e.g., when actually opening the project)
+            const shouldUpdateLastOpened = req.query.updateLastOpened === 'true'
+            if (shouldUpdateLastOpened) {
+                ;(async () => {
+                    try {
+                        await supabase
+                            .from('projects')
+                            .update({ last_opened: new Date().toISOString() })
+                            .eq('id', id)
+                            .eq('user_id', profile.id)
+                        console.log(`Updated last_opened for project ${id}`)
+                    } catch (err) {
+                        console.error(`Failed to update last_opened for project ${id}:`, err)
+                    }
+                })()
+            }
 
             // 6) Return the project
             return res.json(data)
