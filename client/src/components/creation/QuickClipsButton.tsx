@@ -146,7 +146,7 @@ const QuickClipsButton = () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    name: `Smart Cut - ${selectedFile.name}`,
+                    name: selectedFile.name,
                     processing_status: 'queued',
                     processing_type: 'quickclips',
                     processing_progress: 5,

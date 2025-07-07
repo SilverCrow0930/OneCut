@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { apiPath } from '@/lib/config'
 import { useAuth } from '@/contexts/AuthContext'
 import { Project } from '@/types/projects'
@@ -17,6 +17,10 @@ export default function ProjectsList() {
     const [error, setError] = useState<string | null>(null)
     const [showMenu, setShowMenu] = useState<string | null>(null)
     const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
+    
+    // Track polling timeout for cleanup
+    const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const isPollingRef = useRef(false)
 
     // Get highlighted project from URL params
     const highlightedProjectId = searchParams.get('highlight')
@@ -52,6 +56,17 @@ export default function ProjectsList() {
         return { stage: message || 'Processing...', progress }
     }
 
+    // Clean up polling on unmount
+    useEffect(() => {
+        return () => {
+            if (pollingTimeoutRef.current) {
+                clearTimeout(pollingTimeoutRef.current)
+                pollingTimeoutRef.current = null
+            }
+            isPollingRef.current = false
+        }
+    }, [])
+
     useEffect(() => {
         // only fetch once we have a valid token
         if (!session?.access_token) {
@@ -75,36 +90,47 @@ export default function ProjectsList() {
                 }
                 const data: Project[] = await res.json()
                 if (!cancelled) {
-                    // First sort by processing status (processing smart cut first), then by last_opened
+                    // Enhanced sorting logic for Smart Cut projects
                     const sortedProjects = data.sort((a, b) => {
-                        // Processing smart cut projects come first
-                        const aIsProcessing = (a.processing_status === 'processing' || a.processing_status === 'queued') && a.processing_type === 'quickclips'
-                        const bIsProcessing = (b.processing_status === 'processing' || b.processing_status === 'queued') && b.processing_type === 'quickclips'
+                        const aIsSmartCut = a.processing_type === 'quickclips'
+                        const bIsSmartCut = b.processing_type === 'quickclips'
+                        const aIsProcessing = (a.processing_status === 'processing' || a.processing_status === 'queued') && aIsSmartCut
+                        const bIsProcessing = (b.processing_status === 'processing' || b.processing_status === 'queued') && bIsSmartCut
                         
+                        // 1. Processing Smart Cut projects come first (highest priority)
                         if (aIsProcessing && !bIsProcessing) return -1
                         if (!aIsProcessing && bIsProcessing) return 1
                         
-                        // Then sort by last_opened (most recent first, nulls last)
-                        if (a.last_opened && b.last_opened) {
-                            return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
+                        // 2. For non-processing projects, prioritize by last_opened if available
+                        if (!aIsProcessing && !bIsProcessing) {
+                            // If both have last_opened, sort by most recent
+                            if (a.last_opened && b.last_opened) {
+                                return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
+                            }
+                            
+                            // Recently opened projects come first
+                            if (a.last_opened && !b.last_opened) return -1
+                            if (!a.last_opened && b.last_opened) return 1
+                            
+                            // 3. For projects without last_opened, Smart Cut projects come first
+                            if (aIsSmartCut && !bIsSmartCut) return -1
+                            if (!aIsSmartCut && bIsSmartCut) return 1
+                            
+                            // 4. Finally, sort by created_at (most recent first)
+                            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                         }
-                        if (a.last_opened && !b.last_opened) {
-                            return -1 // a (with last_opened) comes first
-                        }
-                        if (!a.last_opened && b.last_opened) {
-                            return 1 // b (with last_opened) comes first
-                        }
-                        // Both have null last_opened, sort by created_at descending (most recent first)
+                        
+                        // Both are processing, sort by created_at (most recent first)
                         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                     })
                     setProjects(sortedProjects)
                     
-                    // If there's a highlighted project that's processing, start polling
-                    if (highlightedProjectId) {
+                    // Start polling only if there's a highlighted project that's processing AND we're not already polling
+                    if (highlightedProjectId && !isPollingRef.current) {
                         const highlightedProject = data.find(p => p.id === highlightedProjectId)
                         if (highlightedProject?.processing_status === 'processing' || 
                             highlightedProject?.processing_status === 'queued') {
-                            pollProjectStatus(highlightedProjectId)
+                            startPolling(highlightedProjectId)
                         }
                     }
                 }
@@ -129,8 +155,28 @@ export default function ProjectsList() {
         }
     }, [session?.access_token, highlightedProjectId])
 
-    // Poll project status for processing projects
+    // Start polling with proper cleanup
+    const startPolling = (projectId: string) => {
+        if (isPollingRef.current) return // Already polling
+        
+        isPollingRef.current = true
+        pollProjectStatus(projectId)
+    }
+
+    // Stop polling
+    const stopPolling = () => {
+        if (pollingTimeoutRef.current) {
+            clearTimeout(pollingTimeoutRef.current)
+            pollingTimeoutRef.current = null
+        }
+        isPollingRef.current = false
+    }
+
+    // Poll project status for processing projects - with improved logic
     const pollProjectStatus = async (projectId: string) => {
+        // Don't poll if we're not supposed to be polling
+        if (!isPollingRef.current) return
+
         try {
             const response = await fetch(apiPath(`projects/${projectId}`), {
                 headers: {
@@ -146,14 +192,26 @@ export default function ProjectsList() {
                     p.id === projectId ? updatedProject : p
                 ))
 
-                // Continue polling if still processing
+                // Continue polling if still processing, otherwise stop
                 if (updatedProject.processing_status === 'processing' || 
                     updatedProject.processing_status === 'queued') {
-                    setTimeout(() => pollProjectStatus(projectId), 3000)
+                    // Use longer intervals to reduce server load - 5 seconds instead of 3
+                    pollingTimeoutRef.current = setTimeout(() => {
+                        pollProjectStatus(projectId)
+                    }, 5000)
+                } else {
+                    // Processing finished, stop polling
+                    stopPolling()
                 }
+            } else {
+                // Error occurred, stop polling to prevent spam
+                console.error('Error polling project status:', response.status)
+                stopPolling()
             }
         } catch (error) {
             console.error('Error polling project status:', error)
+            // Network error, stop polling to prevent spam
+            stopPolling()
         }
     }
 
@@ -244,23 +302,35 @@ export default function ProjectsList() {
                 )
                 // Re-sort after updating last_opened
                 return updatedProjects.sort((a, b) => {
-                    // Processing smart cut projects come first
-                    const aIsProcessing = (a.processing_status === 'processing' || a.processing_status === 'queued') && a.processing_type === 'quickclips'
-                    const bIsProcessing = (b.processing_status === 'processing' || b.processing_status === 'queued') && b.processing_type === 'quickclips'
+                    const aIsSmartCut = a.processing_type === 'quickclips'
+                    const bIsSmartCut = b.processing_type === 'quickclips'
+                    const aIsProcessing = (a.processing_status === 'processing' || a.processing_status === 'queued') && aIsSmartCut
+                    const bIsProcessing = (b.processing_status === 'processing' || b.processing_status === 'queued') && bIsSmartCut
                     
+                    // 1. Processing Smart Cut projects come first (highest priority)
                     if (aIsProcessing && !bIsProcessing) return -1
                     if (!aIsProcessing && bIsProcessing) return 1
                     
-                    // Then sort by last_opened
-                    if (a.last_opened && b.last_opened) {
-                        return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
+                    // 2. For non-processing projects, prioritize by last_opened if available
+                    if (!aIsProcessing && !bIsProcessing) {
+                        // If both have last_opened, sort by most recent
+                        if (a.last_opened && b.last_opened) {
+                            return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
+                        }
+                        
+                        // Recently opened projects come first
+                        if (a.last_opened && !b.last_opened) return -1
+                        if (!a.last_opened && b.last_opened) return 1
+                        
+                        // 3. For projects without last_opened, Smart Cut projects come first
+                        if (aIsSmartCut && !bIsSmartCut) return -1
+                        if (!aIsSmartCut && bIsSmartCut) return 1
+                        
+                        // 4. Finally, sort by created_at (most recent first)
+                        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                     }
-                    if (a.last_opened && !b.last_opened) {
-                        return -1
-                    }
-                    if (!a.last_opened && b.last_opened) {
-                        return 1
-                    }
+                    
+                    // Both are processing, sort by created_at (most recent first)
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 })
             })
