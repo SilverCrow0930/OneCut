@@ -150,7 +150,7 @@ async function getTranscriptionFromAudio(audioUrl: string, mimeType: string): Pr
             model: 'gemini-2.5-flash',
             contents: [content],
             config: {
-                maxOutputTokens: 8192,
+                maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
                 temperature: 0.1,
                 topP: 0.8,
             }
@@ -403,7 +403,7 @@ ${userInstructions}`
             model: 'gemini-2.5-flash',
             contents: [content],
             config: {
-                maxOutputTokens: 4096,
+                maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
                 temperature: 0.2,
                 topP: 0.8,
             }
@@ -710,7 +710,7 @@ Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 
             model: 'gemini-2.5-flash',
             contents: [content],
             config: {
-                maxOutputTokens: 4096,
+                maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
                 temperature: 0.2, // Lower temperature for more consistent, analytical responses
                 topP: 0.8,
             }

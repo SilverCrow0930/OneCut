@@ -13,7 +13,7 @@ const generationConfig = {
     temperature: 0.7,
     topP: 0.8,
     topK: 40,
-    maxOutputTokens: 4096,
+    maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
 }
 
 const safetySettings = [

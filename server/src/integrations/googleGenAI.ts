@@ -621,7 +621,7 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 config: {
                     systemInstruction: chatSystemInstruction,
-                    maxOutputTokens: 2048,
+                    maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
                     temperature: 0.7,
                     topP: 0.8,
                     topK: 40,
@@ -799,7 +799,7 @@ export const generateContent = async (prompt: string, signedUrl: string, mimeTyp
                     thinkingConfig: {
                         includeThoughts: true,
                     },
-                    maxOutputTokens: 8192,
+                    maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
                     temperature: 0.7,
                     topP: 0.8,
                     topK: 40,
@@ -1041,7 +1041,7 @@ export const generateTranscription = async (signedUrl: string, mimeType: string,
                 contents: [content],
                 config: {
                     systemInstruction: transcriptionSystemInstruction,
-                    maxOutputTokens: 8192,
+                    maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
                     temperature: 0.1, // Lower temperature for more accurate transcription
                     topP: 0.8,
                     topK: 40,
@@ -1299,7 +1299,7 @@ export const generateVideoAnalysisFromBlob = async (videoBlob: Blob, mimeType: s
                 contents: [content],
                 config: {
                     systemInstruction: videoAnalysisSystemInstruction,
-                    maxOutputTokens: 8192,
+                    maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
                     temperature: 0.3,
                     topP: 0.8,
                     topK: 40,
@@ -1519,7 +1519,7 @@ export const generateVideoAnalysis = async (signedUrl: string, mimeType: string)
                 contents: [content],
                 config: {
                     systemInstruction: videoAnalysisSystemInstruction,
-                    maxOutputTokens: 8192,
+                    maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
                     temperature: 0.3, // Lower temperature for more consistent analysis
                     topP: 0.8,
                     topK: 40,
@@ -1691,7 +1691,7 @@ Only include commands when the user specifically asks for edits. For general que
             contents: [{ role: 'user', parts: [{ text: contextPrompt }] }],
             config: {
                 systemInstruction: aiAssistantSystemInstruction,
-                maxOutputTokens: 4096,
+                maxOutputTokens: 65536, // Gemini 2.5 Flash supports up to 65,536 output tokens
                 temperature: 0.7,
                 topP: 0.8,
                 topK: 40,
