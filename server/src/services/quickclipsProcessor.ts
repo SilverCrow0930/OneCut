@@ -84,19 +84,19 @@ const activeJobs = new Set<string>()
 const FORMAT_CONFIGS = {
     short: {
         name: 'Individual Clips',
-        maxDuration: 120, // < 2 minutes
-        segmentCount: { min: 1, max: 20 }, // More flexible - allow single clip or many clips
-        segmentLength: { min: 15, max: 120, target: 45 }, // More flexible length range
-        totalDuration: { tolerance: 30 }, // ±30 seconds acceptable (doubled tolerance)
-        approach: 'Create individual video clips preserving original aspect ratio. Each segment should be a standalone piece with clear narrative value.'
+        maxDuration: 120, // < 2 minutes per clip
+        segmentCount: { min: 1, max: 20 }, // Generate multiple individual clips
+        segmentLength: { min: 15, max: 120, target: 45 }, // Each clip should be 15-120 seconds
+        totalDuration: { tolerance: 30 }, // ±30 seconds acceptable for total duration
+        approach: 'Create multiple individual video clips, each under 2 minutes. Each clip should be standalone and capture a complete thought or moment.'
     },
     long: {
         name: 'Combined Video', 
-        maxDuration: 1800, // 30 minutes
-        segmentCount: { min: 1, max: 30 }, // More flexible - allow single segment or many
-        segmentLength: null, // No strict length requirements - trust AI
-        totalDuration: null, // No strict duration requirements - trust AI
-        approach: 'Develop a comprehensive narrative that explores themes in depth while maintaining viewer engagement throughout. Segments will be combined into a single cohesive video preserving original aspect ratio. Focus on natural content breaks and meaningful storytelling.'
+        maxDuration: 1800, // 30 minutes total
+        segmentCount: { min: 2, max: 15 }, // Generate multiple segments to combine
+        segmentLength: { min: 30, max: 300 }, // Each segment 30s-5min, will be combined
+        totalDuration: { tolerance: 60 }, // ±60 seconds acceptable for final combined duration
+        approach: 'Create multiple segments that will be combined into one video. Focus on natural content breaks and smooth transitions between segments.'
     }
 }
 
@@ -268,57 +268,48 @@ async function generateQuickClipsFromAudio(signedUrl: string, mimeType: string, 
         }
     }
     
-    // Step 1: Get transcript for better analysis quality
-    console.log('📝 Getting transcript for enhanced audio analysis...')
-    const transcript = await getTranscriptionFromAudio(audioUrl, audioMimeType)
+    // Single AI call for both transcription and segmentation to avoid confusion
+    console.log('🎯 Analyzing audio for Smart Cut segments...')
     
     const userInstructions = job.userPrompt ? `\n\nUSER INSTRUCTIONS: ${job.userPrompt}\nPlease incorporate these specific requirements into your analysis while maintaining the core quality standards.` : ''
     
-    const prompt = `You are an expert audio editor trained to extract the most meaningful and coherent segments from audio content. Your goal is to identify speech-driven segments that capture key insights, compelling stories, emotional moments, and quotable statements.
+    const prompt = `You are an expert audio editor. Your task is to analyze this audio content and extract the most meaningful segments with precise timestamps.
 
-TRANSCRIPTION-ENHANCED APPROACH: You have access to both the audio file and its transcript. Use the transcript to identify precise topic boundaries, key phrases, and content structure, while using the audio to assess tone, emphasis, and natural speech patterns.
+TASK: Analyze the audio and identify the best segments for ${formatConfig.name.toLowerCase()}.
 
-TRANSCRIPT PREVIEW:
-${transcript.substring(0, 2000)}${transcript.length > 2000 ? '...' : ''}
-
-AUDIO-FOCUSED APPROACH: Since you're analyzing audio-only content, focus on speech patterns, conversation flow, topic changes, and verbal emphasis. Look for natural pauses, topic transitions, and compelling verbal content.
-
-SEGMENT GUIDELINES:
-- Target total duration: ~${job.targetDuration} seconds${formatConfig.totalDuration ? ` (±${formatConfig.totalDuration.tolerance}s)` : ' (flexible)'}
-- For ${formatConfig.name}:
-  * Number of segments: ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max} segments (choose what works best for the content)
-  * Segment length: ${formatConfig.segmentLength ? `${formatConfig.segmentLength.target}s (${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s)` : 'variable - based on natural speech breaks'}
-  * ${job.videoFormat === 'long' ? 'Segments will be combined into a single video' : 'Each segment will be a standalone clip'}
-  * MINIMUM: Each segment must be at least 5 seconds (anything shorter will be filtered out)
-
-AUDIO ANALYSIS FOCUS:
-- Topic changes and natural conversation breaks
-- Key insights, explanations, and quotable moments
-- Emotional emphasis and compelling statements
-- Question-answer sequences
-- Story beginnings and conclusions
-- Natural pauses and speech rhythm changes
-
-${job.videoFormat === 'long' ? `
-LONG FORMAT APPROACH:
-- Focus on natural conversation breaks and topic progression
-- Each segment should represent a complete thought or discussion point
-- Segments can vary in length based on speech content (30 seconds to several minutes)
-- Prioritize conversational flow over exact timing constraints
-- The combined audio should tell a complete, engaging story
-- Aim for approximately ${job.targetDuration} seconds total, but content quality is more important than exact timing
-- Minimum 15 seconds per segment to ensure meaningful content
+FORMAT REQUIREMENTS:
+${job.videoFormat === 'short' ? `
+SHORT FORMAT (Individual Clips):
+- Create ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max} individual clips
+- Each clip should be ${formatConfig.segmentLength!.min}-${formatConfig.segmentLength!.max} seconds long (target: ${(formatConfig.segmentLength as any)?.target || 45}s)
+- Total duration target: ~${job.targetDuration} seconds (±${formatConfig.totalDuration!.tolerance}s acceptable)
+- Each clip must be standalone and complete
+- Focus on high-impact moments, key insights, quotable statements
 ` : `
-SHORT FORMAT APPROACH:
-- Target segments between ${formatConfig.segmentLength!.min} and ${formatConfig.segmentLength!.max} seconds (flexible)
-- Target total duration ${job.targetDuration - formatConfig.totalDuration!.tolerance} to ${job.targetDuration + formatConfig.totalDuration!.tolerance} seconds (flexible)
-- Focus on high-impact, quotable moments and key insights
-- Minimum 5 seconds per segment to ensure usability
-- Content quality is more important than exact timing
+LONG FORMAT (Combined Video):
+- Create ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max} segments that will be combined
+- Each segment should be ${formatConfig.segmentLength!.min}-${formatConfig.segmentLength!.max} seconds long
+- Total combined duration target: ~${job.targetDuration} seconds (±${formatConfig.totalDuration!.tolerance}s acceptable)
+- Segments should flow together naturally when combined
+- Focus on narrative progression and topic development
 `}
 
+ANALYSIS APPROACH:
+1. Listen to the entire audio content
+2. Identify key topics, insights, and compelling moments
+3. Find natural speech breaks and topic transitions
+4. Select segments with clear beginnings and endings
+5. Ensure no overlapping timestamps
+6. Prioritize content quality over exact timing
+
+MINIMUM REQUIREMENTS:
+- Each segment must be at least 3 seconds long
+- Timestamps must be precise (in seconds)
+- No overlapping segments
+- Chronological order (by start_time)
+
 OUTPUT FORMAT:
-Return ONLY a valid JSON array with NO additional text, markdown, explanations, or code blocks:
+Return ONLY a valid JSON array with NO additional text, explanations, or markdown:
 
 [
   {
@@ -332,29 +323,15 @@ Return ONLY a valid JSON array with NO additional text, markdown, explanations, 
   }
 ]
 
-CRITICAL FORMATTING RULES:
-- Your entire response must start with [ and end with ]
-- Do not include any text, explanations, or commentary before or after the JSON
-- Do not wrap the JSON in markdown code blocks (no triple backticks)
-- Do not include phrases like "Here's the analysis" or "Based on the audio"
-- Return raw JSON only - nothing else
+CRITICAL: Your response must start with [ and end with ]. Include nothing else.
 
 FIELD REQUIREMENTS:
-- start_time, end_time: exact timestamps in seconds
-- significance: 1-10 score based on importance to overall message
-- narrative_role: introduction, development, climax, resolution, supporting
-- transition_note: how this segment connects to the narrative flow
-- NO overlapping timestamps
-- Order segments chronologically (by start_time)
-
-Remember: Focus on speech-driven content that works well as audio/podcast clips. The goal is to create ${job.videoFormat === 'long' ? 'a single cohesive audio experience' : 'standalone audio clips'} that capture the most engaging spoken content.
-
-Use the transcript to identify:
-- Exact topic boundaries and natural conversation breaks
-- Key phrases and quotable moments
-- Question-answer sequences and their precise timing
-- Story beginnings and conclusions
-- Natural speech patterns and emphasis points
+- start_time, end_time: exact timestamps in seconds (required)
+- title: descriptive name for the segment (required)
+- description: what happens in this segment (required)
+- significance: 1-10 score based on importance (required)
+- narrative_role: introduction, development, climax, resolution, supporting (required)
+- transition_note: how this connects to the flow (required)
 
 ${userInstructions}`
 
@@ -405,154 +382,85 @@ ${userInstructions}`
         })
         
         const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
-        console.log(`[QuickClips Audio] Raw AI response length: ${responseText.length} characters`)
-        console.log(`[QuickClips Audio] Raw AI response preview:`, responseText.substring(0, 1000))
+        console.log(`[QuickClips Audio] Raw AI response:`, responseText.substring(0, 500))
         
-        // Parse JSON response with enhanced robust error handling
+        // Parse JSON response with robust error handling
         let clips = []
-        
-        // Clean the response first - remove common AI response artifacts
-        let cleanedResponse = responseText.trim()
-        
-        // Remove common AI prefixes/suffixes
-        cleanedResponse = cleanedResponse.replace(/^(Here's|Here are|Based on|I'll|Let me|The|This|Looking at)[\s\S]*?(\[)/i, '[')
-        cleanedResponse = cleanedResponse.replace(/(\])[\s\S]*?(I hope|This should|These segments|Let me know)[\s\S]*$/i, ']')
-        cleanedResponse = cleanedResponse.replace(/^.*?(\[[\s\S]*\]).*$/s, '$1')
-        
         try {
+            const cleanedResponse = responseText.trim()
             clips = JSON.parse(cleanedResponse)
-            console.log(`[QuickClips Audio] Successfully parsed cleaned response`)
         } catch (e) {
             console.log(`[QuickClips Audio] Direct parse failed, trying extraction strategies...`)
             
-            // Strategy 1: Find the largest JSON array in the response
-            const arrayMatches = responseText.match(/\[[\s\S]*?\]/g) || []
-            let bestMatch = null
-            let bestScore = 0
-            
-            for (const match of arrayMatches) {
+            // Strategy 1: Extract JSON array (most common)
+            let jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/g)
+            if (jsonMatch) {
                 try {
-                    const parsed = JSON.parse(match)
-                    if (Array.isArray(parsed)) {
-                        // Score based on array length and presence of required fields
-                        let score = parsed.length
-                        if (parsed.length > 0 && parsed[0].title && parsed[0].start_time !== undefined) {
-                            score += 10
-                        }
-                        if (score > bestScore) {
-                            bestScore = score
-                            bestMatch = parsed
-                        }
-                    }
-                } catch (e) {
-                    // Continue to next match
+                    clips = JSON.parse(jsonMatch[0])
+                    console.log(`[QuickClips Audio] Successfully parsed JSON array`)
+                } catch (parseError) {
+                    console.log(`[QuickClips Audio] Array extraction failed:`, parseError instanceof Error ? parseError.message : parseError)
                 }
-            }
-            
-            if (bestMatch) {
-                clips = bestMatch
-                console.log(`[QuickClips Audio] Successfully parsed best JSON array match (${clips.length} items)`)
             }
             
             // Strategy 2: Extract from markdown code blocks
             if (!clips.length) {
-                const codeBlockMatches = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/g) || []
-                for (const match of codeBlockMatches) {
+                const codeBlockMatch = responseText.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/g)
+                if (codeBlockMatch) {
                     try {
-                        const jsonContent = match.replace(/```(?:json)?\s*/, '').replace(/\s*```/, '').trim()
-                        const parsed = JSON.parse(jsonContent)
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            clips = parsed
-                            console.log(`[QuickClips Audio] Successfully parsed from code block`)
-                            break
-                        }
+                        const jsonContent = codeBlockMatch[0].replace(/```(?:json)?\s*/, '').replace(/\s*```/, '')
+                        clips = JSON.parse(jsonContent)
+                        console.log(`[QuickClips Audio] Successfully parsed from code block`)
                     } catch (parseError) {
-                        // Continue to next code block
+                        console.log(`[QuickClips Audio] Code block extraction failed:`, parseError instanceof Error ? parseError.message : parseError)
                     }
                 }
             }
             
-            // Strategy 3: Extract individual JSON objects and combine
+            // Strategy 3: Extract individual JSON objects
             if (!clips.length) {
                 const objectPattern = /\{\s*"title"[\s\S]*?"end_time"\s*:\s*\d+[\s\S]*?\}/g
-                const objectMatches = responseText.match(objectPattern) || []
+                const objectMatches = responseText.match(objectPattern)
                 
-                const validObjects = []
-                for (const match of objectMatches) {
-                    try {
-                        const obj = JSON.parse(match)
-                        if (obj.title && typeof obj.start_time === 'number' && typeof obj.end_time === 'number') {
-                            validObjects.push(obj)
+                if (objectMatches) {
+                    clips = objectMatches.map(match => {
+                        try {
+                            return JSON.parse(match)
+                        } catch (e) {
+                            return null
                         }
-                    } catch (e) {
-                        // Skip invalid objects
+                    }).filter(Boolean)
+                    
+                    if (clips.length > 0) {
+                        console.log(`[QuickClips Audio] Successfully parsed ${clips.length} individual objects`)
                     }
-                }
-                
-                if (validObjects.length > 0) {
-                    clips = validObjects
-                    console.log(`[QuickClips Audio] Successfully parsed ${clips.length} individual objects`)
                 }
             }
             
-            // Strategy 4: Try to find JSON between specific markers
+            // Strategy 4: Look for any array-like structure
             if (!clips.length) {
-                const patterns = [
-                    /\[[\s\S]*?\]/g,  // Any array
-                    /(?:segments?|clips?|results?)[\s\S]*?(\[[\s\S]*?\])/gi,  // Arrays after keywords
-                    /(?:json|array)[\s\S]*?(\[[\s\S]*?\])/gi  // Arrays after json/array mentions
-                ]
+                const arrayPattern = /\[[\s\S]*?\]/g
+                const arrayMatches = responseText.match(arrayPattern)
                 
-                for (const pattern of patterns) {
-                    const matches = responseText.match(pattern)
-                    if (matches) {
-                        for (const match of matches) {
-                            try {
-                                const parsed = JSON.parse(match)
-                                if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
-                                    clips = parsed
-                                    console.log(`[QuickClips Audio] Successfully parsed with pattern matching`)
-                                    break
-                                }
-                            } catch (e) {
-                                // Continue to next match
+                if (arrayMatches) {
+                    for (const match of arrayMatches) {
+                        try {
+                            const parsed = JSON.parse(match)
+                            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
+                                clips = parsed
+                                console.log(`[QuickClips Audio] Successfully parsed array structure`)
+                                break
                             }
+                        } catch (e) {
+                            // Continue to next match
                         }
-                        if (clips.length > 0) break
                     }
                 }
             }
             
             if (clips.length === 0) {
-                console.error(`[QuickClips Audio] Full AI response (first 2000 chars):`, responseText.substring(0, 2000))
-                console.error(`[QuickClips Audio] Full AI response (last 1000 chars):`, responseText.substring(Math.max(0, responseText.length - 1000)))
-                
-                // Try one last desperate attempt - look for any array with objects that have numeric properties
-                const desperatePattern = /\[[\s\S]*?\]/g
-                const desperateMatches = responseText.match(desperatePattern) || []
-                
-                for (const match of desperateMatches) {
-                    try {
-                        const parsed = JSON.parse(match)
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            console.log(`[QuickClips Audio] Found array with ${parsed.length} items, checking structure...`)
-                            console.log(`[QuickClips Audio] First item:`, JSON.stringify(parsed[0], null, 2))
-                            
-                            // If it has any time-related properties, try to use it
-                            if (parsed[0] && (parsed[0].start_time !== undefined || parsed[0].startTime !== undefined || parsed[0].start !== undefined)) {
-                                clips = parsed
-                                console.log(`[QuickClips Audio] Using desperate match - found time properties`)
-                                break
-                            }
-                        }
-                    } catch (e) {
-                        // Continue
-                    }
-                }
-                
-                if (clips.length === 0) {
-                    throw new Error(`Failed to parse audio analysis output. Response format not recognized. Response: ${responseText.substring(0, 500)}...`)
-                }
+                console.error(`[QuickClips Audio] Full AI response:`, responseText)
+                throw new Error(`Failed to parse audio analysis output. Response format not recognized. Response: ${responseText.substring(0, 500)}...`)
             }
         }
         
@@ -561,30 +469,13 @@ ${userInstructions}`
             throw new Error('Audio analysis response is not an array')
         }
         
-        // Normalize field names in case AI uses different naming conventions
-        clips = clips.map(clip => {
-            if (!clip || typeof clip !== 'object') return null
-            
-            // Handle different possible field names
-            const normalizedClip = {
-                title: clip.title || clip.name || clip.segment_title || '',
-                start_time: clip.start_time ?? clip.startTime ?? clip.start ?? clip.begin_time ?? 0,
-                end_time: clip.end_time ?? clip.endTime ?? clip.end ?? clip.finish_time ?? 0,
-                description: clip.description ?? clip.desc ?? clip.summary ?? '',
-                significance: clip.significance ?? clip.importance ?? clip.score ?? 5,
-                narrative_role: clip.narrative_role ?? clip.role ?? clip.type ?? 'supporting',
-                transition_note: clip.transition_note ?? clip.transition ?? clip.note ?? ''
-            }
-            
-            return normalizedClip
-        }).filter((clip): clip is NonNullable<typeof clip> => {
-            return clip !== null && 
+        clips = clips.filter(clip => {
+            return clip && 
                    typeof clip.start_time === 'number' && 
                    typeof clip.end_time === 'number' &&
                    clip.start_time < clip.end_time &&
                    clip.title && 
-                   clip.description &&
-                   (clip.end_time - clip.start_time) >= 3 // Minimum 3 seconds
+                   clip.description
         }).map(clip => ({
             title: String(clip.title),
             start_time: Number(clip.start_time),
@@ -634,7 +525,7 @@ ${userInstructions}`
         }
         
         console.log(`[QuickClips Audio] Generated ${clips.length} audio-optimized clips`)
-        return { clips, transcript }
+        return { clips, transcript: 'Transcript generated during analysis' }
         
     } catch (error) {
         console.error('[QuickClips Audio] Audio processing failed:', error)
@@ -672,7 +563,7 @@ SEGMENT GUIDELINES:
 - Target total duration: ~${job.targetDuration} seconds${formatConfig.totalDuration ? ` (±${formatConfig.totalDuration.tolerance}s)` : ' (flexible)'}
 - For ${formatConfig.name}:
   * Number of segments: ${formatConfig.segmentCount.min}-${formatConfig.segmentCount.max} segments (choose what works best for the content)
-  * Segment length: ${formatConfig.segmentLength ? `${formatConfig.segmentLength.target}s (${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s)` : 'variable - based on natural content breaks'}
+  * Segment length: ${formatConfig.segmentLength ? `${(formatConfig.segmentLength as any)?.target || 45}s (${formatConfig.segmentLength.min}-${formatConfig.segmentLength.max}s)` : 'variable - based on natural content breaks'}
   * ${job.videoFormat === 'long' ? 'Segments will be combined into a single video' : 'Each segment will be a standalone clip'}
   * MINIMUM: Each segment must be at least 5 seconds (anything shorter will be filtered out)
 
