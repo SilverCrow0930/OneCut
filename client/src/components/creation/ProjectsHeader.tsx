@@ -22,7 +22,7 @@ const ProjectsHeader = () => {
                 <CreateProjectButton />
                 </div>
                 <p className="text-sm text-gray-500">
-                    or browse your existingprojects below
+                    or browse your existing projects below
                 </p>
             </div>
         </div>

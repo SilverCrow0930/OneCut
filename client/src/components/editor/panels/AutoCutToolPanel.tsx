@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { apiPath } from '@/lib/config'
+import { useRouter } from 'next/navigation'
 
-import { CheckCircle2, AlertCircle, Loader2, Brain, Sparkles, Play, Download, RefreshCw, Clock, Eye, Upload, Video } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, Brain, Sparkles, Play, Download, RefreshCw, Clock, Eye, Upload, Video, Edit } from 'lucide-react'
 import VideoDetailsSection from './VideoDetailsSection'
 import { useEditor } from '@/contexts/EditorContext'
 import { v4 as uuid } from 'uuid'
@@ -68,6 +69,7 @@ const AutoCutToolPanel = () => {
     const { tracks, executeCommand } = useEditor()
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
+    const router = useRouter()
 
     // Specific time intervals in seconds (20s to 30m)
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
@@ -217,6 +219,46 @@ const AutoCutToolPanel = () => {
 
         return () => clearInterval(pollInterval)
     }, [currentJob?.id, currentJob?.status, session?.access_token, handleClipsReady])
+
+    // Check if there's already a Smart Cut project for this project on mount
+    useEffect(() => {
+        const checkExistingSmartCutProject = async () => {
+            if (!projectId || !session) return
+
+            try {
+                const response = await fetch(apiPath(`projects/${projectId}`), {
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`
+                    }
+                })
+
+                if (response.ok) {
+                    const project = await response.json()
+                    
+                    // Check if this project has Smart Cut results
+                    if (project.processing_result?.clips && project.processing_result.clips.length > 0) {
+                        setCurrentJob({
+                            id: `existing_${projectId}`,
+                            projectId,
+                            status: 'completed',
+                            progress: 100,
+                            message: 'Smart Cut completed',
+                            clips: project.processing_result.clips,
+                            description: project.processing_result.description
+                        })
+
+                        if (project.processing_result.transcript) {
+                            setTranscript(project.processing_result.transcript)
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking existing Smart Cut project:', error)
+            }
+        }
+
+        checkExistingSmartCutProject()
+    }, [projectId, session?.access_token])
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
@@ -442,6 +484,36 @@ const AutoCutToolPanel = () => {
             }
         }
         return <Brain className="w-4 h-4 text-purple-600" />
+    }
+
+    // Add function to format duration for clips display
+    const formatClipDuration = (seconds: number) => {
+        const minutes = Math.floor(seconds / 60)
+        const remainingSeconds = Math.floor(seconds % 60)
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+    }
+
+    // Add function to handle clip actions
+    const handleDownloadClip = (clip: any) => {
+        if (clip.downloadUrl) {
+            const link = document.createElement('a')
+            link.href = clip.downloadUrl
+            link.download = `${clip.title}.mp4`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        }
+    }
+
+    const handlePreviewClip = (clip: any) => {
+        if (clip.previewUrl) {
+            window.open(clip.previewUrl, '_blank')
+        }
+    }
+
+    const handleEditClip = async (clip: any) => {
+        // Navigate to main editor with this specific clip
+        router.push(`/projects/${projectId}`)
     }
 
     return (
@@ -715,6 +787,83 @@ const AutoCutToolPanel = () => {
                             showThoughts={false}
                             showResponse={false}
                         />
+
+                        {/* Generated Clips Section - Show when completed */}
+                        {currentJob?.status === 'completed' && currentJob.clips && currentJob.clips.length > 0 && (
+                            <div className="border border-gray-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                                        <span className="text-lg">🎬</span>
+                                        Generated Clips ({currentJob.clips.length})
+                                    </h4>
+                                    <button
+                                        onClick={() => router.push(`/projects/quickclips/${projectId}`)}
+                                        className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                                    >
+                                        <Eye className="w-3 h-3" />
+                                        View All
+                                    </button>
+                                </div>
+                                
+                                <div className="space-y-3 max-h-80 overflow-y-auto">
+                                    {currentJob.clips.map((clip: any, index: number) => (
+                                        <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <h5 className="font-medium text-gray-900 text-sm mb-1">
+                                                        {clip.title}
+                                                    </h5>
+                                                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                                                        {clip.description}
+                                                    </p>
+                                                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" />
+                                                            {formatClipDuration(clip.duration)}
+                                                        </span>
+                                                        <span>
+                                                            {formatClipDuration(clip.start_time)} - {formatClipDuration(clip.end_time)}
+                                                        </span>
+                                                        {clip.significance && (
+                                                            <span className="flex items-center gap-1">
+                                                                <span className="text-yellow-500">⭐</span>
+                                                                {clip.significance.toFixed(1)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-1 ml-3">
+                                                    <button
+                                                        onClick={() => handlePreviewClip(clip)}
+                                                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                        title="Preview"
+                                                    >
+                                                        <Play className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDownloadClip(clip)}
+                                                        className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                                        title="Download"
+                                                    >
+                                                        <Download className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                {currentJob.description && (
+                                    <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <h5 className="font-medium text-blue-900 text-sm mb-2">Analysis Summary</h5>
+                                        <p className="text-xs text-blue-800 leading-relaxed">
+                                            {currentJob.description}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Transcript Section - Only show for Talk & Audio content when completed */}
                         {transcript && videoType === 'talk_audio' && currentJob?.status === 'completed' && (
