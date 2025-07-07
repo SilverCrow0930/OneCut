@@ -85,15 +85,15 @@ const FORMAT_CONFIGS = {
     short: {
         name: 'Individual Clips',
         maxDuration: 120, // < 2 minutes
-        segmentCount: { min: 2, max: 14 },
-        segmentLength: { min: 30, max: 90, target: 45 },
-        totalDuration: { tolerance: 15 }, // ±15 seconds acceptable
+        segmentCount: { min: 1, max: 20 }, // More flexible - allow single clip or many clips
+        segmentLength: { min: 15, max: 120, target: 45 }, // More flexible length range
+        totalDuration: { tolerance: 30 }, // ±30 seconds acceptable (doubled tolerance)
         approach: 'Create individual video clips preserving original aspect ratio. Each segment should be a standalone piece with clear narrative value.'
     },
     long: {
         name: 'Combined Video', 
         maxDuration: 1800, // 30 minutes
-        segmentCount: { min: 2, max: 20 },
+        segmentCount: { min: 1, max: 30 }, // More flexible - allow single segment or many
         segmentLength: null, // No strict length requirements - trust AI
         totalDuration: null, // No strict duration requirements - trust AI
         approach: 'Develop a comprehensive narrative that explores themes in depth while maintaining viewer engagement throughout. Segments will be combined into a single cohesive video preserving original aspect ratio. Focus on natural content breaks and meaningful storytelling.'
@@ -704,11 +704,11 @@ Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 
             throw new Error('No valid clips extracted')
         }
 
-        // Filter out clips that are too short to be useful (under 5 seconds)
+        // Filter out clips that are too short to be useful (under 3 seconds)
         const originalLength = clips.length
         clips = clips.filter(clip => {
             const duration = clip.end_time - clip.start_time
-            if (duration < 5) {
+            if (duration < 3) {
                 console.warn(`[QuickClips] Filtering out clip "${clip.title}" - too short (${duration}s)`)
                 return false
             }
@@ -716,7 +716,7 @@ Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 
         })
 
         if (clips.length === 0) {
-            throw new Error('All clips were too short (under 5 seconds)')
+            throw new Error('All clips were too short (under 3 seconds)')
         }
 
         if (clips.length !== originalLength) {
