@@ -2,7 +2,7 @@ import { VertexAI, HarmCategory, HarmBlockThreshold } from '@google-cloud/vertex
 
 const projectId = 'lemona-app'
 const location = 'us-central1'
-const model = 'gemini-2.5-flash-preview-05-20'
+const model = 'gemini-2.5-flash'
 
 const vertexAI = new VertexAI({
     project: projectId,

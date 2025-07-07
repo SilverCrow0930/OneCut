@@ -15,7 +15,7 @@ if (!process.env.GOOGLE_CLOUD_LOCATION) {
 
 // Initialize with dynamic import
 let ai: any = null
-let model = "gemini-2.5-flash-preview-05-20"
+let model = "gemini-2.5-flash"
 let createUserContent: any = null
 let createPartFromUri: any = null
 

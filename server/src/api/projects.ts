@@ -249,6 +249,65 @@ router.put(
     }
 )
 
+// PATCH /api/v1/projects/:id — partial update of an existing project (same logic as PUT)
+router.patch(
+    '/:id',
+    check('id').isUUID().withMessage('Invalid project ID'),
+    check('name').optional().isString().trim(),
+    check('thumbnail_url').optional().isString(),
+    check('duration').optional().isInt({ min: 0 }),
+    check('is_public').optional().isBoolean(),
+    check('notes').optional().isString(),
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const errors = validationResult(req)
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() })
+            }
+
+            const { user } = req as AuthenticatedRequest
+            const { id } = req.params
+
+            const updates = req.body
+
+            // lookup profile id
+            const { data: profile, error: profileError } = await supabase
+                .from('users')
+                .select('id')
+                .eq('auth_id', user.id)
+                .single()
+
+            if (profileError || !profile) {
+                console.error('Profile lookup failed:', profileError)
+                return res.status(500).json({
+                    error: 'Could not load user profile'
+                })
+            }
+
+            // perform update
+            const { data, error } = await supabase
+                .from('projects')
+                .update(updates)
+                .eq('id', id)
+                .eq('user_id', profile.id)
+                .select('*')
+                .single()
+
+            if (error) {
+                console.error('Project update error:', error)
+                return res.status(500).json({
+                    error: error.message
+                })
+            }
+
+            return res.json(data)
+        }
+        catch (err) {
+            next(err)
+        }
+    }
+)
+
 // DELETE /api/v1/projects/:id — delete a project
 router.delete(
     '/:id',

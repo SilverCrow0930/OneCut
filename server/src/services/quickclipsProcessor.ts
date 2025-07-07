@@ -147,7 +147,7 @@ async function getTranscriptionFromAudio(audioUrl: string, mimeType: string): Pr
         ])
         
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-2.5-flash',
             contents: [content],
             config: {
                 maxOutputTokens: 8192,
@@ -388,7 +388,7 @@ ${userInstructions}`
         ])
         
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-2.5-flash',
             contents: [content],
             config: {
                 maxOutputTokens: 4096,
@@ -595,7 +595,7 @@ Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 
         ])
         
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-2.5-flash',
             contents: [content],
             config: {
                 maxOutputTokens: 4096,
@@ -832,7 +832,7 @@ Return ONLY the description text, no extra formatting or quotes.`
         ])
         
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-2.5-flash',
             contents: [content],
             config: {
                 maxOutputTokens: 200,
@@ -1163,29 +1163,68 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 const segmentPath = path.join(tempDir, `segment_${job.id}_${i}.mp4`)
                 segmentFiles.push(segmentPath)
 
-                await new Promise<void>((resolve, reject) => {
-                    ffmpeg(videoUrl)
-                        .seekInput(clip.start_time)
-                        .duration(clipDuration)
-                        .output(segmentPath)
-                        .videoCodec('libx264')
-                        .audioCodec('aac')
-                        .outputOptions([
-                            '-pix_fmt yuv420p',
-                            '-preset fast',
-                            '-movflags +faststart',
-                            '-profile:v main',
-                            '-crf 23',
-                            '-maxrate 4M',
-                            '-bufsize 8M',
-                            '-r 30',
-                            '-g 60',
-                            '-vf scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black'
-                        ])
-                        .on('end', () => resolve())
-                        .on('error', (err) => reject(err))
-                        .run()
-                })
+                // Try normal video processing first, fallback to audio-only if needed
+                let segmentSuccess = false
+                try {
+                    await new Promise<void>((resolve, reject) => {
+                        ffmpeg(videoUrl)
+                            .seekInput(clip.start_time)
+                            .duration(clipDuration)
+                            .output(segmentPath)
+                            .videoCodec('libx264')
+                            .audioCodec('aac')
+                            .outputOptions([
+                                '-pix_fmt yuv420p',
+                                '-preset fast',
+                                '-movflags +faststart',
+                                '-profile:v main',
+                                '-crf 23',
+                                '-maxrate 4M',
+                                '-bufsize 8M',
+                                '-r 30',
+                                '-g 60',
+                                '-vf scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black'
+                            ])
+                            .on('end', () => resolve())
+                            .on('error', (err) => reject(err))
+                            .run()
+                    })
+                    segmentSuccess = true
+                } catch (error) {
+                    console.warn(`[QuickclipsProcessor] Long format segment ${i} failed with video processing, trying audio-only approach: ${(error as Error).message}`)
+                    
+                    // Fallback: audio-only with black background
+                    await new Promise<void>((resolve, reject) => {
+                        ffmpeg()
+                            .input(videoUrl)
+                            .seekInput(clip.start_time)
+                            .duration(clipDuration)
+                            .input('color=c=black:s=1920x1080:r=30')
+                            .inputFormat('lavfi')
+                            .output(segmentPath)
+                            .videoCodec('libx264')
+                            .audioCodec('aac')
+                            .outputOptions([
+                                '-pix_fmt yuv420p',
+                                '-preset fast',
+                                '-movflags +faststart',
+                                '-profile:v main',
+                                '-crf 23',
+                                '-map 0:a', // Audio from original file
+                                '-map 1:v', // Video from black background
+                                '-shortest'
+                            ])
+                            .on('end', () => resolve())
+                            .on('error', (err) => reject(err))
+                            .run()
+                    })
+                    segmentSuccess = true
+                    console.log(`[QuickclipsProcessor] Long format segment ${i} processed with audio-only approach`)
+                }
+                
+                if (!segmentSuccess) {
+                    throw new Error(`Failed to process segment ${i} for long format`)
+                }
             }
 
             // Create concat file
@@ -1305,36 +1344,93 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 const outputPath = path.join(tempDir, `clip_${job.id}_${i}.mp4`)
                 
                 // Use FFmpeg to extract clip with proper encoding settings
-                await new Promise<void>((resolve, reject) => {
-                    ffmpeg(videoUrl)
-                        .seekInput(clip.start_time)
-                        .duration(clipDuration)
-                        .output(outputPath)
-                        .videoCodec('libx264')
-                        .audioCodec('aac')
-                        .outputOptions([
-                            '-pix_fmt yuv420p',
-                            '-preset fast',
-                            '-movflags +faststart',
-                            '-profile:v main',
-                            '-crf 23',
-                            '-maxrate 4M',
-                            '-bufsize 8M',
-                            '-r 30',
-                            '-g 60',
-                            '-vf scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2:black'
-                        ])
-                        .on('start', (command) => {
-                            console.log(`[QuickclipsProcessor] FFmpeg command for clip ${i}:`, command)
+                // First try with video filters, if it fails, retry without video filters
+                let success = false
+                let lastError: Error | null = null
+                
+                // Attempt 1: Normal video processing
+                try {
+                    await new Promise<void>((resolve, reject) => {
+                        ffmpeg(videoUrl)
+                            .seekInput(clip.start_time)
+                            .duration(clipDuration)
+                            .output(outputPath)
+                            .videoCodec('libx264')
+                            .audioCodec('aac')
+                            .outputOptions([
+                                '-pix_fmt yuv420p',
+                                '-preset fast',
+                                '-movflags +faststart',
+                                '-profile:v main',
+                                '-crf 23',
+                                '-maxrate 4M',
+                                '-bufsize 8M',
+                                '-r 30',
+                                '-g 60',
+                                '-vf scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2:black'
+                            ])
+                            .on('start', (command) => {
+                                console.log(`[QuickclipsProcessor] FFmpeg command for clip ${i}:`, command)
+                            })
+                            .on('progress', (progress: FFmpegProgress) => {
+                                const percent = progress.percent ?? 0
+                                console.log(`[QuickclipsProcessor] Processing clip ${i}: ${Math.round(percent)}%`)
+                            })
+                            .on('end', () => resolve())
+                            .on('error', (err) => reject(err))
+                            .run()
+                    })
+                    success = true
+                } catch (error) {
+                    lastError = error as Error
+                    console.warn(`[QuickclipsProcessor] Standard video processing failed for clip ${i}, trying audio-with-black-video approach: ${lastError.message}`)
+                }
+                
+                // Attempt 2: If video processing failed, try audio-only with black video background
+                if (!success) {
+                    try {
+                        await new Promise<void>((resolve, reject) => {
+                            ffmpeg()
+                                .input(videoUrl)
+                                .seekInput(clip.start_time)
+                                .duration(clipDuration)
+                                .input('color=c=black:s=720x1280:r=30')
+                                .inputFormat('lavfi')
+                                .output(outputPath)
+                                .videoCodec('libx264')
+                                .audioCodec('aac')
+                                .outputOptions([
+                                    '-pix_fmt yuv420p',
+                                    '-preset fast',
+                                    '-movflags +faststart',
+                                    '-profile:v main',
+                                    '-crf 23',
+                                    '-map 0:a', // Audio from first input (original file)
+                                    '-map 1:v', // Video from second input (black background)
+                                    '-shortest'  // Match shortest input duration
+                                ])
+                                .on('start', (command) => {
+                                    console.log(`[QuickclipsProcessor] Audio-with-black-video FFmpeg command for clip ${i}:`, command)
+                                })
+                                .on('progress', (progress: FFmpegProgress) => {
+                                    const percent = progress.percent ?? 0
+                                    console.log(`[QuickclipsProcessor] Processing audio-only clip ${i}: ${Math.round(percent)}%`)
+                                })
+                                .on('end', () => resolve())
+                                .on('error', (err) => reject(err))
+                                .run()
                         })
-                        .on('progress', (progress: FFmpegProgress) => {
-                            const percent = progress.percent ?? 0
-                            console.log(`[QuickclipsProcessor] Processing clip ${i}: ${Math.round(percent)}%`)
-                        })
-                        .on('end', () => resolve())
-                        .on('error', (err) => reject(err))
-                        .run()
-                })
+                        success = true
+                        console.log(`[QuickclipsProcessor] Successfully processed clip ${i} with audio-only approach`)
+                    } catch (audioError) {
+                        console.error(`[QuickclipsProcessor] Both video and audio-only processing failed for clip ${i}:`, audioError)
+                        throw new Error(`Failed to process clip ${i}: ${lastError?.message || 'Unknown error'} (also tried audio-only: ${(audioError as Error).message})`)
+                    }
+                }
+                
+                if (!success) {
+                    throw new Error(`Failed to process clip ${i} after trying multiple approaches`)
+                }
                 
                 // Verify the output file exists and has content
                 const stats = await fs.stat(outputPath)
