@@ -382,7 +382,8 @@ ${userInstructions}`
         })
         
         const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
-        console.log(`[QuickClips Audio] Raw AI response:`, responseText.substring(0, 500))
+        console.log(`[QuickClips Audio] Raw AI response (length: ${responseText.length}):`)
+        console.log(responseText)
         
         // Parse JSON response with robust error handling
         let clips = []
@@ -459,8 +460,12 @@ ${userInstructions}`
             }
             
             if (clips.length === 0) {
-                console.error(`[QuickClips Audio] Full AI response:`, responseText)
-                throw new Error(`Failed to parse audio analysis output. Response format not recognized. Response: ${responseText.substring(0, 500)}...`)
+                console.error(`[QuickClips Audio] PARSING FAILED - Full AI response:`)
+                console.error(`Response length: ${responseText.length} characters`)
+                console.error(`Response content:`)
+                console.error(responseText)
+                console.error(`[QuickClips Audio] End of failed response`)
+                throw new Error(`Failed to parse audio analysis output. Response format not recognized.`)
             }
         }
         
