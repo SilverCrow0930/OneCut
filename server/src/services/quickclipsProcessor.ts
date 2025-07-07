@@ -83,20 +83,20 @@ const activeJobs = new Set<string>()
 // Video format configurations with flexible bounds
 const FORMAT_CONFIGS = {
     short: {
-        name: 'Short Format',
+        name: 'Individual Clips',
         maxDuration: 120, // < 2 minutes
         segmentCount: { min: 2, max: 14 },
         segmentLength: { min: 30, max: 90, target: 45 },
         totalDuration: { tolerance: 15 }, // ±15 seconds acceptable
-        approach: 'Create a concise narrative arc with clear beginning, development, and conclusion. Each segment should build upon the previous one.'
+        approach: 'Create individual video clips preserving original aspect ratio. Each segment should be a standalone piece with clear narrative value.'
     },
     long: {
-        name: 'Long Format', 
+        name: 'Combined Video', 
         maxDuration: 1800, // 30 minutes
         segmentCount: { min: 2, max: 20 },
         segmentLength: null, // No strict length requirements - trust AI
         totalDuration: null, // No strict duration requirements - trust AI
-        approach: 'Develop a comprehensive narrative that explores themes in depth while maintaining viewer engagement throughout. Segments will be combined into a single cohesive video. Focus on natural content breaks and meaningful storytelling.'
+        approach: 'Develop a comprehensive narrative that explores themes in depth while maintaining viewer engagement throughout. Segments will be combined into a single cohesive video preserving original aspect ratio. Focus on natural content breaks and meaningful storytelling.'
     }
 }
 
@@ -1163,8 +1163,11 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 const segmentPath = path.join(tempDir, `segment_${job.id}_${i}.mp4`)
                 segmentFiles.push(segmentPath)
 
-                // Try normal video processing first, fallback to audio-only if needed
+                // Use robust approach for long format segments
                 let segmentSuccess = false
+                let lastError: Error | null = null
+                
+                // Attempt 1: Simple video extraction (preserves original aspect ratio)
                 try {
                     await new Promise<void>((resolve, reject) => {
                         ffmpeg(videoUrl)
@@ -1179,47 +1182,73 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 '-movflags +faststart',
                                 '-profile:v main',
                                 '-crf 23',
-                                '-maxrate 4M',
-                                '-bufsize 8M',
-                                '-r 30',
-                                '-g 60',
-                                '-vf scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black'
+                                '-avoid_negative_ts make_zero'
                             ])
                             .on('end', () => resolve())
                             .on('error', (err) => reject(err))
                             .run()
                     })
                     segmentSuccess = true
+                    console.log(`[QuickclipsProcessor] Long format segment ${i} processed with simple approach (original aspect ratio preserved)`)
                 } catch (error) {
-                    console.warn(`[QuickclipsProcessor] Long format segment ${i} failed with video processing, trying audio-only approach: ${(error as Error).message}`)
-                    
-                    // Fallback: audio-only with black background
-                    await new Promise<void>((resolve, reject) => {
-                        ffmpeg()
-                            .input(videoUrl)
-                            .seekInput(clip.start_time)
-                            .duration(clipDuration)
-                            .input('color=c=black:s=1920x1080:r=30')
-                            .inputFormat('lavfi')
-                            .output(segmentPath)
-                            .videoCodec('libx264')
-                            .audioCodec('aac')
-                            .outputOptions([
-                                '-pix_fmt yuv420p',
-                                '-preset fast',
-                                '-movflags +faststart',
-                                '-profile:v main',
-                                '-crf 23',
-                                '-map 0:a', // Audio from original file
-                                '-map 1:v', // Video from black background
-                                '-shortest'
-                            ])
-                            .on('end', () => resolve())
-                            .on('error', (err) => reject(err))
-                            .run()
-                    })
-                    segmentSuccess = true
-                    console.log(`[QuickclipsProcessor] Long format segment ${i} processed with audio-only approach`)
+                    lastError = error as Error
+                    console.warn(`[QuickclipsProcessor] Long format segment ${i} simple processing failed, trying audio-only approach: ${lastError.message}`)
+                }
+                
+                // Attempt 2: Fallback to audio-only with original aspect ratio black background
+                if (!segmentSuccess) {
+                    try {
+                        // First, get the original video dimensions
+                        const videoInfo = await new Promise<{ width: number, height: number }>((resolve, reject) => {
+                            ffmpeg.ffprobe(videoUrl, (err, metadata) => {
+                                if (err) {
+                                    reject(err)
+                                    return
+                                }
+                                
+                                const videoStream = metadata.streams.find(stream => stream.codec_type === 'video')
+                                if (!videoStream || !videoStream.width || !videoStream.height) {
+                                    reject(new Error('Could not determine video dimensions'))
+                                    return
+                                }
+                                
+                                resolve({
+                                    width: videoStream.width,
+                                    height: videoStream.height
+                                })
+                            })
+                        })
+                        
+                        await new Promise<void>((resolve, reject) => {
+                            ffmpeg()
+                                .input(videoUrl)
+                                .seekInput(clip.start_time)
+                                .duration(clipDuration)
+                                .input(`color=c=black:s=${videoInfo.width}x${videoInfo.height}:r=30`)
+                                .inputFormat('lavfi')
+                                .output(segmentPath)
+                                .videoCodec('libx264')
+                                .audioCodec('aac')
+                                .outputOptions([
+                                    '-pix_fmt yuv420p',
+                                    '-preset fast',
+                                    '-movflags +faststart',
+                                    '-profile:v main',
+                                    '-crf 23',
+                                    '-map 0:a', // Audio from original file
+                                    '-map 1:v', // Video from black background with original dimensions
+                                    '-shortest'
+                                ])
+                                .on('end', () => resolve())
+                                .on('error', (err) => reject(err))
+                                .run()
+                        })
+                        segmentSuccess = true
+                        console.log(`[QuickclipsProcessor] Long format segment ${i} processed with audio-only approach (${videoInfo.width}x${videoInfo.height} preserved)`)
+                    } catch (audioError) {
+                        console.error(`[QuickclipsProcessor] All processing methods failed for long format segment ${i}:`, audioError)
+                        throw new Error(`Failed to process segment ${i}: ${lastError?.message || 'Unknown error'} (also tried audio-only: ${(audioError as Error).message})`)
+                    }
                 }
                 
                 if (!segmentSuccess) {
@@ -1325,7 +1354,7 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
             throw error
         }
     } else {
-        // Original short-format processing
+        // Original short-format processing (now preserves original aspect ratio)
         for (let i = 0; i < clips.length; i++) {
             const clip = clips[i]
             
@@ -1343,12 +1372,11 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 // Create temporary output file
                 const outputPath = path.join(tempDir, `clip_${job.id}_${i}.mp4`)
                 
-                // Use FFmpeg to extract clip with proper encoding settings
-                // First try with video filters, if it fails, retry without video filters
+                // Use FFmpeg to extract clip with robust approach
                 let success = false
                 let lastError: Error | null = null
                 
-                // Attempt 1: Normal video processing
+                // Attempt 1: Simple video extraction (preserves original aspect ratio)
                 try {
                     await new Promise<void>((resolve, reject) => {
                         ffmpeg(videoUrl)
@@ -1363,14 +1391,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 '-movflags +faststart',
                                 '-profile:v main',
                                 '-crf 23',
-                                '-maxrate 4M',
-                                '-bufsize 8M',
-                                '-r 30',
-                                '-g 60',
-                                '-vf scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2:black'
+                                '-avoid_negative_ts make_zero'  // Handle timing issues
                             ])
                             .on('start', (command) => {
-                                console.log(`[QuickclipsProcessor] FFmpeg command for clip ${i}:`, command)
+                                console.log(`[QuickclipsProcessor] Simple FFmpeg command for clip ${i}:`, command)
                             })
                             .on('progress', (progress: FFmpegProgress) => {
                                 const percent = progress.percent ?? 0
@@ -1381,20 +1405,42 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                             .run()
                     })
                     success = true
+                    console.log(`[QuickclipsProcessor] Successfully processed clip ${i} with simple approach (original aspect ratio preserved)`)
                 } catch (error) {
                     lastError = error as Error
-                    console.warn(`[QuickclipsProcessor] Standard video processing failed for clip ${i}, trying audio-with-black-video approach: ${lastError.message}`)
+                    console.warn(`[QuickclipsProcessor] Simple video processing failed for clip ${i}, trying audio-only approach: ${lastError.message}`)
                 }
                 
-                // Attempt 2: If video processing failed, try audio-only with black video background
+                // Attempt 2: If video processing failed, try audio-only with original aspect ratio black background
                 if (!success) {
                     try {
+                        // First, get the original video dimensions
+                        const videoInfo = await new Promise<{ width: number, height: number }>((resolve, reject) => {
+                            ffmpeg.ffprobe(videoUrl, (err, metadata) => {
+                                if (err) {
+                                    reject(err)
+                                    return
+                                }
+                                
+                                const videoStream = metadata.streams.find(stream => stream.codec_type === 'video')
+                                if (!videoStream || !videoStream.width || !videoStream.height) {
+                                    reject(new Error('Could not determine video dimensions'))
+                                    return
+                                }
+                                
+                                resolve({
+                                    width: videoStream.width,
+                                    height: videoStream.height
+                                })
+                            })
+                        })
+                        
                         await new Promise<void>((resolve, reject) => {
                             ffmpeg()
                                 .input(videoUrl)
                                 .seekInput(clip.start_time)
                                 .duration(clipDuration)
-                                .input('color=c=black:s=720x1280:r=30')
+                                .input(`color=c=black:s=${videoInfo.width}x${videoInfo.height}:r=30`)
                                 .inputFormat('lavfi')
                                 .output(outputPath)
                                 .videoCodec('libx264')
@@ -1406,11 +1452,11 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                     '-profile:v main',
                                     '-crf 23',
                                     '-map 0:a', // Audio from first input (original file)
-                                    '-map 1:v', // Video from second input (black background)
+                                    '-map 1:v', // Video from second input (black background with original dimensions)
                                     '-shortest'  // Match shortest input duration
                                 ])
                                 .on('start', (command) => {
-                                    console.log(`[QuickclipsProcessor] Audio-with-black-video FFmpeg command for clip ${i}:`, command)
+                                    console.log(`[QuickclipsProcessor] Audio-with-original-dimensions FFmpeg command for clip ${i}:`, command)
                                 })
                                 .on('progress', (progress: FFmpegProgress) => {
                                     const percent = progress.percent ?? 0
@@ -1421,9 +1467,9 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 .run()
                         })
                         success = true
-                        console.log(`[QuickclipsProcessor] Successfully processed clip ${i} with audio-only approach`)
+                        console.log(`[QuickclipsProcessor] Successfully processed clip ${i} with audio-only approach (${videoInfo.width}x${videoInfo.height} preserved)`)
                     } catch (audioError) {
-                        console.error(`[QuickclipsProcessor] Both video and audio-only processing failed for clip ${i}:`, audioError)
+                        console.error(`[QuickclipsProcessor] All processing methods failed for clip ${i}:`, audioError)
                         throw new Error(`Failed to process clip ${i}: ${lastError?.message || 'Unknown error'} (also tried audio-only: ${(audioError as Error).message})`)
                     }
                 }

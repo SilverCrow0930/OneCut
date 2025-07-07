@@ -213,20 +213,20 @@ const QuickClipsButton = () => {
 
             // 3. Start QuickClips processing
             const jobResponse = await fetch(apiPath('quickclips/start'), {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    projectId: project.id,
-                    fileUri,
-                    mimeType: selectedFile.type,
-                    contentType: getContentType(),
-                    targetDuration: parseInt(String(targetDuration)),
-                    userPrompt: userPrompt.trim() || undefined
-                })
-            })
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${session?.access_token}`,
+                            'Content-Type': 'application/json'
+                        },
+                                            body: JSON.stringify({
+                        projectId: project.id,
+                        fileUri,
+                        mimeType: selectedFile.type,
+                        contentType: getContentType(),
+                        targetDuration: parseInt(String(targetDuration)),
+                        userPrompt: userPrompt.trim() || undefined
+                    })
+                    })
 
             if (!jobResponse.ok) {
                 let errorMessage = 'Failed to start processing'
@@ -242,7 +242,7 @@ const QuickClipsButton = () => {
             // Update project with initial processing state
             await fetch(apiPath(`projects/${project.id}`), {
                 method: 'PATCH',
-                headers: {
+                        headers: {
                     'Authorization': `Bearer ${session?.access_token}`,
                     'Content-Type': 'application/json'
                 },
@@ -254,7 +254,7 @@ const QuickClipsButton = () => {
 
             // Close modal and navigate to projects page with highlight
             setIsModalOpen(false)
-            router.push(`/?highlight=${project.id}`)
+            router.push(`/projects?highlight=${project.id}`)
 
         } catch (error) {
             console.error('Processing error:', error)
