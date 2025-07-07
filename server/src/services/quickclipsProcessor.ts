@@ -184,9 +184,15 @@ async function generateQuickClips(signedUrl: string, mimeType: string, job: Quic
 async function generateQuickClipsFromAudio(signedUrl: string, mimeType: string, job: QuickclipsJob): Promise<{ clips: any[], transcript: string }> {
     const { GoogleGenAI, createUserContent, createPartFromUri } = await import('@google/genai')
     
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY environment variable is not set')
+    }
+    
     const ai = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY
     })
+    
+    console.log(`[QuickClips Audio] Gemini API key configured: ${process.env.GEMINI_API_KEY ? 'Yes' : 'No'}`)
     
     const formatConfig = FORMAT_CONFIGS[job.videoFormat]
     
@@ -336,15 +342,22 @@ FIELD REQUIREMENTS:
 ${userInstructions}`
 
     try {
+        console.log(`[QuickClips Audio] Starting AI analysis...`)
+        console.log(`[QuickClips Audio] Audio URL: ${audioUrl.substring(0, 100)}...`)
+        console.log(`[QuickClips Audio] Audio MIME type: ${audioMimeType}`)
+        
         // Upload audio file to Gemini
+        console.log(`[QuickClips Audio] Downloading audio file...`)
         const fileResponse = await fetch(audioUrl)
         if (!fileResponse.ok) {
-            throw new Error(`Failed to download audio: ${fileResponse.status}`)
+            throw new Error(`Failed to download audio: ${fileResponse.status} ${fileResponse.statusText}`)
         }
         
         const buffer = await fileResponse.arrayBuffer()
         const blob = new Blob([buffer], { type: audioMimeType })
+        console.log(`[QuickClips Audio] Audio file downloaded: ${buffer.byteLength} bytes`)
         
+        console.log(`[QuickClips Audio] Uploading to Gemini...`)
         const uploadedFile = await ai.files.upload({
             file: blob,
             config: { mimeType: audioMimeType }
@@ -353,24 +366,39 @@ ${userInstructions}`
         if (!uploadedFile.name) {
             throw new Error('Audio file upload failed - no file name returned')
         }
+        console.log(`[QuickClips Audio] File uploaded to Gemini: ${uploadedFile.name}`)
         
         // Wait for file processing
+        console.log(`[QuickClips Audio] Waiting for file processing...`)
         let file = await ai.files.get({ name: uploadedFile.name })
-        while (file.state === 'PROCESSING') {
+        let attempts = 0
+        while (file.state === 'PROCESSING' && attempts < 30) {
+            console.log(`[QuickClips Audio] File processing... (attempt ${attempts + 1})`)
             await new Promise(resolve => setTimeout(resolve, 2000))
             file = await ai.files.get({ name: uploadedFile.name })
+            attempts++
         }
         
         if (file.state === 'FAILED') {
             throw new Error('Audio file processing failed')
         }
         
+        if (file.state === 'PROCESSING') {
+            throw new Error('Audio file processing timed out after 60 seconds')
+        }
+        
+        console.log(`[QuickClips Audio] File processed successfully: ${file.state}`)
+        
         // Generate content using audio-only analysis
+        console.log(`[QuickClips Audio] Creating AI request...`)
+        console.log(`[QuickClips Audio] Prompt length: ${prompt.length} characters`)
+        
         const content = createUserContent([
             prompt,
             createPartFromUri(uploadedFile.uri || '', audioMimeType)
         ])
         
+        console.log(`[QuickClips Audio] Sending request to Gemini...`)
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: [content],
@@ -380,6 +408,9 @@ ${userInstructions}`
                 topP: 0.8,
             }
         })
+        
+        console.log(`[QuickClips Audio] Received response from Gemini`)
+        console.log(`[QuickClips Audio] Response object:`, JSON.stringify(response, null, 2))
         
         const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
         console.log(`[QuickClips Audio] Raw AI response (length: ${responseText.length}):`)
@@ -533,7 +564,25 @@ ${userInstructions}`
         return { clips, transcript: 'Transcript generated during analysis' }
         
     } catch (error) {
-        console.error('[QuickClips Audio] Audio processing failed:', error)
+        console.error(`[QuickClips Audio] Audio processing failed:`, error)
+        
+        // Log specific error details
+        if (error instanceof Error) {
+            console.error(`[QuickClips Audio] Error name: ${error.name}`)
+            console.error(`[QuickClips Audio] Error message: ${error.message}`)
+            console.error(`[QuickClips Audio] Error stack:`, error.stack)
+        }
+        
+        // Check if it's a Gemini API error
+        if (error && typeof error === 'object' && 'status' in error) {
+            console.error(`[QuickClips Audio] API Error status:`, (error as any).status)
+            console.error(`[QuickClips Audio] API Error details:`, (error as any).message || (error as any).details)
+        }
+        
+        // Check for network errors
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+            console.error(`[QuickClips Audio] Network error - check internet connection and API endpoints`)
+        }
         
         // Clean up temporary audio file on error
         if (tempAudioFile) {
