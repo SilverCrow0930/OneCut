@@ -318,7 +318,7 @@ SHORT FORMAT APPROACH:
 `}
 
 OUTPUT FORMAT:
-Return ONLY a valid JSON array with NO additional text:
+Return ONLY a valid JSON array with NO additional text, markdown, or explanations:
 
 [
   {
@@ -331,6 +331,8 @@ Return ONLY a valid JSON array with NO additional text:
     "transition_note": "Natural pause before topic shift"
   }
 ]
+
+CRITICAL: Your response must start with [ and end with ]. Do not include any text before or after the JSON array.
 
 FIELD REQUIREMENTS:
 - start_time, end_time: exact timestamps in seconds
@@ -400,7 +402,7 @@ ${userInstructions}`
         const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
         console.log(`[QuickClips Audio] Raw AI response:`, responseText.substring(0, 500))
         
-        // Parse JSON response (same logic as video processing)
+        // Parse JSON response with robust error handling
         let clips = []
         try {
             const cleanedResponse = responseText.trim()
@@ -408,15 +410,32 @@ ${userInstructions}`
         } catch (e) {
             console.log(`[QuickClips Audio] Direct parse failed, trying extraction strategies...`)
             
+            // Strategy 1: Extract JSON array (most common)
             let jsonMatch = responseText.match(/\[\s*\{[\s\S]*?\}\s*\]/g)
             if (jsonMatch) {
                 try {
                     clips = JSON.parse(jsonMatch[0])
+                    console.log(`[QuickClips Audio] Successfully parsed JSON array`)
                 } catch (parseError) {
-                    console.log(`[QuickClips Audio] Array extraction failed`)
+                    console.log(`[QuickClips Audio] Array extraction failed:`, parseError instanceof Error ? parseError.message : parseError)
                 }
             }
             
+            // Strategy 2: Extract from markdown code blocks
+            if (!clips.length) {
+                const codeBlockMatch = responseText.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/g)
+                if (codeBlockMatch) {
+                    try {
+                        const jsonContent = codeBlockMatch[0].replace(/```(?:json)?\s*/, '').replace(/\s*```/, '')
+                        clips = JSON.parse(jsonContent)
+                        console.log(`[QuickClips Audio] Successfully parsed from code block`)
+                    } catch (parseError) {
+                        console.log(`[QuickClips Audio] Code block extraction failed:`, parseError instanceof Error ? parseError.message : parseError)
+                    }
+                }
+            }
+            
+            // Strategy 3: Extract individual JSON objects
             if (!clips.length) {
                 const objectPattern = /\{\s*"title"[\s\S]*?"end_time"\s*:\s*\d+[\s\S]*?\}/g
                 const objectMatches = responseText.match(objectPattern)
@@ -429,11 +448,37 @@ ${userInstructions}`
                             return null
                         }
                     }).filter(Boolean)
+                    
+                    if (clips.length > 0) {
+                        console.log(`[QuickClips Audio] Successfully parsed ${clips.length} individual objects`)
+                    }
+                }
+            }
+            
+            // Strategy 4: Look for any array-like structure
+            if (!clips.length) {
+                const arrayPattern = /\[[\s\S]*?\]/g
+                const arrayMatches = responseText.match(arrayPattern)
+                
+                if (arrayMatches) {
+                    for (const match of arrayMatches) {
+                        try {
+                            const parsed = JSON.parse(match)
+                            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
+                                clips = parsed
+                                console.log(`[QuickClips Audio] Successfully parsed array structure`)
+                                break
+                            }
+                        } catch (e) {
+                            // Continue to next match
+                        }
+                    }
                 }
             }
             
             if (clips.length === 0) {
-                throw new Error(`Failed to parse audio analysis output: ${responseText.substring(0, 200)}...`)
+                console.error(`[QuickClips Audio] Full AI response:`, responseText)
+                throw new Error(`Failed to parse audio analysis output. Response format not recognized. Response: ${responseText.substring(0, 500)}...`)
             }
         }
         
@@ -446,13 +491,44 @@ ${userInstructions}`
             return clip && 
                    typeof clip.start_time === 'number' && 
                    typeof clip.end_time === 'number' &&
-                   clip.end_time > clip.start_time &&
-                   (clip.end_time - clip.start_time) >= 5 // Minimum 5 seconds
-        })
+                   clip.start_time < clip.end_time &&
+                   clip.title && 
+                   clip.description
+        }).map(clip => ({
+            title: String(clip.title),
+            start_time: Number(clip.start_time),
+            end_time: Number(clip.end_time),
+            significance: Number(clip.significance) || 7.0,
+            description: String(clip.description),
+            narrative_role: String(clip.narrative_role) || 'supporting',
+            transition_note: String(clip.transition_note) || ''
+        }))
         
         if (clips.length === 0) {
             throw new Error('No valid audio clips found after filtering')
         }
+
+        // Filter out clips that are too short to be useful (under 3 seconds)
+        const originalLength = clips.length
+        clips = clips.filter(clip => {
+            const duration = clip.end_time - clip.start_time
+            if (duration < 3) {
+                console.warn(`[QuickClips Audio] Filtering out clip "${clip.title}" - too short (${duration}s)`)
+                return false
+            }
+            return true
+        })
+
+        if (clips.length === 0) {
+            throw new Error('All audio clips were too short (under 3 seconds)')
+        }
+
+        if (clips.length !== originalLength) {
+            console.log(`[QuickClips Audio] Filtered ${originalLength - clips.length} clips that were too short`)
+        }
+        
+        // Sort chronologically
+        clips.sort((a, b) => a.start_time - b.start_time)
         
         // Clean up temporary audio file
         if (tempAudioFile) {
