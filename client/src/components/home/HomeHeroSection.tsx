@@ -522,7 +522,7 @@ const HomeHeroSection = () => {
                                                     value={targetDuration}
                                                     onChange={(e) => handleDurationChange(parseInt(e.target.value))}
                                                     className="
-                                                    w-full h-4 bg-gradient-to-r from-purple-300 via-blue-300 to-teal-300 rounded-full appearance-none cursor-pointer shadow-inner border border-gray-200
+                                                    w-full h-4 bg-gray-300 rounded-full appearance-none cursor-pointer shadow-inner border border-gray-200
                                                         [&::-webkit-slider-thumb]:appearance-none 
                                                         [&::-webkit-slider-thumb]:w-7 
                                                         [&::-webkit-slider-thumb]:h-7 
