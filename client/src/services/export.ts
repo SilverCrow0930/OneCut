@@ -282,68 +282,193 @@ class ExportService {
     }
 
     /**
-     * Poll export status with automatic retries
+     * Poll export status with adaptive polling intervals to reduce server load
      */
     async pollExportStatus(
         jobId: string,
         onProgress?: ProgressCallback,
         onStatusChange?: StatusCallback,
-        pollInterval: number = 2000
+        initialInterval: number = 1000, // Start with 1 second for immediate feedback
+        maxPolls: number = 300 // Maximum 300 polls (about 10-15 minutes with adaptive intervals)
     ): Promise<{ success: boolean; downloadUrl?: string; error?: string }> {
         return new Promise((resolve) => {
-            const poll = async () => {
-                const result = await this.getExportStatus(jobId)
-
-                if (!result.success || !result.job) {
-                    resolve({
-                        success: false,
-                        error: result.error || 'Failed to get export status'
-                    })
-                    return
-                }
-
-                const job = result.job
-
-                // Update progress callback
-                onProgress?.(job.progress)
-
-                // Update status callback
-                onStatusChange?.(job.status)
-
-                // Check if job is complete
-                if (job.status === 'completed') {
-                    resolve({
-                        success: true,
-                        downloadUrl: job.downloadUrl
-                    })
-                    return
-                }
-
-                // Check if job failed
-                if (job.status === 'failed') {
-                    resolve({
-                        success: false,
-                        error: job.error || 'Export failed'
-                    })
-                    return
-                }
-
-                // Continue polling
-                setTimeout(poll, pollInterval)
+            let pollCount = 0
+            let lastProgress = 0
+            let lastStatus = ''
+            let consecutiveNoChangeCount = 0
+            
+            const getAdaptiveInterval = (pollCount: number, progress: number, status: string): number => {
+                // Fast polling for the first few requests (immediate feedback)
+                if (pollCount < 3) return 1000 // 1 second
+                
+                // If we're in early stages (0-10%), poll more frequently
+                if (progress < 10) return 2000 // 2 seconds
+                
+                // If we're actively processing (10-90%), use moderate polling
+                if (progress >= 10 && progress < 90) return 4000 // 4 seconds
+                
+                // If we're in final stages (90-100%), poll more frequently again
+                if (progress >= 90) return 2000 // 2 seconds
+                
+                // If status is 'queued' and hasn't changed, slow down
+                if (status === 'queued' && consecutiveNoChangeCount > 2) return 6000 // 6 seconds
+                
+                // If we've been polling for a long time, slow down even more
+                if (pollCount > 50) return 8000 // 8 seconds after many polls
+                
+                // Default moderate polling
+                return 3000 // 3 seconds
             }
 
+            const poll = async () => {
+                try {
+                    // Check if we've exceeded maximum polls
+                    if (pollCount >= maxPolls) {
+                        console.error(`[ExportService] Maximum polls (${maxPolls}) exceeded for job ${jobId}`)
+                        resolve({
+                            success: false,
+                            error: 'Export timed out - polling limit reached'
+                        })
+                        return
+                    }
+
+                    const result = await this.getExportStatus(jobId)
+
+                    if (!result.success || !result.job) {
+                        resolve({
+                            success: false,
+                            error: result.error || 'Failed to get export status'
+                        })
+                        return
+                    }
+
+                    const job = result.job
+                    pollCount++
+
+                    // Track changes to implement adaptive polling
+                    const hasProgressChanged = job.progress !== lastProgress
+                    const hasStatusChanged = job.status !== lastStatus
+                    
+                    if (!hasProgressChanged && !hasStatusChanged) {
+                        consecutiveNoChangeCount++
+                    } else {
+                        consecutiveNoChangeCount = 0
+                    }
+
+                    // Only call callbacks if something actually changed
+                    if (hasProgressChanged) {
+                        onProgress?.(job.progress)
+                        lastProgress = job.progress
+                    }
+
+                    if (hasStatusChanged) {
+                        onStatusChange?.(job.status)
+                        lastStatus = job.status
+                    }
+
+                    console.log(`[ExportService] Poll ${pollCount}/${maxPolls}: ${job.status} ${job.progress}% (no change: ${consecutiveNoChangeCount})`)
+
+                    // Check if job is complete
+                    if (job.status === 'completed') {
+                        resolve({
+                            success: true,
+                            downloadUrl: job.downloadUrl
+                        })
+                        return
+                    }
+
+                    // Check if job failed
+                    if (job.status === 'failed') {
+                        resolve({
+                            success: false,
+                            error: job.error || 'Export failed'
+                        })
+                        return
+                    }
+
+                    // Calculate next poll interval adaptively
+                    const nextInterval = getAdaptiveInterval(pollCount, job.progress, job.status)
+                    
+                    // Add some jitter to prevent thundering herd if multiple clients
+                    const jitter = Math.random() * 500 // 0-500ms jitter
+                    const finalInterval = nextInterval + jitter
+
+                    console.log(`[ExportService] Next poll in ${Math.round(finalInterval)}ms`)
+                    
+                    // Continue polling with adaptive interval
+                    setTimeout(poll, finalInterval)
+                    
+                } catch (error) {
+                    console.error('[ExportService] Polling error:', error)
+                    
+                    // On error, increment poll count and check limit
+                    pollCount++
+                    if (pollCount >= maxPolls) {
+                        resolve({
+                            success: false,
+                            error: 'Export timed out - polling limit reached due to errors'
+                        })
+                        return
+                    }
+                    
+                    // On error, wait longer before retrying
+                    setTimeout(poll, 5000)
+                }
+            }
+
+            // Start polling immediately
             poll()
         })
     }
 
     /**
-     * Download a file from URL with proper filename
+     * Download a file from URL with proper filename - fixed to prevent duplicate downloads
      */
     async downloadFile(url: string, filename: string, jobId?: string): Promise<void> {
-        try {
-            console.log('[ExportService] Starting download for:', filename)
+        console.log('[ExportService] Starting download for:', filename)
 
-            // Method 1: Try direct link click first (fastest for signed URLs)
+        // First, try to determine the best method based on URL type
+        const isSignedGoogleUrl = url.includes('storage.googleapis.com') && url.includes('X-Goog-Signature')
+        const isExternalUrl = !url.startsWith(this.baseUrl)
+        
+        // Method 1: For signed URLs (Google Cloud Storage), use direct link click
+        if (isSignedGoogleUrl) {
+            console.log('[ExportService] Using direct download for signed URL')
+            return this.downloadWithDirectLink(url, filename)
+        }
+        
+        // Method 2: For external URLs, try fetch first (better error handling)
+        if (isExternalUrl) {
+            console.log('[ExportService] Using fetch download for external URL')
+            try {
+                return await this.downloadWithFetch(url, filename)
+            } catch (error) {
+                console.warn('[ExportService] Fetch download failed, trying direct link:', error)
+                return this.downloadWithDirectLink(url, filename)
+            }
+        }
+        
+        // Method 3: For internal URLs, use server proxy if available
+        if (jobId) {
+            console.log('[ExportService] Using server proxy download for internal URL')
+            try {
+                return await this.downloadWithServerProxy(jobId, filename)
+            } catch (error) {
+                console.warn('[ExportService] Server proxy download failed, trying direct link:', error)
+                return this.downloadWithDirectLink(url, filename)
+            }
+        }
+        
+        // Method 4: Fallback to direct link
+        console.log('[ExportService] Using direct link download as fallback')
+        return this.downloadWithDirectLink(url, filename)
+    }
+
+    /**
+     * Download using direct link click (most compatible)
+     */
+    private downloadWithDirectLink(url: string, filename: string): Promise<void> {
+        return new Promise((resolve, reject) => {
             try {
                 const link = document.createElement('a')
                 link.href = url
@@ -353,97 +478,130 @@ class ExportService {
                 
                 document.body.appendChild(link)
                 
-                const clickEvent = new MouseEvent('click', {
-                    view: window,
-                    bubbles: true,
-                    cancelable: true
-                })
-                
-                link.dispatchEvent(clickEvent)
-                
+                // Add a small delay to ensure DOM is updated
                 setTimeout(() => {
-                    document.body.removeChild(link)
-                }, 100)
+                    try {
+                        link.click()
+                        console.log('[ExportService] Direct download link clicked')
+                        
+                        // Clean up after a delay
+                        setTimeout(() => {
+                            try {
+                                document.body.removeChild(link)
+                            } catch (cleanupError) {
+                                // Ignore cleanup errors
+                            }
+                        }, 1000)
+                        
+                        resolve()
+                    } catch (clickError) {
+                        document.body.removeChild(link)
+                        reject(new Error(`Direct download failed: ${clickError instanceof Error ? clickError.message : 'Unknown error'}`))
+                    }
+                }, 10)
                 
-                console.log('[ExportService] Direct download initiated')
-                return
-                
-            } catch (directError) {
-                console.warn('[ExportService] Direct download failed, trying fetch method:', directError)
+            } catch (error) {
+                reject(new Error(`Direct download setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`))
             }
+        })
+    }
 
-            // Method 2: Fetch and create blob (for CORS-enabled URLs)
+    /**
+     * Download using fetch and blob creation
+     */
+    private async downloadWithFetch(url: string, filename: string): Promise<void> {
+        const response = await fetch(url, { 
+            mode: 'cors',
+            credentials: 'omit'
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        console.log('[ExportService] Fetch successful, creating blob...')
+        
+        const blob = await response.blob()
+        const blobUrl = URL.createObjectURL(blob)
+
+        return new Promise((resolve, reject) => {
             try {
-                const response = await fetch(url, { 
-                    mode: 'cors',
-                    credentials: 'omit'
-                })
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-                }
-
-                console.log('[ExportService] Fetch successful, creating blob...')
-                
-                const blob = await response.blob()
-                const blobUrl = URL.createObjectURL(blob)
-
                 const link = document.createElement('a')
                 link.href = blobUrl
                 link.download = filename
                 link.style.display = 'none'
                 document.body.appendChild(link)
-                link.click()
                 
                 setTimeout(() => {
-                    document.body.removeChild(link)
-                    URL.revokeObjectURL(blobUrl)
-                }, 100)
-                
-                console.log('[ExportService] Blob download completed')
-                return
-                
-            } catch (fetchError) {
-                console.warn('[ExportService] Fetch download failed:', fetchError)
-            }
-
-            // Method 3: Use server proxy download (if jobId is available)
-            if (jobId) {
-                try {
-                    console.log('[ExportService] Trying server proxy download...')
-                    const proxyUrl = `${this.baseUrl}/api/v1/export/download/${jobId}`
-                    
-                    const link = document.createElement('a')
-                    link.href = proxyUrl
-                    link.download = filename
-                    link.style.display = 'none'
-                    
-                    document.body.appendChild(link)
-                    link.click()
-                    
-                    setTimeout(() => {
+                    try {
+                        link.click()
+                        console.log('[ExportService] Blob download completed')
+                        
+                        // Clean up after a delay
+                        setTimeout(() => {
+                            try {
+                                document.body.removeChild(link)
+                                URL.revokeObjectURL(blobUrl)
+                            } catch (cleanupError) {
+                                // Ignore cleanup errors
+                            }
+                        }, 1000)
+                        
+                        resolve()
+                    } catch (clickError) {
                         document.body.removeChild(link)
-                    }, 100)
-                    
-                    console.log('[ExportService] Server proxy download initiated')
-                    return
-                    
-                } catch (proxyError) {
-                    console.warn('[ExportService] Server proxy download failed:', proxyError)
-                }
+                        URL.revokeObjectURL(blobUrl)
+                        reject(new Error(`Blob download failed: ${clickError instanceof Error ? clickError.message : 'Unknown error'}`))
+                    }
+                }, 10)
+                
+            } catch (error) {
+                URL.revokeObjectURL(blobUrl)
+                reject(new Error(`Blob download setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`))
             }
+        })
+    }
 
-            // Method 4: Open in new window as final fallback
-            console.log('[ExportService] Using fallback: opening in new window')
-            const newWindow = window.open(url, '_blank')
-            if (!newWindow) {
-                throw new Error('Download failed - popup blocker may be enabled. Please allow popups and try again.')
+    /**
+     * Download using server proxy
+     */
+    private async downloadWithServerProxy(jobId: string, filename: string): Promise<void> {
+        const proxyUrl = `${this.baseUrl}/api/v1/export/download/${jobId}`
+        
+        return new Promise((resolve, reject) => {
+            try {
+                const link = document.createElement('a')
+                link.href = proxyUrl
+                link.download = filename
+                link.style.display = 'none'
+                
+                document.body.appendChild(link)
+                
+                setTimeout(() => {
+                    try {
+                        link.click()
+                        console.log('[ExportService] Server proxy download initiated')
+                        
+                        // Clean up after a delay
+                        setTimeout(() => {
+                            try {
+                                document.body.removeChild(link)
+                            } catch (cleanupError) {
+                                // Ignore cleanup errors
+                            }
+                        }, 1000)
+                        
+                        resolve()
+                    } catch (clickError) {
+                        document.body.removeChild(link)
+                        reject(new Error(`Server proxy download failed: ${clickError instanceof Error ? clickError.message : 'Unknown error'}`))
+                    }
+                }, 10)
+                
+            } catch (error) {
+                reject(new Error(`Server proxy download setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`))
             }
-
-        } catch (error) {
-            console.error('[ExportService] All download methods failed:', error)
-            throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        }
+        })
     }
 
     /**
