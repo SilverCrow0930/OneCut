@@ -333,28 +333,42 @@ const QuickClipsButton = () => {
                 onClick={() => setIsModalOpen(true)}
                 className="
                     inline-flex items-center justify-center gap-2 
-                    px-6 py-3 rounded-lg font-semibold text-white
-                    bg-gradient-to-br from-blue-500 to-teal-500
-                    hover:from-blue-600 hover:to-teal-600
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                    shadow-lg hover:shadow-xl
-                    transform transition-all duration-200
+                    px-6 py-3 rounded-xl font-bold text-white
+                    bg-gradient-to-br from-purple-500 via-violet-500 to-indigo-500
+                    hover:from-purple-600 hover:via-violet-600 hover:to-indigo-600
+                    focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
+                    shadow-xl hover:shadow-2xl
+                    transform transition-all duration-300
                     hover:scale-105 active:scale-95
+                    relative overflow-hidden group
                 "
             >
-                <Zap className="w-5 h-5" />
-                                            <span>Smart Cut</span>
+                {/* Button glow effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-xl"></div>
+                
+                <span className="relative z-10 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    <span>Smart Cut</span>
+                </span>
             </button>
 
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-white/50 relative overflow-hidden">
+                        {/* Background Pattern */}
+                        <div className="absolute inset-0 opacity-10">
+                            <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-full blur-xl"></div>
+                            <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-emerald-400 via-teal-500 to-blue-500 rounded-full blur-xl"></div>
+                        </div>
+
                         {/* Header */}
-                        <div className="flex items-start justify-between px-8 py-6 border-b border-gray-200">
+                        <div className="flex items-start justify-between px-8 py-6 border-b border-gray-200/50 relative z-10">
                             <div className="text-left">
-                                <h2 className="text-2xl font-bold text-gray-900">Smart Cut</h2>
-                                <p className="text-gray-600 mt-1">Transform Hours into Highlights</p>
+                                <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 bg-clip-text text-transparent mb-2">
+                                    Smart Cut
+                                </h2>
+                                <p className="text-gray-600">Transform Hours into Highlights</p>
                             </div>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -364,7 +378,7 @@ const QuickClipsButton = () => {
                             </button>
                         </div>
 
-                        <div className="px-8 py-6">
+                        <div className="px-8 py-6 relative z-10">
                             {/* Error Message */}
                             {error && (
                                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -392,11 +406,11 @@ const QuickClipsButton = () => {
                                             <div key={clip.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300">
                                                 {/* Thumbnail Section */}
                                                 <div className="relative group">
-                                                                                        <img
-                                        src={clip.thumbnailUrl}
-                                        alt={clip.title}
-                                        className="w-full h-48 object-cover"
-                                    />
+                                                    <img
+                                                        src={clip.thumbnailUrl}
+                                                        alt={clip.title}
+                                                        className="w-full h-48 object-cover"
+                                                    />
                                                     {/* Preview Overlay */}
                                                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                         <button 
@@ -507,7 +521,7 @@ const QuickClipsButton = () => {
                                     </div>
                                 </div>
                             ) : (
-                                /* Upload View - Same as before */
+                                /* Upload View - Updated with HomeHeroSection styling */
                                 <div className="space-y-6">
                                     {/* Upload Area */}
                                     <div>
@@ -526,35 +540,70 @@ const QuickClipsButton = () => {
                                             onDragOver={handleDragOver}
                                             onDrop={handleDrop}
                                             className={`
-                                                border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
-                                                transition-all duration-300
+                                                border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
+                                                transition-all duration-300 group relative overflow-hidden
                                                 ${selectedFile ? 
-                                                    'border-emerald-400 bg-emerald-50' : 
+                                                    'border-blue-400 bg-gradient-to-br from-blue-50 via-teal-50 to-emerald-50 shadow-inner' : 
                                                     isDragOver ?
-                                                        'border-emerald-500 bg-emerald-100 scale-105' :
-                                                        'border-gray-300 hover:border-emerald-400 hover:bg-emerald-50'
+                                                        'border-purple-500 bg-gradient-to-br from-purple-100 via-violet-100 to-indigo-100 shadow-lg scale-105' :
+                                                        'border-gray-300 hover:border-purple-400 hover:bg-gradient-to-br hover:from-purple-50 hover:via-violet-50 hover:to-indigo-50 hover:shadow-lg'
                                                 }
                                             `}
                                         >
+                                            {/* Animated background for hover */}
+                                            <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDragOver ? 'opacity-100' : ''} ${
+                                                selectedFile 
+                                                    ? 'bg-gradient-to-br from-blue-500/10 via-teal-500/10 to-emerald-400/10'
+                                                    : 'bg-gradient-to-br from-purple-500/10 via-violet-500/10 to-indigo-500/10'
+                                            }`}></div>
+                                            
                                             {selectedFile ? (
-                                                <div className="flex items-center justify-center gap-3">
-                                                    <Video className="w-8 h-8 text-emerald-600" />
-                                                    <div>
-                                                        <p className="font-medium text-emerald-800">{selectedFile.name}</p>
-                                                        <p className="text-sm text-emerald-600">Click to change file</p>
+                                                <div className="flex flex-col items-center gap-3 relative z-10">
+                                                    <div className="relative">
+                                                        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-2xl flex items-center justify-center shadow-lg">
+                                                            <Video className="w-10 h-10 text-white" />
+                                                        </div>
+                                                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                                                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="font-bold text-gray-800 mb-1">
+                                                            {selectedFile.name}
+                                                        </p>
+                                                        <p className="text-sm font-medium bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent">
+                                                            Ready for Smart Cut!
+                                                        </p>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                                                                        <div className="text-center">
-                                                            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                                            <p className="text-lg text-gray-600 mb-2">Drop your video here</p>
-                                                            <p className="text-sm text-gray-500">or click to browse</p>
-                                                        </div>
+                                                <div className="relative z-10">
+                                                    <div className="w-20 h-20 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg border border-purple-100">
+                                                        <Upload className="w-10 h-10 text-purple-500 group-hover:text-purple-600 transition-colors duration-300" />
+                                                    </div>
+                                                    <p className="font-bold text-gray-700 mb-2 group-hover:text-purple-700 transition-colors duration-300 text-lg">
+                                                        Drop your video here
+                                                    </p>
+                                                    <p className="text-sm text-gray-500 mb-4">
+                                                        or click to browse
+                                                    </p>
+                                                    <div className="flex items-center justify-center gap-4 text-xs text-gray-500 bg-purple-50/50 rounded-full px-4 py-2 border border-purple-200/30">
+                                                        <span>MP4</span>
+                                                        <span>•</span>
+                                                        <span>MOV</span>
+                                                        <span>•</span>
+                                                        <span>AVI</span>
+                                                        <span>•</span>
+                                                        <span>Up to 2GB</span>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Video Type Selection */}
+                                    {/* Video Type Selection - Updated with HomeHeroSection styling */}
                                     {selectedFile && (
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -565,7 +614,7 @@ const QuickClipsButton = () => {
                                                     onClick={() => setVideoType('talk_audio')}
                                                     className={`p-4 rounded-lg border-2 transition-all text-left ${
                                                         videoType === 'talk_audio' 
-                                                            ? 'border-emerald-500 bg-emerald-50' 
+                                                            ? 'border-blue-500 bg-blue-50' 
                                                             : 'border-gray-200 hover:border-gray-300'
                                                     }`}
                                                 >
@@ -581,7 +630,7 @@ const QuickClipsButton = () => {
                                                     onClick={() => setVideoType('action_visual')}
                                                     className={`p-4 rounded-lg border-2 transition-all text-left ${
                                                         videoType === 'action_visual' 
-                                                            ? 'border-emerald-500 bg-emerald-50' 
+                                                            ? 'border-blue-500 bg-blue-50' 
                                                             : 'border-gray-200 hover:border-gray-300'
                                                     }`}
                                                 >
@@ -650,7 +699,7 @@ const QuickClipsButton = () => {
                                                 value={userPrompt}
                                                 onChange={(e) => setUserPrompt(e.target.value)}
                                                 placeholder="Tell AI what to focus on... e.g., 'Extract the main discussion points and key insights' or 'Focus on the most engaging moments with good visual content'"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none text-sm"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
                                                 rows={3}
                                                 maxLength={500}
                                             />
@@ -670,26 +719,57 @@ const QuickClipsButton = () => {
                                         <button
                                             onClick={handleStartProcessing}
                                             disabled={!selectedFile || isProcessing || isUploading}
-                                            className="
-                                                w-full bg-gradient-to-r from-emerald-600 to-teal-600 
-                                                hover:from-emerald-700 hover:to-teal-700
-                                                disabled:from-gray-400 disabled:to-gray-500
-                                                text-white font-bold text-lg
-                                                px-6 py-4 rounded-2xl 
-                                                transition-all duration-300 shadow-lg hover:shadow-xl 
-                                                disabled:cursor-not-allowed 
+                                            className={`
+                                                w-full font-bold text-lg px-6 py-4 rounded-2xl 
+                                                transition-all duration-300 shadow-xl hover:shadow-2xl 
                                                 transform hover:scale-105 active:scale-95
-                                                relative overflow-hidden group
-                                            "
+                                                relative overflow-hidden group relative z-10
+                                                ${selectedFile 
+                                                    ? 'bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 hover:from-blue-600 hover:via-teal-600 hover:to-emerald-500 text-white'
+                                                    : 'bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 hover:from-purple-600 hover:via-violet-600 hover:to-indigo-600 text-white cursor-pointer'
+                                                }
+                                                ${(!selectedFile || isProcessing || isUploading) ? 'opacity-70 cursor-not-allowed' : ''}
+                                            `}
                                         >
                                             {/* Button glow effect */}
-                                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-2xl"></div>
+                                            <div className={`absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-300 rounded-2xl ${
+                                                selectedFile 
+                                                    ? 'bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-300'
+                                                    : 'bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400'
+                                            }`}></div>
                                             
                                             <span className="relative z-10 flex items-center justify-center gap-2">
-                                                <Zap className="w-5 h-5" />
-                                                Generate AI Clips
+                                                {isProcessing || isUploading ? (
+                                                    <>
+                                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                        Processing...
+                                                    </>
+                                                ) : selectedFile ? (
+                                                    <>
+                                                        <Sparkles className="w-5 h-5" />
+                                                        Create Smart Cut
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        Smart Cut My Video
+                                                    </>
+                                                )}
                                             </span>
                                         </button>
+
+                                        {/* Note */}
+                                        {selectedFile && (
+                                            <p className="text-xs font-medium bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent text-center mt-4 relative z-10">
+                                                {user ? (
+                                                    <span className="flex items-center justify-center gap-1">
+                                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                                        Processing starts immediately in background
+                                                    </span>
+                                                ) : (
+                                                    'Sign in required to process video'
+                                                )}
+                                            </p>
+                                        )}
 
                                     </div>
                                 </div>
