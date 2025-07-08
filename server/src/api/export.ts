@@ -714,11 +714,54 @@ class ProfessionalVideoExporter {
                 elementFilter += `loop=loop=-1:size=1:start=0,setpts=N/(${this.outputSettings.fps}*TB),`
             }
             
-            // Professional scaling and formatting with proper aspect ratio handling
-            // First scale to fill the target dimensions (crop mode for aspect ratio transformation)
-            elementFilter += `scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=increase:flags=lanczos,`
-            // Then crop to exact dimensions to ensure proper aspect ratio
-            elementFilter += `crop=${this.outputSettings.width}:${this.outputSettings.height}:(iw-ow)/2:(ih-oh)/2,`
+            // Professional scaling with user-defined positioning
+            // Check if user has defined custom crop/position properties
+            const userCrop = element.properties?.crop
+            const userMediaPos = element.properties?.mediaPos
+            const userMediaScale = element.properties?.mediaScale || 1
+            
+            if (userCrop && userMediaPos !== undefined) {
+                // Use user-defined positioning and scaling
+                console.log(`[Export ${this.jobId}] Video track ${index}: Using user-defined positioning`, {
+                    crop: userCrop,
+                    mediaPos: userMediaPos,
+                    mediaScale: userMediaScale
+                })
+                
+                // Calculate the scaling and positioning based on user's edits
+                const scaleWidth = Math.round(userCrop.width * userMediaScale)
+                const scaleHeight = Math.round(userCrop.height * userMediaScale)
+                
+                // First scale the video to the user's desired size
+                elementFilter += `scale=${scaleWidth}:${scaleHeight}:flags=lanczos,`
+                
+                // Then crop and position according to user's edits
+                const cropX = Math.round(userCrop.left + (userMediaPos.x || 0))
+                const cropY = Math.round(userCrop.top + (userMediaPos.y || 0))
+                
+                // Ensure crop dimensions fit within output dimensions
+                const finalCropWidth = Math.min(userCrop.width, this.outputSettings.width)
+                const finalCropHeight = Math.min(userCrop.height, this.outputSettings.height)
+                
+                elementFilter += `crop=${finalCropWidth}:${finalCropHeight}:${cropX}:${cropY},`
+                
+                // Pad to final output dimensions if needed
+                const padX = Math.round((this.outputSettings.width - finalCropWidth) / 2)
+                const padY = Math.round((this.outputSettings.height - finalCropHeight) / 2)
+                
+                elementFilter += `pad=${this.outputSettings.width}:${this.outputSettings.height}:${padX}:${padY}:black,`
+                
+                console.log(`[Export ${this.jobId}] Video track ${index}: Applied user positioning - scale: ${scaleWidth}x${scaleHeight}, crop: ${finalCropWidth}x${finalCropHeight} at ${cropX},${cropY}, pad: ${padX},${padY}`)
+            } else {
+                // Fallback to automatic scaling for videos without user positioning
+                console.log(`[Export ${this.jobId}] Video track ${index}: Using automatic scaling (no user positioning found)`)
+                
+                // Use the aspect ratio transformation that fits the content within target dimensions
+                elementFilter += `scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=increase:flags=lanczos,`
+                // Then crop to exact dimensions to ensure proper aspect ratio
+                elementFilter += `crop=${this.outputSettings.width}:${this.outputSettings.height}:(iw-ow)/2:(ih-oh)/2,`
+            }
+            
             elementFilter += `format=yuv420p,fps=${this.outputSettings.fps}`
             
             console.log(`[Export ${this.jobId}] Video track ${index}: Scaling to ${this.outputSettings.width}x${this.outputSettings.height} with aspect ratio transformation`)
@@ -899,6 +942,17 @@ class ProfessionalVideoExporter {
         const fontFamily = this.parseFontFamily(element.fontFamily)
         const fontFile = this.getFontPath(element.fontFamily, element.fontWeight)
         
+        console.log(`[Export ${this.jobId}] Text filter debug:`, {
+            text: text.substring(0, 50),
+            fontSize: element.fontSize,
+            adjustedFontSize,
+            fontColor,
+            fontFamily,
+            fontFile,
+            fontWeight: element.fontWeight,
+            position: element.position
+        })
+        
         // Position handling with defaults
         const position = element.position || { x: 0.5, y: 0.8 }
         const xPos = position.x * 100 // Convert to percentage
@@ -912,13 +966,10 @@ class ProfessionalVideoExporter {
         const borderColor = element.borderColor || null
         const borderWidth = element.borderWidth || 0
         
-        // Build the drawtext filter with all style properties
+        // Build the drawtext filter - don't use fontfile parameter since we want FFmpeg's built-in font rendering
         let filter = `drawtext=text='${text.replace(/'/g, "\\'")}':fontsize=${adjustedFontSize}:fontcolor=${fontColor}:x=(w*${position.x}):y=(h*${position.y})`
         
-        // Only add fontfile parameter if we have a valid font path
-        if (fontFile && fontFile.trim()) {
-            filter = `drawtext=text='${text.replace(/'/g, "\\'")}':fontfile='${fontFile}':fontsize=${adjustedFontSize}:fontcolor=${fontColor}:x=(w*${position.x}):y=(h*${position.y})`
-        }
+        console.log(`[Export ${this.jobId}] Text filter base:`, filter)
         
         // Add text alignment
         if (textAlign === 'left') {
@@ -950,6 +1001,8 @@ class ProfessionalVideoExporter {
         
         // Add timing
         filter += `:enable='between(t,${startSec},${endSec})'`
+        
+        console.log(`[Export ${this.jobId}] Final text filter:`, filter)
         
         return filter
     }
@@ -1045,145 +1098,12 @@ class ProfessionalVideoExporter {
     }
 
     private getFontPath(fontFamily?: string, fontWeight?: string): string {
-        // Enhanced font paths supporting all UI fonts across platforms
-        const fontPaths: Record<string, string> = {
-            // Windows fonts - Primary system fonts
-            'Arial': 'C:\\Windows\\Fonts\\arial.ttf',
-            'Arial-Bold': 'C:\\Windows\\Fonts\\arialbd.ttf',
-            'Arial-Black': 'C:\\Windows\\Fonts\\ariblk.ttf',
-            'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',
-            'Times-Bold': 'C:\\Windows\\Fonts\\timesbd.ttf',
-            'Verdana': 'C:\\Windows\\Fonts\\verdana.ttf',
-            'Verdana-Bold': 'C:\\Windows\\Fonts\\verdanab.ttf',
-            'Impact': 'C:\\Windows\\Fonts\\impact.ttf',
-            'Georgia': 'C:\\Windows\\Fonts\\georgia.ttf',
-            'Courier-New': 'C:\\Windows\\Fonts\\cour.ttf',
-            'Trebuchet-MS': 'C:\\Windows\\Fonts\\trebuc.ttf',
-            'Franklin-Gothic': 'C:\\Windows\\Fonts\\framd.ttf',
-            
-            // macOS fonts - System fonts
-            'Helvetica': '/System/Library/Fonts/Helvetica.ttc',
-            'Helvetica-Bold': '/System/Library/Fonts/Helvetica.ttc',
-            'Arial-Mac': '/System/Library/Fonts/Arial.ttf',
-            'Arial-Mac-Bold': '/System/Library/Fonts/Arial Bold.ttf',
-            'Times-Mac': '/System/Library/Fonts/Times.ttc',
-            'Impact-Mac': '/System/Library/Fonts/Impact.ttf',
-            'Georgia-Mac': '/System/Library/Fonts/Georgia.ttc',
-            'Courier-Mac': '/System/Library/Fonts/Courier New.ttf',
-            'San-Francisco': '/System/Library/Fonts/SFNS.ttf',
-            'SF-Pro': '/System/Library/Fonts/SF-Pro.ttf',
-            
-            // Linux fonts - Liberation (Microsoft font equivalents)
-            'Liberation-Sans': '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-            'Liberation-Sans-Bold': '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
-            'Liberation-Serif': '/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf',
-            'Liberation-Serif-Bold': '/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf',
-            'Liberation-Mono': '/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf',
-            
-            // DejaVu fonts (common Linux fallback)
-            'DejaVu-Sans': '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-            'DejaVu-Sans-Bold': '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-            'DejaVu-Serif': '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf',
-            'DejaVu-Serif-Bold': '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',
-            'DejaVu-Mono': '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf',
-            
-            // Ubuntu fonts (popular Linux distribution)
-            'Ubuntu': '/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf',
-            'Ubuntu-Bold': '/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf',
-            'Ubuntu-Mono': '/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf',
-            
-            // Noto fonts (Google fonts, widely available)
-            'Noto-Sans': '/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
-            'Noto-Sans-Bold': '/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf',
-            'Noto-Serif': '/usr/share/fonts/truetype/noto/NotoSerif-Regular.ttf',
-            'Noto-Mono': '/usr/share/fonts/truetype/noto/NotoMono-Regular.ttf',
-        }
+        // For server deployment, we should avoid using system-specific font paths
+        // Instead, return empty string to let FFmpeg use its built-in font rendering
+        console.log(`[Export ${this.jobId}] Font request: ${fontFamily}, weight: ${fontWeight}`)
         
-        // Font family mapping - maps UI font families to available system fonts
-        const fontFamilyMapping: Record<string, string[]> = {
-            // Sans-serif fonts
-            'Arial': ['Arial', 'Liberation-Sans', 'DejaVu-Sans', 'Ubuntu', 'Noto-Sans'],
-            'Helvetica': ['Helvetica', 'Arial', 'Liberation-Sans', 'DejaVu-Sans', 'Ubuntu'],
-            'Roboto': ['Liberation-Sans', 'DejaVu-Sans', 'Arial', 'Ubuntu', 'Noto-Sans'],
-            'Open Sans': ['Liberation-Sans', 'DejaVu-Sans', 'Arial', 'Ubuntu', 'Noto-Sans'],
-            'Montserrat': ['Liberation-Sans', 'DejaVu-Sans', 'Arial', 'Ubuntu', 'Noto-Sans'],
-            'San Francisco': ['SF-Pro', 'San-Francisco', 'Helvetica', 'Arial', 'Liberation-Sans'],
-            'Verdana': ['Verdana', 'DejaVu-Sans', 'Liberation-Sans', 'Arial', 'Ubuntu'],
-            'Trebuchet MS': ['Trebuchet-MS', 'Liberation-Sans', 'DejaVu-Sans', 'Arial'],
-            
-            // Serif fonts
-            'Times New Roman': ['Times-New-Roman', 'Times', 'Liberation-Serif', 'DejaVu-Serif', 'Noto-Serif'],
-            'Georgia': ['Georgia', 'Liberation-Serif', 'DejaVu-Serif', 'Times', 'Noto-Serif'],
-            
-            // Monospace fonts
-            'Courier New': ['Courier-New', 'Liberation-Mono', 'DejaVu-Mono', 'Ubuntu-Mono', 'Noto-Mono'],
-            
-            // Impact/Display fonts
-            'Impact': ['Impact', 'Arial-Black', 'Liberation-Sans-Bold', 'DejaVu-Sans-Bold'],
-            'Arial Black': ['Arial-Black', 'Impact', 'Liberation-Sans-Bold', 'DejaVu-Sans-Bold'],
-            'Franklin Gothic Bold': ['Franklin-Gothic', 'Arial-Black', 'Impact', 'Liberation-Sans-Bold'],
-        }
-        
-        // Parse CSS font-family string to get primary font
-        const normalizedFamily = this.parseFontFamily(fontFamily)
-        const isBold = fontWeight === 'bold' || fontWeight === '700' || fontWeight === '800' || fontWeight === '900'
-        
-        console.log(`[Export ${this.jobId}] Looking for font: ${normalizedFamily} (bold: ${isBold}, original: ${fontFamily})`)
-        
-        // Try to find the requested font family
-        if (normalizedFamily && fontFamilyMapping[normalizedFamily]) {
-            const candidates = fontFamilyMapping[normalizedFamily]
-            
-            for (const candidate of candidates) {
-                const fontKey = isBold ? `${candidate}-Bold` : candidate
-                if (fontPaths[fontKey]) {
-                    console.log(`[Export ${this.jobId}] Found font: ${fontKey} -> ${fontPaths[fontKey]}`)
-                    return fontPaths[fontKey]
-                }
-                // Try without bold suffix if bold version not found
-                if (isBold && fontPaths[candidate]) {
-                    console.log(`[Export ${this.jobId}] Found font (regular): ${candidate} -> ${fontPaths[candidate]}`)
-                    return fontPaths[candidate]
-                }
-            }
-        }
-        
-        // Direct font name lookup (case-insensitive)
-        if (normalizedFamily) {
-            const directKey = isBold ? `${normalizedFamily}-Bold` : normalizedFamily
-            for (const [key, path] of Object.entries(fontPaths)) {
-                if (key.toLowerCase() === directKey.toLowerCase()) {
-                    console.log(`[Export ${this.jobId}] Found direct font match: ${key} -> ${path}`)
-                    return path
-                }
-            }
-        }
-        
-        // Universal fallback chain based on platform
-        const universalFallbacks = [
-            // Linux first (most common for servers)
-            'Liberation-Sans', 'DejaVu-Sans', 'Ubuntu', 'Noto-Sans',
-            // Windows fallbacks
-            'Arial', 'Verdana',
-            // macOS fallbacks
-            'Helvetica', 'Arial-Mac'
-        ]
-        
-        for (const fallbackFont of universalFallbacks) {
-            const fallbackKey = isBold ? `${fallbackFont}-Bold` : fallbackFont
-            if (fontPaths[fallbackKey]) {
-                console.log(`[Export ${this.jobId}] Using fallback font: ${fallbackKey} -> ${fontPaths[fallbackKey]}`)
-                return fontPaths[fallbackKey]
-            }
-            // Try regular version if bold not available
-            if (isBold && fontPaths[fallbackFont]) {
-                console.log(`[Export ${this.jobId}] Using fallback font (regular): ${fallbackFont} -> ${fontPaths[fallbackFont]}`)
-                return fontPaths[fallbackFont]
-            }
-        }
-        
-        // Last resort: let FFmpeg use built-in font
-        console.warn(`[Export ${this.jobId}] No fonts available for "${normalizedFamily}", using FFmpeg built-in font`)
+        // Don't use system font paths that may not exist on the server
+        // Let FFmpeg use its built-in font rendering instead
         return ''
     }
 
