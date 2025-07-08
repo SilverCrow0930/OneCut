@@ -348,17 +348,17 @@ class ExportService {
                         return
                     }
 
-                    const result = await this.getExportStatus(jobId)
+                const result = await this.getExportStatus(jobId)
 
-                    if (!result.success || !result.job) {
-                        resolve({
-                            success: false,
-                            error: result.error || 'Failed to get export status'
-                        })
-                        return
-                    }
+                if (!result.success || !result.job) {
+                    resolve({
+                        success: false,
+                        error: result.error || 'Failed to get export status'
+                    })
+                    return
+                }
 
-                    const job = result.job
+                const job = result.job
                     pollCount++
 
                     // Track changes to implement adaptive polling
@@ -373,34 +373,34 @@ class ExportService {
 
                     // Only call callbacks if something actually changed
                     if (hasProgressChanged) {
-                        onProgress?.(job.progress)
+                onProgress?.(job.progress)
                         lastProgress = job.progress
                     }
 
                     if (hasStatusChanged) {
-                        onStatusChange?.(job.status)
+                onStatusChange?.(job.status)
                         lastStatus = job.status
                     }
 
                     console.log(`[ExportService] Poll ${pollCount}/${maxPolls}: ${job.status} ${job.progress}% (no change: ${consecutiveNoChangeCount})`)
 
-                    // Check if job is complete
-                    if (job.status === 'completed') {
-                        resolve({
-                            success: true,
-                            downloadUrl: job.downloadUrl
-                        })
-                        return
-                    }
+                // Check if job is complete
+                if (job.status === 'completed') {
+                    resolve({
+                        success: true,
+                        downloadUrl: job.downloadUrl
+                    })
+                    return
+                }
 
-                    // Check if job failed
-                    if (job.status === 'failed') {
-                        resolve({
-                            success: false,
-                            error: job.error || 'Export failed'
-                        })
-                        return
-                    }
+                // Check if job failed
+                if (job.status === 'failed') {
+                    resolve({
+                        success: false,
+                        error: job.error || 'Export failed'
+                    })
+                    return
+                }
 
                     // Calculate next poll interval adaptively
                     const nextInterval = getAdaptiveInterval(pollCount, job.progress, job.status)
@@ -441,7 +441,7 @@ class ExportService {
      * Download a file from URL with proper filename - fixed to prevent duplicate downloads
      */
     async downloadFile(url: string, filename: string, jobId?: string): Promise<void> {
-        console.log('[ExportService] Starting download for:', filename)
+            console.log('[ExportService] Starting download for:', filename)
 
         // First, try to determine the best method based on URL type
         const isSignedGoogleUrl = url.includes('storage.googleapis.com') && url.includes('X-Goog-Signature')
@@ -503,7 +503,7 @@ class ExportService {
                         // Clean up after a delay
                         setTimeout(() => {
                             try {
-                                document.body.removeChild(link)
+                    document.body.removeChild(link)
                             } catch (cleanupError) {
                                 // Ignore cleanup errors
                             }
@@ -520,25 +520,25 @@ class ExportService {
                 reject(new Error(`Direct download setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`))
             }
         })
-    }
+            }
 
     /**
      * Download using fetch and blob creation
      */
     private async downloadWithFetch(url: string, filename: string): Promise<void> {
-        const response = await fetch(url, { 
-            mode: 'cors',
-            credentials: 'omit'
-        })
+                const response = await fetch(url, { 
+                    mode: 'cors',
+                    credentials: 'omit'
+                })
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-        }
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+                }
 
-        console.log('[ExportService] Fetch successful, creating blob...')
-        
-        const blob = await response.blob()
-        const blobUrl = URL.createObjectURL(blob)
+                console.log('[ExportService] Fetch successful, creating blob...')
+                
+                const blob = await response.blob()
+                const blobUrl = URL.createObjectURL(blob)
 
         return new Promise((resolve, reject) => {
             try {
@@ -556,8 +556,8 @@ class ExportService {
                         // Clean up after a delay
                         setTimeout(() => {
                             try {
-                                document.body.removeChild(link)
-                                URL.revokeObjectURL(blobUrl)
+                    document.body.removeChild(link)
+                    URL.revokeObjectURL(blobUrl)
                             } catch (cleanupError) {
                                 // Ignore cleanup errors
                             }
@@ -576,24 +576,24 @@ class ExportService {
                 reject(new Error(`Blob download setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`))
             }
         })
-    }
+            }
 
     /**
      * Download using server proxy
      */
     private async downloadWithServerProxy(jobId: string, filename: string): Promise<void> {
-        const proxyUrl = `${this.baseUrl}/api/v1/export/download/${jobId}`
-        
+                    const proxyUrl = `${this.baseUrl}/api/v1/export/download/${jobId}`
+                    
         return new Promise((resolve, reject) => {
             try {
-                const link = document.createElement('a')
-                link.href = proxyUrl
-                link.download = filename
-                link.style.display = 'none'
-                
-                document.body.appendChild(link)
-                
-                setTimeout(() => {
+                    const link = document.createElement('a')
+                    link.href = proxyUrl
+                    link.download = filename
+                    link.style.display = 'none'
+                    
+                    document.body.appendChild(link)
+                    
+                    setTimeout(() => {
                     try {
                         link.click()
                         console.log('[ExportService] Server proxy download initiated')
@@ -611,12 +611,12 @@ class ExportService {
                     } catch (clickError) {
                         document.body.removeChild(link)
                         reject(new Error(`Server proxy download failed: ${clickError instanceof Error ? clickError.message : 'Unknown error'}`))
-                    }
-                }, 10)
-                
-            } catch (error) {
-                reject(new Error(`Server proxy download setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`))
             }
+                }, 10)
+
+        } catch (error) {
+                reject(new Error(`Server proxy download setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`))
+        }
         })
     }
 

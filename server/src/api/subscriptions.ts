@@ -7,7 +7,7 @@ const router = Router();
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10',
+  apiVersion: '2025-06-30.basil',
 });
 
 // Stripe Price IDs - these should be environment variables
@@ -161,8 +161,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
 // Handle successful checkout
 async function handleCheckoutCompleted(session: any) {
-  const userId = session.metadata.userId;
-  const planId = session.metadata.planId;
+  const userId = session.metadata?.userId;
+  const planId = session.metadata?.planId;
   const planConfig = PLAN_CONFIGS[planId as keyof typeof PLAN_CONFIGS];
 
   if (!userId || !planId || !planConfig) {
@@ -171,7 +171,7 @@ async function handleCheckoutCompleted(session: any) {
   }
 
   // Get the subscription from Stripe
-  const subscription = await stripe.subscriptions.retrieve(session.subscription);
+  const subscription = await stripe.subscriptions.retrieve(session.subscription as string) as any;
 
   // Create subscription record
   const { error: subError } = await supabase

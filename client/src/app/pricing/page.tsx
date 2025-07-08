@@ -58,9 +58,9 @@ export default function PricingPage() {
         name: planName,
         credits: maxCredits,
         price: price,
-        type: 'credits' as const,
-        nextBilling: 'Feb 15',
-        status: 'active'
+      type: 'credits' as const,
+      nextBilling: 'Feb 15',
+      status: 'active'
       });
     }
     
@@ -91,7 +91,7 @@ export default function PricingPage() {
     },
     {
       id: 'pro-plan',
-      name: 'Pro',
+        name: 'Pro',
       credits: 1000,
       price: 78,
       description: 'For power users',
@@ -171,13 +171,13 @@ export default function PricingPage() {
       });
       
       if (response.ok) {
-        setCurrentSubscriptions(prev => 
-          prev.map(sub => 
-            sub.id === subscriptionId 
-              ? { ...sub, status: 'cancelled' }
-              : sub
-          )
-        );
+    setCurrentSubscriptions(prev => 
+      prev.map(sub => 
+        sub.id === subscriptionId 
+          ? { ...sub, status: 'cancelled' }
+          : sub
+      )
+    );
       }
     } catch (error) {
       console.error('Failed to cancel subscription:', error);
