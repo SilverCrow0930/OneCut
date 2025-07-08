@@ -759,59 +759,51 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 {/* Enhanced Content based on type */}
                 {isVideo && (
                     <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800 relative">
-                        {/* Thumbnail section - fixed width for consistent visibility */}
-                        <div className="absolute left-0 top-0 h-full bg-gray-700 flex items-center justify-center"
-                             style={{ width: Math.min(80, width - 20) }}>
-                            {thumbnailUrl ? (
-                                <div
-                                    className="w-full h-full bg-cover bg-center"
-                                    style={{
-                                        backgroundImage: `url(${thumbnailUrl})`,
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center'
-                                    }}
-                                />
-                            ) : isGenerating ? (
-                                <div className="flex items-center justify-center w-full h-full">
-                                    <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-center w-full h-full">
-                                    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                                    </svg>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Content area - remaining space */}
-                        <div className="absolute top-0 h-full bg-gray-800 flex items-center justify-center"
-                             style={{ 
-                                left: Math.min(80, width - 20),
-                                width: width - Math.min(80, width - 20)
-                             }}>
-                            {/* Play icon */}
-                            <div className="flex items-center justify-center">
-                                <svg className="w-4 h-4 text-white opacity-70" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                        {/* Repeating thumbnail background throughout the entire clip */}
+                        {thumbnailUrl ? (
+                            <div className="w-full h-full flex">
+                                {/* Generate multiple thumbnail instances to fill the clip width */}
+                                {(() => {
+                                    const thumbnailWidth = 60 // Fixed thumbnail width
+                                    const numThumbnails = Math.ceil(width / thumbnailWidth)
+                                    return Array.from({ length: Math.max(1, numThumbnails) }, (_, i) => (
+                                        <div
+                                            key={i}
+                                            className="h-full flex-shrink-0"
+                                            style={{
+                                                width: `${thumbnailWidth}px`,
+                                                backgroundImage: `url(${thumbnailUrl})`,
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center',
+                                                backgroundRepeat: 'no-repeat'
+                                            }}
+                                        />
+                                    ))
+                                })()}
+                                {/* Fill any remaining space with background color */}
+                                <div className="flex-1 bg-gray-800" />
+                            </div>
+                        ) : isGenerating ? (
+                            <div className="flex items-center justify-center w-full h-full bg-gray-700">
+                                <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center w-full h-full bg-gray-700">
+                                <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                                 </svg>
                             </div>
-                        </div>
-
-                        {/* Video label */}
-                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                            VIDEO
-                        </div>
+                        )}
                         
                         {/* Transition indicators */}
                         {hasTransitionIn && (
-                            <div className="absolute top-1 left-1/4 bg-purple-500/80 text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
+                            <div className="absolute top-1 left-1 bg-purple-500/80 text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
                                 <span>↗️</span>
                                 <span className="text-xs">IN</span>
                             </div>
                         )}
                         {hasTransitionOut && (
-                            <div className="absolute top-1 right-1/4 bg-purple-500/80 text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
+                            <div className="absolute top-1 right-1 bg-purple-500/80 text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
                                 <span>↘️</span>
                                 <span className="text-xs">OUT</span>
                             </div>
