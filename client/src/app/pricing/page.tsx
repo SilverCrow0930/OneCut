@@ -35,32 +35,29 @@ export default function PricingPage() {
   const getCurrentSubscriptions = () => {
     const subscriptions = [];
     
-    if (subscriptionType === 'editor-only') {
+    if (subscriptionType === 'editor-plus-credits') {
+      let planName = 'Lemona Plan';
+      let price = 19;
+      
+      if (maxCredits === 150) {
+        planName = 'Starter';
+        price = 10;
+      } else if (maxCredits === 400) {
+        planName = 'Creator';
+        price = 25;
+      } else if (maxCredits === 1000) {
+        planName = 'Pro';
+        price = 78;
+      } else if (maxCredits === 2500) {
+        planName = 'Enterprise';
+        price = 199;
+      }
+      
       subscriptions.push({
-        id: 'editor-only-active',
-        name: 'Video Editor',
-        credits: 0,
-        price: 8,
-        type: 'foundation' as const,
-        nextBilling: 'Feb 15',
-        status: 'active'
-      });
-    } else if (subscriptionType === 'editor-plus-credits') {
-      subscriptions.push({
-        id: 'editor-combo-active',
-        name: 'Video Editor + AI Credits',
+        id: 'active-plan',
+        name: planName,
         credits: maxCredits,
-        price: maxCredits === 400 ? 39 : 79,
-        type: 'credits' as const,
-        nextBilling: 'Feb 15',
-        status: 'active'
-      });
-    } else if (subscriptionType === 'credits-only') {
-      subscriptions.push({
-        id: 'credits-only-active',
-        name: 'AI Credits Only',
-        credits: maxCredits,
-        price: maxCredits === 150 ? 15 : 31,
+        price: price,
         type: 'credits' as const,
         nextBilling: 'Feb 15',
         status: 'active'
@@ -74,59 +71,41 @@ export default function PricingPage() {
 
   const plans: Plan[] = [
     {
-      id: 'video-editor-only',
-      name: 'Video Editing Suite',
-      credits: 15,
-      price: 8,
-      description: 'Complete video editor + 400 AI assistant chats',
-      type: 'foundation',
-      features: ['Unlimited Projects', 'Cloud Storage', 'Full Editor', '1080p Export', '400 AI Assistant Chats', 'No AI Features Credits']
-    },
-    {
-      id: 'starter-credits',
-      name: 'Starter AI',
+      id: 'starter-plan',
+      name: 'Starter',
       credits: 150,
-      price: 15,
-      description: 'Perfect for light AI usage',
+      price: 10,
+      description: 'Perfect for beginners',
       type: 'credits',
-      features: ['150 AI Credits', 'Monthly Reset', 'All AI Features', 'Email Support']
+      features: ['Complete Video Editor', '150 AI Credits', 'Unlimited AI Assistant', 'Cloud Storage', '1080p Export', 'Email Support']
     },
     {
-      id: 'creator-combo',
-      name: 'Creator Complete',
+      id: 'creator-plan',
+      name: 'Creator',
       credits: 400,
-      price: 39, // $8 editor + $31 for 400 credits (best value)
-      description: 'Video Editor + AI Credits (Most Popular)',
+      price: 25,
+      description: 'Most popular choice',
       type: 'credits',
       popular: true,
-      features: ['Complete Video Editor', '400 AI Credits', 'Unlimited AI Assistant', 'Priority Support', 'All Features Unlocked']
+      features: ['Complete Video Editor', '400 AI Credits', 'Unlimited AI Assistant', 'Priority Support', 'All Features Unlocked', 'Advanced Templates']
     },
     {
-      id: 'pro-combo',
-      name: 'Pro Complete',
+      id: 'pro-plan',
+      name: 'Pro',
       credits: 1000,
-      price: 79, // $8 editor + $71 for 1000 credits
-      description: 'Maximum power for professionals',
+      price: 78,
+      description: 'For power users',
       type: 'credits',
-      features: ['Complete Video Editor', '1000 AI Credits', 'Unlimited AI Assistant', 'Priority Support', 'Early Access Features']
+      features: ['Complete Video Editor', '1000 AI Credits', 'Unlimited AI Assistant', 'Priority Support', 'Early Access Features', 'Custom Branding']
     },
     {
-      id: 'credits-only-starter',
-      name: 'AI Credits Only - Starter',
-      credits: 150,
-      price: 15,
-      description: 'AI credits without editor (requires existing subscription)',
+      id: 'enterprise-plan',
+      name: 'Enterprise',
+      credits: 2500,
+      price: 199,
+      description: 'Maximum AI power',
       type: 'credits',
-      features: ['150 AI Credits', 'Monthly Reset', 'All AI Features', 'Requires Editor Subscription']
-    },
-    {
-      id: 'credits-only-pro',
-      name: 'AI Credits Only - Pro',
-      credits: 400,
-      price: 31,
-      description: 'Pro AI credits without editor',
-      type: 'credits',
-      features: ['400 AI Credits', 'Monthly Reset', 'All AI Features', 'Requires Editor Subscription']
+      features: ['Complete Video Editor', '2500 AI Credits', 'Unlimited AI Assistant', 'Dedicated Support', 'Custom Integrations', 'Team Collaboration']
     }
   ];
 
@@ -241,8 +220,6 @@ export default function PricingPage() {
   };
 
   const creditPercentage = (currentCredits / maxCredits) * 100;
-  const foundationPlan = plans.find(p => p.type === 'foundation');
-  const creditPlans = plans.filter(p => p.type === 'credits');
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -317,73 +294,12 @@ export default function PricingPage() {
           {/* Plans Section */}
           <div className="lg:col-span-3 space-y-16">
             
-            {/* Video Editor Plan */}
-            <div>
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold text-gray-900">🎬 Video Editor</h2>
-                <button 
-                  onClick={() => setShowEditorFeatures(!showEditorFeatures)}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
-                >
-                  {showEditorFeatures ? 'Hide' : 'Show'} all features
-                  <svg className={`w-4 h-4 ml-1 transition-transform ${showEditorFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-
-              {foundationPlan && (
-                <div className="bg-white/70 backdrop-blur-sm rounded-3xl border border-white/20 p-10 shadow-xl hover:shadow-2xl transition-all duration-300">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
-                    <div className="mb-6 md:mb-0">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-3">{foundationPlan.name}</h3>
-                      <p className="text-base text-gray-600">{foundationPlan.description}</p>
-                    </div>
-                    <div className="text-center md:text-right">
-                      <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">${foundationPlan.price}</div>
-                      <div className="text-gray-500">/month</div>
-                    </div>
-                  </div>
-
-                  {/* Expandable Features */}
-                  {showEditorFeatures && (
-                    <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border border-blue-100">
-                      <h4 className="font-semibold text-gray-900 mb-4">What's included:</h4>
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        {foundationPlan.features.map((feature, idx) => (
-                          <div key={idx} className="flex items-center text-sm text-gray-700">
-                            <svg className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            {feature}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-6 p-4 bg-white/70 rounded-xl">
-                        <p className="text-sm text-gray-600">
-                          <strong>Plus:</strong> Timeline editing, multi-track support, transitions, effects, and everything you need for professional video editing.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <button 
-                    onClick={() => handleSubscribe(foundationPlan.id)}
-                    disabled={processingSubscription}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-2xl text-base transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {processingSubscription ? 'Processing...' : 'Subscribe Now'}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* AI Features Plans */}
+            {/* Choose a Plan */}
             <div>
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">✨ AI Features</h2>
-                  <p className="text-base text-gray-600 mt-2">Add credits to unlock powerful AI capabilities</p>
+                  <h2 className="text-2xl font-bold text-gray-900">Choose a Plan</h2>
+                  <p className="text-base text-gray-600 mt-2">Complete video editor + AI credits included in every plan</p>
                 </div>
                 <button
                   onClick={() => setShowAIFeatures(!showAIFeatures)}
@@ -423,11 +339,23 @@ export default function PricingPage() {
               )}
               
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {creditPlans.map((plan) => (
+                {plans.map((plan) => (
                   <div 
                     key={plan.id} 
-                    className="relative bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 p-8 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-gray-300/80"
+                    className={`relative bg-white/80 backdrop-blur-sm rounded-2xl border p-8 transition-all duration-300 hover:shadow-xl hover:scale-105 ${
+                      plan.popular 
+                        ? 'border-blue-200 ring-2 ring-blue-500/20 shadow-lg' 
+                        : 'border-gray-200/60 hover:border-gray-300/80'
+                    }`}
                   >
+                    {plan.popular && (
+                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-xs font-semibold">
+                          Most Popular
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="text-center mb-6">
                       <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h4>
                       <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
@@ -440,6 +368,17 @@ export default function PricingPage() {
                         {plan.credits} credits
                       </div>
                       <div className="text-sm text-gray-500">per month</div>
+                    </div>
+
+                    <div className="mb-6 space-y-3">
+                      {plan.features.map((feature, idx) => (
+                        <div key={idx} className="flex items-center text-sm text-gray-700">
+                          <svg className="w-4 h-4 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          {feature}
+                        </div>
+                      ))}
                     </div>
 
                     <button

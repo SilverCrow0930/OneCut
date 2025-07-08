@@ -12,49 +12,41 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // Stripe Price IDs - these should be environment variables
 const STRIPE_PRICE_IDS = {
-  'video-editor-only': process.env.STRIPE_PRICE_EDITOR_ONLY || 'price_editor_only',
-  'creator-combo': process.env.STRIPE_PRICE_CREATOR_COMBO || 'price_creator_combo',
-  'pro-combo': process.env.STRIPE_PRICE_PRO_COMBO || 'price_pro_combo',
-  'credits-only-starter': process.env.STRIPE_PRICE_CREDITS_STARTER || 'price_credits_starter',
-  'credits-only-pro': process.env.STRIPE_PRICE_CREDITS_PRO || 'price_credits_pro',
+  'starter-plan': process.env.STRIPE_PRICE_STARTER || 'price_starter_plan',
+  'creator-plan': process.env.STRIPE_PRICE_CREATOR || 'price_creator_plan',
+  'pro-plan': process.env.STRIPE_PRICE_PRO || 'price_pro_plan',
+  'enterprise-plan': process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise_plan',
 };
 
 // Plan configurations
 const PLAN_CONFIGS = {
-  'video-editor-only': {
-    name: 'Video Editing Suite',
-    subscriptionType: 'editor-only',
-    maxCredits: 0,
-    maxAiChats: 400,
-    priceCents: 800
+  'starter-plan': {
+    name: 'Starter',
+    subscriptionType: 'editor-plus-credits',
+    maxCredits: 150,
+    maxAiChats: 0, // Unlimited for all plans
+    priceCents: 1900
   },
-  'creator-combo': {
-    name: 'Creator Complete',
+  'creator-plan': {
+    name: 'Creator',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 400,
-    maxAiChats: 0, // Unlimited for combo plans
+    maxAiChats: 0, // Unlimited for all plans
     priceCents: 3900
   },
-  'pro-combo': {
-    name: 'Pro Complete',
+  'pro-plan': {
+    name: 'Pro',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 1000,
-    maxAiChats: 0, // Unlimited for combo plans
+    maxAiChats: 0, // Unlimited for all plans
     priceCents: 7900
   },
-  'credits-only-starter': {
-    name: 'AI Credits Only - Starter',
-    subscriptionType: 'credits-only',
-    maxCredits: 150,
-    maxAiChats: 0,
-    priceCents: 1500
-  },
-  'credits-only-pro': {
-    name: 'AI Credits Only - Pro',
-    subscriptionType: 'credits-only',
-    maxCredits: 400,
-    maxAiChats: 0,
-    priceCents: 3100
+  'enterprise-plan': {
+    name: 'Enterprise',
+    subscriptionType: 'editor-plus-credits',
+    maxCredits: 2500,
+    maxAiChats: 0, // Unlimited for all plans
+    priceCents: 19900
   }
 };
 
