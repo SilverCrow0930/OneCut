@@ -226,19 +226,6 @@ export default function PricingPage() {
             <HomeNavbar />
 
       <main className="max-w-[85%] mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16">
-                {/* Header */}
-        <div className="mb-16 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            {currentSubscriptions.filter(s => s.status === 'active').length > 0 ? 'Current Plans' : 'Pricing'}
-                    </h1>
-          <p className="text-base text-gray-600 max-w-3xl mx-auto">
-            {currentSubscriptions.filter(s => s.status === 'active').length > 0 
-              ? 'Manage your active subscriptions and upgrade your plans as needed.'
-              : 'Start with our complete video editor, then add AI credits as you need them.'
-            }
-          </p>
-        </div>
-
         {/* Current Status - Only show if user has active subscriptions */}
         {currentSubscriptions.filter(s => s.status === 'active').length > 0 && (
           <div className="grid md:grid-cols-2 gap-8 mb-16 max-w-5xl mx-auto">
@@ -290,210 +277,90 @@ export default function PricingPage() {
         )}
 
         {/* Main Content */}
-        <div className="grid lg:grid-cols-4 gap-10">
-          {/* Plans Section */}
-          <div className="lg:col-span-3 space-y-16">
-            
-            {/* Choose a Plan */}
-            <div>
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Choose a Plan</h2>
-                  <p className="text-base text-gray-600 mt-2">Complete video editor + AI credits included in every plan</p>
+        <div>
+          {/* Choose a Plan */}
+          <div>
+            <div className="flex items-center justify-between mb-12">
+              <h2 className="text-4xl font-bold text-gray-900">Choose Your Plan</h2>
+              <button
+                onClick={() => setShowAIFeatures(!showAIFeatures)}
+                className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
+              >
+                {showAIFeatures ? 'Hide' : 'Show'} AI features & credits
+                <svg className={`w-4 h-4 ml-1 transition-transform ${showAIFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+
+            {/* AI Features Expandable Section */}
+            {showAIFeatures && (
+              <div className="mb-10 p-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl border border-purple-100">
+                <h4 className="font-semibold text-gray-900 mb-6">What you can do with credits:</h4>
+                <div className="grid sm:grid-cols-2 gap-6">
+                  {aiFeatures.map((feature, idx) => (
+                    <div key={idx} className="flex items-start justify-between p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg">
+                      <div className="flex-1">
+                        <h5 className="font-semibold text-gray-900 text-sm">{feature.name}</h5>
+                        <p className="text-xs text-gray-600 mt-2">{feature.description}</p>
+                      </div>
+                      <div className="ml-4 text-right">
+                        <div className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{feature.cost}</div>
+                        <div className="text-xs text-gray-500">credits</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <button
-                  onClick={() => setShowAIFeatures(!showAIFeatures)}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
+                <div className="mt-8 p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30">
+                  <p className="text-sm text-gray-600">
+                    <strong>💡 Pro Tip:</strong> Credits reset monthly, so you always have fresh AI power to work with. Start with a smaller pack and upgrade as needed!
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {plans.map((plan) => (
+                <div 
+                  key={plan.id} 
+                  className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  {showAIFeatures ? 'Hide' : 'Show'} AI features & credits
-                  <svg className={`w-4 h-4 ml-1 transition-transform ${showAIFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
+                  <div className="text-center mb-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h4>
+                    <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">${plan.price}</div>
+                    <div className="text-gray-500 text-sm">/month</div>
+                  </div>
 
-              {/* AI Features Expandable Section */}
-              {showAIFeatures && (
-                <div className="mb-10 p-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl border border-purple-100">
-                  <h4 className="font-semibold text-gray-900 mb-6">What you can do with credits:</h4>
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    {aiFeatures.map((feature, idx) => (
-                      <div key={idx} className="flex items-start justify-between p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg">
-                        <div className="flex-1">
-                          <h5 className="font-semibold text-gray-900 text-sm">{feature.name}</h5>
-                          <p className="text-xs text-gray-600 mt-2">{feature.description}</p>
-                        </div>
-                        <div className="ml-4 text-right">
-                          <div className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{feature.cost}</div>
-                          <div className="text-xs text-gray-500">credits</div>
-                        </div>
+                  <div className="mb-6 text-center">
+                    <div className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      {plan.credits} credits
+                    </div>
+                    <div className="text-sm text-gray-500">per month</div>
+                  </div>
+
+                  <div className="mb-6 space-y-3">
+                    {plan.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-center text-sm text-gray-700">
+                        <svg className="w-4 h-4 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {feature}
                       </div>
                     ))}
                   </div>
-                  <div className="mt-8 p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30">
-                    <p className="text-sm text-gray-600">
-                      <strong>💡 Pro Tip:</strong> Credits reset monthly, so you always have fresh AI power to work with. Start with a smaller pack and upgrade as needed!
-                    </p>
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {plans.map((plan) => (
-                  <div 
-                    key={plan.id} 
-                    className={`relative bg-white/80 backdrop-blur-sm rounded-2xl border p-8 transition-all duration-300 hover:shadow-xl hover:scale-105 ${
-                      plan.popular 
-                        ? 'border-blue-200 ring-2 ring-blue-500/20 shadow-lg' 
-                        : 'border-gray-200/60 hover:border-gray-300/80'
-                    }`}
+
+                  <button
+                    onClick={() => handleSubscribe(plan.id)}
+                    disabled={processingSubscription}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {plan.popular && (
-                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-xs font-semibold">
-                          Most Popular
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="text-center mb-6">
-                      <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h4>
-                      <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
-                      <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">${plan.price}</div>
-                      <div className="text-gray-500 text-sm">/month</div>
-                    </div>
-
-                    <div className="mb-6 text-center">
-                      <div className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                        {plan.credits} credits
-                      </div>
-                      <div className="text-sm text-gray-500">per month</div>
-                    </div>
-
-                    <div className="mb-6 space-y-3">
-                      {plan.features.map((feature, idx) => (
-                        <div key={idx} className="flex items-center text-sm text-gray-700">
-                          <svg className="w-4 h-4 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          {feature}
-                        </div>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => handleSubscribe(plan.id)}
-                      disabled={processingSubscription}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {processingSubscription ? 'Processing...' : 'Subscribe Now'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Cart Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/70 backdrop-blur-sm rounded-3xl border border-white/20 p-8 sticky top-32 shadow-xl">
-              <div className="flex items-center mb-8">
-                <span className="mr-4 text-2xl transform scale-x-[-1]">🛒</span>
-                <h3 className="text-xl font-bold text-gray-900">Cart</h3>
-              </div>
-              
-              {cart.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
-                    </svg>
-                  </div>
-                  <p className="font-semibold">Your cart is empty</p>
-                  <p className="text-sm mt-2">Add plans to get started</p>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-6 mb-8">
-                    {cart.map((item) => (
-                      <div key={item.plan.id} className="bg-white/50 backdrop-blur-sm border border-white/30 rounded-2xl p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <h4 className="font-semibold text-gray-900 text-sm">{item.plan.name}</h4>
-                          <button
-                            onClick={() => removeFromCart(item.plan.id)}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                                </div>
-                        
-                        <div className="flex items-center justify-between">
-                          {item.plan.type === 'foundation' ? (
-                            <span className="text-xs text-gray-600 bg-gray-100/70 px-3 py-2 rounded-lg">Single plan</span>
-                          ) : (
-                            <div className="flex items-center space-x-3">
-                              <button
-                                onClick={() => updateQuantity(item.plan.id, item.quantity - 1)}
-                                className="w-8 h-8 rounded-lg bg-gray-100/70 hover:bg-gray-200/70 flex items-center justify-center text-gray-600 transition-colors"
-                              >
-                                −
-                              </button>
-                              <span className="w-10 text-center font-semibold">{item.quantity}</span>
-                              <button
-                                onClick={() => updateQuantity(item.plan.id, item.quantity + 1)}
-                                className="w-8 h-8 rounded-lg bg-gray-100/70 hover:bg-gray-200/70 flex items-center justify-center text-gray-600 transition-colors"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
-                          <div className="font-bold text-gray-900">
-                            ${(item.plan.price * item.quantity).toFixed(2)}
-                          </div>
-                        </div>
-                        </div>
-                    ))}
-                  </div>
-
-                  <div className="border-t border-gray-200/50 pt-6 mb-8">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-gray-900">Total</span>
-                      <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">${getTotalPrice()}/mo</span>
-                    </div>
-                  </div>
-
-                  <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-2xl text-base transition-all duration-300 shadow-lg hover:shadow-xl">
-                    Subscribe Now
+                    {processingSubscription ? 'Processing...' : 'Get'}
                   </button>
-                </>
-              )}
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-
-        {/* Simple FAQ */}
-        <div className="mt-24 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 mb-12 text-center">
-            Questions?
-          </h2>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
-              <h3 className="font-semibold text-gray-900 mb-4">How do credits work?</h3>
-              <p className="text-gray-600">
-                Credits reset monthly. Use them for AI features like voiceover, generation, and smart editing.
-              </p>
-                </div>
-            
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
-              <h3 className="font-semibold text-gray-900 mb-4">Can I cancel anytime?</h3>
-              <p className="text-gray-600">
-                Yes! Cancel from your account or this page. No contracts, no hassle.
-              </p>
-            </div>
-            </div>
         </div>
       </main>
         </div>
