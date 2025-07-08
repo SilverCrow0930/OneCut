@@ -170,14 +170,40 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     // Add ref to track initial load
     const isInitialLoadRef = useRef(true)
 
-    // 4) Save state
+    // 4) Save state - always start with 'saved' to prevent "saving..." bug after refresh
     const [saveState, setSaveState] = useState<SaveState>('saved')
 
     // Ensure saveState is 'saved' on initial mount and after refresh
     useEffect(() => {
-        // Set to saved immediately on mount (after refresh)
+        // Always set to saved immediately on mount (after refresh)
         setSaveState('saved')
         isInitialLoadRef.current = true
+        
+        // Set a timeout to ensure this persists even if other effects run
+        const timeout = setTimeout(() => {
+            setSaveState('saved')
+        }, 100)
+        
+        // Handle page refresh/unload to prevent stuck "saving..." state
+        const handleBeforeUnload = () => {
+            setSaveState('saved')
+        }
+        
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // Page became visible again, ensure we're in saved state
+                setSaveState('saved')
+            }
+        }
+        
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        
+        return () => {
+            clearTimeout(timeout)
+            window.removeEventListener('beforeunload', handleBeforeUnload)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
     }, [projectId]) // Reset when project changes
 
     // selection
@@ -226,6 +252,11 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             setSaveState('saved')
             // Mark initial load as complete
             isInitialLoadRef.current = false
+            
+            // Additional safety: set saved state again after a short delay to prevent race conditions
+            setTimeout(() => {
+                setSaveState('saved')
+            }, 200)
         }
         catch (e: any) {
             setTimelineError(e.message)
@@ -302,6 +333,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         // Don't auto-save during initial load
         if (isInitialLoadRef.current) return;
+        
+        // Don't auto-save if we don't have a valid session or projectId
+        if (!session?.access_token || !projectId) return;
         
         // only once you have at least one command…
         if (past.length === 0) return;
