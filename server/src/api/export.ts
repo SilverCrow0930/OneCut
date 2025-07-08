@@ -406,6 +406,30 @@ function convertToTimelineElements(clips: TimelineClip[]): TimelineElement[] {
             clip.sourceEndMs
         )
         
+        // Extract text styling properties from nested style object
+        const textStyle = clip.properties?.style || {}
+        const extractedFontSize = textStyle.fontSize ? parseInt(textStyle.fontSize) : undefined
+        const extractedFontColor = textStyle.color || textStyle.fontColor
+        const extractedFontFamily = textStyle.fontFamily
+        const extractedFontWeight = textStyle.fontWeight
+        const extractedTextAlign = textStyle.textAlign
+        const extractedBackgroundColor = textStyle.backgroundColor
+        
+        // Debug logging for text clips
+        if (clip.type === 'text') {
+            console.log(`[Export] Processing text clip ${clip.id}:`)
+            console.log(`  - Text: "${clip.properties?.text || 'No text'}"`)
+            console.log(`  - Style object:`, textStyle)
+            console.log(`  - Extracted properties:`, {
+                fontSize: extractedFontSize,
+                fontColor: extractedFontColor,
+                fontFamily: extractedFontFamily,
+                fontWeight: extractedFontWeight,
+                textAlign: extractedTextAlign,
+                backgroundColor: extractedBackgroundColor
+            })
+        }
+        
         return {
         id: clip.id,
         type: clip.type as any,
@@ -418,8 +442,15 @@ function convertToTimelineElements(clips: TimelineClip[]): TimelineElement[] {
         speed: clip.speed,
         volume: clip.volume,
         text: clip.properties?.text,
-        fontSize: clip.properties?.fontSize,
-        fontColor: clip.properties?.fontColor,
+        fontSize: extractedFontSize,
+        fontColor: extractedFontColor,
+        fontFamily: extractedFontFamily,
+        fontWeight: extractedFontWeight,
+        fontStyle: textStyle.fontStyle,
+        textAlign: extractedTextAlign,
+        backgroundColor: extractedBackgroundColor,
+        borderColor: textStyle.borderColor,
+        borderWidth: textStyle.borderWidth,
         position: clip.properties?.position,
         properties: clip.properties
         }
@@ -869,7 +900,12 @@ class ProfessionalVideoExporter {
         const borderWidth = element.borderWidth || 0
         
         // Build the drawtext filter with all style properties
-        let filter = `drawtext=text='${text.replace(/'/g, "\\'")}':fontfile='${fontFile}':fontsize=${adjustedFontSize}:fontcolor=${fontColor}:x=(w*${position.x}):y=(h*${position.y})`
+        let filter = `drawtext=text='${text.replace(/'/g, "\\'")}':fontsize=${adjustedFontSize}:fontcolor=${fontColor}:x=(w*${position.x}):y=(h*${position.y})`
+        
+        // Only add fontfile parameter if we have a valid font path
+        if (fontFile && fontFile.trim()) {
+            filter = `drawtext=text='${text.replace(/'/g, "\\'")}':fontfile='${fontFile}':fontsize=${adjustedFontSize}:fontcolor=${fontColor}:x=(w*${position.x}):y=(h*${position.y})`
+        }
         
         // Add text alignment
         if (textAlign === 'left') {
@@ -938,7 +974,12 @@ class ProfessionalVideoExporter {
         
         // Build the complete filter
         let filter = `drawtext=text='${escapedText}'`
-        filter += `:fontfile='${fontFile}'`
+        
+        // Only add fontfile parameter if we have a valid font path
+        if (fontFile && fontFile.trim()) {
+            filter += `:fontfile='${fontFile}'`
+        }
+        
         filter += `:fontsize=${adjustedFontSize}`
         filter += `:fontcolor=${fontColor}`
         filter += `:x=(w*0.5-text_w/2)` // Center horizontally

@@ -36,6 +36,20 @@ interface TimelineClip {
             platform: string
         }
         text?: string
+        style?: {
+            fontSize?: string | number
+            fontColor?: string
+            color?: string
+            fontFamily?: string
+            fontWeight?: string
+            fontStyle?: string
+            textAlign?: string
+            backgroundColor?: string
+            borderColor?: string
+            borderWidth?: number
+            [key: string]: any
+        }
+        // Legacy individual properties for backward compatibility
         fontSize?: number
         fontColor?: string
         fontFamily?: string
