@@ -296,7 +296,7 @@ const HomeHeroSection = () => {
     }
 
     return (
-        <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-teal-50 to-emerald-50 min-h-screen flex items-center pt-24 pb-20">
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-teal-50 to-emerald-50 min-h-screen flex items-start pt-32 pb-20">
             {/* Background Elements */}
             <div className="absolute inset-0 overflow-hidden">
                 <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-500/30 via-teal-500/20 to-emerald-400/30 rounded-full blur-3xl animate-pulse"></div>
