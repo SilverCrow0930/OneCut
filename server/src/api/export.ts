@@ -1752,6 +1752,11 @@ async function processVideoExport(
         console.log(`[Export ${jobId}] Phase 2: Resolving and downloading assets`)
         const downloadedAssets = new Map<string, string>()
         const assetElements = elements.filter(el => {
+            // Explicitly exclude text and caption elements - they don't need asset files
+            if (el.type === 'text' || el.type === 'caption') {
+                return false
+            }
+            
             // Include elements with external assets
             if (el.properties?.externalAsset) return true
             
@@ -1767,6 +1772,7 @@ async function processVideoExport(
         })
         
         console.log(`[Export ${jobId}] Found ${assetElements.length} valid assets to download from ${elements.length} total elements`)
+        console.log(`[Export ${jobId}] Excluded ${elements.filter(el => el.type === 'text' || el.type === 'caption').length} text/caption elements from asset download`)
         
         let successfulDownloads = 0 // Declare outside to be accessible later
         
