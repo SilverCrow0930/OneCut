@@ -297,90 +297,90 @@ export default function PricingPage() {
         )}
 
         {/* Main Content */}
-        <div className="max-w-6xl mx-auto">
+            <div>
           {/* Choose a Plan */}
-          <div>
+            <div>
             <div className="flex items-center justify-between mb-12">
               <h2 className="text-4xl font-bold text-gray-900">Choose Your Plan</h2>
-              <button
-                onClick={() => setShowAIFeatures(!showAIFeatures)}
-                className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
-              >
-                {showAIFeatures ? 'Hide' : 'Show'} AI features & credits
-                <svg className={`w-4 h-4 ml-1 transition-transform ${showAIFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-            </div>
-
-            {/* AI Features Expandable Section */}
-            {showAIFeatures && (
-              <div className="mb-10 p-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl border border-purple-100">
-                <h4 className="font-semibold text-gray-900 mb-6">What you can do with credits:</h4>
-                <div className="grid sm:grid-cols-2 gap-6">
-                  {aiFeatures.map((feature, idx) => (
-                    <div key={idx} className="flex items-start justify-between p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg">
-                      <div className="flex-1">
-                        <h5 className="font-semibold text-gray-900 text-sm">{feature.name}</h5>
-                        <p className="text-xs text-gray-600 mt-2">{feature.description}</p>
-                      </div>
-                      <div className="ml-4 text-right">
-                        <div className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{feature.cost}</div>
-                        <div className="text-xs text-gray-500">credits</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-8 p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30">
-                  <p className="text-sm text-gray-600">
-                    <strong>💡 Pro Tip:</strong> Credits reset monthly, so you always have fresh AI power to work with. Start with a smaller pack and upgrade as needed!
-                  </p>
-                </div>
-              </div>
-            )}
-            
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {plans.map((plan) => (
-                <div 
-                  key={plan.id} 
-                  className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-10 shadow-lg hover:shadow-xl transition-all duration-300"
+                <button
+                  onClick={() => setShowAIFeatures(!showAIFeatures)}
+                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
                 >
-                  <div className="text-center mb-8">
-                    <h4 className="text-2xl font-bold text-gray-900 mb-3">{plan.name}</h4>
-                    <p className="text-base text-gray-600 mb-5">{plan.description}</p>
-                    <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">${plan.price}</div>
-                    <div className="text-gray-500 text-base mt-1">/month</div>
-                  </div>
+                  {showAIFeatures ? 'Hide' : 'Show'} AI features & credits
+                  <svg className={`w-4 h-4 ml-1 transition-transform ${showAIFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
 
-                  <div className="mb-8 text-center">
-                    <div className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      {plan.credits} credits
-                    </div>
-                    <div className="text-base text-gray-500">per month</div>
-                  </div>
-
-                  <div className="mb-8 space-y-4">
-                    {plan.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-center text-base text-gray-700">
-                        <svg className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        {feature}
+              {/* AI Features Expandable Section */}
+              {showAIFeatures && (
+                <div className="mb-10 p-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl border border-purple-100">
+                  <h4 className="font-semibold text-gray-900 mb-6">What you can do with credits:</h4>
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {aiFeatures.map((feature, idx) => (
+                      <div key={idx} className="flex items-start justify-between p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg">
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-gray-900 text-sm">{feature.name}</h5>
+                          <p className="text-xs text-gray-600 mt-2">{feature.description}</p>
+                        </div>
+                        <div className="ml-4 text-right">
+                          <div className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{feature.cost}</div>
+                          <div className="text-xs text-gray-500">credits</div>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                  <div className="mt-8 p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30">
+                    <p className="text-sm text-gray-600">
+                      <strong>💡 Pro Tip:</strong> Credits reset monthly, so you always have fresh AI power to work with. Start with a smaller pack and upgrade as needed!
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-[95%] mx-auto">
+              {plans.map((plan) => (
+                  <div 
+                    key={plan.id} 
+                  className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    <div className="text-center mb-6">
+                      <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h4>
+                      <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
+                      <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">${plan.price}</div>
+                      <div className="text-gray-500 text-sm">/month</div>
+                    </div>
+
+                    <div className="mb-6 text-center">
+                      <div className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        {plan.credits} credits
+                      </div>
+                      <div className="text-sm text-gray-500">per month</div>
+                    </div>
+
+                  <div className="mb-6 space-y-3">
+                    {plan.features.slice(0, 4).map((feature, idx) => (
+                      <div key={idx} className="flex items-center text-sm text-gray-700">
+                        <svg className="w-4 h-4 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                        {feature}
+                        </div>
                     ))}
                   </div>
 
                   <button
                     onClick={() => handleSubscribe(plan.id)}
                     disabled={processingSubscription}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {processingSubscription ? 'Processing...' : `Get ${plan.name}`}
                   </button>
                 </div>
               ))}
             </div>
-          </div>
+            </div>
         </div>
       </main>
         </div>
