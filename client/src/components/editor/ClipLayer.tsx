@@ -841,6 +841,40 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         };
     }, [lastPlayerSize, clip.id, crop, clip.properties, executeCommand]);
 
+    // Emit selection handle data when clip is selected
+    useEffect(() => {
+        if (isPrimarySelection || (isInMultiSelection && isMultiSelectionActive)) {
+            // Get player and container bounds
+            const player = document.querySelector('[style*="aspectRatio"], [style*="aspect-ratio"]') || 
+                          document.querySelector('.bg-black')
+            
+            if (player) {
+                const playerRect = (player as HTMLElement).getBoundingClientRect()
+                
+                const handleData = {
+                    clipId: clip.id,
+                    playerBounds: playerRect,
+                    clipBounds: {
+                        left: crop.left,
+                        top: crop.top,
+                        width: crop.width,
+                        height: crop.height
+                    },
+                    onResizeStart: handleResizeStart,
+                    isPrimarySelection: isPrimarySelection
+                }
+                
+                // Emit event to SelectionHandles component
+                const event = new CustomEvent('updateSelectionHandles', { detail: handleData })
+                window.dispatchEvent(event)
+            }
+        } else {
+            // Clear selection handles
+            const event = new CustomEvent('clearSelectionHandles')
+            window.dispatchEvent(event)
+        }
+    }, [isPrimarySelection, isInMultiSelection, isMultiSelectionActive, crop.left, crop.top, crop.width, crop.height, clip.id, handleResizeStart])
+
     // --- Main render ---
     if (!isVisible) {
         return null
@@ -914,8 +948,9 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div
                 className={`relative pointer-events-auto ${
-                    isPrimarySelection ? 'before:absolute before:inset-[-2px] before:border-2 before:border-purple-400 before:rounded before:shadow-[0_0_0_1px_rgba(216,180,254,0.3)] before:z-[1]' : 
-                    isInMultiSelection && isMultiSelectionActive ? 'before:absolute before:inset-[-2px] before:border-2 before:border-purple-400 before:rounded before:shadow-[0_0_0_1px_rgba(216,180,254,0.3)] before:z-[1]' : ''
+                    isInMultiSelection && isMultiSelectionActive && !isPrimarySelection 
+                        ? 'before:absolute before:inset-[-2px] before:border-2 before:border-purple-400 before:rounded before:shadow-[0_0_0_1px_rgba(216,180,254,0.3)] before:z-[1]' 
+                        : ''
                 }`}
                 data-clip-layer
                 data-clip-id={clip.id}
@@ -938,79 +973,7 @@ export const ClipLayer = React.memo(function ClipLayer({ clip, sourceTime }: Cli
                 >
                     {renderContent}
                 </div>
-                {isPrimarySelection && (
-                    <>
-                        {/* Corner Resize handles - exactly in the corners */}
-                        {/* NW */}
-                        <div
-                            className="absolute cursor-nwse-resize z-[2] hover:scale-110 transition-all duration-150"
-                            style={{
-                                left: 0,
-                                top: 0,
-                                transform: 'translate(-50%, -50%)',
-                                width: '12px',
-                                height: '12px',
-                                background: 'white',
-                                border: '2px solid rgba(216, 180, 254, 0.9)',
-                                borderRadius: '50%',
-                                boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)',
-                                willChange: 'transform'
-                            }}
-                            onMouseDown={(e) => handleResizeStart(e, 'nw')}
-                        />
-                        {/* NE */}
-                        <div
-                            className="absolute cursor-nesw-resize z-[2] hover:scale-110 transition-all duration-150"
-                            style={{
-                                right: 0,
-                                top: 0,
-                                transform: 'translate(50%, -50%)',
-                                width: '12px',
-                                height: '12px',
-                                background: 'white',
-                                border: '2px solid rgba(216, 180, 254, 0.9)',
-                                borderRadius: '50%',
-                                boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)',
-                                willChange: 'transform'
-                            }}
-                            onMouseDown={(e) => handleResizeStart(e, 'ne')}
-                        />
-                        {/* SW */}
-                        <div
-                            className="absolute cursor-nesw-resize z-[2] hover:scale-110 transition-all duration-150"
-                            style={{
-                                left: 0,
-                                bottom: 0,
-                                transform: 'translate(-50%, 50%)',
-                                width: '12px',
-                                height: '12px',
-                                background: 'white',
-                                border: '2px solid rgba(216, 180, 254, 0.9)',
-                                borderRadius: '50%',
-                                boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)',
-                                willChange: 'transform'
-                            }}
-                            onMouseDown={(e) => handleResizeStart(e, 'sw')}
-                        />
-                        {/* SE */}
-                        <div
-                            className="absolute cursor-nwse-resize z-[2] hover:scale-110 transition-all duration-150"
-                            style={{
-                                right: 0,
-                                bottom: 0,
-                                transform: 'translate(50%, 50%)',
-                                width: '12px',
-                                height: '12px',
-                                background: 'white',
-                                border: '2px solid rgba(216, 180, 254, 0.9)',
-                                borderRadius: '50%',
-                                boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1)',
-                                willChange: 'transform'
-                            }}
-                            onMouseDown={(e) => handleResizeStart(e, 'se')}
-                        />
-                    </>
-                )}
+
             </div>
         </div>
     )

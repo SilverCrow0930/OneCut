@@ -199,9 +199,11 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
     }
 
     const handleDelete = () => {
+        const commands = []
+        
         // First remove the clip
-        executeCommand({
-            type: 'REMOVE_CLIP',
+        commands.push({
+            type: 'REMOVE_CLIP' as const,
             payload: {
                 clip
             }
@@ -214,8 +216,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
             const track = tracks.find(t => t.id === clip.trackId)
             if (track) {
                 // Remove the track
-                executeCommand({
-                    type: 'REMOVE_TRACK',
+                commands.push({
+                    type: 'REMOVE_TRACK' as const,
                     payload: {
                         track,
                         affectedClips: []
@@ -230,16 +232,26 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 }))
 
                 // Update each track's index
-                reindexedTracks.forEach(track => {
-                    executeCommand({
-                        type: 'UPDATE_TRACK',
+                reindexedTracks.forEach(trackToUpdate => {
+                    commands.push({
+                        type: 'UPDATE_TRACK' as const,
                         payload: {
-                            before: tracks.find(t => t.id === track.id)!,
-                            after: track
+                            before: tracks.find(t => t.id === trackToUpdate.id)!,
+                            after: trackToUpdate
                         }
                     })
                 })
             }
+        }
+
+        // Execute all commands as a batch if there are multiple, or single command if just one
+        if (commands.length > 1) {
+            executeCommand({
+                type: 'BATCH',
+                payload: { commands }
+            })
+        } else {
+            executeCommand(commands[0])
         }
 
         setShowContextMenu(false)

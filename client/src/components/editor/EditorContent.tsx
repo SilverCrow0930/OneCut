@@ -1,15 +1,17 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { Player } from './Player'
 import PlaybackControls from './PlaybackControls'
 import ClipTools from './ClipTools'
 import ZoomSlider from './ZoomSlider'
 import Timeline from './timeline/Timeline'
 import MarqueeSelection from './MarqueeSelection'
+import SelectionHandles from './SelectionHandles'
 import { AspectRatioButton } from './AspectRatioButton'
 import { useEditor } from '@/contexts/EditorContext'
 
 const EditorContent = () => {
     const { tracks, clips } = useEditor()
+    const playerAreaRef = useRef<HTMLDivElement>(null)
     
     // Determine if timeline has content
     const hasContent = tracks.length > 0 && clips.length > 0
@@ -18,13 +20,19 @@ const EditorContent = () => {
         <MarqueeSelection>
         <div className="flex flex-col h-full overflow-hidden gap-2 p-2 rounded-lg focus:outline-none">
             {/* Player area - flexible but prioritized */}
-            <div className={`
-                bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg 
-                overflow-hidden
-                ${hasContent ? 'flex-[3]' : 'flex-[4]'}
-                min-h-0
-            `}>
+            <div 
+                ref={playerAreaRef}
+                className={`
+                    relative
+                    bg-gradient-to-b from-gray-50/50 to-transparent rounded-lg 
+                    overflow-hidden
+                    ${hasContent ? 'flex-[3]' : 'flex-[4]'}
+                    min-h-0
+                `}
+            >
                 <Player />
+                {/* Selection handles rendered outside the clipped player */}
+                <SelectionHandles containerRef={playerAreaRef} />
             </div>
             
             {/* Controls bar - fixed height */}
