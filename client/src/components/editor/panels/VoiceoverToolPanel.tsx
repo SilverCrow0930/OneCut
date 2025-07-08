@@ -448,7 +448,7 @@ const VoiceoverToolPanel = () => {
                             <span className="ml-2 text-gray-600">Loading voices...</span>
                         </div>
                     ) : (
-                        <div className="grid gap-3 max-h-80 overflow-y-auto elegant-scrollbar">
+                        <div className="grid gap-3 max-h-48 overflow-y-auto elegant-scrollbar">
                             {getTabVoices().map(voice => (
                                 <div
                                     key={voice.id}

@@ -759,9 +759,9 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 {/* Enhanced Content based on type */}
                 {isVideo && (
                     <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800 relative">
-                        {/* Thumbnail section - takes up left portion of clip */}
+                        {/* Thumbnail section - fixed width for consistent visibility */}
                         <div className="absolute left-0 top-0 h-full bg-gray-700 flex items-center justify-center"
-                             style={{ width: Math.min(width * 0.3, 60) }}>
+                             style={{ width: Math.min(80, width - 20) }}>
                             {thumbnailUrl ? (
                                 <div
                                     className="w-full h-full bg-cover bg-center"
@@ -787,8 +787,8 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                         {/* Content area - remaining space */}
                         <div className="absolute top-0 h-full bg-gray-800 flex items-center justify-center"
                              style={{ 
-                                left: Math.min(width * 0.3, 60),
-                                width: width - Math.min(width * 0.3, 60)
+                                left: Math.min(80, width - 20),
+                                width: width - Math.min(80, width - 20)
                              }}>
                             {/* Play icon */}
                             <div className="flex items-center justify-center">

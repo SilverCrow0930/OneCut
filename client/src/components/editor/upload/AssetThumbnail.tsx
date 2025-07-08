@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
+import { useVideoThumbnail } from '@/hooks/useVideoThumbnail'
 import { formatTimeMs } from '@/lib/utils'
 import DraggableAsset from './DraggableAsset'
 import { useAssets } from '@/contexts/AssetsContext'
@@ -27,6 +28,11 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
     const params = useParams()
     const [showContextMenu, setShowContextMenu] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
+
+    const isVideo = asset.mime_type.startsWith('video/')
+    
+    // Use video thumbnail hook for videos
+    const { thumbnailUrl, isGenerating } = useVideoThumbnail(asset.id, url ?? undefined, isVideo)
 
     // Get project ID
     const projectId = Array.isArray(params.projectId) 
@@ -91,12 +97,16 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
         })
     }
 
-    if (loading) {
+    if (loading || (isVideo && isGenerating)) {
         return (
             <div 
-                className="relative bg-gray-200 animate-pulse rounded-lg" 
+                className="relative bg-gray-200 animate-pulse rounded-lg flex items-center justify-center" 
                 style={{ ...style, minHeight: '120px' }}
-            />
+            >
+                {isVideo && isGenerating && (
+                    <div className="text-xs text-gray-500">Generating...</div>
+                )}
+            </div>
         )
     }
 
@@ -110,8 +120,6 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
             </div>
         )
     }
-
-    const isVideo = asset.mime_type.startsWith('video/')
 
     return (
         <>
@@ -137,16 +145,23 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
                     )}
                     {
                         isVideo ? (
-                            <video
-                                src={url}
-                                className="w-full h-full object-cover rounded"
-                                muted
-                                loop
-                            />
+                            // Use thumbnail for videos for faster loading
+                            thumbnailUrl ? (
+                                <img
+                                    src={thumbnailUrl}
+                                    className="w-full h-full object-cover rounded"
+                                    alt={asset.name || 'Video thumbnail'}
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded">
+                                    <div className="text-xs text-gray-500">Loading...</div>
+                                </div>
+                            )
                         ) : (
                             <img
                                 src={url}
                                 className="w-full h-full object-cover rounded"
+                                alt={asset.name || 'Asset'}
                             />
                         )
                     }

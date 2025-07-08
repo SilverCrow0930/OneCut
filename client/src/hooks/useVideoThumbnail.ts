@@ -39,10 +39,10 @@ export function useVideoThumbnail(assetId: string | undefined, videoUrl: string 
       
       try {
         const thumbnailBlob = await generateVideoThumbnail(videoUrl, {
-          width: 160,
-          height: 90,
+          width: 200,
+          height: 112,
           captureTime: 0.5,
-          quality: 0.7
+          quality: 0.5
         })
 
         if (controller.signal.aborted) return
