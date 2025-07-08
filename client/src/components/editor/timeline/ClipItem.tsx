@@ -4,6 +4,7 @@ import { Clip } from '@/types/editor'
 import { getTimeScale } from '@/lib/constants'
 import { useZoom } from '@/contexts/ZoomContext'
 import { useAssetUrl } from '@/hooks/useAssetUrl'
+import { useVideoThumbnail } from '@/hooks/useVideoThumbnail'
 import { useAssets } from '@/contexts/AssetsContext'
 import { formatTime } from '@/lib/utils'
 import TextClipItem from './TextClipItem'
@@ -83,6 +84,9 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
     // Get the media URL - prioritize external asset URL over regular asset URL
     const externalAssetUrl = isExternalAsset?.url
     const mediaUrl = externalAssetUrl || url
+
+    // Generate thumbnail for video clips
+    const { thumbnailUrl, isGenerating } = useVideoThumbnail(clip.assetId, mediaUrl, !!isVideo)
 
     // Get the source duration
     const assetDuration = asset?.duration ?? isExternalAsset?.duration ?? 0
@@ -753,26 +757,47 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                 )}
 
                 {/* Enhanced Content based on type */}
-                {isVideo && mediaUrl && (
+                {isVideo && (
                     <div className="w-full h-full overflow-hidden rounded-lg bg-gray-800 relative">
-                        {/* Single thumbnail image repeated across the entire clip */}
+                        {/* Thumbnail section - takes up left portion of clip */}
+                        <div className="absolute left-0 top-0 h-full bg-gray-700 flex items-center justify-center"
+                             style={{ width: Math.min(width * 0.3, 60) }}>
+                            {thumbnailUrl ? (
                                 <div
-                            className="w-full h-full bg-cover bg-center"
+                                    className="w-full h-full bg-cover bg-center"
                                     style={{
-                                backgroundImage: `url(${mediaUrl}#t=0.1)`, // Use media fragment to get first frame
+                                        backgroundImage: `url(${thumbnailUrl})`,
                                         backgroundSize: 'cover',
-                                backgroundPosition: 'center',
-                                backgroundRepeat: 'repeat-x' // Repeat the image horizontally
+                                        backgroundPosition: 'center'
                                     }}
                                 />
-                        {/* Play icon overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="bg-black/60 rounded-full p-1.5">
-                                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            ) : isGenerating ? (
+                                <div className="flex items-center justify-center w-full h-full">
+                                    <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center w-full h-full">
+                                    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Content area - remaining space */}
+                        <div className="absolute top-0 h-full bg-gray-800 flex items-center justify-center"
+                             style={{ 
+                                left: Math.min(width * 0.3, 60),
+                                width: width - Math.min(width * 0.3, 60)
+                             }}>
+                            {/* Play icon */}
+                            <div className="flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white opacity-70" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                 </svg>
                             </div>
                         </div>
+
                         {/* Video label */}
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
                             VIDEO
@@ -791,7 +816,7 @@ export default function ClipItem({ clip, onSelect, selected }: { clip: Clip, onS
                                 <span className="text-xs">OUT</span>
                             </div>
                         )}
-                                        </div>
+                    </div>
                 )}
 
                 {isImage && mediaUrl && (
