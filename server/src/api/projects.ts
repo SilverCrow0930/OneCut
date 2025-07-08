@@ -153,7 +153,7 @@ router.post(
                 ...otherFields
             } = req.body
 
-            const projectName = name || generateDefaultName()
+            const projectName = name || await generateDefaultName(profile.id)
             
             // 3) Insert new project using the public.users.id
             const insertData = {

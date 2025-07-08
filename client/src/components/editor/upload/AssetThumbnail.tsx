@@ -100,13 +100,9 @@ export default function AssetThumbnail({ asset, highlight, uploading, style }: A
     if (loading || (isVideo && isGenerating)) {
         return (
             <div 
-                className="relative bg-gray-200 animate-pulse rounded-lg flex items-center justify-center" 
+                className="relative bg-gray-200 animate-pulse rounded-lg" 
                 style={{ ...style, minHeight: '120px' }}
-            >
-                {isVideo && isGenerating && (
-                    <div className="text-xs text-gray-500">Generating...</div>
-                )}
-            </div>
+            />
         )
     }
 

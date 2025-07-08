@@ -169,22 +169,11 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     // 4) Save state
     const [saveState, setSaveState] = useState<SaveState>('saved')
 
-    // Ensure saveState is 'saved' on initial mount
+    // Ensure saveState is 'saved' on initial mount and after refresh
     useEffect(() => {
+        // Set to saved immediately on mount (after refresh)
         setSaveState('saved')
-        
-        // Reset saveState when page becomes visible again (after refresh)
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                setSaveState('saved')
-            }
-        }
-        
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
-        }
-    }, [])
+    }, [projectId]) // Reset when project changes
 
     // selection
     const [selectedClipId, setSelectedClipId] = useState<string | null>(null)

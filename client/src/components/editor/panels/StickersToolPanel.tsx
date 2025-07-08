@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Sticker } from 'lucide-react'
+import { Sticker, Search } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
@@ -143,13 +143,16 @@ const StickersToolPanel = () => {
                 <PanelHeader icon={Sticker} title="Stickers" />
             </div>
             <div className="px-4">
-                <input
-                    type="text"
-                    placeholder="Search stickers"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search stickers"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    />
+                </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4 hide-scrollbar">
                 {
