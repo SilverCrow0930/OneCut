@@ -482,6 +482,13 @@ class ProfessionalVideoExporter {
         this.outputSettings = outputSettings
         this.downloadedAssets = downloadedAssets
         this.jobId = jobId
+        
+        console.log(`[Export ${this.jobId}] Output settings:`, {
+            width: outputSettings.width,
+            height: outputSettings.height,
+            fps: outputSettings.fps,
+            aspectRatio: outputSettings.aspectRatio ? `${outputSettings.aspectRatio.width}:${outputSettings.aspectRatio.height}` : 'unknown'
+        })
     }
 
     async exportVideo(outputPath: string): Promise<void> {
@@ -628,8 +635,10 @@ class ProfessionalVideoExporter {
         const timelineDurationSec = Math.max(this.totalDurationMs / 1000, 1)
         const backgroundIndex = inputMapping.size
         
-        // Step 1: Create master timeline background
-        filters.push(`[${backgroundIndex}:v]trim=duration=${timelineDurationSec},setpts=PTS-STARTPTS,scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${this.outputSettings.width}:${this.outputSettings.height}:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,fps=${this.outputSettings.fps}[master_timeline]`)
+        // Step 1: Create master timeline background (already correctly sized)
+        filters.push(`[${backgroundIndex}:v]trim=duration=${timelineDurationSec},setpts=PTS-STARTPTS,format=yuv420p[master_timeline]`)
+        
+        console.log(`[Export ${this.jobId}] Created master timeline background: ${this.outputSettings.width}x${this.outputSettings.height} @ ${this.outputSettings.fps}fps`)
         
         // Step 2: Process video elements
         const videoTracks = this.buildVideoTracks(filters, inputMapping, timelineDurationSec)
@@ -705,10 +714,14 @@ class ProfessionalVideoExporter {
                 elementFilter += `loop=loop=-1:size=1:start=0,setpts=N/(${this.outputSettings.fps}*TB),`
             }
             
-            // Professional scaling and formatting
-            elementFilter += `scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=decrease:flags=lanczos,`
-            elementFilter += `pad=${this.outputSettings.width}:${this.outputSettings.height}:(ow-iw)/2:(oh-ih)/2:black,`
+            // Professional scaling and formatting with proper aspect ratio handling
+            // First scale to fill the target dimensions (crop mode for aspect ratio transformation)
+            elementFilter += `scale=${this.outputSettings.width}:${this.outputSettings.height}:force_original_aspect_ratio=increase:flags=lanczos,`
+            // Then crop to exact dimensions to ensure proper aspect ratio
+            elementFilter += `crop=${this.outputSettings.width}:${this.outputSettings.height}:(iw-ow)/2:(ih-oh)/2,`
             elementFilter += `format=yuv420p,fps=${this.outputSettings.fps}`
+            
+            console.log(`[Export ${this.jobId}] Video track ${index}: Scaling to ${this.outputSettings.width}x${this.outputSettings.height} with aspect ratio transformation`)
             
             // Effects
         if (element.opacity && element.opacity !== 1) {
