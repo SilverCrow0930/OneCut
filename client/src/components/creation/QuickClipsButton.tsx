@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Zap, Upload, Clock, Video, Download, Play, X, Edit, Sparkles } from 'lucide-react'
+import { Zap, Upload, Clock, Video, Download, Play, X, Edit, Sparkles, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { useRouter } from 'next/navigation'
@@ -42,6 +42,9 @@ const QuickClipsButton = () => {
     const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
     
+    // New state for scroll indicator
+    const [showScrollIndicator, setShowScrollIndicator] = useState(false)
+    const modalContentRef = useRef<HTMLDivElement>(null)
 
 
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
@@ -129,16 +132,13 @@ const QuickClipsButton = () => {
             return
         }
 
-        setIsUploading(true)
-        setIsProcessing(true)
-        setProcessingProgress(0)
-        setProcessingMessage('Preparing...')
-        setError(null)
+        // Close modal immediately and redirect to projects
+        setIsModalOpen(false)
+        router.push('/projects')
 
+        // Start processing in the background
         try {
             // 1. Create new project
-            setProcessingProgress(5)
-            setProcessingMessage('Creating project...')
             const projectResponse = await fetch(apiPath('projects'), {
                 method: 'POST',
                 headers: {
@@ -174,8 +174,6 @@ const QuickClipsButton = () => {
             const project = await projectResponse.json()
 
             // 2. Upload file to assets
-            setProcessingProgress(10)
-            setProcessingMessage('Uploading video...')
             const formData = new FormData()
             formData.append('file', selectedFile)
             formData.append('projectId', project.id)
@@ -207,10 +205,6 @@ const QuickClipsButton = () => {
                 throw new Error('File upload did not return a valid GCS URI')
             }
 
-            setIsUploading(false)
-            setProcessingProgress(15)
-            setProcessingMessage('Starting analysis...')
-
             // 3. Start QuickClips processing
             const jobResponse = await fetch(apiPath('quickclips/start'), {
                         method: 'POST',
@@ -239,28 +233,13 @@ const QuickClipsButton = () => {
                 throw new Error(errorMessage)
             }
 
-            // Update project with initial processing state
-            await fetch(apiPath(`projects/${project.id}`), {
-                method: 'PATCH',
-                        headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    processing_progress: 15,
-                    processing_message: 'Analyzing video...'
-                })
-            })
-
-            // Close modal and navigate to projects page with highlight
-            setIsModalOpen(false)
-            router.push(`/projects?highlight=${project.id}`)
+            // The project processing will be handled by the backend
+            // User will see progress on the projects page
 
         } catch (error) {
             console.error('Processing error:', error)
-            setError(error instanceof Error ? error.message : 'An unknown error occurred')
-            setIsProcessing(false)
-            setIsUploading(false)
+            // Since modal is closed, error handling would need to be handled on the projects page
+            // or shown via a toast notification
         }
     }
 
@@ -327,6 +306,45 @@ const QuickClipsButton = () => {
         }
     }
 
+    // Check if content is scrollable
+    const checkScrollable = () => {
+        if (modalContentRef.current) {
+            const { scrollHeight, clientHeight, scrollTop } = modalContentRef.current
+            const isScrollable = scrollHeight > clientHeight
+            const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10
+            setShowScrollIndicator(isScrollable && !isAtBottom)
+        }
+    }
+
+    // Check scrollability when modal opens or content changes
+    useEffect(() => {
+        if (isModalOpen) {
+            setTimeout(checkScrollable, 100)
+        }
+    }, [isModalOpen, selectedFile, videoType])
+
+    // Add scroll event listener
+    useEffect(() => {
+        const modalContent = modalContentRef.current
+        if (modalContent) {
+            modalContent.addEventListener('scroll', checkScrollable)
+            return () => modalContent.removeEventListener('scroll', checkScrollable)
+        }
+    }, [isModalOpen])
+
+    // Scroll indicator component
+    const ScrollIndicator = () => {
+        if (!showScrollIndicator) return null
+        
+        return (
+            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+                <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg border border-white/20">
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                </div>
+            </div>
+        )
+    }
+
     return (
         <>
             <button
@@ -355,7 +373,7 @@ const QuickClipsButton = () => {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white/90 backdrop-blur-sm rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-white/50 relative overflow-hidden">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto elegant-scrollbar shadow-2xl border border-white/50 relative overflow-hidden" ref={modalContentRef}>
                         {/* Background Pattern */}
                         <div className="absolute inset-0 opacity-10">
                             <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-500 via-teal-500 to-emerald-400 rounded-full blur-xl"></div>
@@ -494,31 +512,6 @@ const QuickClipsButton = () => {
                                             </div>
                                         </div>
                                     )}
-                                </div>
-                            ) : (isProcessing || isUploading) ? (
-                                /* Processing View */
-                                <div className="text-center py-12">
-                                    <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Zap className="w-8 h-8 text-white animate-pulse" />
-                                    </div>
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                        {isUploading ? 'Uploading Video...' : 'Processing Your Video'}
-                                    </h3>
-                                    <p className="text-gray-600 mb-6">
-                                        {isUploading ? 'Uploading to cloud storage...' : processingMessage || 'AI is analyzing and creating clips...'}
-                                    </p>
-                                    
-                                    <div className="max-w-xs mx-auto">
-                                        <div className="bg-gray-200 rounded-full h-2 mb-2">
-                                            <div 
-                                                className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full transition-all duration-300"
-                                                style={{ width: `${isUploading ? uploadProgress : processingProgress}%` }}
-                                            />
-                                        </div>
-                                        <p className="text-sm text-gray-500">
-                                            {Math.round(isUploading ? uploadProgress : processingProgress)}% complete
-                                        </p>
-                                    </div>
                                 </div>
                             ) : (
                                 /* Upload View - Updated with HomeHeroSection styling */
@@ -666,20 +659,36 @@ const QuickClipsButton = () => {
                                                 value={targetDuration}
                                                 onChange={(e) => handleDurationChange(parseInt(e.target.value))}
                                                 className="
-                                                    w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
+                                                    w-full h-4 bg-gradient-to-r from-purple-300 via-blue-300 to-teal-300 rounded-full appearance-none cursor-pointer shadow-inner border border-gray-200
                                                     [&::-webkit-slider-thumb]:appearance-none 
-                                                    [&::-webkit-slider-thumb]:w-6 
-                                                    [&::-webkit-slider-thumb]:h-6 
+                                                    [&::-webkit-slider-thumb]:w-7 
+                                                    [&::-webkit-slider-thumb]:h-7 
                                                     [&::-webkit-slider-thumb]:rounded-full 
                                                     [&::-webkit-slider-thumb]:bg-gradient-to-r
-                                                    [&::-webkit-slider-thumb]:from-blue-500
-                                                    [&::-webkit-slider-thumb]:to-purple-500
-                                                    [&::-webkit-slider-thumb]:border-3
+                                                    [&::-webkit-slider-thumb]:from-purple-600
+                                                    [&::-webkit-slider-thumb]:via-blue-600
+                                                    [&::-webkit-slider-thumb]:to-teal-600
+                                                    [&::-webkit-slider-thumb]:border-4
                                                     [&::-webkit-slider-thumb]:border-white
-                                                    [&::-webkit-slider-thumb]:shadow-lg
+                                                    [&::-webkit-slider-thumb]:shadow-xl
                                                     [&::-webkit-slider-thumb]:cursor-pointer
                                                     [&::-webkit-slider-thumb]:hover:scale-110
-                                                    [&::-webkit-slider-thumb]:transition-transform
+                                                    [&::-webkit-slider-thumb]:hover:shadow-2xl
+                                                    [&::-webkit-slider-thumb]:transition-all
+                                                    [&::-webkit-slider-thumb]:duration-200
+                                                    [&::-moz-range-thumb]:w-7
+                                                    [&::-moz-range-thumb]:h-7
+                                                    [&::-moz-range-thumb]:rounded-full
+                                                    [&::-moz-range-thumb]:bg-gradient-to-r
+                                                    [&::-moz-range-thumb]:from-purple-600
+                                                    [&::-moz-range-thumb]:to-teal-600
+                                                    [&::-moz-range-thumb]:border-4
+                                                    [&::-moz-range-thumb]:border-white
+                                                    [&::-moz-range-thumb]:shadow-xl
+                                                    [&::-moz-range-thumb]:cursor-pointer
+                                                    [&::-moz-range-thumb]:hover:scale-110
+                                                    [&::-moz-range-thumb]:transition-all
+                                                    [&::-moz-range-thumb]:duration-200
                                                 "
                                             />
                                             <div className="flex justify-between text-xs text-gray-500">
@@ -778,6 +787,8 @@ const QuickClipsButton = () => {
                     </div>
                 </div>
             )}
+            {/* Scroll Indicator */}
+            <ScrollIndicator />
         </>
     )
 }

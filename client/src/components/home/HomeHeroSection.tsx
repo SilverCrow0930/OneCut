@@ -522,20 +522,36 @@ const HomeHeroSection = () => {
                                                     value={targetDuration}
                                                     onChange={(e) => handleDurationChange(parseInt(e.target.value))}
                                                     className="
-                                                    w-full h-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full appearance-none cursor-pointer
+                                                    w-full h-4 bg-gradient-to-r from-purple-300 via-blue-300 to-teal-300 rounded-full appearance-none cursor-pointer shadow-inner border border-gray-200
                                                         [&::-webkit-slider-thumb]:appearance-none 
-                                                        [&::-webkit-slider-thumb]:w-6 
-                                                        [&::-webkit-slider-thumb]:h-6 
+                                                        [&::-webkit-slider-thumb]:w-7 
+                                                        [&::-webkit-slider-thumb]:h-7 
                                                         [&::-webkit-slider-thumb]:rounded-full 
                                                         [&::-webkit-slider-thumb]:bg-gradient-to-r
-                                                        [&::-webkit-slider-thumb]:from-blue-500
-                                                    [&::-webkit-slider-thumb]:to-purple-500
-                                                        [&::-webkit-slider-thumb]:border-3
+                                                        [&::-webkit-slider-thumb]:from-purple-600
+                                                        [&::-webkit-slider-thumb]:via-blue-600
+                                                        [&::-webkit-slider-thumb]:to-teal-600
+                                                        [&::-webkit-slider-thumb]:border-4
                                                         [&::-webkit-slider-thumb]:border-white
-                                                        [&::-webkit-slider-thumb]:shadow-lg
+                                                        [&::-webkit-slider-thumb]:shadow-xl
                                                         [&::-webkit-slider-thumb]:cursor-pointer
                                                         [&::-webkit-slider-thumb]:hover:scale-110
-                                                        [&::-webkit-slider-thumb]:transition-transform
+                                                        [&::-webkit-slider-thumb]:hover:shadow-2xl
+                                                        [&::-webkit-slider-thumb]:transition-all
+                                                        [&::-webkit-slider-thumb]:duration-200
+                                                        [&::-moz-range-thumb]:w-7
+                                                        [&::-moz-range-thumb]:h-7
+                                                        [&::-moz-range-thumb]:rounded-full
+                                                        [&::-moz-range-thumb]:bg-gradient-to-r
+                                                        [&::-moz-range-thumb]:from-purple-600
+                                                        [&::-moz-range-thumb]:to-teal-600
+                                                        [&::-moz-range-thumb]:border-4
+                                                        [&::-moz-range-thumb]:border-white
+                                                        [&::-moz-range-thumb]:shadow-xl
+                                                        [&::-moz-range-thumb]:cursor-pointer
+                                                        [&::-moz-range-thumb]:hover:scale-110
+                                                        [&::-moz-range-thumb]:transition-all
+                                                        [&::-moz-range-thumb]:duration-200
                                                     "
                                                 />
                                             <div className="flex justify-between text-xs text-gray-500">
