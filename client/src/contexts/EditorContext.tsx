@@ -8,6 +8,7 @@ import React, {
     ReactNode,
     useReducer,
     useCallback,
+    useRef,
 } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
@@ -166,6 +167,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     const [loadingTimeline, setLoadingTimeline] = useState(true)
     const [timelineError, setTimelineError] = useState<string | null>(null)
 
+    // Add ref to track initial load
+    const isInitialLoadRef = useRef(true)
+
     // 4) Save state
     const [saveState, setSaveState] = useState<SaveState>('saved')
 
@@ -173,6 +177,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         // Set to saved immediately on mount (after refresh)
         setSaveState('saved')
+        isInitialLoadRef.current = true
     }, [projectId]) // Reset when project changes
 
     // selection
@@ -219,6 +224,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             
             // Ensure saveState is set to 'saved' after loading timeline
             setSaveState('saved')
+            // Mark initial load as complete
+            isInitialLoadRef.current = false
         }
         catch (e: any) {
             setTimelineError(e.message)
@@ -293,6 +300,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
     // 4) Auto-save full snapshot after edits
     useEffect(() => {
+        // Don't auto-save during initial load
+        if (isInitialLoadRef.current) return;
+        
         // only once you have at least one command…
         if (past.length === 0) return;
 
