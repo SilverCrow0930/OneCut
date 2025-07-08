@@ -36,19 +36,23 @@ const convertTracksForExport = (tracks: Track[]): TimelineTrack[] => {
 }
 
 const ShareButton = () => {
+    const { tracks, clips, project } = useEditor()
+    const { session } = useAuth()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-    const [selectedExportType, setSelectedExportType] = useState('1080p')
+    const [selectedExportType, setSelectedExportType] = useState<'480p' | '720p' | '1080p'>('720p')
+    const [quickExport, setQuickExport] = useState(false)
+    const [useServerExport, setUseServerExport] = useState(true)
+    const buttonRef = useRef<HTMLDivElement>(null)
+
+    // Export states
     const [isExporting, setIsExporting] = useState(false)
     const [exportProgress, setExportProgress] = useState(0)
-    const [exportStatus, setExportStatus] = useState<string>('queued')
     const [exportError, setExportError] = useState<string | null>(null)
-    const [quickExport, setQuickExport] = useState(false)
-    const [useServerExport, setUseServerExport] = useState(true) // Default to server export
+    const [exportStatus, setExportStatus] = useState<string>('queued')
     const [currentJobId, setCurrentJobId] = useState<string | null>(null)
-    const buttonRef = useRef<HTMLDivElement>(null)
-    const { clips, tracks, project } = useEditor()
-    const { assets } = useAssets()
-    const { session } = useAuth()
+
+    // Use aspect ratio from EditorContext instead of project object
+    const { aspectRatio } = useEditor()
 
     // Set access token when session changes
     useEffect(() => {
@@ -164,9 +168,8 @@ const ShareButton = () => {
 
         try {
             if (useServerExport) {
-                // Get the project aspect ratio
-                const projectAspectRatio = project?.aspectRatio || 'horizontal'
-                console.log(`[Export] Using project aspect ratio: ${projectAspectRatio}`)
+                // Use aspect ratio from EditorContext instead of project object
+                console.log(`[Export] Using aspect ratio from EditorContext: ${aspectRatio}`)
                 
                 // Use server-side export
                 const result = await exportService.startExport(
@@ -177,7 +180,7 @@ const ShareButton = () => {
                         fps: 30,
                         quality: quickExport ? 'low' : 'medium',
                         quickExport,
-                        aspectRatio: projectAspectRatio
+                        aspectRatio: aspectRatio
                     }
                 )
 
@@ -201,7 +204,7 @@ const ShareButton = () => {
                     },
                     accessToken: session?.access_token,
                     quickExport,
-                    aspectRatio: project?.aspectRatio || 'horizontal',
+                    aspectRatio: aspectRatio,
                     onProgress: (progress) => {
                         setExportProgress(Math.min(progress, 100))
                     }
@@ -314,7 +317,7 @@ const ShareButton = () => {
                             {exportTypeOptions.map((type) => (
                                 <div key={type.id} className="flex flex-col">
                                     <button
-                                        onClick={() => setSelectedExportType(type.id)}
+                                        onClick={() => setSelectedExportType(type.id as '480p' | '720p' | '1080p')}
                                         className={`
                                             px-4 py-3 rounded-lg text-left font-medium
                                             border transition-all duration-200

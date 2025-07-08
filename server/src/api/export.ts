@@ -406,27 +406,83 @@ function convertToTimelineElements(clips: TimelineClip[]): TimelineElement[] {
             clip.sourceEndMs
         )
         
-        // Extract text styling properties from nested style object
+        // COMPREHENSIVE TEXT STYLE EXTRACTION - Fix for missing backgrounds
         const textStyle = clip.properties?.style || {}
-        const extractedFontSize = textStyle.fontSize ? parseInt(textStyle.fontSize) : undefined
+        
+        // Map CSS properties to FFmpeg properties
+        const extractedFontSize = textStyle.fontSize ? 
+            (typeof textStyle.fontSize === 'string' ? parseInt(textStyle.fontSize) : textStyle.fontSize) : 
+            undefined
+        
+        // Handle both 'color' and 'fontColor' properties  
         const extractedFontColor = textStyle.color || textStyle.fontColor
         const extractedFontFamily = textStyle.fontFamily
         const extractedFontWeight = textStyle.fontWeight
         const extractedTextAlign = textStyle.textAlign
-        const extractedBackgroundColor = textStyle.backgroundColor
+        
+        // CRITICAL FIX: Map CSS background to FFmpeg backgroundColor
+        let extractedBackgroundColor = textStyle.backgroundColor
+        if (!extractedBackgroundColor && textStyle.background) {
+            // Handle CSS background shorthand
+            if (textStyle.background !== 'none' && textStyle.background !== 'transparent') {
+                extractedBackgroundColor = textStyle.background
+            }
+        }
+        
+        // Handle WebkitTextStroke -> borderColor/borderWidth
+        let extractedBorderColor = textStyle.borderColor
+        let extractedBorderWidth = textStyle.borderWidth
+        if (textStyle.WebkitTextStroke && !extractedBorderColor) {
+            // Parse "2px black" format
+            const strokeMatch = textStyle.WebkitTextStroke.match(/(\d+)px\s+(.+)/)
+            if (strokeMatch) {
+                extractedBorderWidth = parseInt(strokeMatch[1])
+                extractedBorderColor = strokeMatch[2]
+            }
+        }
+        
+        // Handle textShadow -> shadow properties
+        let extractedShadowColor = null
+        let extractedShadowX = 0
+        let extractedShadowY = 0
+        if (textStyle.textShadow) {
+            // Parse "2px 2px 4px rgba(0,0,0,0.8)" format
+            const shadowMatch = textStyle.textShadow.match(/(\d+)px\s+(\d+)px\s+\d+px\s+(.+)/)
+            if (shadowMatch) {
+                extractedShadowX = parseInt(shadowMatch[1])
+                extractedShadowY = parseInt(shadowMatch[2])
+                extractedShadowColor = shadowMatch[3]
+            }
+        }
+        
+        // Handle padding -> boxborderw
+        let extractedPadding = 0
+        if (textStyle.padding) {
+            // Parse "8px 16px" or "8px" format
+            const paddingMatch = textStyle.padding.match(/(\d+)px/)
+            if (paddingMatch) {
+                extractedPadding = parseInt(paddingMatch[1])
+            }
+        }
         
         // Debug logging for text clips
         if (clip.type === 'text') {
             console.log(`[Export] Processing text clip ${clip.id}:`)
             console.log(`  - Text: "${clip.properties?.text || 'No text'}"`)
-            console.log(`  - Style object:`, textStyle)
-            console.log(`  - Extracted properties:`, {
+            console.log(`  - Original style object:`, textStyle)
+            console.log(`  - Extracted FFmpeg properties:`, {
                 fontSize: extractedFontSize,
                 fontColor: extractedFontColor,
                 fontFamily: extractedFontFamily,
                 fontWeight: extractedFontWeight,
                 textAlign: extractedTextAlign,
-                backgroundColor: extractedBackgroundColor
+                backgroundColor: extractedBackgroundColor,
+                borderColor: extractedBorderColor,
+                borderWidth: extractedBorderWidth,
+                shadowColor: extractedShadowColor,
+                shadowX: extractedShadowX,
+                shadowY: extractedShadowY,
+                padding: extractedPadding
             })
         }
         
@@ -449,10 +505,17 @@ function convertToTimelineElements(clips: TimelineClip[]): TimelineElement[] {
         fontStyle: textStyle.fontStyle,
         textAlign: extractedTextAlign,
         backgroundColor: extractedBackgroundColor,
-        borderColor: textStyle.borderColor,
-        borderWidth: textStyle.borderWidth,
+        borderColor: extractedBorderColor,
+        borderWidth: extractedBorderWidth,
         position: clip.properties?.position,
-        properties: clip.properties
+        properties: {
+            ...clip.properties,
+            // Store processed shadow properties
+            shadowColor: extractedShadowColor,
+            shadowX: extractedShadowX,
+            shadowY: extractedShadowY,
+            padding: extractedPadding
+        }
         }
     })
 }
@@ -689,19 +752,48 @@ class ProfessionalVideoExporter {
             // Build element processing filter
             let elementFilter = `[${inputIndex}:v]`
         
-        // Source trimming with validation
+        // CRITICAL FIX: Source trimming based on USER'S ACTUAL EDITS
+        // The previous logic was using sourceStartMs/sourceEndMs which don't reflect user edits
+        
+        // Calculate if user has trimmed the video by comparing timeline duration vs asset duration
+        const timelineDurationMs = endTime - startTime
+        const assetDurationMs = element.properties?.assetDurationMs || timelineDurationMs * 1000
+        const assetDurationSec = assetDurationMs / 1000
+        
+        let shouldTrimSource = false
+        let calculatedSourceStart = 0
+        let calculatedSourceDuration = timelineDurationMs
+        
+        // Check if the user has manually trimmed this video clip
         if (element.sourceStartMs !== undefined && element.sourceEndMs !== undefined) {
-                const sourceStart = Math.max(0, element.sourceStartMs / 1000)
-                const sourceEnd = Math.max(sourceStart + MIN_DURATION_SEC, element.sourceEndMs / 1000)
-                const sourceDuration = sourceEnd - sourceStart
+            const originalSourceStart = element.sourceStartMs / 1000
+            const originalSourceEnd = element.sourceEndMs / 1000
+            const originalSourceDuration = originalSourceEnd - originalSourceStart
+            
+            // Only use source trimming if it makes sense (user actually trimmed)
+            if (originalSourceDuration > 0 && originalSourceDuration < assetDurationSec * 0.95) {
+                shouldTrimSource = true
+                calculatedSourceStart = Math.max(0, originalSourceStart)
+                calculatedSourceDuration = Math.max(MIN_DURATION_SEC, originalSourceDuration)
                 
-                // Only add source trimming if duration is valid
-                if (sourceDuration >= MIN_DURATION_SEC) {
-                elementFilter += `trim=start=${sourceStart}:duration=${sourceDuration},setpts=PTS-STARTPTS,`
-                    console.log(`[Export ${this.jobId}] Video track ${index}: Source trimming ${sourceStart}s-${sourceEnd}s (${sourceDuration}s)`)
-                } else {
-                    console.warn(`[Export ${this.jobId}] Video track ${index}: Source trimming duration too short (${sourceDuration}s), skipping trim`)
-                }
+                console.log(`[Export ${this.jobId}] Video track ${index}: RESPECTING USER TRIM - source: ${calculatedSourceStart}s duration: ${calculatedSourceDuration}s (original asset: ${assetDurationSec}s)`)
+            } else {
+                console.log(`[Export ${this.jobId}] Video track ${index}: NO USER TRIM DETECTED - using full video (timeline: ${timelineDurationMs}s, asset: ${assetDurationSec}s)`)
+            }
+        } else {
+            console.log(`[Export ${this.jobId}] Video track ${index}: NO SOURCE TRIMMING INFO - using timeline duration`)
+        }
+        
+        // Apply source trimming only if user actually trimmed the video
+        if (shouldTrimSource) {
+            elementFilter += `trim=start=${calculatedSourceStart}:duration=${calculatedSourceDuration},setpts=PTS-STARTPTS,`
+            console.log(`[Export ${this.jobId}] Video track ${index}: Applied user source trimming: ${calculatedSourceStart}s-${calculatedSourceStart + calculatedSourceDuration}s`)
+        } else {
+            // For videos that aren't trimmed, just ensure proper duration without start offset
+            if (element.type === 'video' && timelineDurationMs < assetDurationSec) {
+                elementFilter += `trim=duration=${timelineDurationMs},setpts=PTS-STARTPTS,`
+                console.log(`[Export ${this.jobId}] Video track ${index}: Applied timeline duration limit: ${timelineDurationMs}s`)
+            }
         }
         
         // Speed adjustment
@@ -933,45 +1025,62 @@ class ProfessionalVideoExporter {
     }
 
     private buildTextFilter(element: TimelineElement, text: string, startSec: number, endSec: number): string {
-        // Text properties with defaults
-        const fontSize = element.fontSize || 24
-        // Adjust font size based on resolution
-        const adjustedFontSize = Math.round(fontSize * (this.outputSettings.height / 1080))
+        // CRITICAL FIX: Ensure font size is never too small
+        const baseFontSize = element.fontSize || 20  // Use 20 as minimum, not 24
+        // Don't scale down font size too much - ensure minimum readable size
+        const adjustedFontSize = Math.max(16, Math.round(baseFontSize * (this.outputSettings.height / 1080)))
         
         const fontColor = element.fontColor || 'white'
         const fontFamily = this.parseFontFamily(element.fontFamily)
-        const fontFile = this.getFontPath(element.fontFamily, element.fontWeight)
         
-        console.log(`[Export ${this.jobId}] Text filter debug:`, {
+        console.log(`[Export ${this.jobId}] Text filter debug - COMPREHENSIVE:`, {
             text: text.substring(0, 50),
-            fontSize: element.fontSize,
+            originalFontSize: element.fontSize,
+            baseFontSize,
             adjustedFontSize,
             fontColor,
             fontFamily,
-            fontFile,
             fontWeight: element.fontWeight,
-            position: element.position
+            backgroundColor: element.backgroundColor,
+            borderColor: element.borderColor,
+            borderWidth: element.borderWidth,
+            position: element.position,
+            shadowProperties: {
+                shadowColor: element.properties?.shadowColor,
+                shadowX: element.properties?.shadowX,
+                shadowY: element.properties?.shadowY
+            },
+            padding: element.properties?.padding
         })
         
         // Position handling with defaults
         const position = element.position || { x: 0.5, y: 0.8 }
-        const xPos = position.x * 100 // Convert to percentage
-        const yPos = position.y * 100
         
-        // Style properties
+        // Style properties with comprehensive CSS translation
         const fontWeight = element.fontWeight || 'normal'
         const fontStyle = element.fontStyle || 'normal'
         const textAlign = element.textAlign || 'center'
-        const backgroundColor = element.backgroundColor || null
-        const borderColor = element.borderColor || null
+        
+        // CRITICAL FIX: Handle backgroundColor properly
+        let backgroundColor = element.backgroundColor
+        if (backgroundColor) {
+            // Convert CSS colors to FFmpeg format
+            backgroundColor = this.convertCssColorToFFmpeg(backgroundColor)
+        }
+        
+        const borderColor = element.borderColor
         const borderWidth = element.borderWidth || 0
         
-        // Build the drawtext filter - don't use fontfile parameter since we want FFmpeg's built-in font rendering
-        let filter = `drawtext=text='${text.replace(/'/g, "\\'")}':fontsize=${adjustedFontSize}:fontcolor=${fontColor}:x=(w*${position.x}):y=(h*${position.y})`
+        // Get shadow properties from processed properties
+        const shadowColor = element.properties?.shadowColor
+        const shadowX = element.properties?.shadowX || 0
+        const shadowY = element.properties?.shadowY || 0
+        const padding = element.properties?.padding || 0
         
-        console.log(`[Export ${this.jobId}] Text filter base:`, filter)
+        // Build the base drawtext filter
+        let filter = `drawtext=text='${text.replace(/'/g, "\\'")}':fontsize=${adjustedFontSize}:fontcolor=${fontColor}`
         
-        // Add text alignment
+        // Add position handling
         if (textAlign === 'left') {
             filter += ':x=(w*0.05)'
         } else if (textAlign === 'right') {
@@ -980,19 +1089,29 @@ class ProfessionalVideoExporter {
             // Center is default
             filter += ':x=(w*0.5-text_w/2)'
         }
+        filter += `:y=(h*${position.y})`
         
-        // Add background box if specified
+        // CRITICAL FIX: Add background box with proper padding
         if (backgroundColor) {
-            filter += `:box=1:boxcolor=${backgroundColor}:boxborderw=10`
+            const boxPadding = Math.max(padding, 8) // Minimum 8px padding for readability
+            filter += `:box=1:boxcolor=${backgroundColor}:boxborderw=${boxPadding}`
+            console.log(`[Export ${this.jobId}] Added background: ${backgroundColor} with padding: ${boxPadding}`)
         }
         
         // Add border/outline if specified
         if (borderColor && borderWidth > 0) {
-            filter += `:bordercolor=${borderColor}:borderw=${borderWidth}`
+            filter += `:borderw=${borderWidth}:bordercolor=${this.convertCssColorToFFmpeg(borderColor)}`
+            console.log(`[Export ${this.jobId}] Added border: ${borderWidth}px ${borderColor}`)
+        }
+        
+        // Add shadow if specified
+        if (shadowColor && (shadowX > 0 || shadowY > 0)) {
+            filter += `:shadowcolor=${this.convertCssColorToFFmpeg(shadowColor)}:shadowx=${shadowX}:shadowy=${shadowY}`
+            console.log(`[Export ${this.jobId}] Added shadow: ${shadowColor} offset ${shadowX},${shadowY}`)
         }
         
         // Add bold/italic styling
-        if (fontWeight === 'bold') {
+        if (fontWeight === 'bold' || fontWeight === '700' || fontWeight === '800' || fontWeight === '900') {
             filter += ':bold=1'
         }
         if (fontStyle === 'italic') {
@@ -1002,9 +1121,52 @@ class ProfessionalVideoExporter {
         // Add timing
         filter += `:enable='between(t,${startSec},${endSec})'`
         
-        console.log(`[Export ${this.jobId}] Final text filter:`, filter)
+        console.log(`[Export ${this.jobId}] FINAL text filter:`, filter)
         
         return filter
+    }
+
+    /**
+     * Convert CSS colors to FFmpeg format
+     */
+    private convertCssColorToFFmpeg(cssColor: string): string {
+        if (!cssColor) return 'white'
+        
+        // Handle rgba() format
+        const rgbaMatch = cssColor.match(/rgba?\(([^)]+)\)/)
+        if (rgbaMatch) {
+            const values = rgbaMatch[1].split(',').map(v => v.trim())
+            if (values.length >= 3) {
+                const r = parseInt(values[0])
+                const g = parseInt(values[1]) 
+                const b = parseInt(values[2])
+                const a = values.length > 3 ? parseFloat(values[3]) : 1
+                
+                // Convert to hex with alpha
+                const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+                return a < 1 ? `${hex}@${a}` : hex
+            }
+        }
+        
+        // Handle hex colors
+        if (cssColor.startsWith('#')) {
+            return cssColor
+        }
+        
+        // Handle named colors
+        const colorMap: { [key: string]: string } = {
+            'black': '#000000',
+            'white': '#FFFFFF',
+            'red': '#FF0000',
+            'green': '#008000',
+            'blue': '#0000FF',
+            'yellow': '#FFFF00',
+            'cyan': '#00FFFF',
+            'magenta': '#FF00FF',
+            'transparent': 'transparent'
+        }
+        
+        return colorMap[cssColor.toLowerCase()] || cssColor
     }
 
     private buildCaptionFilter(element: TimelineElement, text: string, startSec: number, endSec: number): string {
@@ -2062,14 +2224,37 @@ router.post('/start', validateExportRequest, async (req: Request, res: Response)
             console.error(`[Export ${jobId}] Failed to fetch project:`, projectError)
         }
         
-        // Use project's aspect ratio if available, otherwise use the one from export settings
-        const aspectRatio = project?.aspect_ratio || exportSettings.aspectRatio || 'horizontal'
-        console.log(`[Export ${jobId}] Using aspect ratio: ${aspectRatio}`)
+        // Enhanced logging for aspect ratio debugging
+        console.log(`[Export ${jobId}] Project aspect_ratio from database: ${project?.aspect_ratio}`)
+        console.log(`[Export ${jobId}] Export settings aspectRatio from client: ${exportSettings.aspectRatio}`)
         
-        // Update export settings with the project's aspect ratio
+        // CRITICAL FIX: Ensure aspect ratio is properly detected and mapped
+        let finalAspectRatio = 'horizontal' // Default fallback
+        
+        // Priority order: 1. Export settings, 2. Project database, 3. Default
+        if (exportSettings.aspectRatio) {
+            finalAspectRatio = exportSettings.aspectRatio
+            console.log(`[Export ${jobId}] Using aspect ratio from export settings: ${finalAspectRatio}`)
+        } else if (project?.aspect_ratio) {
+            // Map database values to expected format
+            if (project.aspect_ratio === 'vertical' || project.aspect_ratio === '9:16') {
+                finalAspectRatio = 'vertical'
+            } else if (project.aspect_ratio === 'horizontal' || project.aspect_ratio === '16:9') {
+                finalAspectRatio = 'horizontal'
+            } else {
+                finalAspectRatio = project.aspect_ratio === 'vertical' ? 'vertical' : 'horizontal'
+            }
+            console.log(`[Export ${jobId}] Using aspect ratio from database: ${project.aspect_ratio} -> ${finalAspectRatio}`)
+        } else {
+            console.log(`[Export ${jobId}] Using default aspect ratio: ${finalAspectRatio}`)
+        }
+        
+        console.log(`[Export ${jobId}] FINAL ASPECT RATIO DECISION: ${finalAspectRatio}`)
+        
+        // Update export settings with the corrected aspect ratio
         const updatedExportSettings = {
             ...exportSettings,
-            aspectRatio
+            aspectRatio: finalAspectRatio
         }
         
         // Create export job
@@ -2186,7 +2371,7 @@ router.get('/download/:jobId', async (req, res) => {
         }
 
     } catch (error) {
-        console.error(`[Export] Download proxy error:`, error)
+        console.error('[Export] Download proxy error:', error)
         if (!res.headersSent) {
             res.status(500).json({ 
                 success: false, 
@@ -2196,4 +2381,4 @@ router.get('/download/:jobId', async (req, res) => {
     }
 })
 
-export default router 
+export default router
