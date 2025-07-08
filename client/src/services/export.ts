@@ -298,26 +298,28 @@ class ExportService {
             let consecutiveNoChangeCount = 0
             
             const getAdaptiveInterval = (pollCount: number, progress: number, status: string): number => {
-                // Fast polling for the first few requests (immediate feedback)
-                if (pollCount < 3) return 1000 // 1 second
+                // Much slower polling to reduce server load by 80%
                 
-                // If we're in early stages (0-10%), poll more frequently
-                if (progress < 10) return 2000 // 2 seconds
+                // Initial polls - still need some feedback but much slower
+                if (pollCount < 2) return 3000 // 3 seconds (was 1s)
                 
-                // If we're actively processing (10-90%), use moderate polling
-                if (progress >= 10 && progress < 90) return 4000 // 4 seconds
+                // Early stages (0-10%) - very slow since not much happens
+                if (progress < 10) return 15000 // 15 seconds (was 2s)
                 
-                // If we're in final stages (90-100%), poll more frequently again
-                if (progress >= 90) return 2000 // 2 seconds
+                // Active processing (10-90%) - slow but steady
+                if (progress >= 10 && progress < 90) return 20000 // 20 seconds (was 4s)
                 
-                // If status is 'queued' and hasn't changed, slow down
-                if (status === 'queued' && consecutiveNoChangeCount > 2) return 6000 // 6 seconds
+                // Final stages (90-100%) - moderate speed for completion
+                if (progress >= 90) return 8000 // 8 seconds (was 2s)
                 
-                // If we've been polling for a long time, slow down even more
-                if (pollCount > 50) return 8000 // 8 seconds after many polls
+                // If status is 'queued' and hasn't changed, very slow
+                if (status === 'queued' && consecutiveNoChangeCount > 1) return 30000 // 30 seconds (was 6s)
                 
-                // Default moderate polling
-                return 3000 // 3 seconds
+                // If we've been polling for a long time, extremely slow
+                if (pollCount > 20) return 45000 // 45 seconds (was 8s)
+                
+                // Default slow polling
+                return 12000 // 12 seconds (was 3s)
             }
 
             const poll = async () => {
@@ -389,8 +391,8 @@ class ExportService {
                     // Calculate next poll interval adaptively
                     const nextInterval = getAdaptiveInterval(pollCount, job.progress, job.status)
                     
-                    // Add some jitter to prevent thundering herd if multiple clients
-                    const jitter = Math.random() * 500 // 0-500ms jitter
+                    // Add minimal jitter to prevent thundering herd (reduced since we're polling less frequently)
+                    const jitter = Math.random() * 1000 // 0-1000ms jitter
                     const finalInterval = nextInterval + jitter
 
                     console.log(`[ExportService] Next poll in ${Math.round(finalInterval)}ms`)
