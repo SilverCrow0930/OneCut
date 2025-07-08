@@ -77,7 +77,12 @@ export default function PricingPage() {
       price: 10,
       description: 'Perfect for beginners',
       type: 'credits',
-      features: ['Complete Video Editor', '150 AI Credits', 'Unlimited AI Assistant', 'Cloud Storage', '1080p Export', 'Email Support']
+      features: [
+        'Complete Video Editor',
+        '150 AI Credits',
+        'Unlimited AI Assistant',
+        '1080p Export'
+      ]
     },
     {
       id: 'creator-plan',
@@ -87,16 +92,26 @@ export default function PricingPage() {
       description: 'Most popular choice',
       type: 'credits',
       popular: true,
-      features: ['Complete Video Editor', '400 AI Credits', 'Unlimited AI Assistant', 'Priority Support', 'All Features Unlocked', 'Advanced Templates']
+      features: [
+        'Complete Video Editor',
+        '400 AI Credits',
+        'Unlimited AI Assistant',
+        'Priority Support'
+      ]
     },
     {
       id: 'pro-plan',
-        name: 'Pro',
+      name: 'Pro',
       credits: 1000,
       price: 78,
       description: 'For power users',
       type: 'credits',
-      features: ['Complete Video Editor', '1000 AI Credits', 'Unlimited AI Assistant', 'Priority Support', 'Early Access Features', 'Custom Branding']
+      features: [
+        'Complete Video Editor',
+        '1000 AI Credits',
+        'Unlimited AI Assistant',
+        'Early Access Features'
+      ]
     },
     {
       id: 'enterprise-plan',
@@ -105,7 +120,12 @@ export default function PricingPage() {
       price: 199,
       description: 'Maximum AI power',
       type: 'credits',
-      features: ['Complete Video Editor', '2500 AI Credits', 'Unlimited AI Assistant', 'Dedicated Support', 'Custom Integrations', 'Team Collaboration']
+      features: [
+        'Complete Video Editor',
+        '2500 AI Credits',
+        'Unlimited AI Assistant',
+        'Professional Support'
+      ]
     }
   ];
 
@@ -277,7 +297,7 @@ export default function PricingPage() {
         )}
 
         {/* Main Content */}
-        <div>
+        <div className="max-w-6xl mx-auto">
           {/* Choose a Plan */}
           <div>
             <div className="flex items-center justify-between mb-12">
@@ -355,7 +375,7 @@ export default function PricingPage() {
                     disabled={processingSubscription}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {processingSubscription ? 'Processing...' : 'Get'}
+                    {processingSubscription ? 'Processing...' : `Get ${plan.name}`}
                   </button>
                 </div>
               ))}
