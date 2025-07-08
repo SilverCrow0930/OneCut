@@ -58,7 +58,13 @@ const ShareButton = () => {
     // Memoize asset IDs to prevent unnecessary re-renders and requests
     const assetIds = useMemo(() => {
         return clips
-            .filter(clip => clip.assetId)
+            .filter(clip => {
+                // Exclude text clips - they don't need asset URLs
+                if (clip.type === 'text' || clip.type === 'caption') {
+                    return false
+                }
+                return clip.assetId
+            })
             .map(clip => clip.assetId!)
     }, [clips])
     
