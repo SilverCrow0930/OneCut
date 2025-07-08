@@ -8,6 +8,8 @@ import aiRouter from './ai.js'
 import voiceoverRouter from './voiceover.js'
 import exportRouter from './export.js'
 import quickclipsRouter from './quickclips.js'
+import creditsRouter from './credits.js'
+import subscriptionsRouter from './subscriptions.js'
 
 const apiRouter = Router()
 
@@ -20,5 +22,7 @@ apiRouter.use('/ai', aiRouter)
 apiRouter.use('/voiceover', voiceoverRouter)
 apiRouter.use('/export', exportRouter)
 apiRouter.use('/quickclips', quickclipsRouter)
+apiRouter.use('/credits', creditsRouter)
+apiRouter.use('/subscriptions', subscriptionsRouter)
 
 export default apiRouter

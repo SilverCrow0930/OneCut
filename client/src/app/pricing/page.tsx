@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import PieChart from '@/components/ui/PieChart';
+import { useCredits } from '@/contexts/CreditsContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Plan {
   id: string;
@@ -21,93 +23,123 @@ interface CartItem {
 }
 
 export default function PricingPage() {
-  // Simulated user data - in real app this would come from auth/user context
-  const [currentCredits] = useState(47);
-  const [maxCredits] = useState(150);
+  // Real credits data from context
+  const { credits: currentCredits, maxCredits, subscriptionType, aiAssistantChats, maxAiAssistantChats, isLoading } = useCredits();
+  const { user, session } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showEditorFeatures, setShowEditorFeatures] = useState(false);
   const [showAIFeatures, setShowAIFeatures] = useState(false);
+  const [processingSubscription, setProcessingSubscription] = useState(false);
   
-  // Simulated current subscriptions
-  const [currentSubscriptions, setCurrentSubscriptions] = useState([
-    {
-      id: 'foundation-active',
-      name: 'Video Editor',
-      credits: 15,
-      price: 8,
-      type: 'foundation' as const,
-      nextBilling: 'Feb 15',
-      status: 'active'
-    },
-    {
-      id: 'creator-credits-active',
-      name: 'Creator Credits',
-      credits: 150,
-      price: 20,
-      type: 'credits' as const,
-      nextBilling: 'Feb 15',
-      status: 'active'
+  // Dynamic subscription data based on current subscription type
+  const getCurrentSubscriptions = () => {
+    const subscriptions = [];
+    
+    if (subscriptionType === 'editor-only') {
+      subscriptions.push({
+        id: 'editor-only-active',
+        name: 'Video Editor',
+        credits: 0,
+        price: 8,
+        type: 'foundation' as const,
+        nextBilling: 'Feb 15',
+        status: 'active'
+      });
+    } else if (subscriptionType === 'editor-plus-credits') {
+      subscriptions.push({
+        id: 'editor-combo-active',
+        name: 'Video Editor + AI Credits',
+        credits: maxCredits,
+        price: maxCredits === 400 ? 39 : 79,
+        type: 'credits' as const,
+        nextBilling: 'Feb 15',
+        status: 'active'
+      });
+    } else if (subscriptionType === 'credits-only') {
+      subscriptions.push({
+        id: 'credits-only-active',
+        name: 'AI Credits Only',
+        credits: maxCredits,
+        price: maxCredits === 150 ? 15 : 31,
+        type: 'credits' as const,
+        nextBilling: 'Feb 15',
+        status: 'active'
+      });
     }
-  ]);
+    
+    return subscriptions;
+  };
+  
+  const [currentSubscriptions, setCurrentSubscriptions] = useState(getCurrentSubscriptions());
 
   const plans: Plan[] = [
     {
-      id: 'unlimited-editor',
+      id: 'video-editor-only',
       name: 'Video Editing Suite',
       credits: 15,
       price: 8,
-      description: 'Everything you need to create professional videos',
+      description: 'Complete video editor + 400 AI assistant chats',
       type: 'foundation',
-      features: ['Unlimited Projects', 'Cloud Storage', 'Full Editor', '1080p Export', '15 AI Credits']
+      features: ['Unlimited Projects', 'Cloud Storage', 'Full Editor', '1080p Export', '400 AI Assistant Chats', 'No AI Features Credits']
     },
     {
       id: 'starter-credits',
-      name: 'Starter',
-      credits: 75,
-      price: 12,
-      description: 'Perfect for beginners',
+      name: 'Starter AI',
+      credits: 150,
+      price: 15,
+      description: 'Perfect for light AI usage',
       type: 'credits',
-      features: ['75 AI Credits', 'Monthly Reset', 'Email Support']
+      features: ['150 AI Credits', 'Monthly Reset', 'All AI Features', 'Email Support']
     },
     {
-      id: 'creator-credits',
-      name: 'Creator',
-      credits: 200,
-      price: 29,
-      description: 'Most popular choice',
+      id: 'creator-combo',
+      name: 'Creator Complete',
+      credits: 400,
+      price: 39, // $8 editor + $31 for 400 credits (best value)
+      description: 'Video Editor + AI Credits (Most Popular)',
       type: 'credits',
       popular: true,
-      features: ['200 AI Credits', 'Priority Support', 'Advanced Features']
+      features: ['Complete Video Editor', '400 AI Credits', 'Unlimited AI Assistant', 'Priority Support', 'All Features Unlocked']
     },
     {
-      id: 'pro-credits',
-        name: 'Pro',
-      credits: 500,
-      price: 69,
-      description: 'For power users',
+      id: 'pro-combo',
+      name: 'Pro Complete',
+      credits: 1000,
+      price: 79, // $8 editor + $71 for 1000 credits
+      description: 'Maximum power for professionals',
       type: 'credits',
-      features: ['500 AI Credits', 'Priority Support', 'Early Access']
+      features: ['Complete Video Editor', '1000 AI Credits', 'Unlimited AI Assistant', 'Priority Support', 'Early Access Features']
     },
     {
-      id: 'enterprise-credits',
-      name: 'Enterprise',
-      credits: 1500,
-      price: 199,
-      description: 'Maximum AI power',
+      id: 'credits-only-starter',
+      name: 'AI Credits Only - Starter',
+      credits: 150,
+      price: 15,
+      description: 'AI credits without editor (requires existing subscription)',
       type: 'credits',
-      features: ['1500 AI Credits', 'Dedicated Support', 'Custom Integrations']
+      features: ['150 AI Credits', 'Monthly Reset', 'All AI Features', 'Requires Editor Subscription']
+    },
+    {
+      id: 'credits-only-pro',
+      name: 'AI Credits Only - Pro',
+      credits: 400,
+      price: 31,
+      description: 'Pro AI credits without editor',
+      type: 'credits',
+      features: ['400 AI Credits', 'Monthly Reset', 'All AI Features', 'Requires Editor Subscription']
     }
   ];
 
   const aiFeatures = [
-    { name: 'Smart Cut', cost: 15, description: 'AI-powered video editing with automatic cuts' },
-    { name: 'AI Voiceover', cost: 3, description: 'Natural voice generation per minute' },
-    { name: 'Auto Captions', cost: 5, description: 'Automatic caption generation' },
-    { name: 'AI Images', cost: 2, description: 'AI-generated images and graphics' },
-    { name: 'Video Generation', cost: 25, description: 'AI video clips (5-second)' },
-    { name: 'Background Removal', cost: 8, description: 'AI background replacement' },
-    { name: 'Style Transfer', cost: 12, description: 'Apply artistic styles to videos' },
-    { name: 'Audio Enhancement', cost: 4, description: 'AI audio cleanup and enhancement' }
+    { name: 'AI Assistant Chat', cost: 1, description: 'Chat with AI assistant (unlimited with Editor Suite)' },
+    { name: 'Smart Cut', cost: 20, description: 'AI-powered video editing with automatic cuts' },
+    { name: 'AI Voiceover', cost: 5, description: 'Natural voice generation per minute' },
+    { name: 'Auto Captions', cost: 8, description: 'Automatic caption generation per video' },
+    { name: 'AI Images', cost: 3, description: 'AI-generated images and graphics' },
+    { name: 'Video Generation', cost: 30, description: 'AI video clips (5-second)' },
+    { name: 'Background Removal', cost: 12, description: 'AI background replacement per video' },
+    { name: 'Style Transfer', cost: 15, description: 'Apply artistic styles to videos' },
+    { name: 'Audio Enhancement', cost: 6, description: 'AI audio cleanup and enhancement per video' }
   ];
 
   const addToCart = (plan: Plan) => {
@@ -147,14 +179,65 @@ export default function PricingPage() {
     return cart.reduce((sum, item) => sum + (item.plan.credits * item.quantity), 0);
   };
 
-  const cancelSubscription = (subscriptionId: string) => {
-    setCurrentSubscriptions(prev => 
-      prev.map(sub => 
-        sub.id === subscriptionId 
-          ? { ...sub, status: 'cancelled' }
-          : sub
-      )
-    );
+  const cancelSubscription = async (subscriptionId: string) => {
+    if (!user || !session) return;
+    
+    try {
+      const response = await fetch('/api/subscriptions/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      
+      if (response.ok) {
+        setCurrentSubscriptions(prev => 
+          prev.map(sub => 
+            sub.id === subscriptionId 
+              ? { ...sub, status: 'cancelled' }
+              : sub
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Failed to cancel subscription:', error);
+    }
+  };
+
+  const handleSubscribe = async (planId: string) => {
+    if (!user || !session) {
+      // Redirect to login
+      window.location.href = '/auth/login';
+      return;
+    }
+    
+    setProcessingSubscription(true);
+    
+    try {
+      const response = await fetch('/api/subscriptions/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ planId })
+      });
+      
+      if (response.ok) {
+        const { url } = await response.json();
+        window.location.href = url;
+      } else {
+        const error = await response.json();
+        console.error('Failed to create checkout session:', error);
+        alert('Failed to start subscription process. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error starting subscription:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setProcessingSubscription(false);
+    }
   };
 
   const creditPercentage = (currentCredits / maxCredits) * 100;
@@ -285,10 +368,11 @@ export default function PricingPage() {
                   )}
 
                   <button 
-                    onClick={() => addToCart(foundationPlan)}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-2xl text-base transition-all duration-300 shadow-lg hover:shadow-xl"
+                    onClick={() => handleSubscribe(foundationPlan.id)}
+                    disabled={processingSubscription}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-2xl text-base transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Add to Cart
+                    {processingSubscription ? 'Processing...' : 'Subscribe Now'}
                   </button>
                 </div>
               )}
@@ -359,10 +443,11 @@ export default function PricingPage() {
                     </div>
 
                     <button
-                      onClick={() => addToCart(plan)}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
+                      onClick={() => handleSubscribe(plan.id)}
+                      disabled={processingSubscription}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Add to Cart
+                      {processingSubscription ? 'Processing...' : 'Subscribe Now'}
                     </button>
                   </div>
                 ))}
