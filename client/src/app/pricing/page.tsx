@@ -300,14 +300,19 @@ export default function PricingPage() {
             <div>
           {/* Choose a Plan */}
             <div>
-            <div className="flex items-center justify-between mb-12">
-              <h2 className="text-4xl font-bold text-gray-900">Choose Your Plan</h2>
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+                Choose Your Plan
+              </h2>
+              <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-6">
+                Start creating amazing content with our AI-powered video editor
+              </p>
                 <button
                   onClick={() => setShowAIFeatures(!showAIFeatures)}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center transition-colors"
+                  className="inline-flex items-center px-4 py-2 bg-white/70 backdrop-blur-sm rounded-full border border-white/30 text-blue-600 hover:text-blue-700 font-medium text-sm transition-all duration-200 hover:bg-white/80 shadow-md"
                 >
                   {showAIFeatures ? 'Hide' : 'Show'} AI features & credits
-                  <svg className={`w-4 h-4 ml-1 transition-transform ${showAIFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-4 h-4 ml-2 transition-transform ${showAIFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
@@ -315,26 +320,24 @@ export default function PricingPage() {
 
               {/* AI Features Expandable Section */}
               {showAIFeatures && (
-                <div className="mb-10 p-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl border border-purple-100">
-                  <h4 className="font-semibold text-gray-900 mb-6">What you can do with credits:</h4>
-                  <div className="grid sm:grid-cols-2 gap-6">
+                <div className="mb-12 p-6 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-2xl border border-blue-100/50 backdrop-blur-sm">
+                  <div className="text-center mb-6">
+                    <h4 className="text-xl font-semibold text-gray-900 mb-2">What you can do with AI credits</h4>
+                    <p className="text-sm text-gray-600">Credits reset monthly, so you always have fresh AI power to work with</p>
+                  </div>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
                     {aiFeatures.map((feature, idx) => (
-                      <div key={idx} className="flex items-start justify-between p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg">
+                      <div key={idx} className="flex items-center justify-between p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40 hover:bg-white/70 transition-all duration-200">
                         <div className="flex-1">
-                          <h5 className="font-semibold text-gray-900 text-sm">{feature.name}</h5>
-                          <p className="text-xs text-gray-600 mt-2">{feature.description}</p>
+                          <h5 className="font-medium text-gray-900 text-sm">{feature.name}</h5>
+                          <p className="text-xs text-gray-500 mt-1">{feature.description}</p>
                         </div>
-                        <div className="ml-4 text-right">
+                        <div className="ml-3 text-right">
                           <div className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{feature.cost}</div>
-                          <div className="text-xs text-gray-500">credits</div>
+                          <div className="text-xs text-gray-400">credits</div>
                         </div>
                       </div>
                     ))}
-                  </div>
-                  <div className="mt-8 p-5 bg-white/70 backdrop-blur-sm rounded-2xl border border-white/30">
-                    <p className="text-sm text-gray-600">
-                      <strong>💡 Pro Tip:</strong> Credits reset monthly, so you always have fresh AI power to work with. Start with a smaller pack and upgrade as needed!
-                    </p>
                   </div>
                 </div>
               )}
@@ -375,14 +378,166 @@ export default function PricingPage() {
                     disabled={processingSubscription}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {processingSubscription ? 'Processing...' : `Get ${plan.name}`}
+                    {processingSubscription ? 'Processing...' : `Start with ${plan.name}`}
                   </button>
                 </div>
               ))}
             </div>
             </div>
+
+                {/* User Testimonials */}
+        <div className="mt-24 mb-16">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+              What Our Users Say
+            </h2>
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              Join thousands of creators who are already using Lemona to create amazing content
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {/* Testimonial 1 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  S
+                </div>
+                <div className="ml-4">
+                  <h4 className="font-semibold text-gray-900">Sarah Chen</h4>
+                  <p className="text-sm text-gray-600">Content Creator</p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-4">
+                "Lemona has completely transformed my workflow. The AI features save me hours of editing time, and the quality is incredible. I've grown my channel by 300% since using it!"
+              </p>
+              <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </div>
+
+            {/* Testimonial 2 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  M
+                </div>
+                <div className="ml-4">
+                  <h4 className="font-semibold text-gray-900">Marcus Rodriguez</h4>
+                  <p className="text-sm text-gray-600">Marketing Manager</p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-4">
+                "As a marketing professional, I need to create content fast. Lemona's AI assistant and smart cut features are game-changers. What used to take me a full day now takes 30 minutes."
+              </p>
+              <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </div>
+
+            {/* Testimonial 3 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  A
+                </div>
+                <div className="ml-4">
+                  <h4 className="font-semibold text-gray-900">Alex Thompson</h4>
+                  <p className="text-sm text-gray-600">YouTuber</p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-4">
+                "I was skeptical about AI editing tools, but Lemona proved me wrong. The voiceover feature sounds so natural, and the auto captions are 99% accurate. It's like having a full editing team!"
+              </p>
+              <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </div>
+
+            {/* Testimonial 4 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  J
+                </div>
+                <div className="ml-4">
+                  <h4 className="font-semibold text-gray-900">Jessica Park</h4>
+                  <p className="text-sm text-gray-600">Small Business Owner</p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-4">
+                "Running a small business means wearing many hats. Lemona helps me create professional marketing videos without needing a big budget or technical skills. The ROI has been amazing!"
+              </p>
+              <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </div>
+
+            {/* Testimonial 5 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  D
+                </div>
+                <div className="ml-4">
+                  <h4 className="font-semibold text-gray-900">David Kim</h4>
+                  <p className="text-sm text-gray-600">Video Editor</p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-4">
+                "As a professional editor, I was worried AI would replace me. Instead, Lemona has made me more efficient and creative. I can focus on the artistic vision while AI handles the tedious work."
+              </p>
+              <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </div>
+
+            {/* Testimonial 6 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  R
+                </div>
+                <div className="ml-4">
+                  <h4 className="font-semibold text-gray-900">Rachel Davis</h4>
+                  <p className="text-sm text-gray-600">Course Creator</p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-4">
+                "Creating educational content for my online courses used to be so time-consuming. Lemona's AI features, especially the auto captions and voiceover, have revolutionized my content creation process."
+              </p>
+              <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
       </main>
-        </div>
-    );
+    </div>
+  );
 } 
