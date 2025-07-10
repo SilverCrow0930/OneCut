@@ -317,9 +317,9 @@ const HomeHeroSection = () => {
                         {/* Main Headline */}
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                             Transform 
-                            <span className="font-bold bg-gradient-to-r from-blue-500 via-cyan-400 via-teal-400 via-emerald-500 to-emerald-400 bg-clip-text text-transparent animate-gradient-x"> Hours </span>
+                            <span className="font-bold bg-gradient-to-r from-blue-500 via-cyan-400 via-teal-400 via-emerald-500 to-emerald-400 bg-clip-text text-transparent animate-gradient-x-slow"> Hours </span>
                             into 
-                            <span className="font-bold bg-gradient-to-r from-emerald-400 via-emerald-500 via-teal-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent animate-gradient-x"> Highlights</span>
+                            <span className="font-bold bg-gradient-to-r from-emerald-400 via-emerald-500 via-teal-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent animate-gradient-x-slow"> Highlights</span>
                         </h1>
 
                         {/* Subtitle */}

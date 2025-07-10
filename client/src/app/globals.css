@@ -233,6 +233,10 @@
     animation: gradient-x 3s ease-in-out infinite;
 }
 
+.animate-gradient-x-slow {
+    animation: gradient-x 6s ease-in-out infinite;
+}
+
 @keyframes spin {
     from {
         transform: rotate(0deg);
