@@ -34,6 +34,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 // Stripe Price IDs - these should be environment variables
 const STRIPE_PRICE_IDS = {
   'price_1Rii7qRutXiJrhxtPbrjNV04': process.env.STRIPE_PRICE_STARTER || 'price_1Rii7qRutXiJrhxtPbrjNV04',
+  'price_1RjQX1RutXiJrhxtK3hMbYB8': process.env.STRIPE_PRICE_TEST || 'price_1RjQX1RutXiJrhxtK3hMbYB8', // Test plan
   'price_1RiinCRutXiJrhxtgS1H7URs': process.env.STRIPE_PRICE_CREATOR || 'price_1RiinCRutXiJrhxtgS1H7URs',
   'price_1RiimLRutXiJrhxtqRr9Iw2l': process.env.STRIPE_PRICE_PRO || 'price_1RiimLRutXiJrhxtqRr9Iw2l',
   'price_1RiikLRutXiJrhxtK3hMbYB8': process.env.STRIPE_PRICE_ENTERPRISE || 'price_1RiikLRutXiJrhxtK3hMbYB8',
@@ -47,6 +48,13 @@ const PLAN_CONFIGS = {
     maxCredits: 150,
     maxAiChats: 0, // Unlimited for all plans
     priceCents: 1000
+  },
+  'price_1RjQX1RutXiJrhxtK3hMbYB8': { // Test plan
+    name: 'Test',
+    subscriptionType: 'editor-plus-credits',
+    maxCredits: 500,
+    maxAiChats: 0,
+    priceCents: 100
   },
   'price_1RiinCRutXiJrhxtgS1H7URs': {
     name: 'Creator',
@@ -74,7 +82,12 @@ const PLAN_CONFIGS = {
 // Create Stripe checkout session
 router.post('/create-checkout-session', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
-  console.log('[Subscriptions] Create checkout session called with:', req.body);
+  console.log('[Subscriptions] Create checkout session called with:', {
+    body: req.body,
+    userId: authReq.user.id,
+    userEmail: authReq.user.email
+  });
+  
   try {
     const { planId } = req.body;
     const userId = authReq.user.id;
@@ -86,9 +99,17 @@ router.post('/create-checkout-session', authenticate, async (req: Request, res: 
     }
 
     if (!STRIPE_PRICE_IDS[planId as keyof typeof STRIPE_PRICE_IDS]) {
-      console.error('[Subscriptions] Invalid planId provided:', planId);
-      console.error('[Subscriptions] Available plan IDs:', Object.keys(STRIPE_PRICE_IDS));
-      return res.status(400).json({ error: 'Invalid plan ID', availablePlans: Object.keys(STRIPE_PRICE_IDS) });
+      console.error('[Subscriptions] Invalid planId provided:', {
+        providedPlanId: planId,
+        availablePlans: Object.keys(STRIPE_PRICE_IDS),
+        userEmail: userEmail,
+        userId: userId
+      });
+      return res.status(400).json({ 
+        error: 'Invalid plan ID', 
+        providedPlanId: planId,
+        availablePlans: Object.keys(STRIPE_PRICE_IDS)
+      });
     }
 
     const priceId = STRIPE_PRICE_IDS[planId as keyof typeof STRIPE_PRICE_IDS];
