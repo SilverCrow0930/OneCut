@@ -50,22 +50,27 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     
     try {
+      console.log('[CreditsContext] Fetching credits data...');
       const response = await fetch(apiPath('credits'), {
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Cache-Control': 'no-cache'
         }
       });
       
       if (response.ok) {
         const data = await response.json();
+        console.log('[CreditsContext] Received credits data:', data);
         setCredits(data.currentCredits);
         setMaxCredits(data.maxCredits);
         setSubscriptionType(data.subscriptionType);
         setAiAssistantChats(data.aiAssistantChats);
         setMaxAiAssistantChats(data.maxAiAssistantChats);
+      } else {
+        console.error('[CreditsContext] Failed to fetch credits:', await response.text());
       }
     } catch (error) {
-      console.error('Failed to fetch credits:', error);
+      console.error('[CreditsContext] Error fetching credits:', error);
     } finally {
       setIsLoading(false);
     }
@@ -123,6 +128,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Refresh credits data
   const refreshCredits = async () => {
+    console.log('[CreditsContext] Refreshing credits...');
     setIsLoading(true);
     await fetchCreditsData();
   };

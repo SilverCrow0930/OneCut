@@ -145,8 +145,8 @@ router.post('/create-checkout-session', authenticate, async (req: Request, res: 
         },
       ],
       mode: 'subscription',
-      success_url: 'https://lemona.studio/pricing?success=true&session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'https://lemona.studio/pricing?cancelled=true',
+      success_url: `${req.headers.origin}/pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.origin}/pricing?cancelled=true`,
       allow_promotion_codes: true,
       billing_address_collection: 'required',
       metadata: {

@@ -35,24 +35,39 @@ export default function PricingPage() {
   // Refresh credits data on mount and when returning from Stripe
   useEffect(() => {
     const refreshData = async () => {
-      // Check if we're returning from Stripe
-      const urlParams = new URLSearchParams(window.location.search);
-      const success = urlParams.get('success');
-      
-      if (success === 'true') {
-        // Clear the URL parameters
-        window.history.replaceState({}, '', window.location.pathname);
+      try {
+        console.log('Checking URL parameters...');
+        // Check if we're returning from Stripe
+        const urlParams = new URLSearchParams(window.location.search);
+        const success = urlParams.get('success');
+        
+        console.log('URL success parameter:', success);
+        console.log('Current subscription type:', subscriptionType);
+        console.log('Current max credits:', maxCredits);
+        
+        if (success === 'true') {
+          console.log('Success parameter found, refreshing credits...');
+          // Clear the URL parameters
+          window.history.replaceState({}, '', window.location.pathname);
+          
+          // Refresh credits data
+          await refreshCredits();
+          console.log('Credits refreshed. New subscription type:', subscriptionType);
+          console.log('New max credits:', maxCredits);
+        }
+      } catch (error) {
+        console.error('Error in refreshData:', error);
       }
-      
-      // Refresh credits data
-      await refreshCredits();
     };
 
     refreshData();
-  }, [refreshCredits]);
+  }, [refreshCredits, subscriptionType, maxCredits]);
 
   // Update current subscriptions when subscription type or max credits change
   useEffect(() => {
+    console.log('Subscription data changed. Updating current subscriptions...');
+    console.log('Subscription type:', subscriptionType);
+    console.log('Max credits:', maxCredits);
     setCurrentSubscriptions(getCurrentSubscriptions());
   }, [subscriptionType, maxCredits]);
 
