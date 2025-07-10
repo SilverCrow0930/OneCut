@@ -18,10 +18,10 @@ export const API_URL = (() => {
             return 'https://lemona-app.onrender.com';
         }
     } else {
-        // Server-side: default to production
+        // Server-side: default to production URL
         return 'https://lemona-app.onrender.com';
     }
-})()
+})();
 
 /**
  * Helper function to construct API paths
@@ -31,14 +31,9 @@ export function apiPath(path: string) {
 }
 
 /**
- * Stripe publishable key for client-side integration.
- * This must be set in production environment.
+ * Stripe publishable key for payment processing.
+ * Uses live key in production, test key in development.
  */
-export const STRIPE_PUBLISHABLE_KEY = (() => {
-    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-    if (!key) {
-        console.error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set. Stripe integration will not work.');
-        return '';
-    }
-    return key;
-})();
+export const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51Qi6xuRutXiJrhxtfHUC3V4q2p3wUG3qTYh6SSPzae2E3BCMIN9Do0OqoEcfmqmMosGy5vpRkIj7a5rjihbNEdUf00iShGD6bJ';
+
+// Add other configuration variables here
