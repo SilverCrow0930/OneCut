@@ -71,7 +71,7 @@ export default function PricingPage() {
 
   const plans: Plan[] = [
     {
-      id: 'essential-plan',
+      id: 'starter-plan',
       name: 'Essential',
       credits: 150,
       price: 10,
@@ -211,6 +211,10 @@ export default function PricingPage() {
       return;
     }
     
+    console.log('[Client] Starting subscription for plan:', planId);
+    console.log('[Client] User:', user.id);
+    console.log('[Client] Session token exists:', !!session.access_token);
+    
     setProcessingSubscription(true);
     
     try {
@@ -223,17 +227,36 @@ export default function PricingPage() {
         body: JSON.stringify({ planId })
       });
       
+      console.log('[Client] Response status:', response.status);
+      console.log('[Client] Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (response.ok) {
-        const { url } = await response.json();
-        window.location.href = url;
+        const data = await response.json();
+        console.log('[Client] Success response:', data);
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          console.error('[Client] No URL in response:', data);
+          alert('No checkout URL received. Please try again.');
+        }
       } else {
-        const error = await response.json();
-        console.error('Failed to create checkout session:', error);
-        alert('Failed to start subscription process. Please try again.');
+        const errorText = await response.text();
+        console.error('[Client] Error response status:', response.status);
+        console.error('[Client] Error response text:', errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { error: errorText };
+        }
+        
+        console.error('[Client] Parsed error data:', errorData);
+        alert(`Failed to start subscription process: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error starting subscription:', error);
-      alert('An error occurred. Please try again.');
+      console.error('[Client] Network error:', error);
+      alert('Network error occurred. Please check your connection and try again.');
     } finally {
       setProcessingSubscription(false);
     }

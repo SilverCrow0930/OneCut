@@ -1,11 +1,20 @@
-import { Router, Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import { authenticate, AuthenticatedRequest } from '../middleware/authenticate.js';
 import { supabase } from '../config/supabaseClient.js';
 import Stripe from 'stripe';
 
 const router = Router();
 
+// Test endpoint to verify routing works
+router.get('/test', (req: Request, res: Response) => {
+  res.json({ message: 'Subscriptions API is working', timestamp: new Date().toISOString() });
+});
+
 // Initialize Stripe
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('[Subscriptions] STRIPE_SECRET_KEY environment variable is not set');
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-06-30.basil',
 });
@@ -21,25 +30,25 @@ const STRIPE_PRICE_IDS = {
 // Plan configurations
 const PLAN_CONFIGS = {
   'starter-plan': {
-    name: 'Starter',
+    name: 'Essential',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 150,
     maxAiChats: 0, // Unlimited for all plans
-    priceCents: 1900
+    priceCents: 1000
   },
   'creator-plan': {
     name: 'Creator',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 400,
     maxAiChats: 0, // Unlimited for all plans
-    priceCents: 3900
+    priceCents: 2500
   },
   'pro-plan': {
     name: 'Pro',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 1000,
     maxAiChats: 0, // Unlimited for all plans
-    priceCents: 7900
+    priceCents: 7800
   },
   'enterprise-plan': {
     name: 'Enterprise',
@@ -53,13 +62,21 @@ const PLAN_CONFIGS = {
 // Create Stripe checkout session
 router.post('/create-checkout-session', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
+  console.log('[Subscriptions] Create checkout session called with:', req.body);
   try {
     const { planId } = req.body;
     const userId = authReq.user.id;
     const userEmail = authReq.user.email;
 
-    if (!planId || !STRIPE_PRICE_IDS[planId as keyof typeof STRIPE_PRICE_IDS]) {
-      return res.status(400).json({ error: 'Invalid plan ID' });
+    if (!planId) {
+      console.error('[Subscriptions] No planId provided in request body');
+      return res.status(400).json({ error: 'Plan ID is required' });
+    }
+
+    if (!STRIPE_PRICE_IDS[planId as keyof typeof STRIPE_PRICE_IDS]) {
+      console.error('[Subscriptions] Invalid planId provided:', planId);
+      console.error('[Subscriptions] Available plan IDs:', Object.keys(STRIPE_PRICE_IDS));
+      return res.status(400).json({ error: 'Invalid plan ID', availablePlans: Object.keys(STRIPE_PRICE_IDS) });
     }
 
     const priceId = STRIPE_PRICE_IDS[planId as keyof typeof STRIPE_PRICE_IDS];
@@ -110,13 +127,16 @@ router.post('/create-checkout-session', authenticate, async (req: Request, res: 
     });
 
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    res.status(500).json({ error: 'Failed to create checkout session' });
+    console.error('[Subscriptions] Error creating checkout session:', error);
+    res.status(500).json({ 
+      error: 'Failed to create checkout session',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
-// Handle Stripe webhooks
-router.post('/webhook', async (req: Request, res: Response) => {
+// Handle Stripe webhooks (needs raw body)
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
   const sig = req.headers['stripe-signature'] as string;
 
   let event;
