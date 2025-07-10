@@ -32,16 +32,29 @@ export default function PricingPage() {
   const [showAIFeatures, setShowAIFeatures] = useState(false);
   const [processingSubscription, setProcessingSubscription] = useState(false);
   
+  // Refresh credits data on mount and when returning from Stripe
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      const hasSuccess = url.searchParams.get('success');
-      const hasSession = url.searchParams.get('session_id');
-      if (hasSuccess || hasSession) {
-        refreshCredits();
+    const refreshData = async () => {
+      // Check if we're returning from Stripe
+      const urlParams = new URLSearchParams(window.location.search);
+      const success = urlParams.get('success');
+      
+      if (success === 'true') {
+        // Clear the URL parameters
+        window.history.replaceState({}, '', window.location.pathname);
       }
-    }
-  }, []);
+      
+      // Refresh credits data
+      await refreshCredits();
+    };
+
+    refreshData();
+  }, [refreshCredits]);
+
+  // Update current subscriptions when subscription type or max credits change
+  useEffect(() => {
+    setCurrentSubscriptions(getCurrentSubscriptions());
+  }, [subscriptionType, maxCredits]);
 
   // Dynamic subscription data based on current subscription type
   const getCurrentSubscriptions = () => {
@@ -398,7 +411,7 @@ export default function PricingPage() {
                 return (
                   <div 
                     key={plan.id} 
-                    className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     <div className="text-center mb-6">
                       <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h4>
@@ -414,25 +427,25 @@ export default function PricingPage() {
                       <div className="text-sm text-gray-500">per month</div>
                     </div>
 
-                    <div className="mb-6 space-y-3">
-                      {plan.features.slice(0, 4).map((feature, idx) => (
-                        <div key={idx} className="flex items-center text-sm text-gray-700">
-                          <svg className="w-4 h-4 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          {feature}
+                  <div className="mb-6 space-y-3">
+                    {plan.features.slice(0, 4).map((feature, idx) => (
+                      <div key={idx} className="flex items-center text-sm text-gray-700">
+                        <svg className="w-4 h-4 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                        {feature}
                         </div>
-                      ))}
-                    </div>
+                    ))}
+                  </div>
 
-                    <button
-                      onClick={() => handleSubscribe(plan.id)}
+                  <button
+                    onClick={() => handleSubscribe(plan.id)}
                       disabled={processingSubscription || disabled}
                       className={`w-full font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed 
                         ${disabled ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'}`}
-                    >
+                  >
                       {processingSubscription && !disabled ? 'Processing...' : label}
-                    </button>
+                  </button>
                   </div>
                 );
               })}
