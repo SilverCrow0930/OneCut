@@ -38,3 +38,9 @@ export function apiPath(path: string) {
     const clean = path.replace(/^\/+/, '')
     return `${API_URL}${API_PREFIX}/${clean}`
 }
+
+/**
+ * Stripe publishable key for client-side integration.
+ * Falls back to test key if env var isn't set.
+ */
+export const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51RiHZQRutXiJrhxtXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';

@@ -395,10 +395,16 @@ export default function PricingPage() {
 
                   <button
                     onClick={() => handleSubscribe(plan.id)}
-                    disabled={processingSubscription}
+                    disabled={processingSubscription || (currentSubscriptions.length > 0 && currentSubscriptions[0].credits === plan.credits)}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {processingSubscription ? 'Processing...' : `Start with ${plan.name}`}
+                    {processingSubscription ? 'Processing...' : 
+                      currentSubscriptions.length > 0 ? (
+                        currentSubscriptions[0].credits === plan.credits ? 
+                          'Current Plan' : 
+                          `Upgrade to ${plan.name}`
+                      ) : `Start with ${plan.name}`
+                    }
                   </button>
                 </div>
               ))}

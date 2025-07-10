@@ -124,13 +124,25 @@ router.post('/create-checkout-session', authenticate, async (req: Request, res: 
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.CLIENT_URL}/pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/pricing?cancelled=true`,
+      success_url: 'https://lemona.studio/pricing?success=true&session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://lemona.studio/pricing?cancelled=true',
+      allow_promotion_codes: true,
+      billing_address_collection: 'required',
       metadata: {
         userId: userId,
         planId: planId,
         planName: planConfig.name
+      },
+      customer_update: {
+        address: 'auto'
       }
+    });
+
+    console.log('[Subscriptions] Created checkout session:', {
+      sessionId: session.id,
+      url: session.url,
+      customerId: customer.id,
+      planId: planId
     });
 
     res.json({
