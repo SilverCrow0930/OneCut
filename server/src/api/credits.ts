@@ -4,6 +4,17 @@ import { supabase } from '../config/supabaseClient.js';
 
 const router = Router();
 
+// Health check endpoint
+router.get('/health', (req: Request, res: Response) => {
+  console.log('[Credits] Health check called');
+  res.json({ 
+    status: 'ok', 
+    message: 'Credits API is working',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV
+  });
+});
+
 // Get user's current credits and subscription info
 router.get('/', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;

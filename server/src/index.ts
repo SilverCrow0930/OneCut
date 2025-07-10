@@ -73,6 +73,34 @@ app.post('/api/ai/test-post', (req, res) => {
     });
 });
 
+// General server health check (no auth required)
+app.get('/health', (req, res) => {
+    console.log('[Server] General health check called');
+    res.json({
+        status: 'ok',
+        message: 'Server is running',
+        timestamp: new Date().toISOString(),
+        environment: NODE_ENV,
+        port: PORT,
+        corsOrigins: allowedOrigins,
+        routes: {
+            apiV1: '/api/v1/*',
+            ai: '/api/ai/*'
+        }
+    });
+});
+
+// API v1 health check (no auth required for debugging)
+app.get('/api/v1/health', (req, res) => {
+    console.log('[Server] API v1 health check called');
+    res.json({
+        status: 'ok',
+        message: 'API v1 is accessible',
+        timestamp: new Date().toISOString(),
+        note: 'This endpoint bypasses authentication for debugging'
+    });
+});
+
 // protect everything under /api
 app.use(
     '/api/v1',

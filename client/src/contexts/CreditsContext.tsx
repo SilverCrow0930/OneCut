@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { apiPath } from '@/lib/config';
 
 interface CreditsContextType {
   credits: number;
@@ -49,7 +50,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     
     try {
-      const response = await fetch('/api/v1/credits', {
+      const response = await fetch(apiPath('credits'), {
         headers: {
           'Authorization': `Bearer ${session?.access_token}`
         }
@@ -81,7 +82,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     }
     
     try {
-      const response = await fetch('/api/v1/credits/consume', {
+      const response = await fetch(apiPath('credits/consume'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

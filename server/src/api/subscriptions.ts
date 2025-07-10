@@ -5,6 +5,18 @@ import Stripe from 'stripe';
 
 const router = Router();
 
+// Health check endpoint
+router.get('/health', (req: Request, res: Response) => {
+  console.log('[Subscriptions] Health check called');
+  res.json({ 
+    status: 'ok', 
+    message: 'Subscriptions API is working',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    stripeConfigured: !!process.env.STRIPE_SECRET_KEY
+  });
+});
+
 // Test endpoint to verify routing works
 router.get('/test', (req: Request, res: Response) => {
   res.json({ message: 'Subscriptions API is working', timestamp: new Date().toISOString() });
@@ -21,36 +33,36 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // Stripe Price IDs - these should be environment variables
 const STRIPE_PRICE_IDS = {
-  'starter-plan': process.env.STRIPE_PRICE_STARTER || 'price_starter_plan',
-  'creator-plan': process.env.STRIPE_PRICE_CREATOR || 'price_creator_plan',
-  'pro-plan': process.env.STRIPE_PRICE_PRO || 'price_pro_plan',
-  'enterprise-plan': process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise_plan',
+  'price_1Rii7qRutXiJrhxtPbrjNV04': process.env.STRIPE_PRICE_STARTER || 'price_1Rii7qRutXiJrhxtPbrjNV04',
+  'price_1RiinCRutXiJrhxtgS1H7URs': process.env.STRIPE_PRICE_CREATOR || 'price_1RiinCRutXiJrhxtgS1H7URs',
+  'price_1RiimLRutXiJrhxtqRr9Iw2l': process.env.STRIPE_PRICE_PRO || 'price_1RiimLRutXiJrhxtqRr9Iw2l',
+  'price_1RiikLRutXiJrhxtK3hMbYB8': process.env.STRIPE_PRICE_ENTERPRISE || 'price_1RiikLRutXiJrhxtK3hMbYB8',
 };
 
 // Plan configurations
 const PLAN_CONFIGS = {
-  'starter-plan': {
+  'price_1Rii7qRutXiJrhxtPbrjNV04': {
     name: 'Essential',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 150,
     maxAiChats: 0, // Unlimited for all plans
     priceCents: 1000
   },
-  'creator-plan': {
+  'price_1RiinCRutXiJrhxtgS1H7URs': {
     name: 'Creator',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 400,
     maxAiChats: 0, // Unlimited for all plans
     priceCents: 2500
   },
-  'pro-plan': {
+  'price_1RiimLRutXiJrhxtqRr9Iw2l': {
     name: 'Pro',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 1000,
     maxAiChats: 0, // Unlimited for all plans
     priceCents: 7800
   },
-  'enterprise-plan': {
+  'price_1RiikLRutXiJrhxtK3hMbYB8': {
     name: 'Enterprise',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 2500,

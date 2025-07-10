@@ -5,6 +5,7 @@ import HomeNavbar from '@/components/home/HomeNavbar';
 import PieChart from '@/components/ui/PieChart';
 import { useCredits } from '@/contexts/CreditsContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiPath } from '@/lib/config';
 
 interface Plan {
   id: string;
@@ -71,7 +72,7 @@ export default function PricingPage() {
 
   const plans: Plan[] = [
     {
-      id: 'starter-plan',
+      id: 'price_1Rii7qRutXiJrhxtPbrjNV04', // Essential plan
       name: 'Essential',
       credits: 150,
       price: 10,
@@ -85,7 +86,7 @@ export default function PricingPage() {
       ]
     },
     {
-      id: 'creator-plan',
+      id: 'price_1RiinCRutXiJrhxtgS1H7URs', // Creator plan
       name: 'Creator',
       credits: 400,
       price: 25,
@@ -100,7 +101,7 @@ export default function PricingPage() {
       ]
     },
     {
-      id: 'pro-plan',
+      id: 'price_1RiimLRutXiJrhxtqRr9Iw2l', // Pro plan
       name: 'Pro',
       credits: 1000,
       price: 78,
@@ -114,7 +115,7 @@ export default function PricingPage() {
       ]
     },
     {
-      id: 'enterprise-plan',
+      id: 'price_1RiikLRutXiJrhxtK3hMbYB8', // Enterprise plan
       name: 'Enterprise',
       credits: 2500,
       price: 199,
@@ -182,7 +183,7 @@ export default function PricingPage() {
     if (!user || !session) return;
     
     try {
-      const response = await fetch('/api/v1/subscriptions/cancel', {
+      const response = await fetch(apiPath('subscriptions/cancel'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -218,7 +219,7 @@ export default function PricingPage() {
     setProcessingSubscription(true);
     
     try {
-      const response = await fetch('/api/v1/subscriptions/create-checkout-session', {
+      const response = await fetch(apiPath('subscriptions/create-checkout-session'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
