@@ -24,23 +24,21 @@ export const API_URL = (() => {
 })()
 
 /**
- * Prefix for all your versioned API routes.
- */
-const API_PREFIX = '/api/v1'
-
-/**
- * Build a full API URL for the given path:
- *   apiPath('projects')   → 'http://localhost:8080/api/v1/projects'
- *   apiPath('/auth/me')   → 'http://localhost:8080/api/v1/auth/me'
+ * Helper function to construct API paths
  */
 export function apiPath(path: string) {
-    // strip leading slashes from `path`, then join
-    const clean = path.replace(/^\/+/, '')
-    return `${API_URL}${API_PREFIX}/${clean}`
+    return `${API_URL}/api/${path}`;
 }
 
 /**
  * Stripe publishable key for client-side integration.
- * Falls back to test key if env var isn't set.
+ * This must be set in production environment.
  */
-export const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51RiHZQRutXiJrhxtXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+export const STRIPE_PUBLISHABLE_KEY = (() => {
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!key) {
+        console.error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set. Stripe integration will not work.');
+        return '';
+    }
+    return key;
+})();
