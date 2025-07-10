@@ -19,10 +19,27 @@ router.get('/health', (req: Request, res: Response) => {
 router.get('/', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   try {
-    const userId = authReq.user.id;
-    console.log('[Credits API] Fetching data for user:', userId);
+    const authId = authReq.user.id; // This is the Supabase Auth ID
+    console.log('[Credits API] Fetching data for auth ID:', authId);
 
-    // Get user's subscription and credits from database
+    // First, get the internal database user ID from the auth ID
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authId)
+      .single();
+
+    console.log('[Credits API] User lookup result:', { userRecord, error: userError });
+
+    if (userError || !userRecord) {
+      console.error('[Credits API] User not found in database for auth ID:', authId);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userId = userRecord.id; // This is the internal database user ID
+    console.log('[Credits API] Using internal user ID:', userId);
+
+    // Get user's subscription and credits from database using internal user ID
     const { data: subscription, error: subError } = await supabase
       .from('user_subscriptions')
       .select('*')
@@ -36,7 +53,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       throw subError;
     }
 
-    // Get current credits usage
+    // Get current credits usage using internal user ID
     const { data: credits, error: creditsError } = await supabase
       .from('user_credits')
       .select('*')
@@ -91,12 +108,25 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 router.post('/consume', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   try {
-    const userId = authReq.user.id;
+    const authId = authReq.user.id;
     const { amount, featureName } = req.body;
 
     if (!amount || !featureName) {
       return res.status(400).json({ error: 'Amount and feature name are required' });
     }
+
+    // Get the internal database user ID from the auth ID
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authId)
+      .single();
+
+    if (userError || !userRecord) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userId = userRecord.id;
 
     // Get current credits
     const { data: credits, error: creditsError } = await supabase
@@ -164,7 +194,20 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
 router.post('/consume-chat', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   try {
-    const userId = authReq.user.id;
+    const authId = authReq.user.id;
+
+    // Get the internal database user ID from the auth ID
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authId)
+      .single();
+
+    if (userError || !userRecord) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userId = userRecord.id;
 
     // Get current credits
     const { data: credits, error: creditsError } = await supabase
@@ -229,7 +272,20 @@ router.post('/consume-chat', authenticate, async (req: Request, res: Response) =
 router.post('/reset', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   try {
-    const userId = authReq.user.id;
+    const authId = authReq.user.id;
+
+    // Get the internal database user ID from the auth ID
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authId)
+      .single();
+
+    if (userError || !userRecord) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userId = userRecord.id;
 
     // Get user's subscription
     const { data: subscription, error: subError } = await supabase

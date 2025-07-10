@@ -226,14 +226,28 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
 
 // Handle successful checkout
 async function handleCheckoutCompleted(session: any) {
-  const userId = session.metadata?.userId;
+  const authId = session.metadata?.userId; // This is the Supabase Auth ID
   const planId = session.metadata?.planId;
   const planConfig = PLAN_CONFIGS[planId as keyof typeof PLAN_CONFIGS];
 
-  if (!userId || !planId || !planConfig) {
+  if (!authId || !planId || !planConfig) {
     console.error('Missing required metadata in checkout session');
     return;
   }
+
+  // Get the internal database user ID from the auth ID
+  const { data: userRecord, error: userError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('auth_id', authId)
+    .single();
+
+  if (userError || !userRecord) {
+    console.error('User not found in database for auth ID:', authId);
+    return;
+  }
+
+  const userId = userRecord.id; // This is the internal database user ID
 
   // Get the subscription from Stripe
   const subscription = await stripe.subscriptions.retrieve(session.subscription as string) as any;
@@ -353,7 +367,20 @@ async function handlePaymentFailed(invoice: any) {
 router.post('/cancel', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   try {
-    const userId = authReq.user.id;
+    const authId = authReq.user.id;
+
+    // Get the internal database user ID from the auth ID
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authId)
+      .single();
+
+    if (userError || !userRecord) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userId = userRecord.id;
 
     // Get user's active subscription
     const { data: subscription, error: subError } = await supabase

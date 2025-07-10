@@ -24,7 +24,7 @@ interface CreditsContextType {
 const CreditsContext = createContext<CreditsContextType | undefined>(undefined);
 
 export function CreditsProvider({ children }: { children: React.ReactNode }) {
-  const { user, session, profile } = useAuth();
+  const { user, session } = useAuth();
   const [credits, setCredits] = useState(0);
   const [maxCredits, setMaxCredits] = useState(0);
   const [subscriptionType, setSubscriptionType] = useState<'editor-plus-credits' | null>(null);
@@ -47,13 +47,13 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch user's current credits and subscription
   const fetchCreditsData = async () => {
-    if (!user || !profile) {
-      console.log('[CreditsContext] No user or profile, skipping fetch');
+    if (!user) {
+      console.log('[CreditsContext] No user, skipping fetch');
       return;
     }
     
     try {
-      console.log('[CreditsContext] Fetching credits data for user:', profile.id);
+      console.log('[CreditsContext] Fetching credits data for user:', user.id);
       const response = await fetch(apiPath('credits'), {
         headers: {
           'Authorization': `Bearer ${session?.access_token}`,
@@ -92,7 +92,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Consume credits for AI features
   const consumeCredits = async (amount: number, featureName: string): Promise<boolean> => {
-    if (!user || !profile) return false;
+    if (!user) return false;
     
     // Check if user has enough credits
     if (credits < amount) {
@@ -110,7 +110,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({
           amount,
           featureName,
-          userId: profile.id // Use profile.id instead of user.id
+          userId: user.id
         })
       });
       
@@ -132,7 +132,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Consume AI assistant chat (unlimited for all plans now)
   const consumeAiChat = async (): Promise<boolean> => {
-    if (!user || !profile) return false;
+    if (!user) return false;
     
     // All plans now have unlimited AI assistant chats
     // No need to track consumption for AI assistant anymore
@@ -157,7 +157,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchCreditsData();
-  }, [user, profile]); // Add profile to dependencies
+  }, [user]);
 
   const value = {
     credits,
