@@ -273,6 +273,17 @@ export default function PricingPage() {
 
   const creditPercentage = (currentCredits / maxCredits) * 100;
 
+  const getPlanButtonState = (plan: Plan) => {
+    if (!subscriptionType || !maxCredits) return { label: `Start with ${plan.name}`, disabled: false };
+    if (plan.credits === maxCredits) {
+      return { label: 'Current Plan', disabled: true };
+    } else if (plan.credits > maxCredits) {
+      return { label: `Upgrade to ${plan.name}`, disabled: false };
+    } else {
+      return { label: `Switch to ${plan.name}`, disabled: false };
+    }
+  };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
             <HomeNavbar />
@@ -371,10 +382,12 @@ export default function PricingPage() {
               )}
               
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-[95%] mx-auto">
-              {plans.map((plan) => (
+              {plans.map((plan) => {
+                const { label, disabled } = getPlanButtonState(plan);
+                return (
                   <div 
                     key={plan.id} 
-                  className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     <div className="text-center mb-6">
                       <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h4>
@@ -390,26 +403,28 @@ export default function PricingPage() {
                       <div className="text-sm text-gray-500">per month</div>
                     </div>
 
-                  <div className="mb-6 space-y-3">
-                    {plan.features.slice(0, 4).map((feature, idx) => (
-                      <div key={idx} className="flex items-center text-sm text-gray-700">
-                        <svg className="w-4 h-4 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                        {feature}
+                    <div className="mb-6 space-y-3">
+                      {plan.features.slice(0, 4).map((feature, idx) => (
+                        <div key={idx} className="flex items-center text-sm text-gray-700">
+                          <svg className="w-4 h-4 text-blue-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          {feature}
                         </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
 
-                  <button
-                    onClick={() => handleSubscribe(plan.id)}
-                    disabled={processingSubscription}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {processingSubscription ? 'Processing...' : `Start with ${plan.name}`}
-                  </button>
-                </div>
-              ))}
+                    <button
+                      onClick={() => handleSubscribe(plan.id)}
+                      disabled={processingSubscription || disabled}
+                      className={`w-full font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed 
+                        ${disabled ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white'}`}
+                    >
+                      {processingSubscription && !disabled ? 'Processing...' : label}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
             </div>
 
