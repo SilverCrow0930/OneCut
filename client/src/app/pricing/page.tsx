@@ -182,7 +182,7 @@ export default function PricingPage() {
     if (!user || !session) return;
     
     try {
-      const response = await fetch('/api/subscriptions/cancel', {
+      const response = await fetch('/api/v1/subscriptions/cancel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,7 +214,7 @@ export default function PricingPage() {
     setProcessingSubscription(true);
     
     try {
-      const response = await fetch('/api/subscriptions/create-checkout-session', {
+      const response = await fetch('/api/v1/subscriptions/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

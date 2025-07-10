@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAssets } from '@/contexts/AssetsContext'
 import { useEditor } from '@/contexts/EditorContext'
 import { useParams } from 'next/navigation'
-import { apiPath } from '@/lib/config'
+import { apiPath, API_URL } from '@/lib/config'
 import { addAssetToTrack } from '@/lib/editor/utils'
 
 interface GenerationType {
@@ -123,8 +123,8 @@ const AIGenerationToolPanel = () => {
 
             console.log(`🎨 Generating ${activeTab} with Fal.ai:`, requestBody)
 
-            // Call your backend API that will handle Fal.ai integration
-            const response = await fetch(apiPath('ai/generate'), {
+            // Call your backend AI API that will handle Fal.ai integration
+            const response = await fetch(`${API_URL}/api/ai/generate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
