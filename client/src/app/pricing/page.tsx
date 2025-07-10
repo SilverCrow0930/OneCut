@@ -301,7 +301,7 @@ export default function PricingPage() {
           {/* Choose a Plan */}
             <div>
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-blue-500 to-emerald-600 bg-clip-text text-transparent mb-4 animate-gradient-x">
+              <h2 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-emerald-500 via-cyan-400 via-blue-500 to-emerald-600 bg-clip-text text-transparent mb-4 animate-gradient-x">
                 Choose Your Plan
               </h2>
               <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-6">
@@ -384,7 +384,7 @@ export default function PricingPage() {
                 {/* User Testimonials */}
         <div className="mt-24 mb-16">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-blue-500 to-emerald-600 bg-clip-text text-transparent mb-4 animate-gradient-x">
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-emerald-500 via-cyan-400 via-blue-500 to-emerald-600 bg-clip-text text-transparent mb-4 animate-gradient-x">
               What Our Users Say
             </h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
