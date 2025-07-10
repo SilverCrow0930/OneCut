@@ -67,18 +67,19 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
         
         // Log state updates
         console.log('[CreditsContext] Updating state with:', {
-          currentCredits: data.currentCredits,
+          credits: data.currentCredits,
           maxCredits: data.maxCredits,
           subscriptionType: data.subscriptionType,
           aiAssistantChats: data.aiAssistantChats,
           maxAiAssistantChats: data.maxAiAssistantChats
         });
         
-        setCredits(data.currentCredits);
-        setMaxCredits(data.maxCredits);
+        // Update state with the received data
+        setCredits(data.currentCredits || 0);
+        setMaxCredits(data.maxCredits || 0);
         setSubscriptionType(data.subscriptionType);
-        setAiAssistantChats(data.aiAssistantChats);
-        setMaxAiAssistantChats(data.maxAiAssistantChats);
+        setAiAssistantChats(data.aiAssistantChats || 0);
+        setMaxAiAssistantChats(data.maxAiAssistantChats || 0);
       } else {
         const errorText = await response.text();
         console.error('[CreditsContext] Failed to fetch credits. Status:', response.status, 'Error:', errorText);
