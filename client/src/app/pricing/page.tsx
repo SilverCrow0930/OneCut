@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import PieChart from '@/components/ui/PieChart';
 import { useCredits } from '@/contexts/CreditsContext';
@@ -25,13 +25,24 @@ interface CartItem {
 
 export default function PricingPage() {
   // Real credits data from context
-  const { credits: currentCredits, maxCredits, subscriptionType, aiAssistantChats, maxAiAssistantChats, isLoading } = useCredits();
+  const { credits: currentCredits, maxCredits, subscriptionType, aiAssistantChats, maxAiAssistantChats, isLoading, refreshCredits } = useCredits();
   const { user, session } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showEditorFeatures, setShowEditorFeatures] = useState(false);
   const [showAIFeatures, setShowAIFeatures] = useState(false);
   const [processingSubscription, setProcessingSubscription] = useState(false);
   
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      const hasSuccess = url.searchParams.get('success');
+      const hasSession = url.searchParams.get('session_id');
+      if (hasSuccess || hasSession) {
+        refreshCredits();
+      }
+    }
+  }, []);
+
   // Dynamic subscription data based on current subscription type
   const getCurrentSubscriptions = () => {
     const subscriptions = [];
