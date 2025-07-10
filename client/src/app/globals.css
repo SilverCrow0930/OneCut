@@ -2,7 +2,7 @@
 
 @layer base {
     button {
-        @apply cursor-pointer;
+        cursor: pointer;
     }
 }
 
@@ -180,6 +180,17 @@
     }
 }
 
+@keyframes gradient-x {
+    0%, 100% {
+        background-size: 200% 200%;
+        background-position: left center;
+    }
+    50% {
+        background-size: 200% 200%;
+        background-position: right center;
+    }
+}
+
 /* Animation utility classes */
 .animate-fadeIn {
     animation: fadeIn 0.3s ease-out forwards;
@@ -216,6 +227,10 @@
             transparent 100%);
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
+}
+
+.animate-gradient-x {
+    animation: gradient-x 3s ease-in-out infinite;
 }
 
 @keyframes spin {

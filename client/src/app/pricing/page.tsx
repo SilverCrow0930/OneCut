@@ -40,7 +40,7 @@ export default function PricingPage() {
       let price = 19;
       
       if (maxCredits === 150) {
-        planName = 'Starter';
+        planName = 'Essential';
         price = 10;
       } else if (maxCredits === 400) {
         planName = 'Creator';
@@ -71,8 +71,8 @@ export default function PricingPage() {
 
   const plans: Plan[] = [
     {
-      id: 'starter-plan',
-      name: 'Starter',
+      id: 'essential-plan',
+      name: 'Essential',
       credits: 150,
       price: 10,
       description: 'Perfect for beginners',
@@ -301,7 +301,7 @@ export default function PricingPage() {
           {/* Choose a Plan */}
             <div>
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+              <h2 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-blue-500 to-emerald-600 bg-clip-text text-transparent mb-4 animate-gradient-x">
                 Choose Your Plan
               </h2>
               <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-6">
@@ -311,7 +311,7 @@ export default function PricingPage() {
                   onClick={() => setShowAIFeatures(!showAIFeatures)}
                   className="inline-flex items-center px-4 py-2 bg-white/70 backdrop-blur-sm rounded-full border border-white/30 text-blue-600 hover:text-blue-700 font-medium text-sm transition-all duration-200 hover:bg-white/80 shadow-md"
                 >
-                  {showAIFeatures ? 'Hide' : 'Show'} AI features & credits
+                  {showAIFeatures ? 'Hide' : 'Show'} AI features & cost
                   <svg className={`w-4 h-4 ml-2 transition-transform ${showAIFeatures ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -321,10 +321,7 @@ export default function PricingPage() {
               {/* AI Features Expandable Section */}
               {showAIFeatures && (
                 <div className="mb-12 p-6 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-2xl border border-blue-100/50 backdrop-blur-sm">
-                  <div className="text-center mb-6">
-                    <h4 className="text-xl font-semibold text-gray-900 mb-2">What you can do with AI credits</h4>
-                    <p className="text-sm text-gray-600">Credits reset monthly, so you always have fresh AI power to work with</p>
-                  </div>
+
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
                     {aiFeatures.map((feature, idx) => (
                       <div key={idx} className="flex items-center justify-between p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40 hover:bg-white/70 transition-all duration-200">
@@ -388,11 +385,11 @@ export default function PricingPage() {
                 {/* User Testimonials */}
         <div className="mt-24 mb-16">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-blue-500 to-emerald-600 bg-clip-text text-transparent mb-4 animate-gradient-x">
               What Our Users Say
             </h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Join thousands of creators who are already using Lemona to create amazing content
+              Join thousands of creators who are already using Lemona
             </p>
           </div>
 
