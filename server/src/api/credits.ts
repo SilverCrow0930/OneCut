@@ -30,8 +30,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       .eq('status', 'active')
       .single();
 
-    console.log('[Credits API] Raw subscription data:', subscription);
-    console.log('[Credits API] Subscription query error:', subError);
+    console.log('[Credits API] Subscription query result:', { subscription, error: subError });
 
     if (subError && subError.code !== 'PGRST116') {
       throw subError;
@@ -44,8 +43,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       .eq('user_id', userId)
       .single();
 
-    console.log('[Credits API] Raw credits data:', credits);
-    console.log('[Credits API] Credits query error:', creditsError);
+    console.log('[Credits API] Credits query result:', { credits, error: creditsError });
 
     if (creditsError && creditsError.code !== 'PGRST116') {
       throw creditsError;
@@ -62,13 +60,13 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       subscriptionType = subscription.subscription_type;
       maxCredits = subscription.max_credits || 0;
       maxAiAssistantChats = subscription.max_ai_chats || 0;
-      console.log('[Credits API] Extracted subscription data:', { subscriptionType, maxCredits, maxAiAssistantChats });
+      console.log('[Credits API] Using subscription data:', { subscriptionType, maxCredits, maxAiAssistantChats });
     }
 
     if (credits) {
       currentCredits = credits.current_credits || 0;
       aiAssistantChats = credits.ai_assistant_chats || 0;
-      console.log('[Credits API] Extracted credits data:', { currentCredits, aiAssistantChats });
+      console.log('[Credits API] Using credits data:', { currentCredits, aiAssistantChats });
     }
 
     const response = {
@@ -84,7 +82,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     res.json(response);
 
   } catch (error) {
-    console.error('[Credits API] Error fetching credits:', error);
+    console.error('Error fetching credits:', error);
     res.status(500).json({ error: 'Failed to fetch credits' });
   }
 });

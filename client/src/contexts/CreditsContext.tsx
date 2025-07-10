@@ -24,7 +24,7 @@ interface CreditsContextType {
 const CreditsContext = createContext<CreditsContextType | undefined>(undefined);
 
 export function CreditsProvider({ children }: { children: React.ReactNode }) {
-  const { user, session } = useAuth();
+  const { user, session, profile } = useAuth();
   const [credits, setCredits] = useState(0);
   const [maxCredits, setMaxCredits] = useState(0);
   const [subscriptionType, setSubscriptionType] = useState<'editor-plus-credits' | null>(null);
@@ -47,13 +47,13 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch user's current credits and subscription
   const fetchCreditsData = async () => {
-    if (!user) {
-      console.log('[CreditsContext] No user, skipping fetch');
+    if (!user || !profile) {
+      console.log('[CreditsContext] No user or profile, skipping fetch');
       return;
     }
     
     try {
-      console.log('[CreditsContext] Fetching credits data for user:', user.id);
+      console.log('[CreditsContext] Fetching credits data for user:', profile.id);
       const response = await fetch(apiPath('credits'), {
         headers: {
           'Authorization': `Bearer ${session?.access_token}`,
@@ -67,19 +67,18 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
         
         // Log state updates
         console.log('[CreditsContext] Updating state with:', {
-          credits: data.currentCredits,
+          currentCredits: data.currentCredits,
           maxCredits: data.maxCredits,
           subscriptionType: data.subscriptionType,
           aiAssistantChats: data.aiAssistantChats,
           maxAiAssistantChats: data.maxAiAssistantChats
         });
         
-        // Update state with the received data
-        setCredits(data.currentCredits || 0);
-        setMaxCredits(data.maxCredits || 0);
+        setCredits(data.currentCredits);
+        setMaxCredits(data.maxCredits);
         setSubscriptionType(data.subscriptionType);
-        setAiAssistantChats(data.aiAssistantChats || 0);
-        setMaxAiAssistantChats(data.maxAiAssistantChats || 0);
+        setAiAssistantChats(data.aiAssistantChats);
+        setMaxAiAssistantChats(data.maxAiAssistantChats);
       } else {
         const errorText = await response.text();
         console.error('[CreditsContext] Failed to fetch credits. Status:', response.status, 'Error:', errorText);
@@ -93,7 +92,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Consume credits for AI features
   const consumeCredits = async (amount: number, featureName: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!user || !profile) return false;
     
     // Check if user has enough credits
     if (credits < amount) {
@@ -111,7 +110,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({
           amount,
           featureName,
-          userId: user.id
+          userId: profile.id // Use profile.id instead of user.id
         })
       });
       
@@ -133,7 +132,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Consume AI assistant chat (unlimited for all plans now)
   const consumeAiChat = async (): Promise<boolean> => {
-    if (!user) return false;
+    if (!user || !profile) return false;
     
     // All plans now have unlimited AI assistant chats
     // No need to track consumption for AI assistant anymore
@@ -158,7 +157,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchCreditsData();
-  }, [user]);
+  }, [user, profile]); // Add profile to dependencies
 
   const value = {
     credits,
