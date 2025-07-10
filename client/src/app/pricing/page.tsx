@@ -45,10 +45,7 @@ export default function PricingPage() {
       let planName = 'Lemona Plan';
       let price = 19;
       
-      if (maxCredits === 500) {
-        planName = 'Test';
-        price = 1;
-      } else if (maxCredits === 150) {
+      if (maxCredits === 150) {
         planName = 'Essential';
         price = 10;
       } else if (maxCredits === 400) {
@@ -79,21 +76,6 @@ export default function PricingPage() {
   const [currentSubscriptions, setCurrentSubscriptions] = useState(getCurrentSubscriptions());
 
   const plans: Plan[] = [
-    {
-      id: 'price_1RjQXlRutXiJrhxtcaqvp5rb', // Test plan
-      name: 'Test',
-      credits: 500,
-      price: 1,
-      description: 'Try out our AI features',
-      type: 'credits',
-      features: [
-        'Complete Video Editor',
-        '500 AI Credits',
-        'Unlimited AI Assistant',
-        'Basic Support',
-        'Export up to 720p'
-      ]
-    },
     {
       id: 'price_1Rii7qRutXiJrhxtPbrjNV04', // Essential plan
       name: 'Essential',
@@ -425,16 +407,10 @@ export default function PricingPage() {
 
                   <button
                     onClick={() => handleSubscribe(plan.id)}
-                    disabled={processingSubscription || (currentSubscriptions.length > 0 && currentSubscriptions[0].credits === plan.credits)}
+                    disabled={processingSubscription}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {processingSubscription ? 'Processing...' : 
-                      currentSubscriptions.length > 0 ? (
-                        currentSubscriptions[0].credits === plan.credits ? 
-                          'Current Plan' : 
-                          `Upgrade to ${plan.name}`
-                      ) : `Start with ${plan.name}`
-                    }
+                    {processingSubscription ? 'Processing...' : `Start with ${plan.name}`}
                   </button>
                 </div>
               ))}
@@ -590,10 +566,10 @@ export default function PricingPage() {
                 ))}
               </div>
             </div>
-            </div>
-            </div>
+          </div>
         </div>
+      </div>
       </main>
-        </div>
-    );
+    </div>
+  );
 } 

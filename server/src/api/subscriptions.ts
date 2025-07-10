@@ -33,7 +33,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // Stripe Price IDs - these should be environment variables
 const STRIPE_PRICE_IDS = {
-  'price_1RjQXlRutXiJrhxtcaqvp5rb': process.env.STRIPE_PRICE_TEST || 'price_1RjQXlRutXiJrhxtcaqvp5rb',
   'price_1Rii7qRutXiJrhxtPbrjNV04': process.env.STRIPE_PRICE_STARTER || 'price_1Rii7qRutXiJrhxtPbrjNV04',
   'price_1RiinCRutXiJrhxtgS1H7URs': process.env.STRIPE_PRICE_CREATOR || 'price_1RiinCRutXiJrhxtgS1H7URs',
   'price_1RiimLRutXiJrhxtqRr9Iw2l': process.env.STRIPE_PRICE_PRO || 'price_1RiimLRutXiJrhxtqRr9Iw2l',
@@ -42,13 +41,6 @@ const STRIPE_PRICE_IDS = {
 
 // Plan configurations
 const PLAN_CONFIGS = {
-  'price_1RjQXlRutXiJrhxtcaqvp5rb': {
-    name: 'Test',
-    subscriptionType: 'editor-plus-credits',
-    maxCredits: 500,
-    maxAiChats: 0, // Unlimited for all plans
-    priceCents: 100
-  },
   'price_1Rii7qRutXiJrhxtPbrjNV04': {
     name: 'Essential',
     subscriptionType: 'editor-plus-credits',
