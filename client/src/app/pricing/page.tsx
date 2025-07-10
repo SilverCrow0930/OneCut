@@ -1,11 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import PieChart from '@/components/ui/PieChart';
 import { useCredits } from '@/contexts/CreditsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiPath } from '@/lib/config';
+import { loadStripe } from '@stripe/stripe-js';
+import { STRIPE_PUBLISHABLE_KEY } from '@/lib/config';
+
+// Initialize Stripe outside component to avoid multiple instances
+const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 
 interface Plan {
   id: string;
@@ -40,7 +45,10 @@ export default function PricingPage() {
       let planName = 'Lemona Plan';
       let price = 19;
       
-      if (maxCredits === 150) {
+      if (maxCredits === 500) {
+        planName = 'Test';
+        price = 1;
+      } else if (maxCredits === 150) {
         planName = 'Essential';
         price = 10;
       } else if (maxCredits === 400) {
@@ -71,6 +79,21 @@ export default function PricingPage() {
   const [currentSubscriptions, setCurrentSubscriptions] = useState(getCurrentSubscriptions());
 
   const plans: Plan[] = [
+    {
+      id: 'price_1RjQXlRutXiJrhxtcaqvp5rb', // Test plan
+      name: 'Test',
+      credits: 500,
+      price: 1,
+      description: 'Try out our AI features',
+      type: 'credits',
+      features: [
+        'Complete Video Editor',
+        '500 AI Credits',
+        'Unlimited AI Assistant',
+        'Basic Support',
+        'Export up to 720p'
+      ]
+    },
     {
       id: 'price_1Rii7qRutXiJrhxtPbrjNV04', // Essential plan
       name: 'Essential',
@@ -212,13 +235,15 @@ export default function PricingPage() {
       return;
     }
     
-    console.log('[Client] Starting subscription for plan:', planId);
-    console.log('[Client] User:', user.id);
-    console.log('[Client] Session token exists:', !!session.access_token);
-    
     setProcessingSubscription(true);
     
     try {
+      // Load Stripe instance
+      const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error('Failed to load Stripe');
+      }
+
       const response = await fetch(apiPath('subscriptions/create-checkout-session'), {
         method: 'POST',
         headers: {
@@ -228,33 +253,38 @@ export default function PricingPage() {
         body: JSON.stringify({ planId })
       });
       
-      console.log('[Client] Response status:', response.status);
-      console.log('[Client] Response headers:', Object.fromEntries(response.headers.entries()));
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[Client] Success response:', data);
-        if (data.url) {
-          window.location.href = data.url;
-        } else {
-          console.error('[Client] No URL in response:', data);
-          alert('No checkout URL received. Please try again.');
-        }
-      } else {
+      if (!response.ok) {
         const errorText = await response.text();
-        console.error('[Client] Error response status:', response.status);
-        console.error('[Client] Error response text:', errorText);
+        let errorMessage = 'Failed to start subscription process';
         
-        let errorData;
         try {
-          errorData = JSON.parse(errorText);
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
         } catch (e) {
-          errorData = { error: errorText };
+          console.error('[Client] Error parsing error response:', e);
         }
         
-        console.error('[Client] Parsed error data:', errorData);
-        alert(`Failed to start subscription process: ${errorData.error || 'Unknown error'}`);
+        alert(errorMessage);
+        return;
       }
+
+      const data = await response.json();
+      
+      if (!data.url) {
+        alert('No checkout URL received. Please try again.');
+        return;
+      }
+
+      // Redirect to Stripe Checkout
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId
+      });
+
+      if (error) {
+        console.error('[Client] Stripe redirect error:', error);
+        alert(error.message);
+      }
+      
     } catch (error) {
       console.error('[Client] Network error:', error);
       alert('Network error occurred. Please check your connection and try again.');
@@ -560,10 +590,10 @@ export default function PricingPage() {
                 ))}
               </div>
             </div>
-          </div>
+            </div>
+            </div>
         </div>
-      </div>
       </main>
-    </div>
-  );
+        </div>
+    );
 } 
