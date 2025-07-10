@@ -130,15 +130,15 @@ export default function PricingPage() {
   ];
 
   const aiFeatures = [
-    { name: 'AI Assistant Chat', cost: 1, description: 'Chat with AI assistant (unlimited with Editor Suite)' },
-    { name: 'Smart Cut', cost: 20, description: 'AI-powered video editing with automatic cuts' },
-    { name: 'AI Voiceover', cost: 5, description: 'Natural voice generation per minute' },
-    { name: 'Auto Captions', cost: 8, description: 'Automatic caption generation per video' },
-    { name: 'AI Images', cost: 3, description: 'AI-generated images and graphics' },
-    { name: 'Video Generation', cost: 30, description: 'AI video clips (5-second)' },
-    { name: 'Background Removal', cost: 12, description: 'AI background replacement per video' },
-    { name: 'Style Transfer', cost: 15, description: 'Apply artistic styles to videos' },
-    { name: 'Audio Enhancement', cost: 6, description: 'AI audio cleanup and enhancement per video' }
+    { name: 'AI Assistant Chat', cost: 1 },
+    { name: 'Smart Cut', cost: 20 },
+    { name: 'AI Voiceover', cost: 5 },
+    { name: 'Auto Captions', cost: 8 },
+    { name: 'AI Images', cost: 3 },
+    { name: 'Video Generation', cost: 30 },
+    { name: 'Background Removal', cost: 12 },
+    { name: 'Style Transfer', cost: 15 },
+    { name: 'Audio Enhancement', cost: 6 }
   ];
 
   const addToCart = (plan: Plan) => {
@@ -327,7 +327,6 @@ export default function PricingPage() {
                       <div key={idx} className="flex items-center justify-between p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40 hover:bg-white/70 transition-all duration-200">
                         <div className="flex-1">
                           <h5 className="font-medium text-gray-900 text-sm">{feature.name}</h5>
-                          <p className="text-xs text-gray-500 mt-1">{feature.description}</p>
                         </div>
                         <div className="ml-3 text-right">
                           <div className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{feature.cost}</div>
