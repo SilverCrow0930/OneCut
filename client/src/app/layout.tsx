@@ -2,7 +2,6 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Providers } from "./providers";
 import { Poppins } from "next/font/google";
-import StripeScript from '@/components/common/StripeScript';
 
 const poppins = Poppins({
   weight: ['400', '500', '600', '700'],
@@ -21,9 +20,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <StripeScript />
-      </head>
       <body
         className={`antialiased ${poppins.className}`}
       >

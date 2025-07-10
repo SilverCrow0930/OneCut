@@ -18,22 +18,23 @@ export const API_URL = (() => {
             return 'https://lemona-app.onrender.com';
         }
     } else {
-        // Server-side: default to production URL
+        // Server-side: default to production
         return 'https://lemona-app.onrender.com';
     }
-})();
+})()
 
 /**
- * Helper function to construct API paths
+ * Prefix for all your versioned API routes.
+ */
+const API_PREFIX = '/api/v1'
+
+/**
+ * Build a full API URL for the given path:
+ *   apiPath('projects')   → 'http://localhost:8080/api/v1/projects'
+ *   apiPath('/auth/me')   → 'http://localhost:8080/api/v1/auth/me'
  */
 export function apiPath(path: string) {
-    return `${API_URL}/api/${path}`;
+    // strip leading slashes from `path`, then join
+    const clean = path.replace(/^\/+/, '')
+    return `${API_URL}${API_PREFIX}/${clean}`
 }
-
-/**
- * Stripe publishable key for payment processing.
- * Uses live key in production, test key in development.
- */
-export const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51Qi6xuRutXiJrhxtfHUC3V4q2p3wUG3qTYh6SSPzae2E3BCMIN9Do0OqoEcfmqmMosGy5vpRkIj7a5rjihbNEdUf00iShGD6bJ';
-
-// Add other configuration variables here

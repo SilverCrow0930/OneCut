@@ -1,16 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import HomeNavbar from '@/components/home/HomeNavbar';
 import PieChart from '@/components/ui/PieChart';
 import { useCredits } from '@/contexts/CreditsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiPath } from '@/lib/config';
-import { loadStripe } from '@stripe/stripe-js';
-import { STRIPE_PUBLISHABLE_KEY } from '@/lib/config';
-
-// Initialize Stripe outside component to avoid multiple instances
-const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 
 interface Plan {
   id: string;
@@ -220,12 +215,6 @@ export default function PricingPage() {
     setProcessingSubscription(true);
     
     try {
-      // Load Stripe instance
-      const stripe = await stripePromise;
-      if (!stripe) {
-        throw new Error('Failed to load Stripe');
-      }
-
       const response = await fetch(apiPath('subscriptions/create-checkout-session'), {
         method: 'POST',
         headers: {
@@ -258,14 +247,7 @@ export default function PricingPage() {
       }
 
       // Redirect to Stripe Checkout
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: data.sessionId
-      });
-
-      if (error) {
-        console.error('[Client] Stripe redirect error:', error);
-        alert(error.message);
-      }
+      window.location.href = data.url;
       
     } catch (error) {
       console.error('[Client] Network error:', error);
@@ -566,10 +548,10 @@ export default function PricingPage() {
                 ))}
               </div>
             </div>
-          </div>
+            </div>
+            </div>
         </div>
-      </div>
       </main>
-    </div>
-  );
+        </div>
+    );
 } 
