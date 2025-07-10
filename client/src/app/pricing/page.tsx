@@ -86,6 +86,20 @@ export default function PricingPage() {
       ]
     },
     {
+      id: 'price_1RjQX1RutXiJrhxtK3hMbYB8', // Test plan
+      name: 'Test',
+      credits: 500,
+      price: 1,
+      description: 'Limited time experimental access',
+      type: 'credits',
+      features: [
+        'Complete Video Editor',
+        '500 AI Credits',
+        'Unlimited AI Assistant',
+        'Early Access Features'
+      ]
+    },
+    {
       id: 'price_1RiinCRutXiJrhxtgS1H7URs', // Creator plan
       name: 'Creator',
       credits: 400,
