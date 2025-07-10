@@ -20,6 +20,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   try {
     const userId = authReq.user.id;
+    console.log('[Credits API] Fetching data for user:', userId);
 
     // Get user's subscription and credits from database
     const { data: subscription, error: subError } = await supabase
@@ -28,6 +29,8 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       .eq('user_id', userId)
       .eq('status', 'active')
       .single();
+
+    console.log('[Credits API] Subscription query result:', { subscription, error: subError });
 
     if (subError && subError.code !== 'PGRST116') {
       throw subError;
@@ -39,6 +42,8 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       .select('*')
       .eq('user_id', userId)
       .single();
+
+    console.log('[Credits API] Credits query result:', { credits, error: creditsError });
 
     if (creditsError && creditsError.code !== 'PGRST116') {
       throw creditsError;
@@ -55,21 +60,26 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       subscriptionType = subscription.subscription_type;
       maxCredits = subscription.max_credits || 0;
       maxAiAssistantChats = subscription.max_ai_chats || 0;
+      console.log('[Credits API] Using subscription data:', { subscriptionType, maxCredits, maxAiAssistantChats });
     }
 
     if (credits) {
       currentCredits = credits.current_credits || 0;
       aiAssistantChats = credits.ai_assistant_chats || 0;
+      console.log('[Credits API] Using credits data:', { currentCredits, aiAssistantChats });
     }
 
-    res.json({
+    const response = {
       subscriptionType,
       maxCredits,
       currentCredits,
       aiAssistantChats,
       maxAiAssistantChats,
       subscriptionId: subscription?.id || null
-    });
+    };
+
+    console.log('[Credits API] Sending response:', response);
+    res.json(response);
 
   } catch (error) {
     console.error('Error fetching credits:', error);

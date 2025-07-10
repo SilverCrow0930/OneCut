@@ -47,10 +47,13 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch user's current credits and subscription
   const fetchCreditsData = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('[CreditsContext] No user, skipping fetch');
+      return;
+    }
     
     try {
-      console.log('[CreditsContext] Fetching credits data...');
+      console.log('[CreditsContext] Fetching credits data for user:', user.id);
       const response = await fetch(apiPath('credits'), {
         headers: {
           'Authorization': `Bearer ${session?.access_token}`,
@@ -61,13 +64,24 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         console.log('[CreditsContext] Received credits data:', data);
+        
+        // Log state updates
+        console.log('[CreditsContext] Updating state with:', {
+          currentCredits: data.currentCredits,
+          maxCredits: data.maxCredits,
+          subscriptionType: data.subscriptionType,
+          aiAssistantChats: data.aiAssistantChats,
+          maxAiAssistantChats: data.maxAiAssistantChats
+        });
+        
         setCredits(data.currentCredits);
         setMaxCredits(data.maxCredits);
         setSubscriptionType(data.subscriptionType);
         setAiAssistantChats(data.aiAssistantChats);
         setMaxAiAssistantChats(data.maxAiAssistantChats);
       } else {
-        console.error('[CreditsContext] Failed to fetch credits:', await response.text());
+        const errorText = await response.text();
+        console.error('[CreditsContext] Failed to fetch credits. Status:', response.status, 'Error:', errorText);
       }
     } catch (error) {
       console.error('[CreditsContext] Error fetching credits:', error);

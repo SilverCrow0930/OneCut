@@ -70,7 +70,7 @@ export default function PricingPage() {
     console.log('Max credits:', maxCredits);
     setCurrentSubscriptions(getCurrentSubscriptions());
   }, [subscriptionType, maxCredits]);
-
+  
   // Dynamic subscription data based on current subscription type
   const getCurrentSubscriptions = () => {
     const subscriptions = [];
