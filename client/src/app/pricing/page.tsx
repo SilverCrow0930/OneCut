@@ -120,22 +120,8 @@ export default function PricingPage() {
       features: [
         'Complete Video Editor',
         '150 AI Credits',
-        'Unlimited AI Assistant',
+        '400 AI Assistant Messages',
         '1080p Export'
-      ]
-    },
-    {
-      id: 'price_1RjQX1RutXiJrhxtK3hMbYB8', // Test plan
-      name: 'Test',
-      credits: 500,
-      price: 1,
-      description: 'Limited time experimental access',
-      type: 'credits',
-      features: [
-        'Complete Video Editor',
-        '500 AI Credits',
-        'Unlimited AI Assistant',
-        'Early Access Features'
       ]
     },
     {
@@ -149,7 +135,7 @@ export default function PricingPage() {
       features: [
         'Complete Video Editor',
         '400 AI Credits',
-        'Unlimited AI Assistant',
+        '400 AI Assistant Messages',
         'Priority Support'
       ]
     },
@@ -157,28 +143,14 @@ export default function PricingPage() {
       id: 'price_1RiimLRutXiJrhxtqRr9Iw2l', // Pro plan
       name: 'Pro',
       credits: 1000,
-      price: 78,
+      price: 68,
       description: 'For power users',
       type: 'credits',
       features: [
         'Complete Video Editor',
         '1000 AI Credits',
-        'Unlimited AI Assistant',
+        '400 AI Assistant Messages',
         'Early Access Features'
-      ]
-    },
-    {
-      id: 'price_1RiikLRutXiJrhxtK3hMbYB8', // Enterprise plan
-      name: 'Enterprise',
-      credits: 2500,
-      price: 199,
-      description: 'Maximum AI power',
-      type: 'credits',
-      features: [
-        'Complete Video Editor',
-        '2500 AI Credits',
-        'Unlimited AI Assistant',
-        'Professional Support'
       ]
     }
   ];
@@ -187,7 +159,7 @@ export default function PricingPage() {
     { name: 'Smart Cut', cost: 20 },
     { name: 'AI Voiceover', cost: 5 },
     { name: 'Auto Captions', cost: 8 },
-    { name: 'AI Images', cost: 3 },
+    { name: 'Image Generation', cost: 3 },
     { name: 'Video Generation', cost: 30 },
     { name: 'Music Generation', cost: 15 }
   ];

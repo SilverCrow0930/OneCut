@@ -49,13 +49,6 @@ const PLAN_CONFIGS = {
     maxAiChats: 400,
     priceCents: 1000
   },
-  'price_1RjQX1RutXiJrhxtK3hMbYB8': { // Test plan
-    name: 'Test',
-    subscriptionType: 'editor-plus-credits',
-    maxCredits: 500,
-    maxAiChats: 400,
-    priceCents: 100
-  },
   'price_1RiinCRutXiJrhxtgS1H7URs': {
     name: 'Creator',
     subscriptionType: 'editor-plus-credits',
@@ -63,19 +56,12 @@ const PLAN_CONFIGS = {
     maxAiChats: 400,
     priceCents: 2500
   },
-  'price_1RiimLRutXiJrhxtqRr9Iw2l': {
+  'price_1Rjit2RutXiJrhxt6GLIIqfb': {
     name: 'Pro',
     subscriptionType: 'editor-plus-credits',
     maxCredits: 1000,
     maxAiChats: 400,
-    priceCents: 7800
-  },
-  'price_1RiikLRutXiJrhxtK3hMbYB8': {
-    name: 'Enterprise',
-    subscriptionType: 'editor-plus-credits',
-    maxCredits: 2500,
-    maxAiChats: 400,
-    priceCents: 19900
+    priceCents: 6800
   }
 };
 
