@@ -25,7 +25,7 @@ interface CartItem {
 
 export default function PricingPage() {
   // Real credits data from context
-  const { credits: currentCredits, maxCredits, subscription, loading: isLoading, refreshCredits } = useCredits();
+  const { credits: currentCredits, maxCredits, subscriptionType, aiAssistantChats, maxAiAssistantChats, isLoading, refreshCredits } = useCredits();
   const { user, session } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showEditorFeatures, setShowEditorFeatures] = useState(false);
@@ -42,7 +42,7 @@ export default function PricingPage() {
         const success = urlParams.get('success');
         
         console.log('URL success parameter:', success);
-        console.log('Current subscription type:', subscription);
+        console.log('Current subscription type:', subscriptionType);
         console.log('Current max credits:', maxCredits);
         
         if (success === 'true') {
@@ -52,7 +52,7 @@ export default function PricingPage() {
           
           // Refresh credits data
           await refreshCredits();
-          console.log('Credits refreshed. New subscription type:', subscription);
+          console.log('Credits refreshed. New subscription type:', subscriptionType);
           console.log('New max credits:', maxCredits);
         }
       } catch (error) {
@@ -61,21 +61,21 @@ export default function PricingPage() {
     };
 
     refreshData();
-  }, [refreshCredits, subscription, maxCredits]);
+  }, [refreshCredits, subscriptionType, maxCredits]);
 
-  // Update current subscriptions when subscription changes
+  // Update current subscriptions when subscription type or max credits change
   useEffect(() => {
     console.log('Subscription data changed. Updating current subscriptions...');
-    console.log('Subscription:', subscription);
+    console.log('Subscription type:', subscriptionType);
     console.log('Max credits:', maxCredits);
     setCurrentSubscriptions(getCurrentSubscriptions());
-  }, [subscription, maxCredits]);
+  }, [subscriptionType, maxCredits]);
   
-  // Dynamic subscription data based on current subscription
+  // Dynamic subscription data based on current subscription type
   const getCurrentSubscriptions = () => {
     const subscriptions = [];
     
-    if (subscription) {
+    if (subscriptionType === 'editor-plus-credits') {
       let planName = 'Lemona Plan';
       let price = 19;
       
@@ -98,9 +98,9 @@ export default function PricingPage() {
         name: planName,
         credits: maxCredits,
         price: price,
-        type: 'credits' as const,
-        nextBilling: 'Feb 15',
-        status: 'active'
+      type: 'credits' as const,
+      nextBilling: 'Feb 15',
+      status: 'active'
       });
     }
     
@@ -313,7 +313,7 @@ export default function PricingPage() {
   const creditPercentage = (currentCredits / maxCredits) * 100;
 
   const getPlanButtonState = (plan: Plan) => {
-    if (!subscription || !maxCredits) return { label: `Start with ${plan.name}`, disabled: false };
+    if (!subscriptionType || !maxCredits) return { label: `Start with ${plan.name}`, disabled: false };
     if (plan.credits === maxCredits) {
       return { label: 'Current Plan', disabled: true };
     } else if (plan.credits > maxCredits) {
