@@ -2,190 +2,81 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { apiPath } from '@/lib/config';
 
 interface CreditsContextType {
   credits: number;
   maxCredits: number;
-  subscriptionType: 'editor-plus-credits' | null;
-  aiAssistantChats: number;
-  maxAiAssistantChats: number;
-  isLoading: boolean;
-  
-  // Credit consumption functions
-  consumeCredits: (amount: number, featureName: string) => Promise<boolean>;
-  consumeAiChat: () => Promise<boolean>;
-  
-  // Subscription management
+  subscription: any; // TODO: Add proper type
+  loading: boolean;
+  error: string | null;
   refreshCredits: () => Promise<void>;
-  updateSubscription: (subscriptionData: any) => void;
 }
 
 const CreditsContext = createContext<CreditsContextType | undefined>(undefined);
 
-export function CreditsProvider({ children }: { children: React.ReactNode }) {
-  const { user, session } = useAuth();
+export const CreditsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { session } = useAuth();
   const [credits, setCredits] = useState(0);
   const [maxCredits, setMaxCredits] = useState(0);
-  const [subscriptionType, setSubscriptionType] = useState<'editor-plus-credits' | null>(null);
-  const [aiAssistantChats, setAiAssistantChats] = useState(0);
-  const [maxAiAssistantChats, setMaxAiAssistantChats] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [subscription, setSubscription] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Credit consumption rates
-  const CREDIT_COSTS = {
-    'ai-assistant-chat': 1,
-    'smart-cut': 20,
-    'ai-voiceover': 5, // per minute
-    'auto-captions': 8,
-    'ai-images': 3,
-    'video-generation': 30, // per 5-second clip
-    'background-removal': 12,
-    'style-transfer': 15,
-    'audio-enhancement': 6
-  };
-
-  // Fetch user's current credits and subscription
-  const fetchCreditsData = async () => {
-    if (!user) {
-      console.log('[CreditsContext] No user, skipping fetch');
+  const refreshCredits = async () => {
+    if (!session?.access_token) {
+      setLoading(false);
       return;
     }
-    
+
     try {
-      console.log('[CreditsContext] Fetching credits data for user:', user.id);
-      const response = await fetch(apiPath('credits'), {
+      const response = await fetch('/api/credits', {
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-          'Cache-Control': 'no-cache'
+          'Authorization': `Bearer ${session.access_token}`
         }
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[CreditsContext] Received credits data:', data);
-        
-        // Log state updates
-        console.log('[CreditsContext] Updating state with:', {
-          currentCredits: data.currentCredits,
-          maxCredits: data.maxCredits,
-          subscriptionType: data.subscriptionType,
-          aiAssistantChats: data.aiAssistantChats,
-          maxAiAssistantChats: data.maxAiAssistantChats
-        });
-        
-        setCredits(data.currentCredits);
-        setMaxCredits(data.maxCredits);
-        setSubscriptionType(data.subscriptionType);
-        setAiAssistantChats(data.aiAssistantChats);
-        setMaxAiAssistantChats(data.maxAiAssistantChats);
-      } else {
-        const errorText = await response.text();
-        console.error('[CreditsContext] Failed to fetch credits. Status:', response.status, 'Error:', errorText);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch credits');
       }
-    } catch (error) {
-      console.error('[CreditsContext] Error fetching credits:', error);
+
+      const data = await response.json();
+      setCredits(data.credits);
+      setMaxCredits(data.maxCredits);
+      setSubscription(data.subscription);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching credits:', err);
+      setError('Failed to fetch credits');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
-
-  // Consume credits for AI features
-  const consumeCredits = async (amount: number, featureName: string): Promise<boolean> => {
-    if (!user) return false;
-    
-    // Check if user has enough credits
-    if (credits < amount) {
-      console.warn(`Insufficient credits: ${credits} < ${amount}`);
-      return false;
-    }
-    
-    try {
-      const response = await fetch(apiPath('credits/consume'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({
-          amount,
-          featureName,
-          userId: user.id
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCredits(data.remainingCredits);
-        
-        // Log usage for analytics
-        console.log(`✅ Consumed ${amount} credits for ${featureName}. Remaining: ${data.remainingCredits}`);
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Failed to consume credits:', error);
-      return false;
-    }
-  };
-
-  // Consume AI assistant chat (unlimited for all plans now)
-  const consumeAiChat = async (): Promise<boolean> => {
-    if (!user) return false;
-    
-    // All plans now have unlimited AI assistant chats
-    // No need to track consumption for AI assistant anymore
-    console.log('✅ AI assistant chat used (unlimited)');
-    return true;
-  };
-
-  // Refresh credits data
-  const refreshCredits = async () => {
-    console.log('[CreditsContext] Refreshing credits...');
-    setIsLoading(true);
-    await fetchCreditsData();
-  };
-
-  // Update subscription data
-  const updateSubscription = (subscriptionData: any) => {
-    setSubscriptionType(subscriptionData.type);
-    setMaxCredits(subscriptionData.maxCredits);
-    setMaxAiAssistantChats(subscriptionData.maxAiAssistantChats);
-    // Credits and chats will be refreshed on next fetch
   };
 
   useEffect(() => {
-    fetchCreditsData();
-  }, [user]);
-
-  const value = {
-    credits,
-    maxCredits,
-    subscriptionType,
-    aiAssistantChats,
-    maxAiAssistantChats,
-    isLoading,
-    consumeCredits,
-    consumeAiChat,
-    refreshCredits,
-    updateSubscription
-  };
+    refreshCredits();
+  }, [session]);
 
   return (
-    <CreditsContext.Provider value={value}>
+    <CreditsContext.Provider value={{
+      credits,
+      maxCredits,
+      subscription,
+      loading,
+      error,
+      refreshCredits
+    }}>
       {children}
     </CreditsContext.Provider>
   );
-}
+};
 
-export function useCredits() {
+export const useCredits = () => {
   const context = useContext(CreditsContext);
   if (context === undefined) {
     throw new Error('useCredits must be used within a CreditsProvider');
   }
   return context;
-}
+};
 
 // Helper functions for checking feature availability
 export const canUseFeature = (featureName: string, credits: number, subscriptionType: string | null): boolean => {
