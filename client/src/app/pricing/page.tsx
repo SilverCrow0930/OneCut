@@ -395,7 +395,7 @@ export default function PricingPage() {
                 return (
                   <div 
                     key={plan.id} 
-                    className={`bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300 min-w-[300px] ${plan.popular ? 'transform hover:-translate-y-1' : ''}`}
+                    className={`bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300 min-w-[300px] transform hover:-translate-y-1 ${plan.popular ? '' : ''}`}
                   >
                     <div className="text-center mb-6">
                       <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h4>
