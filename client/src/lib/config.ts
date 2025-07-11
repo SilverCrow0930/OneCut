@@ -14,10 +14,8 @@ export const API_URL = (() => {
         const hostname = window.location.hostname;
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return 'http://localhost:8080';
-        } else if (hostname === 'www.lemona.studio' || hostname === 'lemona.studio') {
-            // Use the same domain for API requests in production
-            return `${window.location.protocol}//${hostname}`;
         } else {
+            // Always use render.com in production
             return 'https://lemona-app.onrender.com';
         }
     } else {
