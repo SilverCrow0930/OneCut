@@ -372,14 +372,14 @@ export default function PricingPage() {
               {/* AI Features Expandable Section */}
               {showAIFeatures && (
                 <div className="mb-12 p-8 bg-white/90 rounded-2xl border border-blue-200 shadow-lg backdrop-blur-sm">
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
                     {aiFeatures.map((feature, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-4 bg-white rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black transition-all duration-200">
+                      <div key={idx} className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-100 hover:shadow-md transition-all duration-200">
                         <div className="flex-1">
                           <h5 className="font-medium text-gray-900">{feature.name}</h5>
                         </div>
                         <div className="ml-3 flex flex-col items-end">
-                          <div className="text-lg font-bold text-gray-900">{feature.cost}</div>
+                          <div className="text-lg font-bold text-blue-600">{feature.cost}</div>
                           <div className="text-xs text-gray-500">credits</div>
                         </div>
                       </div>
