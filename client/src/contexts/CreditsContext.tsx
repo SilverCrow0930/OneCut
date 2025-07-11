@@ -18,77 +18,97 @@ interface CreditsContextType {
   
   // Subscription management
   refreshCredits: () => Promise<void>;
-  updateSubscription: (subscriptionData: any) => void;
+  updateSubscription: (type: 'editor-plus-credits' | null) => void;
 }
 
 const CreditsContext = createContext<CreditsContextType | undefined>(undefined);
 
 export function CreditsProvider({ children }: { children: React.ReactNode }) {
-  const { user, session } = useAuth();
-  const [credits, setCredits] = useState(0);
-  const [maxCredits, setMaxCredits] = useState(0);
-  const [subscriptionType, setSubscriptionType] = useState<'editor-plus-credits' | null>(null);
-  const [aiAssistantChats, setAiAssistantChats] = useState(0);
-  const [maxAiAssistantChats, setMaxAiAssistantChats] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+    const { user, session, isLoading: authLoading } = useAuth();
+    const [credits, setCredits] = useState(0);
+    const [maxCredits, setMaxCredits] = useState(0);
+    const [subscriptionType, setSubscriptionType] = useState<'editor-plus-credits' | null>(null);
+    const [aiAssistantChats, setAiAssistantChats] = useState(0);
+    const [maxAiAssistantChats, setMaxAiAssistantChats] = useState(-1);
+    const [isLoading, setIsLoading] = useState(true);
 
-  // Credit consumption rates
-  const CREDIT_COSTS = {
-    'ai-assistant-chat': 1,
-    'smart-cut': 20,
-    'ai-voiceover': 5, // per minute
-    'auto-captions': 8,
-    'ai-images': 3,
-    'video-generation': 30, // per 5-second clip
-    'background-removal': 12,
-    'style-transfer': 15,
-    'audio-enhancement': 6
-  };
+    // Credit consumption rates
+    const CREDIT_COSTS = {
+      'ai-assistant-chat': 1,
+      'smart-cut': 20,
+      'ai-voiceover': 5, // per minute
+      'auto-captions': 8,
+      'ai-images': 3,
+      'video-generation': 30, // per 5-second clip
+      'background-removal': 12,
+      'style-transfer': 15,
+      'audio-enhancement': 6
+    };
 
-  // Fetch user's current credits and subscription
-  const fetchCreditsData = async () => {
-    if (!user) {
-      console.log('[CreditsContext] No user, skipping fetch');
-      return;
-    }
-    
-    try {
-      console.log('[CreditsContext] Fetching credits data for user:', user.id);
-      const response = await fetch(apiPath('credits'), {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-          'Cache-Control': 'no-cache'
+    // Fetch user's current credits and subscription
+    const fetchCreditsData = async () => {
+        if (authLoading) {
+            console.log('[CreditsContext] Auth still loading, waiting...');
+            return;
         }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[CreditsContext] Received credits data:', data);
+
+        if (!user || !session?.access_token) {
+            console.log('[CreditsContext] No user or session, skipping fetch');
+            setIsLoading(false);
+            return;
+        }
         
-        // Log state updates
-        console.log('[CreditsContext] Updating state with:', {
-          currentCredits: data.currentCredits,
-          maxCredits: data.maxCredits,
-          subscriptionType: data.subscriptionType,
-          aiAssistantChats: data.aiAssistantChats,
-          maxAiAssistantChats: data.maxAiAssistantChats
-        });
-        
-        setCredits(data.currentCredits);
-        setMaxCredits(data.maxCredits);
-        setSubscriptionType(data.subscriptionType);
-        setAiAssistantChats(data.aiAssistantChats);
-        setMaxAiAssistantChats(data.maxAiAssistantChats);
-      } else {
-        const errorText = await response.text();
-        console.error('[CreditsContext] Failed to fetch credits. Status:', response.status, 'Error:', errorText);
-      }
-    } catch (error) {
-      console.error('[CreditsContext] Error fetching credits:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        try {
+            console.log('[CreditsContext] Fetching credits data for user:', user.id);
+            console.log('[CreditsContext] Auth token:', session.access_token.substring(0, 10) + '...');
+            
+            const response = await fetch(apiPath('credits'), {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Cache-Control': 'no-cache'
+                },
+                credentials: 'include' // Include cookies if any
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('[CreditsContext] Received credits data:', data);
+                
+                // Log state updates
+                console.log('[CreditsContext] Updating state with:', {
+                    currentCredits: data.currentCredits,
+                    maxCredits: data.maxCredits,
+                    subscriptionType: data.subscriptionType,
+                    aiAssistantChats: data.aiAssistantChats,
+                    maxAiAssistantChats: data.maxAiAssistantChats
+                });
+                
+                setCredits(data.currentCredits);
+                setMaxCredits(data.maxCredits);
+                setSubscriptionType(data.subscriptionType);
+                setAiAssistantChats(data.aiAssistantChats);
+                setMaxAiAssistantChats(data.maxAiAssistantChats);
+            } else {
+                const errorText = await response.text();
+                console.error('[CreditsContext] Failed to fetch credits. Status:', response.status, 'Error:', errorText);
+                
+                // If we get a 401/403, the token might be invalid
+                if (response.status === 401 || response.status === 403) {
+                    console.log('[CreditsContext] Authentication error, might need to refresh token');
+                }
+            }
+        } catch (error) {
+            console.error('[CreditsContext] Error fetching credits:', error);
+            
+            // If it's a network error, retry after a delay
+            if (error instanceof TypeError && error.message === 'Failed to fetch') {
+                console.log('[CreditsContext] Network error, retrying in 5s...');
+                setTimeout(fetchCreditsData, 5000);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
   // Consume credits for AI features
   const consumeCredits = async (amount: number, featureName: string): Promise<boolean> => {
@@ -148,16 +168,17 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Update subscription data
-  const updateSubscription = (subscriptionData: any) => {
-    setSubscriptionType(subscriptionData.type);
-    setMaxCredits(subscriptionData.maxCredits);
-    setMaxAiAssistantChats(subscriptionData.maxAiAssistantChats);
+  const updateSubscription = (type: 'editor-plus-credits' | null) => {
+    setSubscriptionType(type);
+    setMaxCredits(type === 'editor-plus-credits' ? 10000 : 0); // Example max credits for editor-plus
+    setMaxAiAssistantChats(type === 'editor-plus-credits' ? 1000 : -1); // Example max chats for editor-plus
     // Credits and chats will be refreshed on next fetch
   };
 
+  // Fetch credits data when user or session changes
   useEffect(() => {
     fetchCreditsData();
-  }, [user]);
+  }, [user, session, authLoading]);
 
   const value = {
     credits,

@@ -40,7 +40,7 @@ const corsOptions = {
     origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Cache-Control'],
     exposedHeaders: ['Content-Range', 'X-Content-Range']
 }
 app.use(cors(corsOptions))

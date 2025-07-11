@@ -19,6 +19,7 @@ interface AuthContextType {
     profile: Profile | null
     signIn: () => void
     signOut: () => Promise<void>
+    isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,24 +28,28 @@ const AuthContext = createContext<AuthContextType>({
     profile: null,
     signIn: () => { },
     signOut: async () => { },
+    isLoading: true
 })
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null)
     const [session, setSession] = useState<Session | null>(null)
     const [profile, setProfile] = useState<Profile | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
 
     // 1) On mount, load existing session & subscribe to changes
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session)
             setUser(session?.user ?? null)
+            setIsLoading(false)
         })
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (_, newSession) => {
                 setSession(newSession)
                 setUser(newSession?.user ?? null)
+                setIsLoading(false)
             }
         )
         return () => {
@@ -108,6 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             profile,
             signIn,
             signOut,
+            isLoading
         }}>
             {children}
         </AuthContext.Provider>
