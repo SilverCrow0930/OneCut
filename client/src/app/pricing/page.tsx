@@ -184,15 +184,12 @@ export default function PricingPage() {
   ];
 
   const aiFeatures = [
-    { name: 'AI Assistant Chat', cost: 1 },
     { name: 'Smart Cut', cost: 20 },
     { name: 'AI Voiceover', cost: 5 },
     { name: 'Auto Captions', cost: 8 },
     { name: 'AI Images', cost: 3 },
     { name: 'Video Generation', cost: 30 },
-    { name: 'Background Removal', cost: 12 },
-    { name: 'Style Transfer', cost: 15 },
-    { name: 'Audio Enhancement', cost: 6 }
+    { name: 'Music Generation', cost: 15 }
   ];
 
   const addToCart = (plan: Plan) => {

@@ -34,15 +34,12 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
     // Credit consumption rates
     const CREDIT_COSTS = {
-      'ai-assistant-chat': 1,
       'smart-cut': 20,
-      'ai-voiceover': 5, // per minute
+      'ai-voiceover': 5,
       'auto-captions': 8,
       'ai-images': 3,
-      'video-generation': 30, // per 5-second clip
-      'background-removal': 12,
-      'style-transfer': 15,
-      'audio-enhancement': 6
+      'video-generation': 30,
+      'music-generation': 15
     };
 
     // Fetch user's current credits and subscription
@@ -211,38 +208,27 @@ export function useCredits() {
 // Helper functions for checking feature availability
 export const canUseFeature = (featureName: string, credits: number, subscriptionType: string | null): boolean => {
   const CREDIT_COSTS = {
-    'ai-assistant-chat': 1,
     'smart-cut': 20,
     'ai-voiceover': 5,
     'auto-captions': 8,
     'ai-images': 3,
     'video-generation': 30,
-    'background-removal': 12,
-    'style-transfer': 15,
-    'audio-enhancement': 6
+    'music-generation': 15
   };
 
-  // AI assistant is unlimited for all plans now
-  if (featureName === 'ai-assistant-chat') {
-    return true;
-  }
-
-  // For other features, check credits
+  // For all features, check credits
   const cost = CREDIT_COSTS[featureName as keyof typeof CREDIT_COSTS] || 0;
   return credits >= cost;
 };
 
 export const getFeatureCost = (featureName: string): number => {
   const CREDIT_COSTS = {
-    'ai-assistant-chat': 1,
     'smart-cut': 20,
     'ai-voiceover': 5,
     'auto-captions': 8,
     'ai-images': 3,
     'video-generation': 30,
-    'background-removal': 12,
-    'style-transfer': 15,
-    'audio-enhancement': 6
+    'music-generation': 15
   };
 
   return CREDIT_COSTS[featureName as keyof typeof CREDIT_COSTS] || 0;
