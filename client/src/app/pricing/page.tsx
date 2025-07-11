@@ -371,16 +371,17 @@ export default function PricingPage() {
 
               {/* AI Features Expandable Section */}
               {showAIFeatures && (
-                <div className="mb-12 p-8 bg-white/90 rounded-2xl border border-blue-200 shadow-lg backdrop-blur-sm">
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                <div className="mb-12 p-6 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-2xl border border-blue-100/50 backdrop-blur-sm">
+
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
                     {aiFeatures.map((feature, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-100 hover:shadow-md transition-all duration-200">
+                      <div key={idx} className="flex items-center justify-between p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40 hover:bg-white/70 transition-all duration-200">
                         <div className="flex-1">
-                          <h5 className="font-medium text-gray-900">{feature.name}</h5>
+                          <h5 className="font-medium text-gray-900 text-sm">{feature.name}</h5>
                         </div>
-                        <div className="ml-3 flex flex-col items-end">
-                          <div className="text-lg font-bold text-blue-600">{feature.cost}</div>
-                          <div className="text-xs text-gray-500">credits</div>
+                        <div className="ml-3 text-right">
+                          <div className="text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{feature.cost}</div>
+                          <div className="text-xs text-gray-400">credits</div>
                         </div>
                       </div>
                     ))}
