@@ -87,7 +87,7 @@ export default function PricingPage() {
         price = 25;
       } else if (maxCredits === 1000) {
         planName = 'Pro';
-        price = 78;
+        price = 68;
       } else if (maxCredits === 2500) {
         planName = 'Enterprise';
         price = 199;
@@ -389,13 +389,13 @@ export default function PricingPage() {
                 </div>
               )}
               
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-[95%] mx-auto">
+              <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto px-4">
               {plans.map((plan) => {
                 const { label, disabled } = getPlanButtonState(plan);
                 return (
                   <div 
                     key={plan.id} 
-                  className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300"
+                    className={`bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-lg hover:shadow-xl transition-all duration-300 min-w-[300px] ${plan.popular ? 'transform hover:-translate-y-1' : ''}`}
                   >
                     <div className="text-center mb-6">
                       <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h4>
