@@ -18,21 +18,22 @@ const Navbar = () => {
         console.log('signing out')
     }
 
-    // useEffect(() => {
-    //     console.log('user', user)
-    // }, [user])
-
     return (
         <div className="
             flex flex-row w-full items-center justify-between
             bg-black/40 rounded-lg
             border border-white border-opacity-20
             px-6 py-4
+            relative
         ">
             <LemonaLogo />
-            <div className="flex items-center gap-4">
-                {/* Credit Container */}
-                {user && <CreditCounter />}
+            <div className="flex items-center gap-6">
+                {/* Credit Container with proper spacing and visibility */}
+                {user && (
+                    <div className="flex items-center">
+                        <CreditCounter />
+                    </div>
+                )}
 
                 {/* User Menu */}
                 <div className="relative">
