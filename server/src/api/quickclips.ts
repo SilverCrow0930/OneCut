@@ -106,7 +106,55 @@ async function consumeCredits(userId: string, amount: number, featureName: strin
             throw creditsError;
         }
 
-        const currentCredits = credits?.current_credits || 0;
+        let currentCredits = 0;
+
+        if (creditsError && creditsError.code === 'PGRST116') {
+            // No credits record found, create one based on subscription
+            console.log('[QuickClips] No credits record found, creating one...');
+            
+            // Get user's subscription to determine max credits
+            const { data: subscription, error: subError } = await supabase
+                .from('user_subscriptions')
+                .select('max_credits')
+                .eq('user_id', userId)
+                .eq('status', 'active')
+                .single();
+
+            if (subError) {
+                console.error('[QuickClips] Error looking up subscription:', subError);
+                throw subError;
+            }
+
+            if (!subscription) {
+                console.error('[QuickClips] No active subscription found for user');
+                throw new Error('No active subscription found');
+            }
+
+            const maxCredits = subscription.max_credits || 0;
+            console.log('[QuickClips] Initializing credits with max_credits:', maxCredits);
+            
+            // Create credits record
+            const { data: newCredits, error: createError } = await supabase
+                .from('user_credits')
+                .insert({
+                    user_id: userId,
+                    current_credits: maxCredits,
+                    ai_assistant_chats: 0,
+                    last_reset_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+
+            if (createError) {
+                console.error('[QuickClips] Error creating credits record:', createError);
+                throw createError;
+            }
+
+            console.log('[QuickClips] Created new credits record:', newCredits);
+            currentCredits = newCredits.current_credits;
+        } else {
+            currentCredits = credits?.current_credits || 0;
+        }
 
         // Check if user has enough credits
         if (currentCredits < amount) {
@@ -123,6 +171,8 @@ async function consumeCredits(userId: string, amount: number, featureName: strin
                 user_id: userId,
                 current_credits: newCredits,
                 updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'user_id'
             });
 
         if (updateError) {
