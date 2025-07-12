@@ -282,6 +282,58 @@ const AutoCutToolPanel = () => {
         }
     }, [session?.access_token]);
 
+    // Function to generate incremented name
+    const generateSmartCutName = async (baseName: string): Promise<string> => {
+        if (!session?.access_token) return baseName;
+
+        try {
+            // Fetch all projects to check for existing names
+            const response = await fetch(apiPath('projects'), {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch projects');
+            }
+
+            const projects = await response.json();
+            const baseSmartCutName = `Smart Cut: ${baseName}`;
+            
+            // Find all projects that start with this name
+            const matchingProjects = projects.filter((p: any) => 
+                p.name.startsWith(baseSmartCutName)
+            );
+
+            if (matchingProjects.length === 0) {
+                return baseSmartCutName;
+            }
+
+            // Extract numbers from existing names
+            const numbers = matchingProjects
+                .map((p: any) => {
+                    const match = p.name.match(/\((\d+)\)$/);
+                    return match ? parseInt(match[1]) : 0;
+                })
+                .filter((n: number) => n > 0)
+                .sort((a: number, b: number) => b - a);
+
+            // If no numbered versions exist, add (1)
+            if (numbers.length === 0) {
+                return `${baseSmartCutName} (1)`;
+            }
+
+            // Get the highest number and increment
+            const nextNumber = numbers[0] + 1;
+            return `${baseSmartCutName} (${nextNumber})`;
+        } catch (error) {
+            console.error('Error generating project name:', error);
+            // Fallback to timestamp if error
+            return `${baseName} (${Date.now().toString().slice(-4)})`;
+        }
+    };
+
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (file && file.type.startsWith('video/')) {
@@ -434,8 +486,10 @@ const AutoCutToolPanel = () => {
             const maxRetries = 3;
             let lastError;
             
+            // Generate unique name for the Smart Cut project
+            const smartCutProjectName = await generateSmartCutName(selectedFile.name);
+            
             // First create a new project specifically for Smart Cut
-            const smartCutProjectName = `Smart Cut: ${selectedFile.name}`;
             const createProjectResponse = await fetch(apiPath('projects'), {
                 method: 'POST',
                 headers: {
