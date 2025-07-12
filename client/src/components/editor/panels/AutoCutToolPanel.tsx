@@ -516,23 +516,8 @@ const AutoCutToolPanel = () => {
             // Add notification that the project is now visible in the projects page
             console.log(`Smart Cut project created: ${smartCutProjectId}`);
             
-            // Set a message in the UI to inform the user
-            setError(null); // Clear any previous errors
-            setCurrentJob({
-                id: jobData.jobId,
-                projectId: smartCutProjectId,
-                status: 'queued',
-                progress: 0,
-                message: 'Smart Cut job started! Redirecting to projects page...',
-                originalProjectId: projectId
-            });
-            
-            // Small delay before redirecting so user can see the message
-            setTimeout(() => {
-                // Redirect to projects page with highlight parameter to show processing status
-                router.push(`/projects?highlight=${smartCutProjectId}`);
-            }, 1500);
-            
+            // Redirect to projects page with highlight parameter to show processing status
+            router.push(`/projects?highlight=${smartCutProjectId}`);
         } catch (error) {
             console.error('Error starting processing:', error)
             setError(error instanceof Error ? error.message : 'Processing failed')
