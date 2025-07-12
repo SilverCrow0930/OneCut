@@ -267,7 +267,7 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error consuming credits:', error);
+    console.error('[Credits API] Error consuming credits:', error);
     res.status(500).json({ error: 'Failed to consume credits' });
   }
 });
