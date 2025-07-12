@@ -516,6 +516,8 @@ const AutoCutToolPanel = () => {
             // Add notification that the project is now visible in the projects page
             console.log(`Smart Cut project created: ${smartCutProjectId}`);
             
+            // Redirect to projects page with highlight parameter to show processing status
+            router.push(`/projects?highlight=${smartCutProjectId}`);
         } catch (error) {
             console.error('Error starting processing:', error)
             setError(error instanceof Error ? error.message : 'Processing failed')
