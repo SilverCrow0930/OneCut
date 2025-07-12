@@ -34,15 +34,15 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const [nextBillingDate, setNextBillingDate] = useState<string | null>(null);
 
-    // Credit consumption rates
+    // Credit consumption rates (per hour)
     const CREDIT_COSTS = {
-      'smart-cut-audio': 20,
-      'smart-cut-visual': 40,
-      'ai-voiceover': 4,
-      'auto-captions': 8,
-      'ai-images': 4,
-      'video-generation': 15,
-      'music-generation': 2
+      'smart-cut-audio': 20, // per hour
+      'smart-cut-visual': 40, // per hour
+      'ai-voiceover': 4,     // per minute
+      'auto-captions': 8,    // per hour
+      'ai-images': 4,        // per image
+      'video-generation': 15, // per video
+      'music-generation': 2   // per track
     };
 
     // Fetch user's current credits and subscription
@@ -237,13 +237,13 @@ export function useCredits() {
 // Helper functions for checking feature availability
 export const canUseFeature = (featureName: string, credits: number, subscriptionType: string | null): boolean => {
   const CREDIT_COSTS = {
-    'smart-cut-audio': 20,
-    'smart-cut-visual': 40,
-    'ai-voiceover': 4,
-    'auto-captions': 8,
-    'ai-images': 4,
-    'video-generation': 15,
-    'music-generation': 2
+    'smart-cut-audio': 20, // per hour
+    'smart-cut-visual': 40, // per hour
+    'ai-voiceover': 4,     // per minute
+    'auto-captions': 8,    // per hour
+    'ai-images': 4,        // per image
+    'video-generation': 15, // per video
+    'music-generation': 2   // per track
   };
 
   // For all features, check credits
@@ -253,13 +253,13 @@ export const canUseFeature = (featureName: string, credits: number, subscription
 
 export const getFeatureCost = (featureName: string): number => {
   const CREDIT_COSTS = {
-    'smart-cut-audio': 20,
-    'smart-cut-visual': 40,
-    'ai-voiceover': 4,
-    'auto-captions': 8,
-    'ai-images': 4,
-    'video-generation': 15,
-    'music-generation': 2
+    'smart-cut-audio': 20, // per hour
+    'smart-cut-visual': 40, // per hour
+    'ai-voiceover': 4,     // per minute
+    'auto-captions': 8,    // per hour
+    'ai-images': 4,        // per image
+    'video-generation': 15, // per video
+    'music-generation': 2   // per track
   };
 
   return CREDIT_COSTS[featureName as keyof typeof CREDIT_COSTS] || 0;

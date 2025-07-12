@@ -26,8 +26,9 @@ async function calculateCreditsNeeded(fileUri: string, contentType: string): Pro
             throw new Error('Could not determine video duration');
         }
 
-        // Calculate hours (rounded up to nearest hour)
-        const hours = Math.ceil(duration / 3600);
+        // Convert to hours and round up to nearest minute first (to match client-side calculation)
+        const durationInMinutes = Math.ceil(duration / 60);
+        const durationInHours = durationInMinutes / 60;
         
         // Calculate credits based on content type
         let creditsPerHour = 0;
@@ -37,7 +38,8 @@ async function calculateCreditsNeeded(fileUri: string, contentType: string): Pro
             creditsPerHour = 40; // Full video processing
         }
         
-        return hours * creditsPerHour;
+        // Calculate and round up
+        return Math.ceil(durationInHours * creditsPerHour);
     } catch (error) {
         console.error('[QuickClips API] Error during credit calculation:', error);
         throw new Error('Failed to calculate credits needed. Please ensure the video file is accessible and valid.');
@@ -233,8 +235,18 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
         console.log('[Quickclips API] Starting job for project:', projectId)
 
         // Step 1: Verify we can access and process the video
-        console.log('[Quickclips API] Verifying video access and calculating credits...');
-        const creditsNeeded = await calculateCreditsNeeded(fileUri, contentType);
+        console.log('[Quickclips API] Verifying video access...');
+        try {
+            // Just verify the video exists and is accessible
+            const duration = await getVideoDuration(fileUri);
+            if (!duration) {
+                throw new Error('Could not determine video duration');
+            }
+            console.log(`[Quickclips API] Video duration: ${duration} seconds`);
+        } catch (error) {
+            console.error('[QuickClips API] Error accessing video:', error);
+            throw new Error('Failed to access video. Please ensure the file is valid and try again.');
+        }
         
         // Step 2: Get user ID from auth ID
         const { data: userRecord, error: userError } = await supabase
@@ -247,19 +259,10 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
             throw new Error('User not found');
         }
 
-        // Step 3: Consume credits
-        console.log('[Quickclips API] Consuming credits:', creditsNeeded);
-        const success = await consumeCredits(userRecord.id, creditsNeeded, 'smart-cut-audio');
-        
-        if (!success) {
-            console.error('[Quickclips API] Credit consumption failed')
-            return res.status(400).json({
-                success: false,
-                error: 'Insufficient credits. Please upgrade your plan or try a shorter video.'
-            })
-        }
+        // Note: Credit consumption is now handled on the client side
+        // to prevent double-charging the user
 
-        // Step 4: Queue the job
+        // Step 3: Queue the job
         const jobId = await queueQuickclipsJob(
             projectId,
             fileUri,
@@ -280,7 +283,7 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
         });
 
     } catch (error) {
-        console.error('[Quickclips API] Error during credit calculation/consumption:', error);
+        console.error('[Quickclips API] Error starting job:', error);
         next(error)
     }
 });

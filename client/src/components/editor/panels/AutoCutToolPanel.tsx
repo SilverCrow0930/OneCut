@@ -29,6 +29,7 @@ interface QuickClipsJob {
     clips?: any[]
     description?: string
     transcript?: string
+    originalProjectId?: string // Reference to the original project when created from editor
 }
 
 // Video type selection constants
@@ -415,6 +416,34 @@ const AutoCutToolPanel = () => {
             const maxRetries = 3;
             let lastError;
             
+            // First create a new project specifically for Smart Cut
+            const smartCutProjectName = `Smart Cut: ${selectedFile.name}`;
+            const createProjectResponse = await fetch(apiPath('projects'), {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: smartCutProjectName,
+                    processing_type: 'quickclips',
+                    processing_status: 'queued',
+                    processing_message: 'Preparing for Smart Cut...',
+                    processing_data: {
+                        originalProjectId: projectId,
+                        contentType: VIDEO_TYPES[videoType].contentType,
+                        targetDuration
+                    }
+                })
+            });
+            
+            if (!createProjectResponse.ok) {
+                throw new Error('Failed to create Smart Cut project');
+            }
+            
+            const smartCutProject = await createProjectResponse.json();
+            const smartCutProjectId = smartCutProject.id;
+            
             // Retry logic for network issues
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
@@ -425,13 +454,13 @@ const AutoCutToolPanel = () => {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            projectId: projectId || '',
+                            projectId: smartCutProjectId,
                             fileUri,
                             mimeType: selectedFile.type,
                             contentType: VIDEO_TYPES[videoType].contentType,
                             targetDuration,
                             userPrompt: userPrompt.trim() || undefined,
-                            isEditorMode: true // Flag to indicate this is used within the editor
+                            isEditorMode: false // Now we can use the standard flow
                         })
                     })
                     break; // Success, exit retry loop
@@ -470,16 +499,22 @@ const AutoCutToolPanel = () => {
             }
 
             const jobData = await jobResponse.json()
-            if (!projectId) throw new Error('Project ID is required')
+            
+            // Store both project IDs for reference
             setCurrentJob({
                 id: jobData.jobId,
-                projectId,
+                projectId: smartCutProjectId, // Use the Smart Cut project ID
                 status: 'queued',
                 progress: 0,
-                message: 'Queued for processing...'
+                message: 'Queued for processing...',
+                originalProjectId: projectId // Keep track of original project
             })
 
+            // Show success message with link to view the Smart Cut project
             setShowConfig(false)
+            
+            // Add notification that the project is now visible in the projects page
+            console.log(`Smart Cut project created: ${smartCutProjectId}`);
             
         } catch (error) {
             console.error('Error starting processing:', error)
