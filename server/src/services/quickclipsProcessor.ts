@@ -1574,7 +1574,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 '-movflags +faststart',
                                 '-profile:v main',
                                 '-crf 23',
-                                '-avoid_negative_ts make_zero'  // Handle timing issues
+                                '-avoid_negative_ts make_zero',  // Handle timing issues
+                                '-max_muxing_queue_size 1024',  // Increase muxing queue size
+                                '-fflags +genpts',               // Generate presentation timestamps
+                                '-vsync cfr'                     // Constant frame rate
                             ])
                             .on('start', (command) => {
                                 console.log(`[QuickclipsProcessor] Simple FFmpeg command for clip ${i}:`, command)
@@ -1589,6 +1592,7 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                             })
                             .on('error', (err) => {
                                 clearTimeout(timeout)
+                                console.error(`[QuickclipsProcessor] FFmpeg error for clip ${i}:`, err.message)
                                 reject(err)
                             })
                             .run()

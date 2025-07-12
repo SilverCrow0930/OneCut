@@ -1,12 +1,15 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCredits } from '@/contexts/CreditsContext'
 import { apiPath } from '@/lib/config'
 import { Play, Sparkles, Zap, Clock, Upload, Video } from 'lucide-react'
+import { calculateSmartCutCredits } from '@/lib/utils'
 
 const HomeHeroSection = () => {
     const router = useRouter()
     const { user, session, signIn } = useAuth()
+    const { consumeCredits } = useCredits()
     const fileInputRef = useRef<HTMLInputElement>(null)
     
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -15,6 +18,7 @@ const HomeHeroSection = () => {
     const [isUploading, setIsUploading] = useState(false)
     const [isDragOver, setIsDragOver] = useState(false)
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
+    const [error, setError] = useState<string | null>(null)
     
     // Specific time intervals in seconds (20s to 30m)
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
@@ -127,6 +131,44 @@ const HomeHeroSection = () => {
         if (!selectedFile) {
             // Open file picker instead of showing alert
             fileInputRef.current?.click()
+            return
+        }
+
+        // Calculate credits needed based on video duration (assuming talk_audio type for home page)
+        try {
+            // Create a temporary URL for the video to get its duration
+            const videoUrl = URL.createObjectURL(selectedFile)
+            const video = document.createElement('video')
+            
+            // Wait for video metadata to load to get duration
+            await new Promise((resolve, reject) => {
+                video.onloadedmetadata = resolve
+                video.onerror = reject
+                video.src = videoUrl
+            })
+            
+            // Get video duration and calculate credits (assuming talk_audio type)
+            const durationInSeconds = video.duration
+            const creditsNeeded = calculateSmartCutCredits(durationInSeconds, 'talk_audio')
+            
+            console.log(`Video duration: ${Math.ceil(durationInSeconds / 60)} minutes (${(durationInSeconds / 3600).toFixed(2)} hours)`)
+            console.log(`Credits needed: ${creditsNeeded} (talk_audio type)`)
+            
+            // Clean up
+            URL.revokeObjectURL(videoUrl)
+            
+            // Consume credits before processing
+            const success = await consumeCredits(creditsNeeded, 'smart-cut-audio')
+            
+            if (!success) {
+                setError('Insufficient credits. Please upgrade your plan or try a shorter video.')
+                return
+            }
+            
+            // If credits were successfully consumed, continue with processing
+        } catch (error) {
+            console.error('Error calculating video duration:', error)
+            setError('Failed to calculate video duration. Please try again.')
             return
         }
 
@@ -643,6 +685,35 @@ const HomeHeroSection = () => {
                             )}
                         </div>
                     </div>
+                    
+                    {/* Error Display */}
+                    {error && (
+                        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-red-700 text-sm">{error}</p>
+                        </div>
+                    )}
+
+                    {/* Upload Progress */}
+                    {isUploading && (
+                        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-blue-700 text-sm mb-2">Creating your Smart Cut project...</p>
+                            <div className="w-full bg-blue-200 rounded-full h-2">
+                                <div 
+                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                    style={{ width: '75%' }}
+                                ></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* File Upload */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="video/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                    />
                 </div>
             </div>
         </section>

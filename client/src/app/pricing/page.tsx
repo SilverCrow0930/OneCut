@@ -85,6 +85,9 @@ export default function PricingPage() {
       } else if (maxCredits === 500) {
         planName = 'Creator';
         price = 25;
+      } else if (maxCredits === 1000) {
+        planName = 'Custom Plan';
+        price = 50;
       } else if (maxCredits === 1500) {
         planName = 'Pro';
         price = 68;

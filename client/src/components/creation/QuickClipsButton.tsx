@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Zap, Upload, Clock, Video, Download, Play, X, Edit, Sparkles, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCredits } from '@/contexts/CreditsContext'
 import { apiPath } from '@/lib/config'
 import { useRouter } from 'next/navigation'
+import { calculateSmartCutCredits } from '@/lib/utils'
 
 interface QuickClip {
     id: string
@@ -23,6 +25,7 @@ interface QuickClip {
 
 const QuickClipsButton = () => {
     const { user, session, signIn } = useAuth()
+    const { consumeCredits } = useCredits()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
     
@@ -129,6 +132,45 @@ const QuickClipsButton = () => {
 
         if (!selectedFile) {
             alert('Please select a video file first')
+            return
+        }
+
+        // Calculate credits needed based on video duration and type
+        try {
+            // Create a temporary URL for the video to get its duration
+            const videoUrl = URL.createObjectURL(selectedFile)
+            const video = document.createElement('video')
+            
+            // Wait for video metadata to load to get duration
+            await new Promise((resolve, reject) => {
+                video.onloadedmetadata = resolve
+                video.onerror = reject
+                video.src = videoUrl
+            })
+            
+            // Get video duration and calculate credits
+            const durationInSeconds = video.duration
+            const creditsNeeded = calculateSmartCutCredits(durationInSeconds, videoType)
+            
+            console.log(`Video duration: ${Math.ceil(durationInSeconds / 60)} minutes (${(durationInSeconds / 3600).toFixed(2)} hours)`)
+            console.log(`Credits needed: ${creditsNeeded} (${videoType} type)`)
+            
+            // Clean up
+            URL.revokeObjectURL(videoUrl)
+            
+            // Consume credits before processing
+            const featureName = videoType === 'talk_audio' ? 'smart-cut-audio' : 'smart-cut-visual'
+            const success = await consumeCredits(creditsNeeded, featureName)
+            
+            if (!success) {
+                setError('Insufficient credits. Please upgrade your plan or try a shorter video.')
+                return
+            }
+            
+            // If credits were successfully consumed, continue with processing
+        } catch (error) {
+            console.error('Error calculating video duration:', error)
+            setError('Failed to calculate video duration. Please try again.')
             return
         }
 
@@ -725,6 +767,7 @@ const QuickClipsButton = () => {
 
                                     {/* Generate Button */}
                                     <div className="pt-2">
+                                        {/* Start Button */}
                                         <button
                                             onClick={handleStartProcessing}
                                             disabled={!selectedFile || isProcessing || isUploading}
@@ -748,7 +791,7 @@ const QuickClipsButton = () => {
                                             }`}></div>
                                             
                                             <span className="relative z-10 flex items-center justify-center gap-2">
-                                                {isProcessing || isUploading ? (
+                                                {isUploading ? (
                                                     <>
                                                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                                         Processing...
@@ -766,7 +809,13 @@ const QuickClipsButton = () => {
                                             </span>
                                         </button>
 
-                                        {/* Note */}
+                                        {/* Error Display */}
+                                        {error && (
+                                            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                                <p className="text-red-700 text-sm">{error}</p>
+                                            </div>
+                                        )}
+
                                         {selectedFile && (
                                             <p className="text-xs font-medium bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-400 bg-clip-text text-transparent text-center mt-4 relative z-10">
                                                 {user ? (

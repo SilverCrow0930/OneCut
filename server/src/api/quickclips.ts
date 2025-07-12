@@ -6,6 +6,100 @@ import { supabase } from '../config/supabaseClient.js'
 
 const router = Router()
 
+// Credit calculation helper functions
+function calculateSmartCutCredits(durationInSeconds: number, contentType: string): number {
+    // Convert to hours and round up to nearest minute first
+    const durationInMinutes = Math.ceil(durationInSeconds / 60);
+    const durationInHours = durationInMinutes / 60;
+    
+    // Credits per hour based on content type
+    const creditsPerHour = contentType === 'talking_video' ? 20 : 40;
+    
+    // Calculate and round up
+    return Math.ceil(durationInHours * creditsPerHour);
+}
+
+async function getVideoDuration(fileUri: string): Promise<number> {
+    const ffmpeg = await import('fluent-ffmpeg');
+    
+    return new Promise((resolve, reject) => {
+        ffmpeg.default.ffprobe(fileUri, (err, metadata) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            
+            const duration = metadata.format?.duration;
+            if (!duration) {
+                reject(new Error('Could not determine video duration'));
+                return;
+            }
+            
+            resolve(duration);
+        });
+    });
+}
+
+async function consumeCredits(userId: string, amount: number, featureName: string): Promise<boolean> {
+    try {
+        // Get current credits
+        const { data: credits, error: creditsError } = await supabase
+            .from('user_credits')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        if (creditsError && creditsError.code !== 'PGRST116') {
+            throw creditsError;
+        }
+
+        const currentCredits = credits?.current_credits || 0;
+
+        // Check if user has enough credits
+        if (currentCredits < amount) {
+            console.log(`[QuickClips] Insufficient credits: ${currentCredits} < ${amount}`);
+            return false;
+        }
+
+        // Update credits
+        const newCredits = currentCredits - amount;
+        
+        const { error: updateError } = await supabase
+            .from('user_credits')
+            .upsert({
+                user_id: userId,
+                current_credits: newCredits,
+                updated_at: new Date().toISOString()
+            });
+
+        if (updateError) {
+            throw updateError;
+        }
+
+        // Log the credit usage
+        const { error: logError } = await supabase
+            .from('credit_usage_log')
+            .insert({
+                user_id: userId,
+                feature_name: featureName,
+                credits_consumed: amount,
+                remaining_credits: newCredits,
+                created_at: new Date().toISOString()
+            });
+
+        if (logError) {
+            console.error('Failed to log credit usage:', logError);
+            // Don't fail the request if logging fails
+        }
+
+        console.log(`[QuickClips] ✅ Consumed ${amount} credits for ${featureName}. Remaining: ${newCredits}`);
+        return true;
+    } catch (error) {
+        console.error('[QuickClips] Failed to consume credits:', error);
+        return false;
+    }
+}
+
 // Validation middleware
 const validateQuickclipsRequest = [
     body('projectId').isUUID().withMessage('Valid project ID is required'),
@@ -65,7 +159,44 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
             })
         }
 
-        // 2. Queue the background job
+        // 2. Calculate and consume credits (skip for editor mode as it's handled on frontend)
+        if (!isEditorMode) {
+            try {
+                console.log('[Quickclips API] Calculating credits for standalone QuickClips...')
+                
+                // Get video duration
+                const videoDuration = await getVideoDuration(fileUri)
+                console.log(`[Quickclips API] Video duration: ${videoDuration} seconds`)
+                
+                // Calculate credits needed
+                const creditsNeeded = calculateSmartCutCredits(videoDuration, contentType)
+                console.log(`[Quickclips API] Credits needed: ${creditsNeeded} for ${contentType}`)
+                
+                // Consume credits
+                const featureName = contentType === 'talking_video' ? 'smart-cut-audio' : 'smart-cut-visual'
+                const success = await consumeCredits(profile.id, creditsNeeded, featureName)
+                
+                if (!success) {
+                    console.error('[Quickclips API] Credit consumption failed')
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Insufficient credits. Please upgrade your plan or try a shorter video.'
+                    })
+                }
+                
+                console.log('[Quickclips API] Credits consumed successfully')
+            } catch (error) {
+                console.error('[Quickclips API] Error during credit calculation/consumption:', error)
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to calculate or consume credits'
+                })
+            }
+        } else {
+            console.log('[Quickclips API] Skipping credit consumption for editor mode (handled on frontend)')
+        }
+
+        // 3. Queue the background job
         const jobId = await queueQuickclipsJob(
             projectId,
             fileUri,
