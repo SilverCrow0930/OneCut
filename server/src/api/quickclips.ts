@@ -3,8 +3,19 @@ import { body, validationResult } from 'express-validator'
 import { AuthenticatedRequest } from '../middleware/authenticate.js'
 import { queueQuickclipsJob, getJobStatus, getUserJobs } from '../services/quickclipsProcessor.js'
 import { supabase } from '../config/supabaseClient.js'
+import { Storage } from '@google-cloud/storage';
+import path from 'path';
+import os from 'os';
+import fs from 'fs/promises';
 
 const router = Router()
+
+// Initialize GCS bucket
+const storage = new Storage({
+    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    keyFilename: process.env.GOOGLE_CLOUD_KEY_FILE,
+});
+const bucket = storage.bucket(process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'lemona-edit-assets');
 
 // Credit calculation helper functions
 function calculateSmartCutCredits(durationInSeconds: number, contentType: string): number {
@@ -21,23 +32,51 @@ function calculateSmartCutCredits(durationInSeconds: number, contentType: string
 
 async function getVideoDuration(fileUri: string): Promise<number> {
     const ffmpeg = await import('fluent-ffmpeg');
+    const tempDir = os.tmpdir();
+    const tempFile = path.join(tempDir, `temp_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`);
     
-    return new Promise((resolve, reject) => {
-        ffmpeg.default.ffprobe(fileUri, (err, metadata) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            
-            const duration = metadata.format?.duration;
-            if (!duration) {
-                reject(new Error('Could not determine video duration'));
-                return;
-            }
-            
-            resolve(duration);
+    try {
+        // Get signed URL
+        const objectKey = fileUri.replace('gs://lemona-edit-assets/', '');
+        const file = bucket.file(objectKey);
+        const [signedUrl] = await file.getSignedUrl({
+            action: 'read',
+            expires: Date.now() + 1 * 60 * 60 * 1000, // 1 hour
         });
-    });
+
+        // Download file
+        const response = await fetch(signedUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to download video: ${response.status}`);
+        }
+        const buffer = await response.arrayBuffer();
+        await fs.writeFile(tempFile, Buffer.from(buffer));
+
+        // Get duration
+        return new Promise((resolve, reject) => {
+            ffmpeg.default.ffprobe(tempFile, (err, metadata) => {
+                // Clean up temp file
+                fs.unlink(tempFile).catch(console.error);
+                
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                
+                const duration = metadata.format?.duration;
+                if (!duration) {
+                    reject(new Error('Could not determine video duration'));
+                    return;
+                }
+                
+                resolve(duration);
+            });
+        });
+    } catch (error) {
+        // Clean up temp file in case of error
+        fs.unlink(tempFile).catch(console.error);
+        throw error;
+    }
 }
 
 async function consumeCredits(userId: string, amount: number, featureName: string): Promise<boolean> {
