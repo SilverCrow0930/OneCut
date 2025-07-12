@@ -16,6 +16,7 @@ import { ActionButtons } from './auto-cut/ActionButtons'
 import { ProcessingStatus } from './auto-cut/ProcessingStatus'
 import { useCredits } from '@/contexts/CreditsContext'
 import { calculateSmartCutCredits } from '@/lib/utils';
+import { useCallback as useCallbackEffect } from 'react';
 
 type ProcessingState = 'idle' | 'starting' | 'queued' | 'processing' | 'completed' | 'failed'
 
@@ -263,6 +264,23 @@ const AutoCutToolPanel = () => {
 
         checkExistingSmartCutProject()
     }, [projectId, session?.access_token])
+
+    // Function to refresh projects list
+    const refreshProjectsList = useCallbackEffect(async () => {
+        try {
+            const response = await fetch(apiPath('projects'), {
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Failed to refresh projects');
+            }
+            // The ProjectsList component will automatically update due to the fetch
+        } catch (error) {
+            console.error('Error refreshing projects:', error);
+        }
+    }, [session?.access_token]);
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
@@ -513,8 +531,8 @@ const AutoCutToolPanel = () => {
             // Show success message with link to view the Smart Cut project
             setShowConfig(false)
             
-            // Add notification that the project is now visible in the projects page
-            console.log(`Smart Cut project created: ${smartCutProjectId}`);
+            // Refresh the projects list to show the new project immediately
+            await refreshProjectsList();
             
             // Redirect to projects page with highlight parameter to show processing status
             router.push(`/projects?highlight=${smartCutProjectId}`);
