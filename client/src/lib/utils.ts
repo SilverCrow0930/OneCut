@@ -93,3 +93,67 @@ export async function getMediaDuration(file: File, url: string): Promise<number>
         media.onerror = () => reject(new Error('Could not load media metadata'))
     })
 }
+
+/**
+ * Calculate credits needed for Smart Cut based on video duration and type
+ * @param durationInSeconds Video duration in seconds
+ * @param type 'talk_audio' or 'action_visual'
+ * @returns Number of credits needed
+ */
+export function calculateSmartCutCredits(durationInSeconds: number, type: 'talk_audio' | 'action_visual'): number {
+  // Convert to hours and round up to nearest minute first
+  const durationInMinutes = Math.ceil(durationInSeconds / 60);
+  const durationInHours = durationInMinutes / 60;
+  
+  // Credits per hour based on type
+  const creditsPerHour = type === 'talk_audio' ? 20 : 40;
+  
+  // Calculate and round up
+  return Math.ceil(durationInHours * creditsPerHour);
+}
+
+/**
+ * Calculate credits needed for auto captions based on video duration
+ * @param durationInSeconds Video duration in seconds
+ * @returns Number of credits needed
+ */
+export function calculateCaptionsCredits(durationInSeconds: number): number {
+  // Convert to hours and round up to nearest minute first
+  const durationInMinutes = Math.ceil(durationInSeconds / 60);
+  const durationInHours = durationInMinutes / 60;
+  
+  // 8 credits per hour for captions
+  return Math.ceil(durationInHours * 8);
+}
+
+/**
+ * Calculate credits needed for AI voiceover based on text length
+ * @param textLength Number of characters in the text
+ * @returns Number of credits needed
+ */
+export function calculateVoiceoverCredits(textLength: number): number {
+  // Estimate: ~150 characters per minute of audio
+  const estimatedMinutes = Math.ceil(textLength / 150);
+  
+  // 4 credits per minute for voiceover
+  return estimatedMinutes * 4;
+}
+
+/**
+ * Get credit cost for a specific AI feature
+ * @param featureName Name of the AI feature
+ * @returns Number of credits needed
+ */
+export function getAIFeatureCreditCost(featureName: string): number {
+  const creditCosts: Record<string, number> = {
+    'smart-cut-audio': 20, // per hour
+    'smart-cut-visual': 40, // per hour
+    'auto-captions': 8,    // per hour
+    'ai-voiceover': 4,     // per minute
+    'ai-images': 4,        // per image
+    'video-generation': 15, // per video
+    'music-generation': 2   // per track
+  };
+  
+  return creditCosts[featureName] || 0;
+}

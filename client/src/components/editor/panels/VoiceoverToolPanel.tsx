@@ -11,6 +11,8 @@ import {
 } from 'lucide-react'
 import PanelHeader from './PanelHeader'
 import { apiPath } from '@/lib/config'
+import { useCredits } from '@/contexts/CreditsContext';
+import { calculateVoiceoverCredits } from '@/lib/utils';
 
 interface Voice {
     id: string
@@ -141,6 +143,7 @@ const VoiceoverToolPanel = () => {
     const { session } = useAuth()
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
+    const { consumeCredits } = useCredits();
 
     // Load voices and user preferences on mount
     useEffect(() => {
@@ -277,6 +280,22 @@ const VoiceoverToolPanel = () => {
             console.log('Script:', script)
             console.log('Voice:', selectedVoice.name)
             console.log('Settings:', voiceSettings)
+
+            // Calculate credits needed based on text length
+            const characterCount = script.length;
+            const creditsNeeded = calculateVoiceoverCredits(characterCount);
+            
+            console.log(`Text length: ${characterCount} characters (est. ${Math.ceil(characterCount / 150)} minutes)`);
+            console.log(`Credits needed for voiceover: ${creditsNeeded}`);
+            
+            // Consume credits before processing
+            const success = await consumeCredits(creditsNeeded, 'ai-voiceover');
+            
+            if (!success) {
+                setError('Insufficient credits. Please upgrade your plan.');
+                setIsGenerating(false);
+                return;
+            }
 
             const response = await fetch(apiPath('voiceover/generate'), {
                 method: 'POST',

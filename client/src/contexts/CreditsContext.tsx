@@ -11,6 +11,7 @@ interface CreditsContextType {
   aiAssistantChats: number;
   maxAiAssistantChats: number;
   isLoading: boolean;
+  nextBillingDate: string | null;
   
   // Credit consumption functions
   consumeCredits: (amount: number, featureName: string) => Promise<boolean>;
@@ -31,15 +32,17 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     const [aiAssistantChats, setAiAssistantChats] = useState(0);
     const [maxAiAssistantChats, setMaxAiAssistantChats] = useState(-1);
     const [isLoading, setIsLoading] = useState(true);
+    const [nextBillingDate, setNextBillingDate] = useState<string | null>(null);
 
     // Credit consumption rates
     const CREDIT_COSTS = {
-      'smart-cut': 20,
-      'ai-voiceover': 5,
+      'smart-cut-audio': 20,
+      'smart-cut-visual': 40,
+      'ai-voiceover': 4,
       'auto-captions': 8,
-      'ai-images': 3,
-      'video-generation': 30,
-      'music-generation': 15
+      'ai-images': 4,
+      'video-generation': 15,
+      'music-generation': 2
     };
 
     // Fetch user's current credits and subscription
@@ -77,7 +80,8 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
                     maxCredits: data.maxCredits,
                     subscriptionType: data.subscriptionType,
                     aiAssistantChats: data.aiAssistantChats,
-                    maxAiAssistantChats: data.maxAiAssistantChats
+                    maxAiAssistantChats: data.maxAiAssistantChats,
+                    nextBillingDate: data.nextBillingDate
                 });
                 
                 setCredits(data.currentCredits);
@@ -85,6 +89,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
                 setSubscriptionType(data.subscriptionType);
                 setAiAssistantChats(data.aiAssistantChats);
                 setMaxAiAssistantChats(data.maxAiAssistantChats);
+                setNextBillingDate(data.nextBillingDate);
             } else {
                 const errorText = await response.text();
                 console.error('[CreditsContext] Failed to fetch credits. Status:', response.status, 'Error:', errorText);
@@ -184,6 +189,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     aiAssistantChats,
     maxAiAssistantChats,
     isLoading,
+    nextBillingDate,
     consumeCredits,
     consumeAiChat,
     refreshCredits,
@@ -208,12 +214,13 @@ export function useCredits() {
 // Helper functions for checking feature availability
 export const canUseFeature = (featureName: string, credits: number, subscriptionType: string | null): boolean => {
   const CREDIT_COSTS = {
-    'smart-cut': 20,
-    'ai-voiceover': 5,
+    'smart-cut-audio': 20,
+    'smart-cut-visual': 40,
+    'ai-voiceover': 4,
     'auto-captions': 8,
-    'ai-images': 3,
-    'video-generation': 30,
-    'music-generation': 15
+    'ai-images': 4,
+    'video-generation': 15,
+    'music-generation': 2
   };
 
   // For all features, check credits
@@ -223,12 +230,13 @@ export const canUseFeature = (featureName: string, credits: number, subscription
 
 export const getFeatureCost = (featureName: string): number => {
   const CREDIT_COSTS = {
-    'smart-cut': 20,
-    'ai-voiceover': 5,
+    'smart-cut-audio': 20,
+    'smart-cut-visual': 40,
+    'ai-voiceover': 4,
     'auto-captions': 8,
-    'ai-images': 3,
-    'video-generation': 30,
-    'music-generation': 15
+    'ai-images': 4,
+    'video-generation': 15,
+    'music-generation': 2
   };
 
   return CREDIT_COSTS[featureName as keyof typeof CREDIT_COSTS] || 0;

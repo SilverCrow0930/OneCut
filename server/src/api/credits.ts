@@ -72,12 +72,19 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     let currentCredits = 0;
     let aiAssistantChats = 0;
     let maxAiAssistantChats = 0;
+    let nextBillingDate = null;
 
     if (subscription) {
       subscriptionType = subscription.subscription_type;
       maxCredits = subscription.max_credits || 0;
       maxAiAssistantChats = subscription.max_ai_chats || 0;
-      console.log('[Credits API] Using subscription data:', { subscriptionType, maxCredits, maxAiAssistantChats });
+      nextBillingDate = subscription.next_billing_date || null;
+      console.log('[Credits API] Using subscription data:', { 
+        subscriptionType, 
+        maxCredits, 
+        maxAiAssistantChats,
+        nextBillingDate 
+      });
     }
 
     if (credits) {
@@ -92,7 +99,8 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       currentCredits,
       aiAssistantChats,
       maxAiAssistantChats,
-      subscriptionId: subscription?.id || null
+      subscriptionId: subscription?.id || null,
+      nextBillingDate
     };
 
     console.log('[Credits API] Sending response:', response);

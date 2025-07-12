@@ -25,7 +25,7 @@ interface CartItem {
 
 export default function PricingPage() {
   // Real credits data from context
-  const { credits: currentCredits, maxCredits, subscriptionType, aiAssistantChats, maxAiAssistantChats, isLoading, refreshCredits } = useCredits();
+  const { credits: currentCredits, maxCredits, subscriptionType, aiAssistantChats, maxAiAssistantChats, isLoading, refreshCredits, nextBillingDate } = useCredits();
   const { user, session } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showEditorFeatures, setShowEditorFeatures] = useState(false);
@@ -79,13 +79,13 @@ export default function PricingPage() {
       let planName = 'Lemona Plan';
       let price = 19;
       
-      if (maxCredits === 150) {
+      if (maxCredits === 200) {
         planName = 'Essential';
         price = 10;
-      } else if (maxCredits === 400) {
+      } else if (maxCredits === 500) {
         planName = 'Creator';
         price = 25;
-      } else if (maxCredits === 1000) {
+      } else if (maxCredits === 1500) {
         planName = 'Pro';
         price = 68;
       } else if (maxCredits === 2500) {
@@ -93,14 +93,24 @@ export default function PricingPage() {
         price = 199;
       }
       
+      // Format next billing date
+      const formatNextBillingDate = () => {
+        if (!nextBillingDate) {
+          return 'Next month';
+        }
+        
+        const date = new Date(nextBillingDate);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      };
+      
       subscriptions.push({
         id: 'active-plan',
         name: planName,
         credits: maxCredits,
         price: price,
-      type: 'credits' as const,
-      nextBilling: 'Feb 15',
-      status: 'active'
+        type: 'credits' as const,
+        nextBilling: formatNextBillingDate(),
+        status: 'active'
       });
     }
     

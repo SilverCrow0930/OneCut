@@ -7,6 +7,7 @@ import { useEditor } from '@/contexts/EditorContext'
 import { useParams } from 'next/navigation'
 import { apiPath, API_URL } from '@/lib/config'
 import { addAssetToTrack } from '@/lib/editor/utils'
+import { useCredits } from '@/contexts/CreditsContext';
 
 interface GenerationType {
     id: 'image' | 'video' | 'music'
@@ -78,6 +79,7 @@ const AIGenerationToolPanel = () => {
     const { refresh } = useAssets()
     const { tracks, clips, executeCommand } = useEditor()
     const params = useParams()
+    const { consumeCredits } = useCredits();
 
     const activeType = GENERATION_TYPES.find(type => type.id === activeTab)!
 
@@ -85,6 +87,31 @@ const AIGenerationToolPanel = () => {
         if (!prompt.trim() || !session?.access_token) {
             setError('Please enter a prompt and make sure you\'re signed in')
             return
+        }
+        
+        // Calculate credits needed based on generation type
+        let creditsNeeded = 0;
+        let featureName = '';
+        
+        if (activeTab === 'image') {
+            creditsNeeded = 4; // 4 credits per image
+            featureName = 'ai-images';
+        } else if (activeTab === 'video') {
+            creditsNeeded = 15; // 15 credits per video
+            featureName = 'video-generation';
+        } else if (activeTab === 'music') {
+            creditsNeeded = 2; // 2 credits per music track
+            featureName = 'music-generation';
+        }
+        
+        console.log(`Credits needed for ${activeTab} generation: ${creditsNeeded}`);
+        
+        // Consume credits before processing
+        const success = await consumeCredits(creditsNeeded, featureName);
+        
+        if (!success) {
+            setError('Insufficient credits. Please upgrade your plan.');
+            return;
         }
         
         setIsGenerating(true)

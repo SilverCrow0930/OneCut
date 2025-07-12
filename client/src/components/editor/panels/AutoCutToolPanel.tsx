@@ -14,6 +14,8 @@ import PanelHeader from './PanelHeader'
 import { FilePreview } from './auto-cut/FilePreview'
 import { ActionButtons } from './auto-cut/ActionButtons'
 import { ProcessingStatus } from './auto-cut/ProcessingStatus'
+import { useCredits } from '@/contexts/CreditsContext'
+import { calculateSmartCutCredits } from '@/lib/utils';
 
 type ProcessingState = 'idle' | 'starting' | 'queued' | 'processing' | 'completed' | 'failed'
 
@@ -67,6 +69,7 @@ const AutoCutToolPanel = () => {
     const { session } = useAuth()
     const { refresh, assets } = useAssets()
     const { tracks, executeCommand } = useEditor()
+    const { consumeCredits } = useCredits()
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
     const router = useRouter()
@@ -317,6 +320,45 @@ const AutoCutToolPanel = () => {
 
     const handleStartProcessing = async () => {
         if (!selectedFile || !session) return
+
+        // Calculate credits needed based on video duration and type
+        try {
+            // Create a temporary URL for the video to get its duration
+            const videoUrl = URL.createObjectURL(selectedFile)
+            const video = document.createElement('video')
+            
+            // Wait for video metadata to load to get duration
+            await new Promise((resolve, reject) => {
+                video.onloadedmetadata = resolve
+                video.onerror = reject
+                video.src = videoUrl
+            })
+            
+            // Get video duration and calculate credits
+            const durationInSeconds = video.duration
+            const creditsNeeded = calculateSmartCutCredits(durationInSeconds, videoType)
+            
+            console.log(`Video duration: ${Math.ceil(durationInSeconds / 60)} minutes (${(durationInSeconds / 3600).toFixed(2)} hours)`)
+            console.log(`Credits needed: ${creditsNeeded} (${videoType} type)`)
+            
+            // Clean up
+            URL.revokeObjectURL(videoUrl)
+            
+            // Consume credits before processing
+            const featureName = videoType === 'talk_audio' ? 'smart-cut-audio' : 'smart-cut-visual'
+            const success = await consumeCredits(creditsNeeded, featureName)
+            
+            if (!success) {
+                setError('Insufficient credits. Please upgrade your plan or try a shorter video.')
+                return
+            }
+            
+            // If credits were successfully consumed, continue with upload and processing
+        } catch (error) {
+            console.error('Error calculating video duration:', error)
+            setError('Failed to calculate video duration. Please try again.')
+            return
+        }
 
         setIsUploading(true)
         setError(null)

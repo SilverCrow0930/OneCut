@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEditor } from '@/contexts/EditorContext'
 import { useCaptions, Caption } from '@/contexts/CaptionsContext'
+import { useCredits } from '@/contexts/CreditsContext';
 import { useParams } from 'next/navigation'
 import { apiPath } from '@/lib/config'
 import { v4 as uuid } from 'uuid'
 import { TrackType } from '@/types/editor'
+import { calculateCaptionsCredits } from '@/lib/utils';
 
 // Icons
 import { 
@@ -346,6 +348,8 @@ const CaptionsToolPanel = () => {
         setSelectedTrackId,
         resetCaptions,
     } = useCaptions()
+
+    const { consumeCredits } = useCredits();
 
     // Local state for highlight color
     const [selectedHighlightColor, setSelectedHighlightColor] = useState<string | null>(null)
