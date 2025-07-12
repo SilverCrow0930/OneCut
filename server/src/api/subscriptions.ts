@@ -45,21 +45,21 @@ const PLAN_CONFIGS = {
   'price_1Rii7qRutXiJrhxtPbrjNV04': {
     name: 'Essential',
     subscriptionType: 'editor-plus-credits',
-    maxCredits: 150,
+    maxCredits: 200,
     maxAiChats: 400,
     priceCents: 1000
   },
   'price_1RiinCRutXiJrhxtgS1H7URs': {
     name: 'Creator',
     subscriptionType: 'editor-plus-credits',
-    maxCredits: 400,
+    maxCredits: 500,
     maxAiChats: 400,
     priceCents: 2500
   },
   'price_1Rjit2RutXiJrhxt6GLIIqfb': {
     name: 'Pro',
     subscriptionType: 'editor-plus-credits',
-    maxCredits: 1000,
+    maxCredits: 1500,
     maxAiChats: 400,
     priceCents: 6800
   }

@@ -113,13 +113,13 @@ export default function PricingPage() {
     {
       id: 'price_1Rii7qRutXiJrhxtPbrjNV04', // Essential plan
       name: 'Essential',
-      credits: 150,
+      credits: 200,
       price: 10,
       description: 'Perfect for beginners',
       type: 'credits',
       features: [
         'Complete Video Editor',
-        '150 AI Credits',
+        '200 AI Credits',
         '400 AI Assistant Messages',
         '1080p Export'
       ]
@@ -127,14 +127,14 @@ export default function PricingPage() {
     {
       id: 'price_1RiinCRutXiJrhxtgS1H7URs', // Creator plan
       name: 'Creator',
-      credits: 400,
+      credits: 500,
       price: 25,
       description: 'Most popular choice',
       type: 'credits',
       popular: true,
       features: [
         'Complete Video Editor',
-        '400 AI Credits',
+        '500 AI Credits',
         '400 AI Assistant Messages',
         'Priority Support'
       ]
@@ -142,13 +142,13 @@ export default function PricingPage() {
     {
       id: 'price_1RiimLRutXiJrhxtqRr9Iw2l', // Pro plan
       name: 'Pro',
-      credits: 1000,
+      credits: 1500,
       price: 68,
       description: 'For power users',
       type: 'credits',
       features: [
         'Complete Video Editor',
-        '1000 AI Credits',
+        '1500 AI Credits',
         '400 AI Assistant Messages',
         'Early Access Features'
       ]
@@ -156,12 +156,14 @@ export default function PricingPage() {
   ];
 
   const aiFeatures = [
-    { name: 'Smart Cut', cost: 20 },
-    { name: 'AI Voiceover', cost: 5 },
-    { name: 'Auto Captions', cost: 8 },
-    { name: 'Image Generation', cost: 3 },
-    { name: 'Video Generation', cost: 30 },
-    { name: 'Music Generation', cost: 15 }
+    { name: 'Smart Cut - Audio (hour)', cost: 20 },
+    { name: 'Smart Cut - Visual (hour)', cost: 40 },
+    { name: 'AI Assistant', cost: 0 },
+    { name: 'Auto Captions (hour)', cost: 8 },
+    { name: 'AI Voiceover (minute)', cost: 4 },
+    { name: 'Image Generation', cost: 4 },
+    { name: 'Video Generation', cost: 15 },
+    { name: 'Music Generation', cost: 2 }
   ];
 
   const addToCart = (plan: Plan) => {
