@@ -18,16 +18,30 @@ const storage = new Storage({
 const bucket = storage.bucket(process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'lemona-edit-assets');
 
 // Credit calculation helper functions
-function calculateSmartCutCredits(durationInSeconds: number, contentType: string): number {
-    // Convert to hours and round up to nearest minute first
-    const durationInMinutes = Math.ceil(durationInSeconds / 60);
-    const durationInHours = durationInMinutes / 60;
-    
-    // Credits per hour based on content type
-    const creditsPerHour = contentType === 'talking_video' ? 20 : 40;
-    
-    // Calculate and round up
-    return Math.ceil(durationInHours * creditsPerHour);
+async function calculateCreditsNeeded(fileUri: string, contentType: string): Promise<number> {
+    try {
+        // First verify we can access and process the video
+        const duration = await getVideoDuration(fileUri);
+        if (!duration) {
+            throw new Error('Could not determine video duration');
+        }
+
+        // Calculate hours (rounded up to nearest hour)
+        const hours = Math.ceil(duration / 3600);
+        
+        // Calculate credits based on content type
+        let creditsPerHour = 0;
+        if (contentType === 'talking_video') {
+            creditsPerHour = 20; // Audio-only processing
+        } else {
+            creditsPerHour = 40; // Full video processing
+        }
+        
+        return hours * creditsPerHour;
+    } catch (error) {
+        console.error('[QuickClips API] Error during credit calculation:', error);
+        throw new Error('Failed to calculate credits needed. Please ensure the video file is accessible and valid.');
+    }
 }
 
 async function getVideoDuration(fileUri: string): Promise<number> {
@@ -152,7 +166,7 @@ const validateQuickclipsRequest = [
         .withMessage('User prompt must be a string with maximum 500 characters')
 ]
 
-// POST /api/v1/quickclips/start - Start a new Quickclips processing job
+// Start QuickClips processing
 router.post('/start', validateQuickclipsRequest, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const errors = validationResult(req)
@@ -168,98 +182,58 @@ router.post('/start', validateQuickclipsRequest, async (req: Request, res: Respo
 
         console.log('[Quickclips API] Starting job for project:', projectId)
 
-        // 1. Verify user owns the project
-        const { data: profile, error: profileError } = await supabase
+        // Step 1: Verify we can access and process the video
+        console.log('[Quickclips API] Verifying video access and calculating credits...');
+        const creditsNeeded = await calculateCreditsNeeded(fileUri, contentType);
+        
+        // Step 2: Get user ID from auth ID
+        const { data: userRecord, error: userError } = await supabase
             .from('users')
             .select('id')
             .eq('auth_id', user.id)
-            .single()
+            .single();
 
-        if (profileError || !profile) {
-            console.error('[Quickclips API] Profile lookup failed:', profileError)
-            return res.status(500).json({
+        if (userError || !userRecord) {
+            throw new Error('User not found');
+        }
+
+        // Step 3: Consume credits
+        console.log('[Quickclips API] Consuming credits:', creditsNeeded);
+        const success = await consumeCredits(userRecord.id, creditsNeeded, 'smart-cut-audio');
+        
+        if (!success) {
+            console.error('[Quickclips API] Credit consumption failed')
+            return res.status(400).json({
                 success: false,
-                error: 'Could not load user profile'
+                error: 'Insufficient credits. Please upgrade your plan or try a shorter video.'
             })
         }
 
-        const { data: project, error: projectError } = await supabase
-            .from('projects')
-            .select('id, user_id')
-            .eq('id', projectId)
-            .eq('user_id', profile.id)
-            .single()
-
-        if (projectError || !project) {
-            console.error('[Quickclips API] Project verification failed:', projectError)
-            return res.status(404).json({
-                success: false,
-                error: 'Project not found or access denied'
-            })
-        }
-
-        // 2. Calculate and consume credits (skip for editor mode as it's handled on frontend)
-        if (!isEditorMode) {
-            try {
-                console.log('[Quickclips API] Calculating credits for standalone QuickClips...')
-                
-                // Get video duration
-                const videoDuration = await getVideoDuration(fileUri)
-                console.log(`[Quickclips API] Video duration: ${videoDuration} seconds`)
-                
-                // Calculate credits needed
-                const creditsNeeded = calculateSmartCutCredits(videoDuration, contentType)
-                console.log(`[Quickclips API] Credits needed: ${creditsNeeded} for ${contentType}`)
-                
-                // Consume credits
-                const featureName = contentType === 'talking_video' ? 'smart-cut-audio' : 'smart-cut-visual'
-                const success = await consumeCredits(profile.id, creditsNeeded, featureName)
-                
-                if (!success) {
-                    console.error('[Quickclips API] Credit consumption failed')
-                    return res.status(400).json({
-                        success: false,
-                        error: 'Insufficient credits. Please upgrade your plan or try a shorter video.'
-                    })
-                }
-                
-                console.log('[Quickclips API] Credits consumed successfully')
-            } catch (error) {
-                console.error('[Quickclips API] Error during credit calculation/consumption:', error)
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to calculate or consume credits'
-                })
-            }
-        } else {
-            console.log('[Quickclips API] Skipping credit consumption for editor mode (handled on frontend)')
-        }
-
-        // 3. Queue the background job
+        // Step 4: Queue the job
         const jobId = await queueQuickclipsJob(
             projectId,
             fileUri,
             mimeType,
             contentType,
             targetDuration,
-            profile.id,
+            userRecord.id,
             isEditorMode || false,
             userPrompt
         )
 
         console.log(`[Quickclips API] Job ${jobId} queued successfully for project ${projectId}`)
 
-        res.json({
+        res.json({ 
             success: true,
             jobId,
-            message: 'Quickclips processing started'
-        })
+            message: 'QuickClips job started successfully'
+        });
 
     } catch (error) {
-        console.error('[Quickclips API] Error starting job:', error)
+        console.error('[Quickclips API] Error during credit calculation/consumption:', error);
         next(error)
     }
-})
+});
 
 // GET /api/v1/quickclips/status/:jobId - Get job status
 router.get('/status/:jobId', async (req: Request, res: Response, next: NextFunction) => {
