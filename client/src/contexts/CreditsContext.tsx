@@ -114,13 +114,19 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Consume credits for AI features
   const consumeCredits = async (amount: number, featureName: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!user) {
+      console.error('[CreditsContext] No user found for credit consumption');
+      return false;
+    }
     
     // Check if user has enough credits
     if (credits < amount) {
-      console.warn(`Insufficient credits: ${credits} < ${amount}`);
+      console.warn(`[CreditsContext] Insufficient credits: ${credits} < ${amount}`);
       return false;
     }
+    
+    console.log(`[CreditsContext] Attempting to consume ${amount} credits for ${featureName}`);
+    console.log(`[CreditsContext] Current credits: ${credits}, User ID: ${user.id}`);
     
     try {
       const response = await fetch(apiPath('credits/consume'), {
@@ -131,23 +137,40 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({
           amount,
-          featureName,
-          userId: user.id
+          featureName
         })
       });
       
+      console.log(`[CreditsContext] API response status: ${response.status}`);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log(`[CreditsContext] API response data:`, data);
         setCredits(data.remainingCredits);
         
         // Log usage for analytics
         console.log(`✅ Consumed ${amount} credits for ${featureName}. Remaining: ${data.remainingCredits}`);
         return true;
+      } else {
+        // Log the error response
+        const errorText = await response.text();
+        console.error(`[CreditsContext] API error response:`, {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          console.error(`[CreditsContext] Parsed error data:`, errorData);
+        } catch (e) {
+          console.error(`[CreditsContext] Could not parse error response as JSON`);
+        }
+        
+        return false;
       }
-      
-      return false;
     } catch (error) {
-      console.error('Failed to consume credits:', error);
+      console.error('[CreditsContext] Network error during credit consumption:', error);
       return false;
     }
   };

@@ -119,7 +119,15 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
     const authId = authReq.user.id;
     const { amount, featureName } = req.body;
 
+    console.log('[Credits API] Consume request received:', {
+      authId,
+      amount,
+      featureName,
+      body: req.body
+    });
+
     if (!amount || !featureName) {
+      console.error('[Credits API] Missing required fields:', { amount, featureName });
       return res.status(400).json({ error: 'Amount and feature name are required' });
     }
 
@@ -130,11 +138,15 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
       .eq('auth_id', authId)
       .single();
 
+    console.log('[Credits API] User lookup result:', { userRecord, error: userError });
+
     if (userError || !userRecord) {
+      console.error('[Credits API] User not found for auth ID:', authId);
       return res.status(404).json({ error: 'User not found' });
     }
 
     const userId = userRecord.id;
+    console.log('[Credits API] Using internal user ID:', userId);
 
     // Get current credits
     const { data: credits, error: creditsError } = await supabase
@@ -143,19 +155,72 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
       .eq('user_id', userId)
       .single();
 
-    if (creditsError && creditsError.code !== 'PGRST116') {
+    console.log('[Credits API] Credits lookup result:', { credits, error: creditsError });
+
+    let currentCredits = 0;
+
+    if (creditsError && creditsError.code === 'PGRST116') {
+      // No credits record found, create one based on subscription
+      console.log('[Credits API] No credits record found, creating one...');
+      
+      // Get user's subscription to determine max credits
+      const { data: subscription, error: subError } = await supabase
+        .from('user_subscriptions')
+        .select('max_credits')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+
+      console.log('[Credits API] Subscription lookup for credits initialization:', { subscription, error: subError });
+
+      const maxCredits = subscription?.max_credits || 0;
+      console.log('[Credits API] Initializing credits with max_credits:', maxCredits);
+
+      // Create credits record
+      const { data: newCredits, error: createError } = await supabase
+        .from('user_credits')
+        .insert({
+          user_id: userId,
+          current_credits: maxCredits,
+          ai_assistant_chats: 0,
+          last_reset_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('[Credits API] Error creating credits record:', createError);
+        throw createError;
+      }
+
+      console.log('[Credits API] Created new credits record:', newCredits);
+      currentCredits = newCredits.current_credits;
+    } else if (creditsError) {
+      console.error('[Credits API] Credits lookup error:', creditsError);
       throw creditsError;
+    } else {
+      currentCredits = credits?.current_credits || 0;
     }
 
-    const currentCredits = credits?.current_credits || 0;
+    console.log('[Credits API] Current credits before consumption:', currentCredits);
 
     // Check if user has enough credits
     if (currentCredits < amount) {
+      console.warn('[Credits API] Insufficient credits:', {
+        currentCredits,
+        requestedAmount: amount,
+        shortfall: amount - currentCredits
+      });
       return res.status(400).json({ error: 'Insufficient credits' });
     }
 
     // Update credits
     const newCredits = currentCredits - amount;
+    console.log('[Credits API] Updating credits:', {
+      from: currentCredits,
+      to: newCredits,
+      consumed: amount
+    });
     
     const { error: updateError } = await supabase
       .from('user_credits')
@@ -166,8 +231,11 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
       });
 
     if (updateError) {
+      console.error('[Credits API] Update error:', updateError);
       throw updateError;
     }
+
+    console.log('[Credits API] Credits updated successfully');
 
     // Log the credit usage
     const { error: logError } = await supabase
@@ -184,6 +252,12 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
       console.error('Failed to log credit usage:', logError);
       // Don't fail the request if logging fails
     }
+
+    console.log('[Credits API] Consumption successful:', {
+      consumed: amount,
+      remaining: newCredits,
+      featureName
+    });
 
     res.json({
       success: true,
