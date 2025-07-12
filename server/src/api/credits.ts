@@ -238,6 +238,8 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
         user_id: userId,
         current_credits: newCredits,
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id'
       });
 
     if (updateError) {
