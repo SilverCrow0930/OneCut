@@ -173,7 +173,17 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
 
       console.log('[Credits API] Subscription lookup for credits initialization:', { subscription, error: subError });
 
-      const maxCredits = subscription?.max_credits || 0;
+      if (subError) {
+        console.error('[Credits API] Error looking up subscription:', subError);
+        throw subError;
+      }
+
+      if (!subscription) {
+        console.error('[Credits API] No active subscription found for user');
+        throw new Error('No active subscription found');
+      }
+
+      const maxCredits = subscription.max_credits || 0;
       console.log('[Credits API] Initializing credits with max_credits:', maxCredits);
 
       // Create credits record
@@ -267,8 +277,19 @@ router.post('/consume', authenticate, async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('[Credits API] Error consuming credits:', error);
-    res.status(500).json({ error: 'Failed to consume credits' });
+    console.error('Error consuming credits:', error);
+    let errorMessage = 'Failed to consume credits';
+    
+    if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('[Credits API] Detailed error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+    }
+    
+    res.status(500).json({ error: errorMessage });
   }
 });
 
