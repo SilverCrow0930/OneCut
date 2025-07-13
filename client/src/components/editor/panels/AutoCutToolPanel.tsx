@@ -268,14 +268,18 @@ const AutoCutToolPanel = () => {
     // Function to refresh projects list
     const refreshProjectsList = useCallbackEffect(async () => {
         try {
-            const response = await fetch(apiPath('projects'), {
+            // Make a direct fetch with cache-busting to ensure fresh data
+            const response = await fetch(apiPath('projects') + `?t=${Date.now()}`, {
                 headers: {
-                    'Authorization': `Bearer ${session?.access_token}`
+                    'Authorization': `Bearer ${session?.access_token}`,
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
                 }
             });
             if (!response.ok) {
                 throw new Error('Failed to refresh projects');
             }
+            console.log('Projects list refreshed successfully');
             // The ProjectsList component will automatically update due to the fetch
         } catch (error) {
             console.error('Error refreshing projects:', error);
@@ -585,11 +589,9 @@ const AutoCutToolPanel = () => {
             // Show success message with link to view the Smart Cut project
             setShowConfig(false)
             
-            // Refresh the projects list to show the new project immediately
-            await refreshProjectsList();
-            
             // Redirect to projects page with highlight parameter to show processing status
-            router.push(`/projects?highlight=${smartCutProjectId}`);
+            // Using window.location.href to force a full page reload
+            window.location.href = `/projects?highlight=${smartCutProjectId}`;
         } catch (error) {
             console.error('Error starting processing:', error)
             setError(error instanceof Error ? error.message : 'Processing failed')
