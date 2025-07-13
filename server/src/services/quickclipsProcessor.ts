@@ -1466,25 +1466,55 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                     reject(new Error('Thumbnail generation timeout after 2 minutes'))
                 }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
                 
-                ffmpeg(outputPath)
-                    .outputOptions([
-                        '-vf', 'thumbnail,scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:-1:-1:color=black',
-                        '-frames:v', '1'
-                    ])
-                    .output(thumbnailPath)
-                    .on('start', (command) => {
-                        console.log(`[QuickclipsProcessor] Thumbnail command for long format:`, command)
+                try {
+                    // First check if the output file exists and has content
+                    fs.stat(outputPath).then(stats => {
+                        if (stats.size === 0) {
+                            return reject(new Error('Output file is empty, cannot generate thumbnail'));
+                        }
+                        
+                        // Use a simpler approach for thumbnail generation
+                        ffmpeg(outputPath)
+                            .outputOptions([
+                                '-ss', '00:00:01', // Seek to 1 second
+                                '-vframes', '1'    // Take 1 frame
+                            ])
+                            .output(thumbnailPath)
+                            .on('start', (command) => {
+                                console.log(`[QuickclipsProcessor] Thumbnail command for long format:`, command)
+                            })
+                            .on('end', () => {
+                                clearTimeout(timeout)
+                                resolve()
+                            })
+                            .on('error', (err) => {
+                                clearTimeout(timeout)
+                                console.error(`[QuickclipsProcessor] Thumbnail error for long format:`, err.message)
+                                
+                                // Create a fallback blank thumbnail if thumbnail generation fails
+                                console.log(`[QuickclipsProcessor] Creating fallback thumbnail for long format`)
+                                ffmpeg()
+                                    .input('color=c=black:s=640x360:r=1')
+                                    .inputFormat('lavfi')
+                                    .outputOptions(['-frames:v', '1'])
+                                    .output(thumbnailPath)
+                                    .on('end', () => {
+                                        clearTimeout(timeout)
+                                        resolve()
+                                    })
+                                    .on('error', (fallbackErr) => {
+                                        console.error(`[QuickclipsProcessor] Fallback thumbnail failed:`, fallbackErr.message)
+                                        reject(err) // Reject with the original error
+                                    })
+                                    .run()
+                            })
+                            .run()
+                    }).catch(err => {
+                        reject(new Error(`Cannot access output file: ${err.message}`))
                     })
-                    .on('end', () => {
-                        clearTimeout(timeout)
-                        resolve()
-                    })
-                    .on('error', (err) => {
-                        clearTimeout(timeout)
-                        console.error(`[QuickclipsProcessor] Thumbnail error for long format:`, err.message)
-                        reject(err)
-                    })
-                    .run()
+                } catch (error) {
+                    reject(error)
+                }
             })
 
             // Upload thumbnail
@@ -1714,25 +1744,55 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                         reject(new Error('Thumbnail generation timeout after 2 minutes'))
                     }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
                     
-                    ffmpeg(outputPath)
-                        .outputOptions([
-                            '-vf', 'thumbnail,scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:-1:-1:color=black',
-                            '-frames:v', '1'
-                        ])
-                        .output(thumbnailPath)
-                        .on('start', (command) => {
-                            console.log(`[QuickclipsProcessor] Thumbnail command for clip ${i}:`, command)
+                    try {
+                        // First check if the output file exists and has content
+                        fs.stat(outputPath).then(stats => {
+                            if (stats.size === 0) {
+                                return reject(new Error('Output file is empty, cannot generate thumbnail'));
+                            }
+                            
+                            // Use a simpler approach for thumbnail generation
+                            ffmpeg(outputPath)
+                                .outputOptions([
+                                    '-ss', '00:00:01', // Seek to 1 second
+                                    '-vframes', '1'    // Take 1 frame
+                                ])
+                                .output(thumbnailPath)
+                                .on('start', (command) => {
+                                    console.log(`[QuickclipsProcessor] Thumbnail command for clip ${i}:`, command)
+                                })
+                                .on('end', () => {
+                                    clearTimeout(timeout)
+                                    resolve()
+                                })
+                                .on('error', (err) => {
+                                    clearTimeout(timeout)
+                                    console.error(`[QuickclipsProcessor] Thumbnail error for clip ${i}:`, err.message)
+                                    
+                                    // Create a fallback blank thumbnail if thumbnail generation fails
+                                    console.log(`[QuickclipsProcessor] Creating fallback thumbnail for clip ${i}`)
+                                    ffmpeg()
+                                        .input('color=c=black:s=640x360:r=1')
+                                        .inputFormat('lavfi')
+                                        .outputOptions(['-frames:v', '1'])
+                                        .output(thumbnailPath)
+                                        .on('end', () => {
+                                            clearTimeout(timeout)
+                                            resolve()
+                                        })
+                                        .on('error', (fallbackErr) => {
+                                            console.error(`[QuickclipsProcessor] Fallback thumbnail failed:`, fallbackErr.message)
+                                            reject(err) // Reject with the original error
+                                        })
+                                        .run()
+                                })
+                                .run()
+                        }).catch(err => {
+                            reject(new Error(`Cannot access output file: ${err.message}`))
                         })
-                        .on('end', () => {
-                            clearTimeout(timeout)
-                            resolve()
-                        })
-                        .on('error', (err) => {
-                            clearTimeout(timeout)
-                            console.error(`[QuickclipsProcessor] Thumbnail error for clip ${i}:`, err.message)
-                            reject(err)
-                        })
-                        .run()
+                    } catch (error) {
+                        reject(error)
+                    }
                 })
                 
                 // Upload thumbnail

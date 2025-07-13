@@ -17,6 +17,7 @@ import { ProcessingStatus } from './auto-cut/ProcessingStatus'
 import { useCredits } from '@/contexts/CreditsContext'
 import { calculateSmartCutCredits } from '@/lib/utils';
 import { useCallback as useCallbackEffect } from 'react';
+import { useQuickClips } from '@/contexts/QuickClipsContext';
 
 type ProcessingState = 'idle' | 'starting' | 'queued' | 'processing' | 'completed' | 'failed'
 
@@ -75,6 +76,27 @@ const AutoCutToolPanel = () => {
     const params = useParams()
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
     const router = useRouter()
+    const { socket, onQuickClipsState } = useQuickClips();
+    
+    // Listen for QuickClips state updates
+    useEffect(() => {
+        if (!socket) return;
+        
+        // Set up listener for project creation notifications
+        const handleProjectCreated = (data: any) => {
+            if (data.event === 'project_created' && data.projectId) {
+                console.log('Received project creation notification:', data);
+                // Force reload to show the new project
+                window.location.href = `/projects?highlight=${data.projectId}`;
+            }
+        };
+        
+        socket.on('quickclips_notification', handleProjectCreated);
+        
+        return () => {
+            socket.off('quickclips_notification', handleProjectCreated);
+        };
+    }, [socket]);
 
     // Specific time intervals in seconds (20s to 30m)
     const timeIntervals = [20, 40, 60, 90, 120, 240, 360, 480, 600, 900, 1200, 1500, 1800]
@@ -588,6 +610,14 @@ const AutoCutToolPanel = () => {
 
             // Show success message with link to view the Smart Cut project
             setShowConfig(false)
+            
+            // Emit a notification via socket if available
+            if (socket) {
+                socket.emit('project_created', { 
+                    projectId: smartCutProjectId,
+                    type: 'quickclips'
+                });
+            }
             
             // Redirect to projects page with highlight parameter to show processing status
             // Using window.location.href to force a full page reload
