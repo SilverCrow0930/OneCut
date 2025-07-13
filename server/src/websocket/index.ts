@@ -199,19 +199,6 @@ export const setupWebSocket = async (httpServer: HttpServer): Promise<Server> =>
                 }
             });
 
-            // Project creation notification handler
-            socket.on('project_created', (data: { projectId: string, type: string }) => {
-                console.log(`[WebSocket] Project creation notification received:`, data);
-                
-                // Broadcast to all clients (including sender)
-                io.emit('quickclips_notification', {
-                    event: 'project_created',
-                    projectId: data.projectId,
-                    type: data.type,
-                    timestamp: Date.now()
-                });
-            });
-
             socket.on('disconnect', () => {
                 console.log(`[WebSocket] Client disconnected: ${socket.id}`);
             });
