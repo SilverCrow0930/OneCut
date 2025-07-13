@@ -174,49 +174,8 @@ const QuickClipsButton = () => {
             return
         }
 
-        // Create project object first so we can add it to local storage
-        const projectData = {
-            id: crypto.randomUUID(), // Generate a temporary ID
-            name: selectedFile.name,
-            processing_status: 'queued',
-            processing_type: 'quickclips',
-            processing_progress: 5,
-            processing_message: 'Creating project...',
-            processing_data: {
-                contentType: getContentType(),
-                videoFormat: getVideoFormat(),
-                targetDuration,
-                filename: selectedFile.name
-            },
-            created_at: new Date().toISOString(),
-            is_optimistic: true // Mark this as an optimistically added project
-        };
-
-        // Add to localStorage to persist through navigation
+        // 1. Create new project first to get the real ID
         try {
-            // Get existing projects
-            const existingProjects = localStorage.getItem('optimistic_projects');
-            const projects = existingProjects ? JSON.parse(existingProjects) : [];
-            
-            // Add new project
-            projects.push(projectData);
-            
-            // Save back to localStorage
-            localStorage.setItem('optimistic_projects', JSON.stringify(projects));
-            
-            console.log('Added optimistic project to localStorage:', projectData.id);
-        } catch (err) {
-            console.warn('Failed to store optimistic project in localStorage:', err);
-            // Continue anyway - this is just for better UX
-        }
-
-        // Close modal immediately and redirect to projects
-        setIsModalOpen(false)
-        router.push(`/projects?highlight=${projectData.id}`)
-
-        // Start processing in the background
-        try {
-            // 1. Create new project
             const projectResponse = await fetch(apiPath('projects'), {
                 method: 'POST',
                 headers: {
@@ -251,19 +210,40 @@ const QuickClipsButton = () => {
 
             const project = await projectResponse.json()
 
-            // Replace the optimistic project ID with the real one
+            // 2. Add optimistic project with the REAL project ID
+            const projectData = {
+                id: project.id, // Use the real project ID
+                name: selectedFile.name,
+                processing_status: 'queued',
+                processing_type: 'quickclips',
+                processing_progress: 5,
+                processing_message: 'Creating project...',
+                processing_data: {
+                    contentType: getContentType(),
+                    videoFormat: getVideoFormat(),
+                    targetDuration,
+                    filename: selectedFile.name
+                },
+                created_at: new Date().toISOString(),
+                is_optimistic: true
+            };
+
+            // Store in localStorage
             try {
                 const existingProjects = localStorage.getItem('optimistic_projects');
-                if (existingProjects) {
-                    const projects = JSON.parse(existingProjects);
-                    const updatedProjects = projects.filter((p: any) => p.id !== projectData.id);
-                    localStorage.setItem('optimistic_projects', JSON.stringify(updatedProjects));
-                }
+                const projects = existingProjects ? JSON.parse(existingProjects) : [];
+                projects.push(projectData);
+                localStorage.setItem('optimistic_projects', JSON.stringify(projects));
+                console.log('Added optimistic project to localStorage:', projectData.id);
             } catch (err) {
-                console.warn('Failed to update optimistic projects:', err);
+                console.warn('Failed to store optimistic project in localStorage:', err);
             }
 
-            // 2. Upload file to assets
+            // Close modal and redirect
+            setIsModalOpen(false)
+            router.push(`/projects?highlight=${project.id}`)
+
+            // 3. Upload file and start processing
             const formData = new FormData()
             formData.append('file', selectedFile)
             formData.append('projectId', project.id)
@@ -295,7 +275,7 @@ const QuickClipsButton = () => {
                 throw new Error('File upload did not return a valid GCS URI')
             }
 
-            // 3. Start QuickClips processing
+            // Start QuickClips processing
             const jobResponse = await fetch(apiPath('quickclips/start'), {
                 method: 'POST',
                 headers: {
@@ -322,9 +302,6 @@ const QuickClipsButton = () => {
                 }
                 throw new Error(errorMessage)
             }
-
-            // The project processing will be handled by the backend
-            // User will see progress on the projects page
 
         } catch (error) {
             console.error('Error during project creation or file upload:', error)
