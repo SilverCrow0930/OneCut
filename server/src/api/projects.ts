@@ -184,22 +184,6 @@ router.post(
                 })
             }
 
-            // Send WebSocket notification for project creation
-            // This is especially useful for QuickClips projects
-            if (global.io && data.processing_type === 'quickclips') {
-                try {
-                    global.io.emit('project_created', {
-                        projectId: data.id,
-                        projectType: data.processing_type,
-                        status: data.processing_status
-                    });
-                    console.log(`[Projects API] Emitted project_created event for ${data.id}`);
-                } catch (wsError) {
-                    console.error('[Projects API] WebSocket notification error:', wsError);
-                    // Don't fail the request if WebSocket notification fails
-                }
-            }
-
             // 4) Return the full project data
             return res.status(201).json(data)
         }

@@ -43,7 +43,6 @@ interface QuickClipsContextType {
     sendQuickClipsRequest: (data: QuickClipsEvent) => void;
     onQuickClipsResponse: (callback: (response: QuickClipsResponse) => void) => void;
     onQuickClipsState: (callback: (state: QuickClipsState) => void) => void;
-    onProjectCreated: (callback: (data: {projectId: string, projectType: string, status: string}) => void) => void;
 }
 
 const QuickClipsContext = createContext<QuickClipsContextType | undefined>(undefined);
@@ -106,17 +105,6 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
             console.log('QuickClips WebSocket disconnected:', reason);
         });
 
-        // Add listener for project creation events
-        newSocket.on('project_created', (data) => {
-            console.log('Received project_created event:', data);
-            if (data.projectType === 'quickclips' && 
-                (data.status === 'processing' || data.status === 'queued')) {
-                console.log('Refreshing page to show new QuickClips project...');
-                // Force a page refresh to show the new project
-                window.location.href = `/projects?highlight=${data.projectId}`;
-            }
-        });
-
         socketRef.current = newSocket;
         setSocket(newSocket);
 
@@ -154,21 +142,12 @@ export function QuickClipsProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const onProjectCreated = (callback: (data: {projectId: string, projectType: string, status: string}) => void) => {
-        if (socket) {
-            socket.on('project_created', callback);
-        } else {
-            console.log('WebSocket not available for project creation events');
-        }
-    };
-
     return (
         <QuickClipsContext.Provider value={{
             socket,
             sendQuickClipsRequest,
             onQuickClipsResponse,
-            onQuickClipsState,
-            onProjectCreated
+            onQuickClipsState
         }}>
             {children}
         </QuickClipsContext.Provider>
