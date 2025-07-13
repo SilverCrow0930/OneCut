@@ -1467,11 +1467,13 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
                 
                 ffmpeg(outputPath)
-                    .screenshots({
-                        timestamps: ['1'],
-                        filename: path.basename(thumbnailPath),
-                        folder: path.dirname(thumbnailPath),
-                        size: '640x360'
+                    .outputOptions([
+                        '-vf', 'thumbnail,scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:-1:-1:color=black',
+                        '-frames:v', '1'
+                    ])
+                    .output(thumbnailPath)
+                    .on('start', (command) => {
+                        console.log(`[QuickclipsProcessor] Thumbnail command for long format:`, command)
                     })
                     .on('end', () => {
                         clearTimeout(timeout)
@@ -1479,8 +1481,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                     })
                     .on('error', (err) => {
                         clearTimeout(timeout)
+                        console.error(`[QuickclipsProcessor] Thumbnail error for long format:`, err.message)
                         reject(err)
                     })
+                    .run()
             })
 
             // Upload thumbnail
@@ -1711,11 +1715,13 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                     }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
                     
                     ffmpeg(outputPath)
-                        .screenshots({
-                            timestamps: ['1'],
-                            filename: path.basename(thumbnailPath),
-                            folder: path.dirname(thumbnailPath),
-                            size: '640x360'
+                        .outputOptions([
+                            '-vf', 'thumbnail,scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:-1:-1:color=black',
+                            '-frames:v', '1'
+                        ])
+                        .output(thumbnailPath)
+                        .on('start', (command) => {
+                            console.log(`[QuickclipsProcessor] Thumbnail command for clip ${i}:`, command)
                         })
                         .on('end', () => {
                             clearTimeout(timeout)
@@ -1723,8 +1729,10 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                         })
                         .on('error', (err) => {
                             clearTimeout(timeout)
+                            console.error(`[QuickclipsProcessor] Thumbnail error for clip ${i}:`, err.message)
                             reject(err)
                         })
+                        .run()
                 })
                 
                 // Upload thumbnail
