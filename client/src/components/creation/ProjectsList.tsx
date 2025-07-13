@@ -577,8 +577,7 @@ function ProjectCard({
                 <div className="rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-purple-400 via-blue-400 to-emerald-300 flex flex-col justify-between min-h-[220px]">
                     <div className="flex flex-col items-center justify-center h-40 p-4">
                         <div className="w-12 h-12 mb-3 relative flex items-center justify-center">
-                            <svg className="w-12 h-12 animate-spin-slow text-white/70 absolute top-0 left-0" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="6" strokeDasharray="100" strokeDashoffset="60" strokeLinecap="round" /></svg>
-                            <span className="absolute text-white font-bold text-lg left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">{project.processing_progress || 7}%</span>
+                            <span className="text-white font-bold text-2xl">{project.processing_progress || 7}%</span>
                         </div>
                         <div className="text-white font-bold text-lg mb-1">Analyzing...</div>
                         <div className="text-white/80 text-sm">{project.processing_message || 'Preparing...'} </div>

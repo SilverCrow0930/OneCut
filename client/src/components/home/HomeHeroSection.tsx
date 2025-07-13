@@ -212,7 +212,39 @@ const HomeHeroSection = () => {
 
             const project = await projectResponse.json()
 
-            // 2. Upload file to assets
+            // 2. Add optimistic project with the REAL project ID
+            const projectData = {
+                id: project.id, // Use the real project ID
+                name: selectedFile.name,
+                processing_status: 'queued',
+                processing_type: 'quickclips',
+                processing_progress: 5,
+                processing_message: 'Creating project...',
+                processing_data: {
+                    contentType: 'talking_video',
+                    videoFormat: targetDuration < 120 ? 'short' : 'long',
+                    targetDuration,
+                    filename: selectedFile.name
+                },
+                created_at: new Date().toISOString(),
+                is_optimistic: true
+            };
+
+            // Store in localStorage
+            try {
+                const existingProjects = localStorage.getItem('optimistic_projects');
+                const projects = existingProjects ? JSON.parse(existingProjects) : [];
+                projects.push(projectData);
+                localStorage.setItem('optimistic_projects', JSON.stringify(projects));
+                console.log('Added optimistic project to localStorage:', projectData.id);
+            } catch (err) {
+                console.warn('Failed to store optimistic project in localStorage:', err);
+            }
+
+            // Close modal and redirect
+            router.push(`/projects?highlight=${project.id}`)
+
+            // 3. Upload file and start processing in the background
             const formData = new FormData()
             formData.append('file', selectedFile)
             formData.append('projectId', project.id)
@@ -248,7 +280,7 @@ const HomeHeroSection = () => {
                 throw new Error('File upload did not return a valid GCS URI')
             }
 
-            // 3. Start background processing job
+            // 4. Start background processing job
             console.log('Starting QuickClips with data:', {
                 projectId: project.id,
                 fileUri,
@@ -325,9 +357,6 @@ const HomeHeroSection = () => {
                 })
                 throw new Error(errorMessage)
             }
-
-            // 4. Navigate to projects page showing the processing project
-            router.push(`/projects?highlight=${project.id}`)
 
         } catch (error) {
             console.error('Error starting quickclips:', error)
@@ -690,19 +719,6 @@ const HomeHeroSection = () => {
                     {error && (
                         <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                             <p className="text-red-700 text-sm">{error}</p>
-                        </div>
-                    )}
-
-                    {/* Upload Progress */}
-                    {isUploading && (
-                        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-blue-700 text-sm mb-2">Creating your Smart Cut project...</p>
-                            <div className="w-full bg-blue-200 rounded-full h-2">
-                                <div 
-                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                    style={{ width: '75%' }}
-                                ></div>
-                            </div>
                         </div>
                     )}
 
