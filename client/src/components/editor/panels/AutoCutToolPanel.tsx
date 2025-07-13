@@ -16,7 +16,6 @@ import { ActionButtons } from './auto-cut/ActionButtons'
 import { ProcessingStatus } from './auto-cut/ProcessingStatus'
 import { useCredits } from '@/contexts/CreditsContext'
 import { calculateSmartCutCredits } from '@/lib/utils';
-import { useCallback as useCallbackEffect } from 'react';
 
 type ProcessingState = 'idle' | 'starting' | 'queued' | 'processing' | 'completed' | 'failed'
 
@@ -265,79 +264,6 @@ const AutoCutToolPanel = () => {
         checkExistingSmartCutProject()
     }, [projectId, session?.access_token])
 
-    // Function to refresh projects list
-    const refreshProjectsList = useCallbackEffect(async () => {
-        try {
-            // Make a direct fetch with cache-busting to ensure fresh data
-            const response = await fetch(apiPath('projects') + `?t=${Date.now()}`, {
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
-            });
-            if (!response.ok) {
-                throw new Error('Failed to refresh projects');
-            }
-            console.log('Projects list refreshed successfully');
-            // The ProjectsList component will automatically update due to the fetch
-        } catch (error) {
-            console.error('Error refreshing projects:', error);
-        }
-    }, [session?.access_token]);
-
-    // Function to generate incremented name
-    const generateSmartCutName = async (baseName: string): Promise<string> => {
-        if (!session?.access_token) return baseName;
-
-        try {
-            // Fetch all projects to check for existing names
-            const response = await fetch(apiPath('projects'), {
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch projects');
-            }
-
-            const projects = await response.json();
-            const baseSmartCutName = `Smart Cut: ${baseName}`;
-            
-            // Find all projects that start with this name
-            const matchingProjects = projects.filter((p: any) => 
-                p.name.startsWith(baseSmartCutName)
-            );
-
-            if (matchingProjects.length === 0) {
-                return baseSmartCutName;
-            }
-
-            // Extract numbers from existing names
-            const numbers = matchingProjects
-                .map((p: any) => {
-                    const match = p.name.match(/\((\d+)\)$/);
-                    return match ? parseInt(match[1]) : 0;
-                })
-                .filter((n: number) => n > 0)
-                .sort((a: number, b: number) => b - a);
-
-            // If no numbered versions exist, add (1)
-            if (numbers.length === 0) {
-                return `${baseSmartCutName} (1)`;
-            }
-
-            // Get the highest number and increment
-            const nextNumber = numbers[0] + 1;
-            return `${baseSmartCutName} (${nextNumber})`;
-        } catch (error) {
-            console.error('Error generating project name:', error);
-            // Fallback to timestamp if error
-            return `${baseName} (${Date.now().toString().slice(-4)})`;
-        }
-    };
-
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (file && file.type.startsWith('video/')) {
@@ -490,10 +416,8 @@ const AutoCutToolPanel = () => {
             const maxRetries = 3;
             let lastError;
             
-            // Generate unique name for the Smart Cut project
-            const smartCutProjectName = await generateSmartCutName(selectedFile.name);
-            
             // First create a new project specifically for Smart Cut
+            const smartCutProjectName = `Smart Cut: ${selectedFile.name}`;
             const createProjectResponse = await fetch(apiPath('projects'), {
                 method: 'POST',
                 headers: {
@@ -589,9 +513,11 @@ const AutoCutToolPanel = () => {
             // Show success message with link to view the Smart Cut project
             setShowConfig(false)
             
+            // Add notification that the project is now visible in the projects page
+            console.log(`Smart Cut project created: ${smartCutProjectId}`);
+            
             // Redirect to projects page with highlight parameter to show processing status
-            // Using window.location.href to force a full page reload
-            window.location.href = `/projects?highlight=${smartCutProjectId}`;
+            router.push(`/projects?highlight=${smartCutProjectId}`);
         } catch (error) {
             console.error('Error starting processing:', error)
             setError(error instanceof Error ? error.message : 'Processing failed')

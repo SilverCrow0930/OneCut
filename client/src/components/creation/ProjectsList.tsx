@@ -123,29 +123,14 @@ export default function ProjectsList() {
                         // Both are processing, sort by created_at (most recent first)
                         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                     })
-                    
                     setProjects(sortedProjects)
                     
-                    // Start polling if there's a highlighted project OR any processing project
-                    const hasProcessingProjects = sortedProjects.some(p => 
-                        (p.processing_status === 'processing' || p.processing_status === 'queued') &&
-                        p.processing_type === 'quickclips'
-                    )
-                    
+                    // Start polling only if there's a highlighted project that's processing AND we're not already polling
                     if (highlightedProjectId && !isPollingRef.current) {
-                        const highlightedProject = sortedProjects.find(p => p.id === highlightedProjectId)
+                        const highlightedProject = data.find(p => p.id === highlightedProjectId)
                         if (highlightedProject?.processing_status === 'processing' || 
                             highlightedProject?.processing_status === 'queued') {
                             startPolling(highlightedProjectId)
-                        }
-                    } else if (hasProcessingProjects && !isPollingRef.current) {
-                        // Find the first processing project and start polling it
-                        const processingProject = sortedProjects.find(p => 
-                            (p.processing_status === 'processing' || p.processing_status === 'queued') &&
-                            p.processing_type === 'quickclips'
-                        )
-                        if (processingProject) {
-                            startPolling(processingProject.id)
                         }
                     }
                 }
@@ -210,10 +195,10 @@ export default function ProjectsList() {
                 // Continue polling if still processing, otherwise stop
                 if (updatedProject.processing_status === 'processing' || 
                     updatedProject.processing_status === 'queued') {
-                    // Poll every 2 seconds for better responsiveness
+                    // Use longer intervals to reduce server load - 5 seconds instead of 3
                     pollingTimeoutRef.current = setTimeout(() => {
                         pollProjectStatus(projectId)
-                    }, 2000)
+                    }, 5000)
                 } else {
                     // Processing finished, stop polling
                     stopPolling()
