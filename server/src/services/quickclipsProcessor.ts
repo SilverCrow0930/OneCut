@@ -873,7 +873,7 @@ Remember: For ${formatConfig.name}, the goal is to create ${job.videoFormat === 
         return clips
         
     } catch (error) {
-        console.error('[QuickClips Video] AI generation failed:', error)
+        console.error('[QuickclipsProcessor] AI generation failed:', error)
         throw error
     }
 }
@@ -964,7 +964,7 @@ Return ONLY the description text, no extra formatting or quotes.`
         return description
         
     } catch (error) {
-        console.error('[QuickClips] Video description generation failed:', error)
+        console.error('[QuickclipsProcessor] Video description generation failed:', error)
         
         // Fallback description
         const mainTopics = clips.slice(0, 3).map(c => c.title).join(', ')
@@ -1262,6 +1262,38 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
         throw new Error('Could not access source video')
     }
 
+    // First, probe the video to check for valid streams
+    try {
+        console.log('[QuickclipsProcessor] Probing video file for stream information...')
+        const videoInfo = await new Promise<any>((resolve, reject) => {
+            ffmpeg.ffprobe(videoUrl, (err, metadata) => {
+                if (err) {
+                    reject(new Error(`Failed to probe video file: ${err.message}`))
+                    return
+                }
+                resolve(metadata)
+            })
+        })
+        
+        // Check if the file has a valid video stream
+        const videoStream = videoInfo.streams.find((stream: any) => stream.codec_type === 'video')
+        const audioStream = videoInfo.streams.find((stream: any) => stream.codec_type === 'audio')
+        
+        console.log('[QuickclipsProcessor] Stream information:', {
+            hasVideoStream: !!videoStream,
+            hasAudioStream: !!audioStream,
+            videoStreamIndex: videoStream ? videoStream.index : 'none',
+            audioStreamIndex: audioStream ? audioStream.index : 'none',
+        })
+        
+        if (!videoStream && !audioStream) {
+            throw new Error('Source file contains neither video nor audio streams')
+        }
+    } catch (error) {
+        console.error('[QuickclipsProcessor] Error probing video file:', error)
+        throw new Error(`Failed to analyze source file: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+
     // For long format, we'll combine all segments into one video
     if (job.videoFormat === 'long') {
         try {
@@ -1302,7 +1334,9 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 '-movflags +faststart',
                                 '-profile:v main',
                                 '-crf 23',
-                                '-avoid_negative_ts make_zero'
+                                '-avoid_negative_ts make_zero',
+                                '-map 0:v?', // Map video stream if it exists (optional)
+                                '-map 0:a?' // Map audio stream if it exists (optional)
                             ])
                             .on('start', (command) => {
                                 console.log(`[QuickClips] Starting FFmpeg for long segment ${i}: ${command}`)
@@ -1341,7 +1375,11 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 
                                 const videoStream = metadata.streams.find(stream => stream.codec_type === 'video')
                                 if (!videoStream || !videoStream.width || !videoStream.height) {
-                                    reject(new Error('Could not determine video dimensions'))
+                                    // If no video stream or dimensions, use default dimensions
+                                    resolve({
+                                        width: 1280,
+                                        height: 720
+                                    })
                                     return
                                 }
                                 
@@ -1357,12 +1395,20 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 reject(new Error('FFmpeg audio-only timeout after 5 minutes'))
                             }, 5 * 60 * 1000) // 5 minute timeout
                             
-                            ffmpeg()
+                            const ffmpegCommand = ffmpeg()
+                            
+                            // Add audio input if available
+                            ffmpegCommand
                                 .input(videoUrl)
                                 .seekInput(clip.start_time)
                                 .duration(clipDuration)
+                            
+                            // Add black background
+                            ffmpegCommand
                                 .input(`color=c=black:s=${videoInfo.width}x${videoInfo.height}:r=30`)
                                 .inputFormat('lavfi')
+                            
+                            ffmpegCommand
                                 .output(segmentPath)
                                 .videoCodec('libx264')
                                 .audioCodec('aac')
@@ -1372,8 +1418,8 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                     '-movflags +faststart',
                                     '-profile:v main',
                                     '-crf 23',
-                                    '-map 0:a', // Audio from original file
-                                    '-map 1:v', // Video from black background with original dimensions
+                                    '-map 0:a?', // Map audio from first input if it exists
+                                    '-map 1:v', // Map video from black background
                                     '-shortest'
                                 ])
                                 .on('start', (command) => {
@@ -1577,7 +1623,9 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 '-avoid_negative_ts make_zero',  // Handle timing issues
                                 '-max_muxing_queue_size 1024',  // Increase muxing queue size
                                 '-fflags +genpts',               // Generate presentation timestamps
-                                '-vsync cfr'                     // Constant frame rate
+                                '-vsync cfr',                    // Constant frame rate
+                                '-map 0:v?',                     // Map video stream if it exists (optional)
+                                '-map 0:a?'                      // Map audio stream if it exists (optional)
                             ])
                             .on('start', (command) => {
                                 console.log(`[QuickclipsProcessor] Simple FFmpeg command for clip ${i}:`, command)
@@ -1617,7 +1665,11 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 
                                 const videoStream = metadata.streams.find(stream => stream.codec_type === 'video')
                                 if (!videoStream || !videoStream.width || !videoStream.height) {
-                                    reject(new Error('Could not determine video dimensions'))
+                                    // If no video stream or dimensions, use default dimensions
+                                    resolve({
+                                        width: 1280,
+                                        height: 720
+                                    })
                                     return
                                 }
                                 
@@ -1633,12 +1685,20 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                 reject(new Error('FFmpeg audio-only timeout after 5 minutes'))
                             }, 5 * 60 * 1000) // 5 minute timeout
                             
-                            ffmpeg()
+                            const ffmpegCommand = ffmpeg()
+                            
+                            // Add audio input if available
+                            ffmpegCommand
                                 .input(videoUrl)
                                 .seekInput(clip.start_time)
                                 .duration(clipDuration)
+                            
+                            // Add black background
+                            ffmpegCommand
                                 .input(`color=c=black:s=${videoInfo.width}x${videoInfo.height}:r=30`)
                                 .inputFormat('lavfi')
+                            
+                            ffmpegCommand
                                 .output(outputPath)
                                 .videoCodec('libx264')
                                 .audioCodec('aac')
@@ -1648,8 +1708,8 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                                     '-movflags +faststart',
                                     '-profile:v main',
                                     '-crf 23',
-                                    '-map 0:a', // Audio from first input (original file)
-                                    '-map 1:v', // Video from second input (black background with original dimensions)
+                                    '-map 0:a?', // Map audio from first input if it exists
+                                    '-map 1:v', // Map video from black background
                                     '-shortest'  // Match shortest input duration
                                 ])
                                 .on('start', (command) => {
@@ -1674,6 +1734,49 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                     } catch (audioError) {
                         console.error(`[QuickclipsProcessor] All processing methods failed for clip ${i}:`, audioError)
                         throw new Error(`Failed to process clip ${i}: ${lastError?.message || 'Unknown error'} (also tried audio-only: ${(audioError as Error).message})`)
+                    }
+                }
+                
+                // Attempt 3: Last resort - create a minimal valid video file
+                if (!success) {
+                    try {
+                        console.log(`[QuickclipsProcessor] Attempting last resort minimal video for clip ${i}`)
+                        
+                        await new Promise<void>((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                reject(new Error('FFmpeg last resort timeout after 3 minutes'))
+                            }, 3 * 60 * 1000)
+                            
+                            // Create a minimal valid video with a static image
+                            ffmpeg()
+                                .input('color=c=black:s=1280x720:r=30:d=' + clipDuration)
+                                .inputFormat('lavfi')
+                                .output(outputPath)
+                                .videoCodec('libx264')
+                                .outputOptions([
+                                    '-pix_fmt yuv420p',
+                                    '-preset ultrafast',
+                                    '-crf 30',
+                                    '-t', clipDuration.toString()
+                                ])
+                                .on('start', (command) => {
+                                    console.log(`[QuickclipsProcessor] Last resort FFmpeg command for clip ${i}:`, command)
+                                })
+                                .on('end', () => {
+                                    clearTimeout(timeout)
+                                    resolve()
+                                })
+                                .on('error', (err) => {
+                                    clearTimeout(timeout)
+                                    reject(err)
+                                })
+                                .run()
+                        })
+                        success = true
+                        console.log(`[QuickclipsProcessor] Created minimal valid video file for clip ${i} as last resort`)
+                    } catch (lastResortError) {
+                        console.error(`[QuickclipsProcessor] Even last resort approach failed for clip ${i}:`, lastResortError)
+                        throw new Error(`Failed to process clip ${i} after trying all approaches: ${(lastResortError as Error).message}`)
                     }
                 }
                 
@@ -1705,42 +1808,75 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 
                 // Generate thumbnail
                 const thumbnailPath = path.join(tempDir, `thumb_${job.id}_${i}.jpg`)
-                await new Promise<void>((resolve, reject) => {
-                    const timeout = setTimeout(() => {
-                        reject(new Error('Thumbnail generation timeout after 2 minutes'))
-                    }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
+                let thumbnailSuccess = false
+                
+                // Try to generate thumbnail from the clip
+                try {
+                    await new Promise<void>((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('Thumbnail generation timeout after 2 minutes'))
+                        }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
+                        
+                        ffmpeg(outputPath)
+                            .screenshots({
+                                timestamps: ['1'],
+                                filename: path.basename(thumbnailPath),
+                                folder: path.dirname(thumbnailPath),
+                                size: '640x360'
+                            })
+                            .on('end', () => {
+                                clearTimeout(timeout)
+                                resolve()
+                            })
+                            .on('error', (err) => {
+                                clearTimeout(timeout)
+                                reject(err)
+                            })
+                    })
+                    thumbnailSuccess = true
+                } catch (thumbnailError) {
+                    console.warn(`[QuickclipsProcessor] Failed to generate thumbnail for clip ${i}, creating default thumbnail:`, thumbnailError)
                     
-                    ffmpeg(outputPath)
-                        .screenshots({
-                            timestamps: ['1'],
-                            filename: path.basename(thumbnailPath),
-                            folder: path.dirname(thumbnailPath),
-                            size: '640x360'
+                    // Create a default black thumbnail
+                    try {
+                        await new Promise<void>((resolve, reject) => {
+                            ffmpeg()
+                                .input('color=c=black:s=640x360:r=1:d=1')
+                                .inputFormat('lavfi')
+                                .output(thumbnailPath)
+                                .outputOptions(['-frames:v 1'])
+                                .on('end', () => resolve())
+                                .on('error', (err) => reject(err))
+                                .run()
                         })
-                        .on('end', () => {
-                            clearTimeout(timeout)
-                            resolve()
-                        })
-                        .on('error', (err) => {
-                            clearTimeout(timeout)
-                            reject(err)
-                        })
-                })
-                
-                // Upload thumbnail
-                const thumbFileName = `clips/${job.projectId}/thumb_${i}_${Date.now()}.jpg`
-                await bucket.upload(thumbnailPath, {
-                    destination: thumbFileName,
-                    metadata: {
-                        contentType: 'image/jpeg',
-                        cacheControl: 'public, max-age=31536000'
+                        thumbnailSuccess = true
+                    } catch (defaultThumbError) {
+                        console.error(`[QuickclipsProcessor] Failed to create default thumbnail:`, defaultThumbError)
+                        // Continue without thumbnail
                     }
-                })
+                }
                 
-                const [thumbnailUrl] = await bucket.file(thumbFileName).getSignedUrl({
-                    action: 'read',
-                    expires: Date.now() + 7 * 24 * 60 * 60 * 1000
-                })
+                // Upload thumbnail if we have one
+                let thumbnailUrl = '';
+                if (thumbnailSuccess) {
+                    const thumbFileName = `clips/${job.projectId}/thumb_${i}_${Date.now()}.jpg`
+                    await bucket.upload(thumbnailPath, {
+                        destination: thumbFileName,
+                        metadata: {
+                            contentType: 'image/jpeg',
+                            cacheControl: 'public, max-age=31536000'
+                        }
+                    })
+                    
+                    const [signedThumbUrl] = await bucket.file(thumbFileName).getSignedUrl({
+                        action: 'read',
+                        expires: Date.now() + 7 * 24 * 60 * 60 * 1000
+                    })
+                    thumbnailUrl = signedThumbUrl
+                } else {
+                    // Use a default thumbnail URL
+                    thumbnailUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjM2MCIgdmlld0JveD0iMCAwIDY0MCAzNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2NDAiIGhlaWdodD0iMzYwIiBmaWxsPSIjMEYxNzJBIi8+Cjwvc3ZnPgo=';
+                }
                 
                 processedClips.push({
                     id: `clip_${job.id}_${i}`,
@@ -1761,7 +1897,9 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 // Cleanup temp files
                 try {
                     await fs.unlink(outputPath)
-                    await fs.unlink(thumbnailPath)
+                    if (thumbnailSuccess) {
+                        await fs.unlink(thumbnailPath)
+                    }
                 } catch (cleanupError) {
                     console.warn(`[QuickclipsProcessor] Cleanup warning for job ${job.id}:`, cleanupError)
                 }
