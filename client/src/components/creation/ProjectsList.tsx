@@ -1,11 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { apiPath } from '@/lib/config'
-import { MoreVertical, Folder, Trash2, Play, Zap, Calendar, Eye } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import { Project } from '@/types/projects'
+import { formatSecondsAsTimestamp } from '@/lib/utils'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Clock, Play, Folder, MoreHorizontal, Trash2, Zap, Video, Eye, Loader2 } from 'lucide-react'
 
 type ProjectFilter = 'all' | 'quickclips'
+
+// Fix the TypeScript errors by defining the proper type for optimistic projects
+interface OptimisticProject extends Project {
+    is_optimistic?: boolean;
+}
 
 export default function ProjectsList() {
     const router = useRouter()
@@ -20,13 +26,12 @@ export default function ProjectsList() {
     // Track polling timeout for cleanup
     const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const isPollingRef = useRef(false)
-    const pollingProjectIdRef = useRef<string | null>(null)
 
     // Get highlighted project from URL params
     const highlightedProjectId = searchParams.get('highlight')
 
     // Get processing project if any
-    const processingProjects = projects.filter(p => 
+    const processingProject = projects.find(p => 
         p.processing_status === 'processing' || 
         p.processing_status === 'queued'
     )
@@ -42,44 +47,93 @@ export default function ProjectsList() {
 
         // Map progress to different stages
         if (progress < 20) {
-            return { stage: 'Analyzing video...', progress: Math.max(5, progress) }
+            return { stage: 'Analyzing video...', progress: 15 }
         } else if (progress < 40) {
-            return { stage: 'Extracting content...', progress: progress }
+            return { stage: 'Extracting content...', progress: 35 }
         } else if (progress < 60) {
-            return { stage: 'Identifying key moments...', progress: progress }
+            return { stage: 'Identifying key moments...', progress: 55 }
         } else if (progress < 80) {
-            return { stage: 'Generating smart cuts...', progress: progress }
+            return { stage: 'Generating smart cuts...', progress: 75 }
         } else if (progress < 95) {
-            return { stage: 'Finalizing...', progress: progress }
+            return { stage: 'Finalizing...', progress: 90 }
         }
 
         return { stage: message || 'Processing...', progress }
     }
 
+    // Get optimistic projects from localStorage
+    const getOptimisticProjects = useCallback((): OptimisticProject[] => {
+        try {
+            const storedProjects = localStorage.getItem('optimistic_projects');
+            if (storedProjects) {
+                return JSON.parse(storedProjects);
+            }
+        } catch (err) {
+            console.warn('Failed to parse optimistic projects:', err);
+        }
+        return [];
+    }, []);
+
+    // Clean up polling on unmount
     useEffect(() => {
+        return () => {
+            if (pollingTimeoutRef.current) {
+                clearTimeout(pollingTimeoutRef.current)
+                pollingTimeoutRef.current = null
+            }
+            isPollingRef.current = false
+        }
+    }, [])
+
+    useEffect(() => {
+        // only fetch once we have a valid token
+        if (!session?.access_token) {
+            return
+        }
+
         let cancelled = false
-        
+
         async function load() {
-            try {
-                if (!session?.access_token) {
-                    return
-                }
+            setLoading(true)
+            setError(null)
+            
+            // First get optimistic projects from localStorage to show immediately
+            const optimisticProjects = getOptimisticProjects();
+            if (optimisticProjects.length > 0) {
+                // Show optimistic projects immediately while real data loads
+                setProjects(optimisticProjects);
+                setLoading(false);
                 
-                const response = await fetch(apiPath('projects'), {
-                    headers: {
-                        'Authorization': `Bearer ${session.access_token}`
+                // Start polling for any optimistic projects since they're being processed
+                optimisticProjects.forEach((project: OptimisticProject) => {
+                    if (!isPollingRef.current && (project.processing_status === 'processing' || project.processing_status === 'queued')) {
+                        startPolling(project.id);
                     }
+                });
+            }
+            
+            try {
+                const res = await fetch(apiPath('projects'), {
+                    headers: {
+                        Authorization: `Bearer ${session?.access_token}`,
+                    },
                 })
-                
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch projects: ${response.statusText}`)
+                if (!res.ok) {
+                    const text = await res.text()
+                    throw new Error(`Error ${res.status}: ${text}`)
                 }
-                
-                const data = await response.json()
-                
+                const data: Project[] = await res.json()
                 if (!cancelled) {
+                    // Merge with any optimistic projects that haven't been replaced yet
+                    // A real project will replace an optimistic one with the same ID
+                    const optimisticProjectIds = new Set(data.map(p => p.id));
+                    const remainingOptimisticProjects = optimisticProjects.filter((p: OptimisticProject) => !optimisticProjectIds.has(p.id));
+                    
+                    // Combine real and remaining optimistic projects
+                    const combinedProjects = [...data, ...remainingOptimisticProjects];
+                    
                     // Enhanced sorting logic for Smart Cut projects
-                    const sortedProjects = data.sort((a: Project, b: Project) => {
+                    const sortedProjects = combinedProjects.sort((a, b) => {
                         const aIsSmartCut = a.processing_type === 'quickclips'
                         const bIsSmartCut = b.processing_type === 'quickclips'
                         const aIsProcessing = (a.processing_status === 'processing' || a.processing_status === 'queued') && aIsSmartCut
@@ -113,36 +167,12 @@ export default function ProjectsList() {
                     })
                     setProjects(sortedProjects)
                     
-                    // First priority: poll highlighted project if it's processing
-                    if (highlightedProjectId) {
-                        const highlightedProject = data.find((p: Project) => p.id === highlightedProjectId)
-                        if (highlightedProject?.processing_status === 'processing' || highlightedProject?.processing_status === 'queued') {
-                            // Start polling the highlighted project if not already polling or polling a different project
-                            if (!isPollingRef.current || pollingProjectIdRef.current !== highlightedProjectId) {
-                                stopPolling(); // Stop any existing polling
-                                startPolling(highlightedProjectId);
-                                console.log(`[Projects] Starting polling for highlighted project: ${highlightedProjectId}`);
-                                return;
-                            }
-                        }
-                    }
-                    
-                    // Second priority: if any project is processing and we're not polling, start polling
-                    const firstProcessingProject = sortedProjects.find((p: Project) => 
-                        p.processing_status === 'processing' || p.processing_status === 'queued'
-                    );
-                    
-                    if (firstProcessingProject && !isPollingRef.current) {
-                        console.log(`[Projects] Starting polling for processing project: ${firstProcessingProject.id}`);
-                        startPolling(firstProcessingProject.id);
-                    }
-                    
-                    // If we were polling a project that's no longer processing, stop polling
-                    if (isPollingRef.current && pollingProjectIdRef.current) {
-                        const pollingProject = sortedProjects.find((p: Project) => p.id === pollingProjectIdRef.current);
-                        if (!pollingProject || (pollingProject.processing_status !== 'processing' && pollingProject.processing_status !== 'queued')) {
-                            console.log(`[Projects] Stopping polling - project no longer processing: ${pollingProjectIdRef.current}`);
-                            stopPolling();
+                    // Start polling only if there's a highlighted project that's processing AND we're not already polling
+                    if (highlightedProjectId && !isPollingRef.current) {
+                        const highlightedProject = sortedProjects.find(p => p.id === highlightedProjectId)
+                        if (highlightedProject?.processing_status === 'processing' || 
+                            highlightedProject?.processing_status === 'queued') {
+                            startPolling(highlightedProjectId)
                         }
                     }
                 }
@@ -165,30 +195,13 @@ export default function ProjectsList() {
         return () => {
             cancelled = true
         }
-    }, [session?.access_token, highlightedProjectId])
+    }, [session?.access_token, highlightedProjectId, getOptimisticProjects])
 
     // Start polling with proper cleanup
     const startPolling = (projectId: string) => {
-        if (isPollingRef.current && pollingProjectIdRef.current === projectId) return // Already polling this project
+        if (isPollingRef.current) return // Already polling
         
         isPollingRef.current = true
-        pollingProjectIdRef.current = projectId;
-        
-        // Add the dummy processing animation for immediate feedback
-        setProjects(prev => prev.map((p: Project) => {
-            if (p.id === projectId && (p.processing_status === 'processing' || p.processing_status === 'queued')) {
-                // Animate progress to give user visual feedback even before server updates
-                const currentProgress = p.processing_progress || 0;
-                const nextProgress = Math.min(95, currentProgress + 5); // Cap at 95% since 100% should come from server
-                
-                return {
-                    ...p,
-                    processing_progress: nextProgress
-                };
-            }
-            return p;
-        }));
-        
         pollProjectStatus(projectId)
     }
 
@@ -199,7 +212,6 @@ export default function ProjectsList() {
             pollingTimeoutRef.current = null
         }
         isPollingRef.current = false
-        pollingProjectIdRef.current = null;
     }
 
     // Poll project status for processing projects - with improved logic
@@ -218,38 +230,17 @@ export default function ProjectsList() {
                 const updatedProject = await response.json()
                 
                 // Update the project in the list
-                setProjects(prev => prev.map((p: Project) => 
+                setProjects(prev => prev.map(p => 
                     p.id === projectId ? updatedProject : p
                 ))
 
                 // Continue polling if still processing, otherwise stop
                 if (updatedProject.processing_status === 'processing' || 
                     updatedProject.processing_status === 'queued') {
-                    
-                    // Keep polling but incrementally increase progress for visual feedback
-                    setProjects(prev => prev.map((p: Project) => {
-                        if (p.id === projectId && (p.processing_status === 'processing' || p.processing_status === 'queued')) {
-                            const currentProgress = p.processing_progress || 0;
-                            if (currentProgress < 95) {
-                                // Advance progress by 1-3% each poll to show movement
-                                const increment = Math.random() * 2 + 1; // 1-3%
-                                const nextProgress = Math.min(95, currentProgress + increment);
-                                
-                                return {
-                                    ...p,
-                                    processing_progress: nextProgress
-                                };
-                            }
-                        }
-                        return p;
-                    }));
-                    
-                    // Use adaptive intervals to reduce server load
-                    const interval = 5000; // 5 second interval
-                    
+                    // Use longer intervals to reduce server load - 5 seconds instead of 3
                     pollingTimeoutRef.current = setTimeout(() => {
                         pollProjectStatus(projectId)
-                    }, interval)
+                    }, 5000)
                 } else {
                     // Processing finished, stop polling
                     stopPolling()
@@ -493,23 +484,20 @@ export default function ProjectsList() {
             </div>
 
             {/* Processing status bar */}
-            {processingProjects.length > 0 && (
+            {processingProject && (
                 <div className="w-full max-w-6xl mx-auto mb-6">
                     <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center gap-3 mb-2">
-                            <svg className="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
+                            <Loader2 className="w-4 h-4 animate-spin" />
                             <span className="text-sm font-medium">
-                                {getProcessingStage(processingProjects[0]).stage}
+                                {getProcessingStage(processingProject).stage}
                             </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                             <div 
                                 className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-out"
                                 style={{ 
-                                    width: `${getProcessingStage(processingProjects[0]).progress}%`,
+                                    width: `${getProcessingStage(processingProject).progress}%`,
                                 }}
                             />
                         </div>
@@ -581,32 +569,6 @@ function ProjectCard({
     const isCompleted = project.processing_status === 'completed'
     const hasFailed = project.processing_status === 'failed'
     const clipCount = project.processing_result?.clips?.length || 0
-    
-    // Get processing stage for this card
-    const getCardProcessingStage = () => {
-        const progress = project.processing_progress || 0
-        
-        if (project.processing_status === 'queued') {
-            return { stage: 'Preparing...', progress: 5 }
-        }
-
-        // Map progress to different stages
-        if (progress < 20) {
-            return { stage: 'Analyzing...', progress }
-        } else if (progress < 40) {
-            return { stage: 'Extracting...', progress }
-        } else if (progress < 60) {
-            return { stage: 'Processing...', progress }
-        } else if (progress < 80) {
-            return { stage: 'Generating...', progress }
-        } else if (progress < 95) {
-            return { stage: 'Finalizing...', progress }
-        }
-
-        return { stage: 'Processing...', progress }
-    }
-    
-    const processingStage = getCardProcessingStage()
 
     return (
         <div
@@ -617,56 +579,128 @@ function ProjectCard({
                 isQuickClips ? 'border-l-4 border-l-emerald-500' : ''
             }`}>
                 {/* Thumbnail */}
-                <div className="relative aspect-video bg-gray-100 overflow-hidden">
-                    {/* Processing overlay */}
-                    {isProcessing && (
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/80 to-indigo-500/80 flex flex-col items-center justify-center text-white z-10">
-                            {/* Animated pulse effect */}
-                            <div className="absolute inset-0 bg-white opacity-10 animate-pulse"></div>
-                            
-                            <div className="text-center z-20 px-4">
-                                <div className="mb-3 flex flex-col items-center">
-                                    <svg className="animate-spin h-6 w-6 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span className="font-semibold">{processingStage.stage}</span>
-                                </div>
-                                
-                                <div className="w-full h-1.5 bg-white/30 rounded-full overflow-hidden">
-                                    <div 
-                                        className="h-full bg-white rounded-full transition-all duration-500 ease-out"
-                                        style={{ width: `${processingStage.progress}%` }}
-                                    ></div>
-                                </div>
-                                
-                                <div className="mt-2 text-xs font-medium">
-                                    {Math.round(processingStage.progress)}% complete
-                                </div>
+                <div className="aspect-video relative bg-gray-50">
+                    {project.thumbnail_url ? (
+                        <img
+                            src={project.thumbnail_url}
+                            alt={project.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                const target = e.currentTarget;
+                                target.style.display = 'none';
+                                const fallback = target.parentElement?.querySelector('.fallback-content');
+                                if (fallback) {
+                                    (fallback as HTMLElement).style.display = 'flex';
+                                }
+                            }}
+                        />
+                    ) : null}
+                    
+                    {/* Fallback content */}
+                    <div 
+                        className={`fallback-content w-full h-full ${
+                            isQuickClips 
+                                ? 'bg-gradient-to-br from-emerald-50 to-teal-100' 
+                                : 'bg-gradient-to-br from-gray-50 to-gray-100'
+                        } flex flex-col items-center justify-center ${project.thumbnail_url ? 'hidden' : 'flex'}`}
+                    >
+                        <div className={`w-14 h-14 mb-3 ${isQuickClips ? 'text-emerald-400' : 'text-gray-300'}`}>
+                            {isQuickClips ? (
+                                <Zap className="w-full h-full" strokeWidth={1.5} />
+                            ) : (
+                                <Play className="w-full h-full" strokeWidth={1.5} />
+                            )}
+                        </div>
+                        <span className={`text-sm font-medium ${isQuickClips ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                                                    {isQuickClips ? 'Smart Cut' : 'No Preview'}
+                        </span>
+                    </div>
+
+                    {/* QuickClips status badge */}
+                    {isQuickClips && (
+                        <div className="absolute top-3 left-3">
+                            <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+                                isProcessing 
+                                    ? 'bg-blue-100 text-blue-700' 
+                                    : isCompleted 
+                                        ? 'bg-emerald-100 text-emerald-700' 
+                                        : hasFailed 
+                                            ? 'bg-red-100 text-red-700'
+                                            : 'bg-gray-100 text-gray-700'
+                            }`}>
+                                {isProcessing ? (
+                                    <>
+                                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                                        Processing
+                                    </>
+                                ) : isCompleted ? (
+                                    <>
+                                        {clipCount} clips
+                                    </>
+                                ) : hasFailed ? (
+                                    'Failed'
+                                ) : (
+                                                                                'Smart Cut'
+                                )}
                             </div>
                         </div>
                     )}
 
-                    {/* Failed overlay */}
-                    {hasFailed && (
-                        <div className="absolute inset-0 bg-red-500/80 flex items-center justify-center text-white z-10">
-                            <div className="text-center">
-                                <div className="mb-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <span className="font-medium text-sm">Processing failed</span>
+                    {/* Three-dot menu button - only visible on hover */}
+                    <div 
+                        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                        onMouseDown={(e) => {
+                            e.stopPropagation()
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                        }}
+                    >
+                        <button
+                            onMouseDown={(e) => {
+                                e.stopPropagation()
+                            }}
+                            onClick={(e) => {
+                                console.log('Menu button clicked')
+                                onMenuClick(e, project.id)
+                            }}
+                            className="w-9 h-9 bg-white/95 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
+                        >
+                            <MoreHorizontal className="w-4 h-4 text-gray-600" />
+                        </button>
+                        
+                        {/* Dropdown menu */}
+                        {showMenu === project.id && (
+                            <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+                                {isQuickClips && isCompleted && (
+                                    <button
+                                        onClick={(e) => {
+                                            console.log('View Clips button clicked')
+                                            onViewClips(e, project.id)
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
+                                    >
+                                        <Eye className="w-4 h-4" />
+                                        View Clips
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                        console.log('DIRECT DELETE MOUSEDOWN - calling onDelete directly')
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        // Call delete directly on mousedown to bypass any click issues
+                                        onDelete(e, project)
+                                    }}
+                                    className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                </button>
                             </div>
-                        </div>
-                    )}
-
-                    {/* Completed QuickClips badge */}
-                    {isQuickClips && isCompleted && (
-                        <div className="absolute top-2 right-2 bg-emerald-500 text-white text-xs px-2 py-1 rounded-full z-10">
-                            {clipCount} clip{clipCount !== 1 && 's'}
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                     {/* Hover overlay */}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -690,14 +724,9 @@ function ProjectCard({
                     <p className="text-sm text-gray-500">
                         {new Date(project.created_at || Date.now()).toLocaleDateString()}
                     </p>
-                    {isQuickClips && isProcessing && (
+                    {isQuickClips && project.processing_message && (
                         <p className="text-xs text-gray-400 mt-1 truncate">
-                            {processingStage.stage} • {Math.round(processingStage.progress)}% complete
-                        </p>
-                    )}
-                    {isQuickClips && isCompleted && clipCount > 0 && (
-                        <p className="text-xs text-emerald-600 font-medium mt-1">
-                            {clipCount} clip{clipCount !== 1 && 's'} generated
+                            {project.processing_message}
                         </p>
                     )}
                 </div>
