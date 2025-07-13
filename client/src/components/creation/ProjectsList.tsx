@@ -570,6 +570,29 @@ function ProjectCard({
     const hasFailed = project.processing_status === 'failed'
     const clipCount = project.processing_result?.clips?.length || 0
 
+    // Modern Smart Cut processing card
+    if (isQuickClips && isProcessing) {
+        return (
+            <div className="group cursor-pointer relative" onClick={() => onProjectClick(project.id)}>
+                <div className="rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-purple-400 via-blue-400 to-emerald-300 flex flex-col justify-between min-h-[220px]">
+                    <div className="flex flex-col items-center justify-center h-40 p-4">
+                        <div className="w-12 h-12 mb-3 relative flex items-center justify-center">
+                            <svg className="w-12 h-12 animate-spin-slow text-white/70 absolute top-0 left-0" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="6" strokeDasharray="100" strokeDashoffset="60" strokeLinecap="round" /></svg>
+                            <span className="absolute text-white font-bold text-lg left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">{project.processing_progress || 7}%</span>
+                        </div>
+                        <div className="text-white font-bold text-lg mb-1">Analyzing...</div>
+                        <div className="text-white/80 text-sm">{project.processing_message || 'Preparing...'} </div>
+                    </div>
+                    <div className="bg-white/80 p-4 rounded-b-2xl">
+                        <div className="font-semibold text-gray-900 truncate text-base">{project.name || 'Smart Cut'}</div>
+                        <div className="text-xs text-gray-500 mt-1">{new Date(project.created_at || Date.now()).toLocaleDateString()}</div>
+                        <div className="text-xs text-gray-400 mt-1">Analyzing... • {project.processing_progress || 7}% complete</div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div
             className={`group cursor-pointer relative ${isHighlighted ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
