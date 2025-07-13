@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { ArrowLeft, Download, Play, Edit, Share, Zap, Clock, Star } from 'lucide-react'
 import HomeNavbar from '@/components/home/HomeNavbar'
-import io from 'socket.io-client'
 
 interface QuickClip {
     id: string
@@ -47,84 +46,21 @@ export default function QuickClipsViewPage() {
     const [project, setProject] = useState<ProjectData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [processingStatus, setProcessingStatus] = useState<{
-        state: string;
-        message: string;
-        progress: number;
-    } | null>(null)
+    
+    // Polling state
+    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+    const isPollingRef = useRef(false)
 
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
-
-    // Setup WebSocket connection
-    useEffect(() => {
-        if (!projectId || !session?.access_token) return;
-
-        // Connect to WebSocket server
-        const socket = io(process.env.NEXT_PUBLIC_API_URL || 'https://api.lemona.app', {
-            transports: ['websocket'],
-            auth: {
-                token: session.access_token
-            }
-        });
-
-        console.log('WebSocket: Connecting...');
-
-        socket.on('connect', () => {
-            console.log('WebSocket: Connected');
-            // Join project-specific room (optional, if your server supports rooms)
-            socket.emit('join_project', projectId);
-        });
-
-        // Listen for processing status updates
-        socket.on('quickclips_state', (data) => {
-            console.log('WebSocket: Received state update', data);
-            setProcessingStatus(data);
-            
-            // Update project with latest processing info
-            setProject(prev => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    processing_status: data.state,
-                    processing_progress: data.progress,
-                    processing_message: data.message
-                };
-            });
-
-            // If completed, refresh project data to get results
-            if (data.state === 'completed') {
-                fetchProject();
-            }
-        });
-
-        // Listen for completed processing
-        socket.on('quickclips_response', (data) => {
-            console.log('WebSocket: Received response', data);
-            if (data.success) {
-                fetchProject();
-            }
-        });
-
-        socket.on('disconnect', () => {
-            console.log('WebSocket: Disconnected');
-        });
-
-        socket.on('error', (err) => {
-            console.error('WebSocket: Error', err);
-        });
-
-        // Cleanup function
-        return () => {
-            console.log('WebSocket: Cleaning up connection');
-            socket.disconnect();
-        };
-    }, [projectId, session?.access_token]);
 
     const fetchProject = async () => {
         if (!session?.access_token || !projectId) return;
         
         try {
-            setLoading(true);
+            if (!loading) {
+                console.log('[QuickClips] Polling project status...')
+            }
+            
             const response = await fetch(apiPath(`projects/${projectId}`), {
                 headers: {
                     'Authorization': `Bearer ${session?.access_token}`
@@ -138,14 +74,12 @@ export default function QuickClipsViewPage() {
             const data = await response.json()
             setProject(data)
             
-            // Update processing status from project data if available
-            if (data.processing_status && data.processing_progress) {
-                setProcessingStatus({
-                    state: data.processing_status,
-                    message: data.processing_message || '',
-                    progress: data.processing_progress
-                });
-            }
+            console.log('[QuickClips] Project status:', {
+                processing_status: data.processing_status,
+                processing_progress: data.processing_progress,
+                clips_count: data.processing_result?.clips?.length || 0
+            })
+            
         } catch (error) {
             console.error('Error fetching project:', error)
             setError(error instanceof Error ? error.message : 'Failed to load project')
@@ -154,9 +88,50 @@ export default function QuickClipsViewPage() {
         }
     }
 
+    // Start polling when project is processing
+    const startPolling = () => {
+        if (isPollingRef.current) return // Already polling
+        
+        console.log('[QuickClips] Starting polling for project status updates')
+        isPollingRef.current = true
+        
+        pollingIntervalRef.current = setInterval(() => {
+            fetchProject()
+        }, 3000) // Poll every 3 seconds
+    }
+
+    // Stop polling
+    const stopPolling = () => {
+        if (pollingIntervalRef.current) {
+            console.log('[QuickClips] Stopping polling')
+            clearInterval(pollingIntervalRef.current)
+            pollingIntervalRef.current = null
+        }
+        isPollingRef.current = false
+    }
+
+    // Initial fetch and polling setup
     useEffect(() => {
-        fetchProject();
-    }, [session?.access_token, projectId]);
+        fetchProject()
+    }, [session?.access_token, projectId])
+
+    // Manage polling based on project status
+    useEffect(() => {
+        if (!project) return
+
+        const isProcessing = project.processing_status === 'processing' || project.processing_status === 'queued'
+        
+        if (isProcessing && !isPollingRef.current) {
+            startPolling()
+        } else if (!isProcessing && isPollingRef.current) {
+            stopPolling()
+        }
+
+        // Cleanup on unmount
+        return () => {
+            stopPolling()
+        }
+    }, [project?.processing_status])
 
     const formatDuration = (seconds: number) => {
         if (seconds < 60) {
@@ -218,7 +193,7 @@ export default function QuickClipsViewPage() {
     }
 
     // Show processing state if project is still being processed
-    if (project?.processing_status === 'processing' || project?.processing_status === 'queued' || processingStatus?.state === 'processing' || processingStatus?.state === 'analyzing' || processingStatus?.state === 'generating') {
+    if (project?.processing_status === 'processing' || project?.processing_status === 'queued') {
         return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
                 <HomeNavbar />
@@ -229,19 +204,32 @@ export default function QuickClipsViewPage() {
                                 <Zap className="w-8 h-8 text-blue-600" />
                             </div>
                             <h2 className="text-2xl font-bold text-gray-900">Processing Smart Cut</h2>
-                            <p className="text-gray-600 mt-1">{processingStatus?.message || project?.processing_message || 'Analyzing your video...'}</p>
+                            <p className="text-gray-600 mt-1">{project?.processing_message || 'Analyzing your video...'}</p>
                         </div>
                         
                         <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
                             <div 
                                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
-                                style={{ width: `${processingStatus?.progress || project?.processing_progress || 0}%` }}
+                                style={{ width: `${project?.processing_progress || 0}%` }}
                             ></div>
                         </div>
                         
                         <p className="text-sm text-gray-500 text-center">
-                            This process may take a few minutes. You don't need to keep this page open.
+                            This process may take a few minutes. This page will automatically update when complete.
                         </p>
+
+                        {/* Show progress info */}
+                        <div className="mt-4 text-center">
+                            <p className="text-xs text-gray-400">
+                                Progress: {project?.processing_progress || 0}%
+                            </p>
+                            {isPollingRef.current && (
+                                <div className="flex items-center justify-center gap-1 mt-2">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                    <span className="text-xs text-blue-600">Checking for updates...</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
