@@ -47,52 +47,32 @@ export default function QuickClipsViewPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     
-    // Add visual progress state separate from project progress
-    const [visualProgress, setVisualProgress] = useState(0)
-    
     // Polling state
     const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
     const isPollingRef = useRef(false)
-    const pollCountRef = useRef(0)
-    const projectIdRef = useRef<string>(typeof params.projectId === 'string' ? params.projectId : 
-        Array.isArray(params.projectId) ? params.projectId[0] : '')
 
-    // Get project ID from params
-    const projectId = Array.isArray(params.projectId) ? params.projectId[0] : 
-        (params.projectId as string)
-
-    // Update project ID ref when it changes
-    useEffect(() => {
-        projectIdRef.current = projectId;
-    }, [projectId]);
+    const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
 
     const fetchProject = async () => {
         if (!session?.access_token || !projectId) return;
 
-        try {
+            try {
             if (!loading) {
                 console.log('[QuickClips] Polling project status...')
             }
             
-            // Log the full API URL being called for debugging
-            const apiUrl = apiPath(`projects/${projectId}`);
-            console.log('[QuickClips] API URL:', apiUrl);
-            
-            const response = await fetch(apiUrl, {
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`
+                const response = await fetch(apiPath(`projects/${projectId}`), {
+                    headers: {
+                        'Authorization': `Bearer ${session?.access_token}`
+                    }
+                })
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch project')
                 }
-            })
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('[QuickClips] API error:', response.status, errorText);
-                throw new Error('Failed to fetch project')
-            }
-
-            const data = await response.json()
-            console.log('[QuickClips] Project data received:', data);
-            setProject(data)
+                const data = await response.json()
+                setProject(data)
             
             console.log('[QuickClips] Project status:', {
                 processing_status: data.processing_status,
@@ -100,13 +80,13 @@ export default function QuickClipsViewPage() {
                 clips_count: data.processing_result?.clips?.length || 0
             })
             
-        } catch (error) {
-            console.error('Error fetching project:', error)
-            setError(error instanceof Error ? error.message : 'Failed to load project')
-        } finally {
-            setLoading(false)
+            } catch (error) {
+                console.error('Error fetching project:', error)
+                setError(error instanceof Error ? error.message : 'Failed to load project')
+            } finally {
+                setLoading(false)
+            }
         }
-    }
 
     // Start polling when project is processing
     const startPolling = () => {
@@ -114,56 +94,20 @@ export default function QuickClipsViewPage() {
         
         console.log('[QuickClips] Starting polling for project status updates')
         isPollingRef.current = true
-        pollCountRef.current = 0;
         
-        // First poll quickly for immediate feedback
-        fetchProject();
-        
-        // Then set up interval
-        scheduleNextPoll();
-    }
-    
-    // Schedule the next poll with adaptive timing
-    const scheduleNextPoll = () => {
-        // Clear any existing timeout
-        if (pollingIntervalRef.current) {
-            clearTimeout(pollingIntervalRef.current);
-        }
-        
-        // Calculate poll interval - more frequent at first, then slower
-        let interval = 2000; // Default 2 seconds
-        
-        if (pollCountRef.current < 3) {
-            // First few polls: very quick (1s)
-            interval = 1000;
-        } else if (pollCountRef.current < 10) {
-            // Next few polls: medium pace (2s)
-            interval = 2000;
-        } else {
-            // Later polls: slower pace (3s)
-            interval = 3000;
-        }
-        
-        pollingIntervalRef.current = setTimeout(() => {
-            pollCountRef.current++;
-            fetchProject();
-            
-            // If still polling, schedule next poll
-            if (isPollingRef.current) {
-                scheduleNextPoll();
-            }
-        }, interval);
+        pollingIntervalRef.current = setInterval(() => {
+            fetchProject()
+        }, 3000) // Poll every 3 seconds
     }
 
     // Stop polling
     const stopPolling = () => {
         if (pollingIntervalRef.current) {
             console.log('[QuickClips] Stopping polling')
-            clearTimeout(pollingIntervalRef.current)
+            clearInterval(pollingIntervalRef.current)
             pollingIntervalRef.current = null
         }
         isPollingRef.current = false
-        pollCountRef.current = 0;
     }
 
     // Initial fetch and polling setup
@@ -188,40 +132,6 @@ export default function QuickClipsViewPage() {
             stopPolling()
         }
     }, [project?.processing_status])
-
-    // Update visual progress whenever project progress changes
-    useEffect(() => {
-        if (project?.processing_progress) {
-            // Gradually animate to the new progress value
-            const targetProgress = project.processing_progress;
-            const currentProgress = visualProgress;
-            
-            // Don't animate backwards
-            if (targetProgress < currentProgress) {
-                setVisualProgress(targetProgress);
-                return;
-            }
-            
-            // Animate progress in small increments
-            const duration = 500; // animation duration in ms
-            const steps = 10;
-            const increment = (targetProgress - currentProgress) / steps;
-            let currentStep = 0;
-            
-            const animateProgress = () => {
-                currentStep++;
-                if (currentStep <= steps) {
-                    setVisualProgress(prev => Math.min(prev + increment, targetProgress));
-                    requestAnimationFrame(animateProgress);
-                }
-            };
-            
-            requestAnimationFrame(animateProgress);
-        } else if (project?.processing_status === 'queued') {
-            // Show minimum progress for queued projects
-            setVisualProgress(5);
-        }
-    }, [project?.processing_progress, project?.processing_status]);
 
     const formatDuration = (seconds: number) => {
         if (seconds < 60) {
@@ -300,7 +210,7 @@ export default function QuickClipsViewPage() {
                         <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
                             <div 
                                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
-                                style={{ width: `${visualProgress}%` }}
+                                style={{ width: `${project?.processing_progress || 0}%` }}
                             ></div>
                         </div>
                         
@@ -311,7 +221,7 @@ export default function QuickClipsViewPage() {
                         {/* Show progress info */}
                         <div className="mt-4 text-center">
                             <p className="text-xs text-gray-400">
-                                Progress: {Math.round(visualProgress)}%
+                                Progress: {project?.processing_progress || 0}%
                             </p>
                             {isPollingRef.current && (
                                 <div className="flex items-center justify-center gap-1 mt-2">

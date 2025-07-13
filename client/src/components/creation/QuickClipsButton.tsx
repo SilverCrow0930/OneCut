@@ -166,122 +166,110 @@ const QuickClipsButton = () => {
                 setError('Insufficient credits. Please upgrade your plan or try a shorter video.')
                 return
             }
+
+            // IMMEDIATELY create project and redirect to projects page
+            // This shows the processing UI right away without waiting
+            setIsModalOpen(false)
             
-            // If credits were successfully consumed, continue with processing
+            try {
+                // 1. Create project first - this will appear immediately in the projects list
+                const projectResponse = await fetch(apiPath('projects'), {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session?.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: selectedFile.name,
+                        processing_status: 'processing', // Set to processing immediately
+                        processing_type: 'quickclips',
+                        processing_progress: 5, // Start with some initial progress
+                        processing_message: 'Analyzing video content...',
+                        processing_data: {
+                            contentType: getContentType(),
+                            videoFormat: getVideoFormat(),
+                            targetDuration,
+                            filename: selectedFile.name
+                        }
+                    })
+                })
+
+                if (!projectResponse.ok) {
+                    let errorMessage = 'Failed to create project'
+                    try {
+                        const errorData = await projectResponse.json()
+                        errorMessage = errorData?.error || errorMessage
+                    } catch (e) {
+                        errorMessage = projectResponse.statusText || errorMessage
+                    }
+                    throw new Error(errorMessage)
+                }
+
+                const project = await projectResponse.json()
+
+                // IMPORTANT: Immediately redirect to projects page to show processing state
+                router.push('/projects?highlight=' + project.id)
+                
+                // Continue with upload and processing in the background after redirect
+                // The user will already see the processing project in the list
+                setTimeout(async () => {
+                    try {
+                        // 2. Upload file to assets
+                        const formData = new FormData()
+                        formData.append('file', selectedFile)
+                        formData.append('projectId', project.id)
+
+                        const uploadResponse = await fetch(apiPath('assets/upload-to-gcs'), {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${session?.access_token}`,
+                            },
+                            body: formData
+                        })
+
+                        if (!uploadResponse.ok) {
+                            console.error('Failed to upload file:', uploadResponse.status)
+                            return
+                        }
+
+                        const uploadResult = await uploadResponse.json()
+                        const fileUri = uploadResult.gsUri
+                        
+                        if (!fileUri) {
+                            console.error('No gsUri found in upload response')
+                            return
+                        }
+
+                        // 3. Start QuickClips processing
+                        await fetch(apiPath('quickclips/start'), {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${session?.access_token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                projectId: project.id,
+                                fileUri,
+                                mimeType: selectedFile.type,
+                                contentType: getContentType(),
+                                targetDuration: parseInt(String(targetDuration)),
+                                userPrompt: userPrompt.trim() || undefined
+                            })
+                        })
+                    } catch (error) {
+                        console.error('Background processing error:', error)
+                    }
+                }, 100) // Small delay to ensure redirect happens first
+                
+            } catch (error) {
+                console.error('Failed to initialize processing:', error)
+                setError(error instanceof Error ? error.message : 'Failed to initialize processing')
+            }
+            
         } catch (error) {
             console.error('Error calculating video duration:', error)
-            setError('Failed to calculate video duration. Please try again.')
+            setError(error instanceof Error ? error.message : 'Failed to calculate video duration. Please try again.')
             return
-        }
-
-        // Close modal immediately and redirect to projects
-        setIsModalOpen(false)
-        router.push('/projects')
-
-        // Start processing in the background
-        try {
-            // 1. Create new project
-            const projectResponse = await fetch(apiPath('projects'), {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: selectedFile.name,
-                    processing_status: 'queued',
-                    processing_type: 'quickclips',
-                    processing_progress: 5,
-                    processing_message: 'Creating project...',
-                    processing_data: {
-                        contentType: getContentType(),
-                        videoFormat: getVideoFormat(),
-                        targetDuration,
-                        filename: selectedFile.name
-                    }
-                })
-            })
-
-            if (!projectResponse.ok) {
-                let errorMessage = 'Failed to create project'
-                try {
-                    const errorData = await projectResponse.json()
-                    errorMessage = errorData?.error || errorMessage
-                } catch (e) {
-                    errorMessage = projectResponse.statusText || errorMessage
-                }
-                throw new Error(errorMessage)
-            }
-
-            const project = await projectResponse.json()
-
-            // 2. Upload file to assets
-            const formData = new FormData()
-            formData.append('file', selectedFile)
-            formData.append('projectId', project.id)
-
-            const uploadResponse = await fetch(apiPath('assets/upload-to-gcs'), {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                },
-                body: formData
-            })
-
-            if (!uploadResponse.ok) {
-                let errorMessage = 'Failed to upload file'
-                try {
-                    const errorData = await uploadResponse.json()
-                    errorMessage = errorData?.error || errorMessage
-                } catch (e) {
-                    errorMessage = uploadResponse.statusText || errorMessage
-                }
-                throw new Error(errorMessage)
-            }
-
-            const uploadResult = await uploadResponse.json()
-            const fileUri = uploadResult.gsUri
-            
-            if (!fileUri) {
-                console.error('No gsUri found in upload response. Available fields:', Object.keys(uploadResult))
-                throw new Error('File upload did not return a valid GCS URI')
-            }
-
-            // 3. Start QuickClips processing
-            const jobResponse = await fetch(apiPath('quickclips/start'), {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${session?.access_token}`,
-                            'Content-Type': 'application/json'
-                        },
-                                            body: JSON.stringify({
-                        projectId: project.id,
-                        fileUri,
-                        mimeType: selectedFile.type,
-                        contentType: getContentType(),
-                        targetDuration: parseInt(String(targetDuration)),
-                        userPrompt: userPrompt.trim() || undefined
-                    })
-                    })
-
-            if (!jobResponse.ok) {
-                let errorMessage = 'Failed to start processing'
-                try {
-                    const errorData = await jobResponse.json()
-                    errorMessage = errorData?.error || errorMessage
-                } catch (e) {
-                    errorMessage = jobResponse.statusText || errorMessage
-                }
-                throw new Error(errorMessage)
-            }
-
-            // The project processing will be handled by the backend
-            // User will see progress on the projects page
-
-        } catch (error) {
-            console.error('Processing error:', error)
-            // Since modal is closed, error handling would need to be handled on the projects page
-            // or shown via a toast notification
         }
     }
 
