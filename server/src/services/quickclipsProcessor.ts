@@ -1512,21 +1512,21 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                     reject(new Error('Thumbnail generation timeout after 2 minutes'))
                 }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
                 
-                ffmpeg(outputPath)
+                        ffmpeg(outputPath)
                     .screenshots({
                         timestamps: ['1'],
                         filename: path.basename(thumbnailPath),
                         folder: path.dirname(thumbnailPath),
                         size: '640x360'
-                    })
-                    .on('end', () => {
-                        clearTimeout(timeout)
-                        resolve()
-                    })
-                    .on('error', (err) => {
-                        clearTimeout(timeout)
+                            })
+                            .on('end', () => {
+                                clearTimeout(timeout)
+                                resolve()
+                            })
+                            .on('error', (err) => {
+                                clearTimeout(timeout)
                         reject(err)
-                    })
+                                    })
             })
 
             // Upload thumbnail
@@ -1812,24 +1812,24 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 
                 // Try to generate thumbnail from the clip
                 try {
-                    await new Promise<void>((resolve, reject) => {
-                        const timeout = setTimeout(() => {
-                            reject(new Error('Thumbnail generation timeout after 2 minutes'))
-                        }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
-                        
-                        ffmpeg(outputPath)
+                await new Promise<void>((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Thumbnail generation timeout after 2 minutes'))
+                    }, 2 * 60 * 1000) // 2 minute timeout for thumbnail
+                    
+                            ffmpeg(outputPath)
                             .screenshots({
                                 timestamps: ['1'],
                                 filename: path.basename(thumbnailPath),
                                 folder: path.dirname(thumbnailPath),
                                 size: '640x360'
-                            })
-                            .on('end', () => {
-                                clearTimeout(timeout)
-                                resolve()
-                            })
-                            .on('error', (err) => {
-                                clearTimeout(timeout)
+                                })
+                                .on('end', () => {
+                                    clearTimeout(timeout)
+                                    resolve()
+                                })
+                                .on('error', (err) => {
+                                    clearTimeout(timeout)
                                 reject(err)
                             })
                     })
@@ -1840,15 +1840,15 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                     // Create a default black thumbnail
                     try {
                         await new Promise<void>((resolve, reject) => {
-                            ffmpeg()
+                                    ffmpeg()
                                 .input('color=c=black:s=640x360:r=1:d=1')
-                                .inputFormat('lavfi')
-                                .output(thumbnailPath)
+                                        .inputFormat('lavfi')
+                                        .output(thumbnailPath)
                                 .outputOptions(['-frames:v 1'])
                                 .on('end', () => resolve())
                                 .on('error', (err) => reject(err))
-                                .run()
-                        })
+                                        .run()
+                                })
                         thumbnailSuccess = true
                     } catch (defaultThumbError) {
                         console.error(`[QuickclipsProcessor] Failed to create default thumbnail:`, defaultThumbError)
@@ -1859,19 +1859,19 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 // Upload thumbnail if we have one
                 let thumbnailUrl = '';
                 if (thumbnailSuccess) {
-                    const thumbFileName = `clips/${job.projectId}/thumb_${i}_${Date.now()}.jpg`
-                    await bucket.upload(thumbnailPath, {
-                        destination: thumbFileName,
-                        metadata: {
-                            contentType: 'image/jpeg',
-                            cacheControl: 'public, max-age=31536000'
-                        }
-                    })
-                    
+                const thumbFileName = `clips/${job.projectId}/thumb_${i}_${Date.now()}.jpg`
+                await bucket.upload(thumbnailPath, {
+                    destination: thumbFileName,
+                    metadata: {
+                        contentType: 'image/jpeg',
+                        cacheControl: 'public, max-age=31536000'
+                    }
+                })
+                
                     const [signedThumbUrl] = await bucket.file(thumbFileName).getSignedUrl({
-                        action: 'read',
-                        expires: Date.now() + 7 * 24 * 60 * 60 * 1000
-                    })
+                    action: 'read',
+                    expires: Date.now() + 7 * 24 * 60 * 60 * 1000
+                })
                     thumbnailUrl = signedThumbUrl
                 } else {
                     // Use a default thumbnail URL
@@ -1898,7 +1898,7 @@ async function extractVideoClips(videoUrl: string, clips: AIGeneratedClip[], job
                 try {
                     await fs.unlink(outputPath)
                     if (thumbnailSuccess) {
-                        await fs.unlink(thumbnailPath)
+                    await fs.unlink(thumbnailPath)
                     }
                 } catch (cleanupError) {
                     console.warn(`[QuickclipsProcessor] Cleanup warning for job ${job.id}:`, cleanupError)
@@ -1924,88 +1924,16 @@ export function getUserJobs(userId: string): QuickclipsJob[] {
     return Array.from(jobQueue.values()).filter(job => job.userId === userId)
 }
 
-// Cleanup old jobs and mark stalled jobs as failed (run every 10 minutes)
-cron.schedule('*/10 * * * *', () => {
-    const cleanupCutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago for cleanup
-    const stalledJobCutoffTime = new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago for stalled jobs
+// Cleanup old jobs (run every hour)
+cron.schedule('0 * * * *', () => {
+    const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago
     
     for (const [jobId, job] of jobQueue.entries()) {
-        // Clean up old completed/failed jobs
-        if (job.createdAt < cleanupCutoffTime && ['completed', 'failed'].includes(job.status)) {
+        if (job.createdAt < cutoffTime && ['completed', 'failed'].includes(job.status)) {
             jobQueue.delete(jobId)
             console.log(`[QuickclipsProcessor] Cleaned up old job ${jobId}`)
-            continue
-        }
-        
-        // Mark stalled jobs as failed
-        if (job.createdAt < stalledJobCutoffTime && ['queued', 'processing'].includes(job.status)) {
-            console.log(`[QuickclipsProcessor] Job ${jobId} for project ${job.projectId} has been processing for over 30 minutes - marking as failed`)
-            
-            job.status = 'failed'
-            job.error = 'Processing timeout - job took longer than 30 minutes'
-            job.message = 'Processing failed: Timeout after 30 minutes'
-            
-            // Update project status in database (only for standalone Smart Cut projects)
-            if (!job.isEditorMode) {
-                // Use a regular function to handle async operations
-                (function updateStatus() {
-                    updateProjectStatus(job.projectId, {
-                        processing_status: 'failed',
-                        processing_error: job.error,
-                        processing_message: job.message,
-                        processing_completed_at: new Date().toISOString()
-                    }).then(() => {
-                        console.log(`[QuickclipsProcessor] Updated project ${job.projectId} status to failed due to timeout`)
-                    }).catch((error) => {
-                        console.error(`[QuickclipsProcessor] Failed to update project ${job.projectId} status:`, error)
-                    })
-                })()
-            }
-            
-            // Emit error state if socket is available
-            if (global.io) {
-                global.io.emit('quickclips_state', {
-                    state: 'error',
-                    message: job.message,
-                    progress: 0,
-                    projectId: job.projectId
-                })
-                global.io.emit('quickclips_response', {
-                    success: false,
-                    error: job.error,
-                    projectId: job.projectId
-                })
-            }
         }
     }
-});
-
-// Initialize - clean up any stalled projects
-(async () => {
-    try {
-        const stalledCutoffTime = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-        
-        // Find all projects that have been processing for more than 30 minutes
-        const { data: stalledProjects, error } = await supabase
-            .from('projects')
-            .update({
-                processing_status: 'failed',
-                processing_error: 'Processing timeout - job took longer than 30 minutes',
-                processing_message: 'Processing failed: Timeout after 30 minutes',
-                processing_completed_at: new Date().toISOString()
-            })
-            .eq('processing_status', 'processing')
-            .lt('processing_started_at', stalledCutoffTime)
-            .select('id')
-        
-        if (error) {
-            console.error('[QuickclipsProcessor] Error cleaning up stalled projects:', error)
-        } else if (stalledProjects && stalledProjects.length > 0) {
-            console.log(`[QuickclipsProcessor] Cleaned up ${stalledProjects.length} stalled projects on startup`)
-        }
-    } catch (error) {
-        console.error('[QuickclipsProcessor] Error during startup cleanup:', error)
-    }
-})()
+})
 
 console.log('[QuickclipsProcessor] Background processor initialized') 

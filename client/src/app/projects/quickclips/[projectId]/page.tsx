@@ -30,8 +30,6 @@ interface ProjectData {
     processing_status?: string
     processing_progress?: number
     processing_message?: string
-    processing_error?: string
-    processing_completed_at?: string
     processing_result?: {
         clips: QuickClip[]
         description?: string
@@ -231,41 +229,6 @@ export default function QuickClipsViewPage() {
                                     <span className="text-xs text-blue-600">Checking for updates...</span>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-    
-    // Show error state if project processing failed
-    if (project?.processing_status === 'failed') {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-                <HomeNavbar />
-                <div className="flex flex-col items-center justify-center min-h-screen p-8">
-                    <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-red-600">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9.344-2.198c-.376-.023-.75.05-1.124.22A9.003 9.003 0 0016.5 21h-9a9.003 9.003 0 00-7.72-8.728 3.006 3.006 0 01-1.124-.22 2.99 2.99 0 01-1.164-.812 3.013 3.013 0 01-.38-3.655c.434-.597 1.077-1.006 1.82-1.15.742-.145 1.51-.056 2.19.255a9.005 9.005 0 007.876 0 3.013 3.013 0 013.01.397 3.012 3.012 0 01.382 3.655 2.99 2.99 0 01-1.163.812" />
-                                </svg>
-                            </div>
-                            <h2 className="text-2xl font-bold text-gray-900">Processing Failed</h2>
-                            <p className="text-gray-600 mt-1">{project?.processing_error || 'There was an error processing your video.'}</p>
-                        </div>
-                        
-                        <p className="text-sm text-gray-500 text-center mb-6">
-                            {project?.processing_message || 'We encountered an issue while trying to create your Smart Cut.'}
-                        </p>
-
-                        <div className="flex justify-center">
-                            <button
-                                onClick={() => router.push('/projects')}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                            >
-                                Back to Projects
-                            </button>
                         </div>
                     </div>
                 </div>

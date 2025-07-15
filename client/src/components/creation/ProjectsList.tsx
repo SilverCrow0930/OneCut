@@ -588,6 +588,50 @@ function ProjectCard({
                         <div className="text-xs text-gray-400 mt-1">Analyzing... • {project.processing_progress || 7}% complete</div>
                     </div>
                 </div>
+
+                {/* Three-dot menu button - added to processing card */}
+                <div 
+                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                    onMouseDown={(e) => {
+                        e.stopPropagation()
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                    }}
+                >
+                    <button
+                        onMouseDown={(e) => {
+                            e.stopPropagation()
+                        }}
+                        onClick={(e) => {
+                            console.log('Menu button clicked')
+                            onMenuClick(e, project.id)
+                        }}
+                        className="w-9 h-9 bg-white/95 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
+                    >
+                        <MoreHorizontal className="w-4 h-4 text-gray-600" />
+                    </button>
+                    
+                    {/* Dropdown menu */}
+                    {showMenu === project.id && (
+                        <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+                            <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                    console.log('DIRECT DELETE MOUSEDOWN - calling onDelete directly')
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    // Call delete directly on mousedown to bypass any click issues
+                                    onDelete(e, project)
+                                }}
+                                className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-3"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         )
     }
