@@ -1924,16 +1924,88 @@ export function getUserJobs(userId: string): QuickclipsJob[] {
     return Array.from(jobQueue.values()).filter(job => job.userId === userId)
 }
 
-// Cleanup old jobs (run every hour)
-cron.schedule('0 * * * *', () => {
-    const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago
+// Cleanup old jobs and mark stalled jobs as failed (run every 10 minutes)
+cron.schedule('*/10 * * * *', () => {
+    const cleanupCutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago for cleanup
+    const stalledJobCutoffTime = new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago for stalled jobs
     
     for (const [jobId, job] of jobQueue.entries()) {
-        if (job.createdAt < cutoffTime && ['completed', 'failed'].includes(job.status)) {
+        // Clean up old completed/failed jobs
+        if (job.createdAt < cleanupCutoffTime && ['completed', 'failed'].includes(job.status)) {
             jobQueue.delete(jobId)
             console.log(`[QuickclipsProcessor] Cleaned up old job ${jobId}`)
+            continue
+        }
+        
+        // Mark stalled jobs as failed
+        if (job.createdAt < stalledJobCutoffTime && ['queued', 'processing'].includes(job.status)) {
+            console.log(`[QuickclipsProcessor] Job ${jobId} for project ${job.projectId} has been processing for over 30 minutes - marking as failed`)
+            
+            job.status = 'failed'
+            job.error = 'Processing timeout - job took longer than 30 minutes'
+            job.message = 'Processing failed: Timeout after 30 minutes'
+            
+            // Update project status in database (only for standalone Smart Cut projects)
+            if (!job.isEditorMode) {
+                // Use a regular function to handle async operations
+                (function updateStatus() {
+                    updateProjectStatus(job.projectId, {
+                        processing_status: 'failed',
+                        processing_error: job.error,
+                        processing_message: job.message,
+                        processing_completed_at: new Date().toISOString()
+                    }).then(() => {
+                        console.log(`[QuickclipsProcessor] Updated project ${job.projectId} status to failed due to timeout`)
+                    }).catch((error) => {
+                        console.error(`[QuickclipsProcessor] Failed to update project ${job.projectId} status:`, error)
+                    })
+                })()
+            }
+            
+            // Emit error state if socket is available
+            if (global.io) {
+                global.io.emit('quickclips_state', {
+                    state: 'error',
+                    message: job.message,
+                    progress: 0,
+                    projectId: job.projectId
+                })
+                global.io.emit('quickclips_response', {
+                    success: false,
+                    error: job.error,
+                    projectId: job.projectId
+                })
+            }
         }
     }
-})
+});
+
+// Initialize - clean up any stalled projects
+(async () => {
+    try {
+        const stalledCutoffTime = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+        
+        // Find all projects that have been processing for more than 30 minutes
+        const { data: stalledProjects, error } = await supabase
+            .from('projects')
+            .update({
+                processing_status: 'failed',
+                processing_error: 'Processing timeout - job took longer than 30 minutes',
+                processing_message: 'Processing failed: Timeout after 30 minutes',
+                processing_completed_at: new Date().toISOString()
+            })
+            .eq('processing_status', 'processing')
+            .lt('processing_started_at', stalledCutoffTime)
+            .select('id')
+        
+        if (error) {
+            console.error('[QuickclipsProcessor] Error cleaning up stalled projects:', error)
+        } else if (stalledProjects && stalledProjects.length > 0) {
+            console.log(`[QuickclipsProcessor] Cleaned up ${stalledProjects.length} stalled projects on startup`)
+        }
+    } catch (error) {
+        console.error('[QuickclipsProcessor] Error during startup cleanup:', error)
+    }
+})()
 
 console.log('[QuickclipsProcessor] Background processor initialized') 
