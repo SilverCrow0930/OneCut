@@ -64,7 +64,12 @@ export default function ProjectsList() {
     // Get optimistic projects from localStorage
     const getOptimisticProjects = useCallback((): OptimisticProject[] => {
         try {
-            const storedProjects = localStorage.getItem('optimistic_projects');
+            // Use user-specific key to avoid cross-user contamination
+            const userId = session?.user?.id;
+            if (!userId) return [];
+            
+            const storageKey = `optimistic_projects_${userId}`;
+            const storedProjects = localStorage.getItem(storageKey);
             if (storedProjects) {
                 return JSON.parse(storedProjects);
             }
@@ -72,7 +77,7 @@ export default function ProjectsList() {
             console.warn('Failed to parse optimistic projects:', err);
         }
         return [];
-    }, []);
+    }, [session?.user?.id]);
 
     // Clean up polling on unmount
     useEffect(() => {
@@ -126,33 +131,21 @@ export default function ProjectsList() {
                     const sortedProjects = combinedProjects.sort((a, b) => {
                         const aIsSmartCut = a.processing_type === 'quickclips'
                         const bIsSmartCut = b.processing_type === 'quickclips'
-                        const aIsProcessing = (a.processing_status === 'processing' || a.processing_status === 'queued') && aIsSmartCut
-                        const bIsProcessing = (b.processing_status === 'processing' || b.processing_status === 'queued') && bIsSmartCut
                         
-                        // 1. Processing Smart Cut projects come first (highest priority)
-                        if (aIsProcessing && !bIsProcessing) return -1
-                        if (!aIsProcessing && bIsProcessing) return 1
-                        
-                        // 2. For non-processing projects, prioritize by last_opened if available
-                        if (!aIsProcessing && !bIsProcessing) {
-                            // If both have last_opened, sort by most recent
-                            if (a.last_opened && b.last_opened) {
-                                return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
-                            }
-                            
-                            // Recently opened projects come first
-                            if (a.last_opened && !b.last_opened) return -1
-                            if (!a.last_opened && b.last_opened) return 1
-                            
-                            // 3. For projects without last_opened, Smart Cut projects come first
-                            if (aIsSmartCut && !bIsSmartCut) return -1
-                            if (!aIsSmartCut && bIsSmartCut) return 1
-                            
-                            // 4. Finally, sort by created_at (most recent first)
-                            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                        // 1. For all projects, prioritize by last_opened if available
+                        if (a.last_opened && b.last_opened) {
+                            return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
                         }
                         
-                        // Both are processing, sort by created_at (most recent first)
+                        // Recently opened projects come first
+                        if (a.last_opened && !b.last_opened) return -1
+                        if (!a.last_opened && b.last_opened) return 1
+                        
+                        // 2. For projects without last_opened, Smart Cut projects come first
+                        if (aIsSmartCut && !bIsSmartCut) return -1
+                        if (!aIsSmartCut && bIsSmartCut) return 1
+                        
+                        // 3. Finally, sort by created_at (most recent first)
                         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                     })
                     setProjects(sortedProjects)
@@ -320,6 +313,23 @@ export default function ProjectsList() {
             console.log('Project deleted successfully, removing from local state')
             // Remove from local state
             setProjects(prev => prev.filter(p => p.id !== project.id))
+            
+            // Also remove from localStorage to prevent it from reappearing after refresh
+            try {
+                const userId = session?.user?.id;
+                if (userId) {
+                    const storageKey = `optimistic_projects_${userId}`;
+                    const storedProjects = localStorage.getItem(storageKey);
+                    if (storedProjects) {
+                        const projects = JSON.parse(storedProjects);
+                        const updatedProjects = projects.filter((p: OptimisticProject) => p.id !== project.id);
+                        localStorage.setItem(storageKey, JSON.stringify(updatedProjects));
+                        console.log('Removed project from localStorage:', project.id);
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to remove project from localStorage:', err);
+            }
         } catch (error) {
             console.error('Error deleting project:', error)
             alert('Failed to delete project: ' + (error instanceof Error ? error.message : 'Unknown error'))
@@ -346,33 +356,21 @@ export default function ProjectsList() {
                 return updatedProjects.sort((a, b) => {
                     const aIsSmartCut = a.processing_type === 'quickclips'
                     const bIsSmartCut = b.processing_type === 'quickclips'
-                    const aIsProcessing = (a.processing_status === 'processing' || a.processing_status === 'queued') && aIsSmartCut
-                    const bIsProcessing = (b.processing_status === 'processing' || b.processing_status === 'queued') && bIsSmartCut
                     
-                    // 1. Processing Smart Cut projects come first (highest priority)
-                    if (aIsProcessing && !bIsProcessing) return -1
-                    if (!aIsProcessing && bIsProcessing) return 1
-                    
-                    // 2. For non-processing projects, prioritize by last_opened if available
-                    if (!aIsProcessing && !bIsProcessing) {
-                        // If both have last_opened, sort by most recent
-                        if (a.last_opened && b.last_opened) {
-                            return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
-                        }
-                        
-                        // Recently opened projects come first
-                        if (a.last_opened && !b.last_opened) return -1
-                        if (!a.last_opened && b.last_opened) return 1
-                        
-                        // 3. For projects without last_opened, Smart Cut projects come first
-                        if (aIsSmartCut && !bIsSmartCut) return -1
-                        if (!aIsSmartCut && bIsSmartCut) return 1
-                        
-                        // 4. Finally, sort by created_at (most recent first)
-                        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                    // 1. For all projects, prioritize by last_opened if available
+                    if (a.last_opened && b.last_opened) {
+                        return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
                     }
                     
-                    // Both are processing, sort by created_at (most recent first)
+                    // Recently opened projects come first
+                    if (a.last_opened && !b.last_opened) return -1
+                    if (!a.last_opened && b.last_opened) return 1
+                    
+                    // 2. For projects without last_opened, Smart Cut projects come first
+                    if (aIsSmartCut && !bIsSmartCut) return -1
+                    if (!aIsSmartCut && bIsSmartCut) return 1
+                    
+                    // 3. Finally, sort by created_at (most recent first)
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 })
             })

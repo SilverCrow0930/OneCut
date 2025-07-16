@@ -230,11 +230,15 @@ const QuickClipsButton = () => {
 
             // Store in localStorage
             try {
-                const existingProjects = localStorage.getItem('optimistic_projects');
-                const projects = existingProjects ? JSON.parse(existingProjects) : [];
-                projects.push(projectData);
-                localStorage.setItem('optimistic_projects', JSON.stringify(projects));
-                console.log('Added optimistic project to localStorage:', projectData.id);
+                const userId = session?.user?.id;
+                if (userId) {
+                    const storageKey = `optimistic_projects_${userId}`;
+                    const existingProjects = localStorage.getItem(storageKey);
+                    const projects = existingProjects ? JSON.parse(existingProjects) : [];
+                    projects.push(projectData);
+                    localStorage.setItem(storageKey, JSON.stringify(projects));
+                    console.log('Added optimistic project to localStorage:', projectData.id);
+                }
             } catch (err) {
                 console.warn('Failed to store optimistic project in localStorage:', err);
             }
