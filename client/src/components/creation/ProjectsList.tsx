@@ -97,20 +97,9 @@ export default function ProjectsList() {
             setLoading(true)
             setError(null)
             
-            // First get optimistic projects from localStorage to show immediately
+            // Get optimistic projects from localStorage but don't display them yet
             const optimisticProjects = getOptimisticProjects();
-            if (optimisticProjects.length > 0) {
-                // Show optimistic projects immediately while real data loads
-                setProjects(optimisticProjects);
-                setLoading(false);
-                
-                // Start polling for any optimistic projects since they're being processed
-                optimisticProjects.forEach((project: OptimisticProject) => {
-                    if (!isPollingRef.current && (project.processing_status === 'processing' || project.processing_status === 'queued')) {
-                        startPolling(project.id);
-                    }
-                });
-            }
+            let projectsToTrack = [];
             
             try {
                 const res = await fetch(apiPath('projects'), {
@@ -131,6 +120,7 @@ export default function ProjectsList() {
                     
                     // Combine real and remaining optimistic projects
                     const combinedProjects = [...data, ...remainingOptimisticProjects];
+                    projectsToTrack = combinedProjects;
                     
                     // Enhanced sorting logic for Smart Cut projects
                     const sortedProjects = combinedProjects.sort((a, b) => {
@@ -174,6 +164,16 @@ export default function ProjectsList() {
                             highlightedProject?.processing_status === 'queued') {
                             startPolling(highlightedProjectId)
                         }
+                    }
+                    
+                    // Also check if any processing projects need polling
+                    const processingProject = sortedProjects.find(p => 
+                        (p.processing_status === 'processing' || p.processing_status === 'queued') &&
+                        p.processing_type === 'quickclips'
+                    )
+                    
+                    if (processingProject && !isPollingRef.current) {
+                        startPolling(processingProject.id)
                     }
                 }
             }
