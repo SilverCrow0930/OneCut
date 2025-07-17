@@ -383,13 +383,55 @@ router.get(
             }
 
             const data = await response.json();
+            
+            // Validate response format
+            if (type === 'video' && !Array.isArray(data.videos)) {
+                console.error('❌ Invalid video response format:', data);
+                throw new Error('Invalid response format from Pexels API - videos array missing');
+            }
+            if (type === 'image' && !Array.isArray(data.photos)) {
+                console.error('❌ Invalid image response format:', data);
+                throw new Error('Invalid response format from Pexels API - photos array missing');
+            }
+
+            // Log full response for debugging
             console.log('✅ PEXELS API SUCCESS:', {
                 type,
+                query,
                 itemCount: type === 'video' ? data.videos?.length : data.photos?.length,
                 totalResults: data.total_results,
                 page: data.page,
-                per_page: data.per_page
+                per_page: data.per_page,
+                responsePreview: JSON.stringify(data).substring(0, 200) + '...'
             });
+
+            // If no results, try a fallback query
+            if ((type === 'video' && (!data.videos || data.videos.length === 0)) ||
+                (type === 'image' && (!data.photos || data.photos.length === 0))) {
+                
+                console.log('⚠️ No results found, trying fallback query...');
+                
+                // Try a more general fallback query
+                const fallbackQuery = type === 'video' ? 'people' : 'landscape';
+                const fallbackUrl = type === 'video' 
+                    ? `https://api.pexels.com/videos/search?query=${encodeURIComponent(fallbackQuery)}&orientation=${orientation}&page=${page}&per_page=${per_page}`
+                    : `https://api.pexels.com/v1/search?query=${encodeURIComponent(fallbackQuery)}&orientation=${orientation}&page=${page}&per_page=${per_page}`;
+                
+                const fallbackResponse = await fetch(fallbackUrl, {
+                    headers: {
+                        'Authorization': process.env.PEXELS_API_KEY
+                    }
+                });
+                
+                if (fallbackResponse.ok) {
+                    const fallbackData = await fallbackResponse.json();
+                    console.log('✅ Fallback query succeeded:', {
+                        query: fallbackQuery,
+                        itemCount: type === 'video' ? fallbackData.videos?.length : fallbackData.photos?.length
+                    });
+                    return res.json(fallbackData);
+                }
+            }
 
             res.json(data);
         }

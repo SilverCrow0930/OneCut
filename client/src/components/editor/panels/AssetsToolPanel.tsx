@@ -64,11 +64,37 @@ const AssetsToolPanel: React.FC<AssetsToolPanelProps> = ({ setHighlightedAssetId
             fetch(apiPath(`assets/pexels?${queryParams}`), {
                 headers: { Authorization: `Bearer ${session.access_token}` },
             })
-                .then(res => res.json())
-                .then(data => {
-                    setAssets(prev => prev.concat(selectedTab === 'image' ? data.photos : data.videos))
+                .then(async res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    const data = await res.json();
+                    console.log('Pexels API Response:', {
+                        type: selectedTab,
+                        query: searchQuery || 'default',
+                        data: data,
+                        hasPhotos: !!data.photos?.length,
+                        hasVideos: !!data.videos?.length,
+                        totalResults: data.total_results
+                    });
+                    
+                    if (!data.photos && !data.videos) {
+                        throw new Error('No photos or videos in response');
+                    }
+                    
+                    const newAssets = selectedTab === 'image' ? data.photos : data.videos;
+                    if (!newAssets?.length) {
+                        console.log('No assets found in response');
+                        setError('No assets found for this search');
+                        return;
+                    }
+                    
+                    setAssets(prev => prev.concat(newAssets));
                 })
-                .catch(() => setError('Failed to fetch assets'))
+                .catch((error) => {
+                    console.error('Failed to fetch assets:', error);
+                    setError(`Failed to fetch assets: ${error.message}`);
+                })
                 .finally(() => setLoading(false))
         }
     }, [selectedTab, page, searchQuery, session?.access_token])
