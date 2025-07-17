@@ -325,8 +325,8 @@ router.get(
             const type = String(req.query.type || 'image');
             const page = String(req.query.page || '1');
             const per_page = String(req.query.per_page || '20');
-            // Use better default search terms that are more likely to return results
-            const defaultQuery = type === 'video' ? 'nature landscape' : 'business office';
+            // Use more general default search terms
+            const defaultQuery = type === 'video' ? 'nature' : 'people';
             const query = (req.query.query && String(req.query.query).trim()) || defaultQuery;
 
             // Debug environment variable loading
@@ -344,12 +344,11 @@ router.get(
                 return res.status(500).json({ error: 'Pexels API key not configured' });
             }
 
-            const orientation = 'portrait';
             let url = '';
             if (type === 'video') {
-                url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&orientation=${orientation}&page=${page}&per_page=${per_page}`;
+                url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&page=${page}&per_page=${per_page}`;
             } else {
-                url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=${orientation}&page=${page}&per_page=${per_page}`;
+                url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&page=${page}&per_page=${per_page}`;
             }
 
             console.log('🔍 PEXELS API REQUEST:', {
@@ -412,10 +411,10 @@ router.get(
                 console.log('⚠️ No results found, trying fallback query...');
                 
                 // Try a more general fallback query
-                const fallbackQuery = type === 'video' ? 'people' : 'landscape';
+                const fallbackQuery = type === 'video' ? 'city' : 'abstract';
                 const fallbackUrl = type === 'video' 
-                    ? `https://api.pexels.com/videos/search?query=${encodeURIComponent(fallbackQuery)}&orientation=${orientation}&page=${page}&per_page=${per_page}`
-                    : `https://api.pexels.com/v1/search?query=${encodeURIComponent(fallbackQuery)}&orientation=${orientation}&page=${page}&per_page=${per_page}`;
+                    ? `https://api.pexels.com/videos/search?query=${encodeURIComponent(fallbackQuery)}&page=${page}&per_page=${per_page}`
+                    : `https://api.pexels.com/v1/search?query=${encodeURIComponent(fallbackQuery)}&page=${page}&per_page=${per_page}`;
                 
                 const fallbackResponse = await fetch(fallbackUrl, {
                     headers: {
