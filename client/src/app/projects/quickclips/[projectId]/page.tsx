@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiPath } from '@/lib/config'
 import { ArrowLeft, Download, Play, Edit, Share, Zap, Clock, Star } from 'lucide-react'
 import HomeNavbar from '@/components/home/HomeNavbar'
+import FreeCreditsAnimation from '@/components/ui/FreeCreditsAnimation'
 
 interface QuickClip {
     id: string
@@ -42,16 +43,40 @@ interface ProjectData {
 export default function QuickClipsViewPage() {
     const params = useParams()
     const router = useRouter()
-    const { session } = useAuth()
+    const { session, profile } = useAuth()
     const [project, setProject] = useState<ProjectData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [showCreditsAnimation, setShowCreditsAnimation] = useState(false)
     
     // Polling state
     const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
     const isPollingRef = useRef(false)
 
     const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId
+
+    // Check if this user should see the free credits animation
+    useEffect(() => {
+        if (profile) {
+            // Check if we've already shown the animation to this user
+            const animationShown = localStorage.getItem(`credits_animation_shown_${profile.id}`)
+            
+            if (!animationShown) {
+                // Check if the user was created recently (within the last 5 minutes)
+                const createdAt = new Date(profile.created_at).getTime()
+                const now = Date.now()
+                const isNewUser = (now - createdAt) < 5 * 60 * 1000 // 5 minutes
+                
+                if (isNewUser) {
+                    console.log('New user detected on QuickClips page. Showing free credits animation.')
+                    setShowCreditsAnimation(true)
+                    
+                    // Mark that we've shown the animation
+                    localStorage.setItem(`credits_animation_shown_${profile.id}`, 'true')
+                }
+            }
+        }
+    }, [profile])
 
     const fetchProject = async () => {
         if (!session?.access_token || !projectId) return;
@@ -403,6 +428,15 @@ export default function QuickClipsViewPage() {
                     </div>
                 )}
             </main>
+            
+            {/* Free Credits Animation */}
+            {showCreditsAnimation && (
+                <FreeCreditsAnimation 
+                    onClose={() => setShowCreditsAnimation(false)}
+                    autoClose={true}
+                    autoCloseTime={15000}
+                />
+            )}
         </div>
     )
 } 
