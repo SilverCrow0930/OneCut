@@ -25,7 +25,7 @@ interface CartItem {
 
 export default function PricingPage() {
   // Real credits data from context
-  const { credits: currentCredits, maxCredits, subscriptionType, aiAssistantChats, maxAiAssistantChats, isLoading, refreshCredits, nextBillingDate } = useCredits();
+  const { credits: currentCredits, maxCredits, subscriptionType, aiAssistantChats, maxAiAssistantChats, isLoading, refreshCredits, nextBillingDate, cancelAt } = useCredits();
   const { user, session } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showEditorFeatures, setShowEditorFeatures] = useState(false);
@@ -68,8 +68,9 @@ export default function PricingPage() {
     console.log('Subscription data changed. Updating current subscriptions...');
     console.log('Subscription type:', subscriptionType);
     console.log('Max credits:', maxCredits);
+    console.log('Cancel at:', cancelAt);
     setCurrentSubscriptions(getCurrentSubscriptions());
-  }, [subscriptionType, maxCredits]);
+  }, [subscriptionType, maxCredits, cancelAt]);
   
   // Dynamic subscription data based on current subscription type
   const getCurrentSubscriptions = () => {
@@ -113,7 +114,9 @@ export default function PricingPage() {
         price: price,
         type: 'credits' as const,
         nextBilling: formatNextBillingDate(),
-        status: 'active'
+        status: 'active',
+        cancelDate: cancelAt,
+        message: cancelAt ? 'Subscription will be cancelled at the end of your current billing period' : undefined
       });
     }
     
@@ -219,6 +222,13 @@ export default function PricingPage() {
   const cancelSubscription = async (subscriptionId: string) => {
     if (!user || !session) return;
     
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel your subscription? You will keep access to all features until the end of your current billing period.'
+    );
+    
+    if (!confirmed) return;
+    
     try {
       const response = await fetch(apiPath('subscriptions/cancel'), {
         method: 'POST',
@@ -228,17 +238,86 @@ export default function PricingPage() {
         }
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
-    setCurrentSubscriptions(prev => 
-      prev.map(sub => 
-        sub.id === subscriptionId 
-          ? { ...sub, status: 'cancelled' }
-          : sub
-      )
-    );
+        // Update the UI to show the subscription is scheduled for cancellation
+        setCurrentSubscriptions(prev => 
+          prev.map(sub => 
+            sub.id === subscriptionId 
+              ? { 
+                  ...sub, 
+                  status: 'cancelled',
+                  cancelDate: data.cancelDate,
+                  message: data.message
+                }
+              : sub
+          )
+        );
+        
+        // Show success message
+        alert(`✅ ${data.message}\n\nYour ${data.planName} plan will remain active until ${new Date(data.cancelDate).toLocaleDateString()}.`);
+        
+        // Refresh credits data to reflect any changes
+        await refreshCredits();
+      } else {
+        console.error('Cancellation failed:', data);
+        alert(`❌ Failed to cancel subscription: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Failed to cancel subscription:', error);
+      alert('❌ Network error occurred. Please try again.');
+    }
+  };
+
+  const reactivateSubscription = async (subscriptionId: string) => {
+    if (!user || !session) return;
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      'Do you want to reactivate your subscription? It will continue as normal and you will be billed on your next billing date.'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const response = await fetch(apiPath('subscriptions/reactivate'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Update the UI to show the subscription is reactivated
+        setCurrentSubscriptions(prev => 
+          prev.map(sub => 
+            sub.id === subscriptionId 
+              ? { 
+                  ...sub, 
+                  status: 'active',
+                  cancelDate: null,
+                  message: undefined
+                }
+              : sub
+          )
+        );
+        
+        // Show success message
+        alert(`✅ ${data.message}\n\nYour ${data.planName} plan has been reactivated.`);
+        
+        // Refresh credits data to reflect any changes
+        await refreshCredits();
+      } else {
+        console.error('Reactivation failed:', data);
+        alert(`❌ Failed to reactivate subscription: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to reactivate subscription:', error);
+      alert('❌ Network error occurred. Please try again.');
     }
   };
 
@@ -297,13 +376,19 @@ export default function PricingPage() {
   const creditPercentage = (currentCredits / maxCredits) * 100;
 
   const getPlanButtonState = (plan: Plan) => {
-    if (!subscriptionType || !maxCredits) return { label: `Start with ${plan.name}`, disabled: false };
+    // If no subscription, show "Start with" for all plans
+    if (!subscriptionType || !maxCredits) {
+      return { label: `Start with ${plan.name}`, disabled: false };
+    }
+    
+    // If user has a subscription
     if (plan.credits === maxCredits) {
       return { label: 'Current Plan', disabled: true };
     } else if (plan.credits > maxCredits) {
       return { label: `Upgrade to ${plan.name}`, disabled: false };
     } else {
-      return { label: `Switch to ${plan.name}`, disabled: false };
+      // For downgrading, we'll disable the button but show what it would be
+      return { label: `Downgrade to ${plan.name}`, disabled: true };
     }
   };
 
@@ -344,16 +429,44 @@ export default function PricingPage() {
                   <div key={sub.id} className="flex items-center justify-between p-4 bg-white/50 rounded-xl border border-white/30">
                     <div>
                       <div className="font-semibold text-gray-900">{sub.name}</div>
-                      <div className="text-sm text-gray-600">Next billing: {sub.nextBilling}</div>
+                      <div className="text-sm text-gray-600">
+                        {sub.cancelDate ? (
+                          <span className="text-orange-600">
+                            Cancels on {new Date(sub.cancelDate).toLocaleDateString()}
+                          </span>
+                        ) : (
+                          `Next billing: ${sub.nextBilling}`
+                        )}
+                      </div>
+                      {sub.message && (
+                        <div className="text-xs text-orange-500 mt-1">
+                          {sub.message}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="font-bold text-gray-900">${sub.price}/mo</span>
-                      <button
-                        onClick={() => cancelSubscription(sub.id)}
-                        className="text-sm text-red-500 hover:text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition-all duration-200"
-                      >
-                        Cancel
-                      </button>
+                      {!sub.cancelDate && (
+                        <button
+                          onClick={() => cancelSubscription(sub.id)}
+                          className="text-sm text-red-500 hover:text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition-all duration-200"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      {sub.cancelDate && (
+                        <button
+                          onClick={() => reactivateSubscription(sub.id)}
+                          className="text-sm text-green-500 hover:text-green-600 px-4 py-2 rounded-lg hover:bg-green-50 transition-all duration-200"
+                        >
+                          Reactivate
+                        </button>
+                      )}
+                      {sub.cancelDate && (
+                        <span className="text-sm text-orange-600 px-4 py-2 rounded-lg bg-orange-50">
+                          Scheduled for cancellation
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}

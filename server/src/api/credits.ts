@@ -71,40 +71,42 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     let maxCredits = 0;
     let currentCredits = 0;
     let aiAssistantChats = 0;
-    let maxAiAssistantChats = 0;
+    let maxAiAssistantChats = -1; // -1 means unlimited
     let nextBillingDate = null;
+    let cancelAt = null;
 
     if (subscription) {
       subscriptionType = subscription.subscription_type;
       maxCredits = subscription.max_credits || 0;
-      maxAiAssistantChats = subscription.max_ai_chats || 0;
-      nextBillingDate = subscription.next_billing_date || null;
-      console.log('[Credits API] Using subscription data:', { 
-        subscriptionType, 
-        maxCredits, 
-        maxAiAssistantChats,
-        nextBillingDate 
-      });
+      maxAiAssistantChats = subscription.max_ai_chats || -1;
+      nextBillingDate = subscription.next_billing_date;
+      cancelAt = subscription.cancel_at;
     }
 
     if (credits) {
       currentCredits = credits.current_credits || 0;
       aiAssistantChats = credits.ai_assistant_chats || 0;
-      console.log('[Credits API] Using credits data:', { currentCredits, aiAssistantChats });
     }
 
-    const response = {
+    console.log('[Credits API] Returning response:', {
       subscriptionType,
       maxCredits,
       currentCredits,
       aiAssistantChats,
       maxAiAssistantChats,
-      subscriptionId: subscription?.id || null,
-      nextBillingDate
-    };
+      nextBillingDate,
+      cancelAt
+    });
 
-    console.log('[Credits API] Sending response:', response);
-    res.json(response);
+    res.json({
+      subscriptionType,
+      maxCredits,
+      currentCredits,
+      aiAssistantChats,
+      maxAiAssistantChats,
+      nextBillingDate,
+      cancelAt
+    });
 
   } catch (error) {
     console.error('Error fetching credits:', error);

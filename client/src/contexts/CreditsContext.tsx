@@ -12,6 +12,7 @@ interface CreditsContextType {
   maxAiAssistantChats: number;
   isLoading: boolean;
   nextBillingDate: string | null;
+  cancelAt: string | null;
   
   // Credit consumption functions
   consumeCredits: (amount: number, featureName: string) => Promise<boolean>;
@@ -33,6 +34,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     const [maxAiAssistantChats, setMaxAiAssistantChats] = useState(-1);
     const [isLoading, setIsLoading] = useState(true);
     const [nextBillingDate, setNextBillingDate] = useState<string | null>(null);
+    const [cancelAt, setCancelAt] = useState<string | null>(null);
 
     // Credit consumption rates (per hour)
     const CREDIT_COSTS = {
@@ -45,68 +47,47 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
       'music-generation': 2   // per track
     };
 
-    // Fetch user's current credits and subscription
     const fetchCreditsData = async () => {
-        if (authLoading) {
-            console.log('[CreditsContext] Auth still loading, waiting...');
-            return;
-        }
-
-        if (!user || !session?.access_token) {
-            console.log('[CreditsContext] No user or session, skipping fetch');
+        if (!user || !session?.access_token || authLoading) {
+            console.log('[CreditsContext] Skipping fetch - no user or session');
             setIsLoading(false);
             return;
         }
-        
+
         try {
-            console.log('[CreditsContext] Fetching credits data for user:', user.id);
-            console.log('[CreditsContext] Auth token:', session.access_token.substring(0, 10) + '...');
-            
+            console.log('[CreditsContext] Fetching credits data...');
             const response = await fetch(apiPath('credits'), {
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Cache-Control': 'no-cache'
-                },
-                credentials: 'include' // Include cookies if any
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log('[CreditsContext] Received credits data:', data);
-                
-                // Log state updates
-                console.log('[CreditsContext] Updating state with:', {
-                    currentCredits: data.currentCredits,
-                    maxCredits: data.maxCredits,
-                    subscriptionType: data.subscriptionType,
-                    aiAssistantChats: data.aiAssistantChats,
-                    maxAiAssistantChats: data.maxAiAssistantChats,
-                    nextBillingDate: data.nextBillingDate
-                });
-                
-                setCredits(data.currentCredits);
-                setMaxCredits(data.maxCredits);
-                setSubscriptionType(data.subscriptionType);
-                setAiAssistantChats(data.aiAssistantChats);
-                setMaxAiAssistantChats(data.maxAiAssistantChats);
-                setNextBillingDate(data.nextBillingDate);
-            } else {
-                const errorText = await response.text();
-                console.error('[CreditsContext] Failed to fetch credits. Status:', response.status, 'Error:', errorText);
-                
-                // If we get a 401/403, the token might be invalid
-                if (response.status === 401 || response.status === 403) {
-                    console.log('[CreditsContext] Authentication error, might need to refresh token');
+                    'Authorization': `Bearer ${session.access_token}`
                 }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
+
+            const data = await response.json();
+            console.log('[CreditsContext] Received credits data:', data);
+
+            setCredits(data.currentCredits || 0);
+            setMaxCredits(data.maxCredits || 0);
+            setSubscriptionType(data.subscriptionType || null);
+            setAiAssistantChats(data.aiAssistantChats || 0);
+            setMaxAiAssistantChats(data.maxAiAssistantChats || -1);
+            setNextBillingDate(data.nextBillingDate || null);
+            setCancelAt(data.cancelAt || null);
+
         } catch (error) {
             console.error('[CreditsContext] Error fetching credits:', error);
             
-            // If it's a network error, retry after a delay
-            if (error instanceof TypeError && error.message === 'Failed to fetch') {
-                console.log('[CreditsContext] Network error, retrying in 5s...');
-                setTimeout(fetchCreditsData, 5000);
-            }
+            // Set defaults on error
+            setCredits(0);
+            setMaxCredits(0);
+            setSubscriptionType(null);
+            setAiAssistantChats(0);
+            setMaxAiAssistantChats(-1);
+            setNextBillingDate(null);
+            setCancelAt(null);
         } finally {
             setIsLoading(false);
         }
@@ -114,61 +95,43 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
 
   // Consume credits for AI features
   const consumeCredits = async (amount: number, featureName: string): Promise<boolean> => {
-    if (!user) {
-      console.error('[CreditsContext] No user found for credit consumption');
+    if (!user || !session?.access_token) {
+      console.warn('[CreditsContext] Cannot consume credits - no user or session');
       return false;
     }
-    
+
     // Check if user has enough credits
     if (credits < amount) {
-      console.warn(`[CreditsContext] Insufficient credits: ${credits} < ${amount}`);
+      console.warn('[CreditsContext] Insufficient credits:', { required: amount, available: credits });
       return false;
     }
-    
-    console.log(`[CreditsContext] Attempting to consume ${amount} credits for ${featureName}`);
-    console.log(`[CreditsContext] Current credits: ${credits}, User ID: ${user.id}`);
-    
+
     try {
+      console.log('[CreditsContext] Consuming credits:', { amount, featureName });
+      
       const response = await fetch(apiPath('credits/consume'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({
-          amount,
-          featureName
-        })
+        body: JSON.stringify({ amount, featureName })
       });
-      
-      console.log(`[CreditsContext] API response status: ${response.status}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`[CreditsContext] API response data:`, data);
-        setCredits(data.remainingCredits);
-        
-        // Log usage for analytics
-        console.log(`✅ Consumed ${amount} credits for ${featureName}. Remaining: ${data.remainingCredits}`);
-        return true;
-      } else {
-        // Log the error response
-        const errorText = await response.text();
-        console.error(`[CreditsContext] API error response:`, {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
-        
-        try {
-          const errorData = JSON.parse(errorText);
-          console.error(`[CreditsContext] Parsed error data:`, errorData);
-        } catch (e) {
-          console.error(`[CreditsContext] Could not parse error response as JSON`);
-        }
-        
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[CreditsContext] Credit consumption failed:', errorData);
         return false;
       }
+
+      const data = await response.json();
+      console.log('[CreditsContext] Credit consumption successful:', data);
+      
+      // Update local state
+      setCredits(data.remainingCredits || 0);
+      
+      return true;
+      
     } catch (error) {
       console.error('[CreditsContext] Network error during credit consumption:', error);
       return false;
@@ -213,6 +176,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
     maxAiAssistantChats,
     isLoading,
     nextBillingDate,
+    cancelAt,
     consumeCredits,
     consumeAiChat,
     refreshCredits,

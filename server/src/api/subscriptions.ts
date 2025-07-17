@@ -354,6 +354,7 @@ router.post('/cancel', authenticate, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   try {
     const authId = authReq.user.id;
+    console.log('[Subscriptions] Cancel request received for auth ID:', authId);
 
     // Get the internal database user ID from the auth ID
     const { data: userRecord, error: userError } = await supabase
@@ -363,31 +364,171 @@ router.post('/cancel', authenticate, async (req: Request, res: Response) => {
       .single();
 
     if (userError || !userRecord) {
+      console.error('[Subscriptions] User not found for auth ID:', authId);
       return res.status(404).json({ error: 'User not found' });
     }
 
     const userId = userRecord.id;
+    console.log('[Subscriptions] Using internal user ID:', userId);
 
     // Get user's active subscription
     const { data: subscription, error: subError } = await supabase
       .from('user_subscriptions')
-      .select('stripe_subscription_id')
+      .select('stripe_subscription_id, plan_name, next_billing_date')
       .eq('user_id', userId)
       .eq('status', 'active')
       .single();
 
     if (subError || !subscription) {
+      console.error('[Subscriptions] No active subscription found for user:', userId);
       return res.status(404).json({ error: 'No active subscription found' });
     }
 
-    // Cancel subscription in Stripe
-    await stripe.subscriptions.cancel(subscription.stripe_subscription_id);
+    console.log('[Subscriptions] Found active subscription:', {
+      stripeId: subscription.stripe_subscription_id,
+      planName: subscription.plan_name,
+      nextBilling: subscription.next_billing_date
+    });
 
-    res.json({ success: true });
+    // Schedule cancellation at the end of the billing period (not immediate)
+    const updatedSubscription = await stripe.subscriptions.update(
+      subscription.stripe_subscription_id,
+      {
+        cancel_at_period_end: true,
+        metadata: {
+          cancelled_by_user: 'true',
+          cancelled_at: new Date().toISOString()
+        }
+      }
+    ) as any;
+
+    console.log('[Subscriptions] Subscription scheduled for cancellation:', {
+      id: updatedSubscription.id,
+      cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+      current_period_end: updatedSubscription.current_period_end
+    });
+
+    // Update our database to reflect the scheduled cancellation
+    const { error: updateError } = await supabase
+      .from('user_subscriptions')
+      .update({
+        cancel_at: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('status', 'active');
+
+    if (updateError) {
+      console.error('[Subscriptions] Error updating database:', updateError);
+      return res.status(500).json({ error: 'Failed to update subscription status' });
+    }
+
+    console.log('[Subscriptions] Successfully scheduled cancellation for user:', userId);
+
+    res.json({ 
+      success: true,
+      message: 'Subscription will be cancelled at the end of your current billing period',
+      cancelDate: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+      planName: subscription.plan_name
+    });
 
   } catch (error) {
-    console.error('Error cancelling subscription:', error);
-    res.status(500).json({ error: 'Failed to cancel subscription' });
+    console.error('[Subscriptions] Error cancelling subscription:', error);
+    res.status(500).json({ 
+      error: 'Failed to cancel subscription',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Reactivate subscription (undo cancellation)
+router.post('/reactivate', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  try {
+    const authId = authReq.user.id;
+    console.log('[Subscriptions] Reactivate request received for auth ID:', authId);
+
+    // Get the internal database user ID from the auth ID
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authId)
+      .single();
+
+    if (userError || !userRecord) {
+      console.error('[Subscriptions] User not found for auth ID:', authId);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userId = userRecord.id;
+    console.log('[Subscriptions] Using internal user ID:', userId);
+
+    // Get user's subscription that's scheduled for cancellation
+    const { data: subscription, error: subError } = await supabase
+      .from('user_subscriptions')
+      .select('stripe_subscription_id, plan_name, cancel_at')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .not('cancel_at', 'is', null)
+      .single();
+
+    if (subError || !subscription) {
+      console.error('[Subscriptions] No subscription scheduled for cancellation found for user:', userId);
+      return res.status(404).json({ error: 'No subscription scheduled for cancellation found' });
+    }
+
+    console.log('[Subscriptions] Found subscription scheduled for cancellation:', {
+      stripeId: subscription.stripe_subscription_id,
+      planName: subscription.plan_name,
+      cancelAt: subscription.cancel_at
+    });
+
+    // Reactivate subscription in Stripe
+    const updatedSubscription = await stripe.subscriptions.update(
+      subscription.stripe_subscription_id,
+      {
+        cancel_at_period_end: false,
+        metadata: {
+          reactivated_by_user: 'true',
+          reactivated_at: new Date().toISOString()
+        }
+      }
+    ) as any;
+
+    console.log('[Subscriptions] Subscription reactivated:', {
+      id: updatedSubscription.id,
+      cancel_at_period_end: updatedSubscription.cancel_at_period_end
+    });
+
+    // Update our database to reflect the reactivation
+    const { error: updateError } = await supabase
+      .from('user_subscriptions')
+      .update({
+        cancel_at: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('status', 'active');
+
+    if (updateError) {
+      console.error('[Subscriptions] Error updating database:', updateError);
+      return res.status(500).json({ error: 'Failed to update subscription status' });
+    }
+
+    console.log('[Subscriptions] Successfully reactivated subscription for user:', userId);
+
+    res.json({ 
+      success: true,
+      message: 'Subscription has been reactivated and will continue as normal',
+      planName: subscription.plan_name
+    });
+
+  } catch (error) {
+    console.error('[Subscriptions] Error reactivating subscription:', error);
+    res.status(500).json({ 
+      error: 'Failed to reactivate subscription',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
