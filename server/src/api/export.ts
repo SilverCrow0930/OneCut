@@ -27,6 +27,8 @@ import cron from 'node-cron'
 import { Request, Response } from 'express'
 import { supabase } from '../config/supabaseClient.js'
 import { bucket } from '../integrations/googleStorage.js'
+import { BrowserRenderer } from '../services/browserRenderer.js'
+import { ElementClassifier, classifyElements } from '../services/elementClassifier.js'
 
 // Configure FFmpeg path
 const isProduction = process.env.NODE_ENV === 'production'
@@ -527,6 +529,7 @@ class ProfessionalVideoExporter {
     private outputSettings: { width: number, height: number, fps: number }
     private downloadedAssets: Map<string, string>
     private jobId: string
+    private overlayFramesPath: string | null = null
 
     constructor(elements: TimelineElement[], tracks: TimelineTrack[], outputSettings: any, downloadedAssets: Map<string, string>, jobId: string) {
         this.elements = elements.sort((a, b) => a.timelineStartMs - b.timelineStartMs)
@@ -554,12 +557,49 @@ class ProfessionalVideoExporter {
         })
     }
 
+    async renderStyledElements(): Promise<void> {
+        // Classify elements to determine if we need browser rendering
+        const classification = classifyElements(this.elements)
+        
+        if (!classification.hasStyledElements) {
+            console.log(`[Export ${this.jobId}] No styled elements found, skipping browser rendering`)
+            return
+        }
+
+        console.log(`[Export ${this.jobId}] Browser rendering ${classification.styledElements.length} styled elements: ${ElementClassifier.getStats(classification)}`)
+
+        const renderer = new BrowserRenderer(TEMP_DIR, this.jobId)
+        
+        try {
+            await renderer.initialize(this.outputSettings.width, this.outputSettings.height)
+            
+            const overlayDir = await renderer.renderOverlayFrames(
+                classification.styledElements,
+                this.totalDurationMs,
+                this.outputSettings.fps
+            )
+            
+            if (overlayDir) {
+                this.overlayFramesPath = path.join(overlayDir, 'frame_%06d.png')
+                console.log(`[Export ${this.jobId}] Browser rendering completed: ${this.overlayFramesPath}`)
+            }
+        } finally {
+            await renderer.cleanup()
+        }
+    }
+
     async exportVideo(outputPath: string): Promise<void> {
         const ffmpegCommand = ffmpeg()
         
         console.log(`[Export ${this.jobId}] Professional export: ${this.elements.length} elements, ${this.tracks.length} tracks`)
         
+        // Step 1: Render styled elements with browser if needed
+        await this.renderStyledElements()
+        
+        // Step 2: Add all inputs (media + overlay if exists)
         await this.addInputAssets(ffmpegCommand)
+        
+        // Step 3: Build filter graph (now supports overlay)
         const filterGraph = await this.buildFilterGraph()
         
         console.log(`[Export ${this.jobId}] Filter: ${filterGraph}`)
@@ -667,24 +707,34 @@ class ProfessionalVideoExporter {
     }
 
     private async addInputAssets(command: ffmpeg.FfmpegCommand): Promise<void> {
-        const mediaElements = this.elements.filter(e => 
+        // Get media elements (excluding styled elements that are browser-rendered)
+        const classification = classifyElements(this.elements)
+        const mediaElements = classification.mediaElements.filter(e => 
             ['video', 'audio', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId)
         )
 
         const uniqueAssets = [...new Set(mediaElements.map(e => this.downloadedAssets.get(e.assetId!)!))]
         
-        console.log(`[Export ${this.jobId}] Adding ${uniqueAssets.length} unique assets as inputs`)
+        console.log(`[Export ${this.jobId}] Adding ${uniqueAssets.length} unique media assets as inputs`)
         uniqueAssets.forEach((assetPath, index) => {
             console.log(`[Export ${this.jobId}] Input ${index}: ${assetPath}`)
             command.input(assetPath)
         })
 
-        // Black background at the end
+        // Black background
         const backgroundIndex = uniqueAssets.length
         console.log(`[Export ${this.jobId}] Adding black background as input ${backgroundIndex}`)
         command.input(`color=c=black:s=${this.outputSettings.width}x${this.outputSettings.height}:r=${this.outputSettings.fps}`)
                .inputFormat('lavfi')
                .duration(this.totalDurationMs / 1000)
+
+        // Add browser-rendered overlay frames if they exist
+        if (this.overlayFramesPath) {
+            const overlayIndex = backgroundIndex + 1
+            console.log(`[Export ${this.jobId}] Adding browser overlay as input ${overlayIndex}: ${this.overlayFramesPath}`)
+            command.input(this.overlayFramesPath)
+                   .inputFPS(this.outputSettings.fps)
+        }
     }
 
     private async buildFilterGraph(): Promise<string> {
@@ -712,8 +762,8 @@ class ProfessionalVideoExporter {
         // Step 4: Composite video tracks
         const finalVideo = this.compositeVideoTracks(filters, videoTracks, 'master_timeline')
         
-        // Step 5: Add text and caption overlays (UPDATED)
-        this.addTextAndCaptionOverlays(filters, finalVideo)
+        // Step 5: Add browser-rendered overlay (HYBRID SYSTEM)
+        this.addBrowserOverlay(filters, finalVideo)
         
         // Step 6: Mix audio tracks
         this.mixAudioTracks(filters, audioTracks)
@@ -725,11 +775,13 @@ class ProfessionalVideoExporter {
     private buildVideoTracks(filters: string[], inputMapping: Map<string, number>, timelineDuration: number): Array<{label: string, startTime: number, endTime: number}> {
         const videoTracks: Array<{label: string, startTime: number, endTime: number}> = []
         
-        const videoElements = this.elements
+        // Only process media elements (styled elements are handled by browser renderer)
+        const classification = classifyElements(this.elements)
+        const videoElements = classification.mediaElements
             .filter(e => ['video', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
-                .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
+            .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
 
-        console.log(`[Export ${this.jobId}] Building ${videoElements.length} video tracks`)
+        console.log(`[Export ${this.jobId}] Building ${videoElements.length} media video tracks (${classification.styledElements.length} styled elements handled by browser)`)
 
         videoElements.forEach((element, index) => {
                 const assetPath = this.downloadedAssets.get(element.assetId!)
@@ -962,66 +1014,30 @@ class ProfessionalVideoExporter {
         }
     }
 
-    private addTextAndCaptionOverlays(filters: string[], videoComposite: string): void {
-        // Process BOTH text and caption elements
-        const textElements = this.elements.filter(e => 
-            (e.type === 'text' || e.type === 'caption') && e.text
-        )
-        
-        if (textElements.length === 0) {
-            console.log(`[Export ${this.jobId}] No text or caption overlays`)
+    private addBrowserOverlay(filters: string[], videoComposite: string): void {
+        if (!this.overlayFramesPath) {
+            // No browser overlay, just copy video composite to final output
+            console.log(`[Export ${this.jobId}] No browser overlay, using video composite as final output`)
             filters.push(`[${videoComposite}]copy[final_video]`)
             return
         }
         
-        console.log(`[Export ${this.jobId}] Adding ${textElements.length} text/caption overlays with simplified filters`)
+        // Calculate overlay input index
+        const classification = classifyElements(this.elements)
+        const mediaAssetCount = [...new Set(
+            classification.mediaElements
+                .filter(e => ['video', 'audio', 'image', 'gif'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
+                .map(e => this.downloadedAssets.get(e.assetId!)!)
+        )].length
         
-        let currentOutput = videoComposite
+        const overlayInputIndex = mediaAssetCount + 1  // +1 for background, overlay is next
         
-        textElements.forEach((element, index) => {
-            // Validate text overlay duration with minimum duration
-            const startSec = Math.max(0, element.timelineStartMs / 1000)
-            const endSec = Math.max(startSec + MIN_DURATION_SEC, element.timelineEndMs / 1000)
-            const duration = endSec - startSec
-            
-            // Skip if duration is still invalid
-            if (duration < MIN_DURATION_SEC) {
-                console.warn(`[Export ${this.jobId}] Skipping ${element.type} overlay ${index}: Duration ${duration}s too short (minimum: ${MIN_DURATION_SEC}s)`)
-                return
-            }
-            
-            // Clean and escape text for FFmpeg
-            const originalText = element.text || ''
-            const text = originalText
-                .replace(/\\/g, '\\\\')  // Escape backslashes first
-                .replace(/'/g, "\\'")    // Escape single quotes
-                .replace(/:/g, '\\:')    // Escape colons
-                .replace(/\n/g, '\\n')   // Escape newlines
-            
-            if (!originalText.trim()) {
-                console.warn(`[Export ${this.jobId}] Skipping ${element.type} overlay ${index}: Empty text`)
-                return
-            }
-            
-            console.log(`[Export ${this.jobId}] Processing ${element.type} overlay ${index}: "${originalText}" -> "${text}"`)
-            
-            const outputLabel = index === textElements.length - 1 ? 'final_video' : `text_${index}`
-            
-            // Apply text directly to the video using drawtext filter with timing
-            let textFilter: string
-            if (element.type === 'caption') {
-                textFilter = this.buildCaptionFilter(element, text, startSec, endSec)
-            } else {
-                textFilter = this.buildTextFilter(element, text, startSec, endSec)
-            }
-            
-            // Apply text filter directly to the current video output with enable timing
-            filters.push(`[${currentOutput}]${textFilter}[${outputLabel}]`)
-            
-            currentOutput = outputLabel
-            
-            console.log(`[Export ${this.jobId}] Added ${element.type} overlay ${index}: "${text.substring(0, 30)}..." (${startSec}s-${endSec}s, duration: ${duration}s) with timing-aware approach`)
-        })
+        console.log(`[Export ${this.jobId}] Adding browser overlay composition from input ${overlayInputIndex}`)
+        
+        // Composite browser-rendered overlay on top of video
+        filters.push(`[${videoComposite}][${overlayInputIndex}:v]overlay=0:0:format=auto,format=yuv420p[final_video]`)
+        
+        console.log(`[Export ${this.jobId}] Browser overlay composition added successfully`)
     }
 
     private buildTextFilter(element: TimelineElement, text: string, startSec: number, endSec: number): string {
@@ -1272,11 +1288,13 @@ class ProfessionalVideoExporter {
     private buildAudioTracks(filters: string[], inputMapping: Map<string, number>, timelineDuration: number): Array<{label: string, startTime: number, endTime: number}> {
         const audioTracks: Array<{label: string, startTime: number, endTime: number}> = []
         
-        const audioElements = this.elements
+        // Only process media elements (styled elements are handled by browser renderer)
+        const classification = classifyElements(this.elements)
+        const audioElements = classification.mediaElements
             .filter(e => ['audio'].includes(e.type) && e.assetId && this.downloadedAssets.has(e.assetId))
             .sort((a, b) => a.timelineStartMs - b.timelineStartMs)
 
-        console.log(`[Export ${this.jobId}] Building ${audioElements.length} audio tracks`)
+        console.log(`[Export ${this.jobId}] Building ${audioElements.length} media audio tracks`)
 
         audioElements.forEach((element, index) => {
                 const assetPath = this.downloadedAssets.get(element.assetId!)
