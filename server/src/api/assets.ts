@@ -11,6 +11,15 @@ import path from 'path'
 
 dotenv.config()
 
+// Debug: Log environment variable status at startup
+console.log('🚀 Assets API startup - Environment check:', {
+    hasPexelsKey: !!process.env.PEXELS_API_KEY,
+    pexelsKeyLength: process.env.PEXELS_API_KEY?.length || 0,
+    hasFreesoundKey: !!process.env.FREESOUND_API_KEY,
+    hasGiphyKey: !!process.env.GIPHY_API_KEY,
+    nodeEnv: process.env.NODE_ENV
+})
+
 const keyFilePath = process.env.GCS_KEY_FILE_PATH
 if (!keyFilePath) throw new Error('GCS_KEY_FILE_PATH is not defined in .env')
 
@@ -318,8 +327,18 @@ router.get(
             const per_page = String(req.query.per_page || '20');
             const query = (req.query.query && String(req.query.query).trim()) || 'vertical';
 
+            // Debug environment variable loading
+            console.log('🔍 PEXELS DEBUG INFO:', {
+                hasKey: !!process.env.PEXELS_API_KEY,
+                keyLength: process.env.PEXELS_API_KEY?.length || 0,
+                keyPreview: process.env.PEXELS_API_KEY?.substring(0, 10) + '...' || 'UNDEFINED',
+                allEnvKeys: Object.keys(process.env).filter(key => key.includes('PEXELS')),
+                nodeEnv: process.env.NODE_ENV
+            });
+
             if (!process.env.PEXELS_API_KEY) {
                 console.error('❌ PEXELS_API_KEY environment variable is not set');
+                console.error('Available environment variables containing "PEXELS":', Object.keys(process.env).filter(key => key.includes('PEXELS')));
                 return res.status(500).json({ error: 'Pexels API key not configured' });
             }
 
