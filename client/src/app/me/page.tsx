@@ -39,7 +39,7 @@ export default function MePage() {
                     )
                 }
                 <img
-                    src={profile.avatar_url}
+                    src={profile.avatar_url || '/assets/main/lemona-icon.png'}
                     alt={`${profile.full_name}'s avatar`}
                     className={`
                         w-24 h-24 rounded-full mx-auto transition-opacity duration-300
