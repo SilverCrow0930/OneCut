@@ -51,11 +51,7 @@ export const TOOLS: Tool[] = [
         icon: '/assets/icons/captions.png',
         aiTool: true,
     },
-    {
-        label: 'Music',
-        icon: '/assets/icons/volume-high.png',
-        aiTool: true,
-    },
+
     {
         label: 'Transitions',
         icon: '/assets/icons/animation.png',
