@@ -133,17 +133,17 @@ export default function ProjectsList() {
                         const bIsSmartCut = b.processing_type === 'quickclips'
                         
                         // 1. For all projects, prioritize by last_opened if available
-                        if (a.last_opened && b.last_opened) {
-                            return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
-                        }
-                        
-                        // Recently opened projects come first
-                        if (a.last_opened && !b.last_opened) return -1
-                        if (!a.last_opened && b.last_opened) return 1
-                        
+                            if (a.last_opened && b.last_opened) {
+                                return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
+                            }
+                            
+                            // Recently opened projects come first
+                            if (a.last_opened && !b.last_opened) return -1
+                            if (!a.last_opened && b.last_opened) return 1
+                            
                         // 2. For projects without last_opened, Smart Cut projects come first
-                        if (aIsSmartCut && !bIsSmartCut) return -1
-                        if (!aIsSmartCut && bIsSmartCut) return 1
+                            if (aIsSmartCut && !bIsSmartCut) return -1
+                            if (!aIsSmartCut && bIsSmartCut) return 1
                         
                         // 3. Finally, sort by created_at (most recent first)
                         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -160,13 +160,13 @@ export default function ProjectsList() {
                     }
                     
                     // Also check if any processing projects need polling
-                    const processingProject = sortedProjects.find(p => 
-                        (p.processing_status === 'processing' || p.processing_status === 'queued') &&
-                        p.processing_type === 'quickclips'
-                    )
+                        const processingProject = sortedProjects.find(p => 
+                            (p.processing_status === 'processing' || p.processing_status === 'queued') &&
+                            p.processing_type === 'quickclips'
+                        )
                     
                     if (processingProject && !isPollingRef.current) {
-                        startPolling(processingProject.id)
+                            startPolling(processingProject.id)
                     }
                 }
             }
@@ -358,17 +358,17 @@ export default function ProjectsList() {
                     const bIsSmartCut = b.processing_type === 'quickclips'
                     
                     // 1. For all projects, prioritize by last_opened if available
-                    if (a.last_opened && b.last_opened) {
-                        return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
-                    }
-                    
-                    // Recently opened projects come first
-                    if (a.last_opened && !b.last_opened) return -1
-                    if (!a.last_opened && b.last_opened) return 1
-                    
+                        if (a.last_opened && b.last_opened) {
+                            return new Date(b.last_opened).getTime() - new Date(a.last_opened).getTime()
+                        }
+                        
+                        // Recently opened projects come first
+                        if (a.last_opened && !b.last_opened) return -1
+                        if (!a.last_opened && b.last_opened) return 1
+                        
                     // 2. For projects without last_opened, Smart Cut projects come first
-                    if (aIsSmartCut && !bIsSmartCut) return -1
-                    if (!aIsSmartCut && bIsSmartCut) return 1
+                        if (aIsSmartCut && !bIsSmartCut) return -1
+                        if (!aIsSmartCut && bIsSmartCut) return 1
                     
                     // 3. Finally, sort by created_at (most recent first)
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

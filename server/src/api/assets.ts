@@ -319,6 +319,7 @@ router.get(
             const query = (req.query.query && String(req.query.query).trim()) || 'vertical';
 
             if (!process.env.PEXELS_API_KEY) {
+                console.error('❌ PEXELS_API_KEY environment variable is not set');
                 return res.status(500).json({ error: 'Pexels API key not configured' });
             }
 
@@ -330,7 +331,13 @@ router.get(
                 url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=${orientation}&page=${page}&per_page=${per_page}`;
             }
 
-            console.log('PEXELS API URL:', url);
+            console.log('🔍 PEXELS API REQUEST:', {
+                type,
+                query,
+                url: url.replace(process.env.PEXELS_API_KEY, '[REDACTED]'),
+                page,
+                per_page
+            });
 
             const response = await fetch(url, {
                 headers: {
@@ -338,16 +345,115 @@ router.get(
                 }
             });
 
+            console.log('📡 PEXELS API RESPONSE:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries())
+            });
+
             if (!response.ok) {
                 const text = await response.text();
+                console.error('❌ PEXELS API ERROR:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: text
+                });
                 throw new Error(`Pexels API error: ${response.statusText} - ${text}`);
             }
 
             const data = await response.json();
+            console.log('✅ PEXELS API SUCCESS:', {
+                type,
+                itemCount: type === 'video' ? data.videos?.length : data.photos?.length,
+                totalResults: data.total_results,
+                page: data.page,
+                per_page: data.per_page
+            });
+
             res.json(data);
         }
         catch (err) {
+            console.error('❌ PEXELS API HANDLER ERROR:', err);
             next(err);
+        }
+    }
+);
+
+// Debug endpoint to test Pexels API configuration
+router.get(
+    '/pexels/debug',
+    async (req: Request, res: Response) => {
+        try {
+            console.log('🔧 PEXELS DEBUG ENDPOINT CALLED');
+            
+            const hasApiKey = !!process.env.PEXELS_API_KEY;
+            const keyPreview = process.env.PEXELS_API_KEY ? 
+                process.env.PEXELS_API_KEY.substring(0, 10) + '...' : 
+                'NOT_SET';
+
+            console.log('🔑 API Key Status:', { hasApiKey, keyPreview });
+
+            if (!hasApiKey) {
+                return res.json({
+                    status: 'error',
+                    message: 'PEXELS_API_KEY environment variable not set',
+                    hasApiKey: false
+                });
+            }
+
+            // Test API call
+            const testUrl = 'https://api.pexels.com/v1/search?query=nature&per_page=1';
+            console.log('🧪 Testing API call to:', testUrl);
+
+            const response = await fetch(testUrl, {
+                headers: {
+                    'Authorization': process.env.PEXELS_API_KEY!
+                }
+            });
+
+            const isSuccess = response.ok;
+            const statusCode = response.status;
+            const statusText = response.statusText;
+
+            console.log('📊 Test Results:', { isSuccess, statusCode, statusText });
+
+            if (isSuccess) {
+                const data = await response.json();
+                return res.json({
+                    status: 'success',
+                    message: 'Pexels API is working correctly',
+                    hasApiKey: true,
+                    testResult: {
+                        statusCode,
+                        statusText,
+                        photoCount: data.photos?.length || 0,
+                        totalResults: data.total_results
+                    }
+                });
+            } else {
+                const errorBody = await response.text();
+                console.error('❌ Test API call failed:', { statusCode, statusText, errorBody });
+                
+                return res.json({
+                    status: 'error',
+                    message: 'Pexels API test failed',
+                    hasApiKey: true,
+                    testResult: {
+                        statusCode,
+                        statusText,
+                        error: errorBody
+                    }
+                });
+            }
+
+        } catch (error: any) {
+            console.error('❌ DEBUG ENDPOINT ERROR:', error);
+            return res.json({
+                status: 'error',
+                message: 'Debug test failed',
+                error: error.message,
+                hasApiKey: !!process.env.PEXELS_API_KEY
+            });
         }
     }
 );

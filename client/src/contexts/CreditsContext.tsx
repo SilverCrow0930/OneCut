@@ -53,7 +53,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
             setIsLoading(false);
             return;
         }
-
+        
         try {
             console.log('[CreditsContext] Fetching credits data...');
             const response = await fetch(apiPath('credits'), {
@@ -61,14 +61,14 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
                     'Authorization': `Bearer ${session.access_token}`
                 }
             });
-
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
 
-            const data = await response.json();
-            console.log('[CreditsContext] Received credits data:', data);
-
+                const data = await response.json();
+                console.log('[CreditsContext] Received credits data:', data);
+                
             setCredits(data.currentCredits || 0);
             setMaxCredits(data.maxCredits || 0);
             setSubscriptionType(data.subscriptionType || null);
@@ -99,13 +99,13 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
       console.warn('[CreditsContext] Cannot consume credits - no user or session');
       return false;
     }
-
+    
     // Check if user has enough credits
     if (credits < amount) {
       console.warn('[CreditsContext] Insufficient credits:', { required: amount, available: credits });
       return false;
     }
-
+    
     try {
       console.log('[CreditsContext] Consuming credits:', { amount, featureName });
       
@@ -117,7 +117,7 @@ export function CreditsProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({ amount, featureName })
       });
-
+      
       if (!response.ok) {
         const errorData = await response.json();
         console.error('[CreditsContext] Credit consumption failed:', errorData);
