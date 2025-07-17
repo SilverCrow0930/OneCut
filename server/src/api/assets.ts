@@ -325,7 +325,9 @@ router.get(
             const type = String(req.query.type || 'image');
             const page = String(req.query.page || '1');
             const per_page = String(req.query.per_page || '20');
-            const query = (req.query.query && String(req.query.query).trim()) || 'vertical';
+            // Use better default search terms that are more likely to return results
+            const defaultQuery = type === 'video' ? 'nature landscape' : 'business office';
+            const query = (req.query.query && String(req.query.query).trim()) || defaultQuery;
 
             // Debug environment variable loading
             console.log('🔍 PEXELS DEBUG INFO:', {
