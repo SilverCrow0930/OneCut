@@ -1,3 +1,5 @@
+![OneCut](OneCut.gif)
+
 # OneCut
 
 OneCut is an AI-powered web-based video editor that transforms long-form content into engaging highlights. Built for professionals, educators, and content creators who need to quickly turn hours of footage into shareable videos without the complexity of traditional editing software.
