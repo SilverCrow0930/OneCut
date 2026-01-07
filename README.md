@@ -6,6 +6,10 @@ OneCut is an AI-powered web-based video editor that transforms long-form content
 
 OneCut combines advanced AI analysis with an intuitive editing interface to automate the most time-consuming parts of video production. Upload your long recordings, let AI identify the best moments, and refine the results with professional editing tools—all in your browser.
 
+![OneCut Video Editor Interface](editor-screenshot.png)
+
+The OneCut interface features a clean, modern design with a central video preview, comprehensive tool panels for editing, a multi-track timeline, and integrated export options optimized for social media platforms.
+
 ## Key Features
 
 ### AI-Powered Smart Cut
